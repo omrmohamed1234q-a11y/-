@@ -1,6 +1,11 @@
 # Overview
 
-"اطبعلي" is a modern Arabic-localized printing and e-commerce platform built with React, TypeScript, and Supabase. The application combines printing services, smart scanning with OCR, PDF manipulation tools, and an integrated marketplace for educational materials. Designed for students, teachers, and professionals in Arabic-speaking markets, it features a gamification system with bounty points and rewards to encourage user engagement.
+"اطبعلي" is a modern Arabic-localized printing and e-commerce platform with both web and mobile applications. The platform combines printing services, smart scanning with OCR, PDF manipulation tools, and an integrated marketplace for educational materials. Designed for students, teachers, and professionals in Arabic-speaking markets, it features a gamification system with bounty points and rewards to encourage user engagement.
+
+## Platform Components
+- **Web Application**: React/TypeScript/Vite-based responsive web app
+- **Mobile Application**: React Native (Expo) mobile app with native functionality
+- **Backend Services**: Express.js API with Supabase integration
 
 # User Preferences
 
@@ -9,12 +14,21 @@ Preferred communication style: Simple, everyday language.
 # System Architecture
 
 ## Frontend Architecture
+
+### Web Application
 - **React 18** with TypeScript for type safety and modern component patterns
 - **Vite** as the build tool for fast development and optimized production builds
 - **Wouter** for lightweight client-side routing
 - **TanStack Query** for server state management and caching
 - **Tailwind CSS** with shadcn/ui components for consistent, accessible UI design
 - **Arabic-first design** with RTL support and IBM Plex Sans Arabic font
+
+### Mobile Application
+- **React Native (Expo)** with TypeScript for cross-platform mobile development
+- **Expo Router** for file-based navigation with type safety
+- **React Native Reanimated** for smooth animations and gestures
+- **Native-optimized UI** with platform-specific components and styling
+- **Arabic RTL support** with mobile-optimized layouts and interactions
 
 ## Backend Architecture
 - **Express.js** server with TypeScript for API endpoints
