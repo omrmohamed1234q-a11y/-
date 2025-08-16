@@ -2,131 +2,185 @@ import React, { useState } from 'react'
 import {
   View,
   Text,
+  StyleSheet,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
-  Image,
 } from 'react-native'
-import { Link, useRouter } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
-import { useAuth } from '../../context/AuthContext'
+import { Link, router } from 'expo-router'
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
-  const { resetPassword } = useAuth()
-  const router = useRouter()
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {}
+
+    if (!email) {
+      newErrors.email = 'البريد الإلكتروني مطلوب'
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'البريد الإلكتروني غير صحيح'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleResetPassword = async () => {
-    if (!email.trim()) {
-      Alert.alert('خطأ', 'يرجى إدخال البريد الإلكتروني')
-      return
-    }
+    if (!validateForm()) return
 
-    if (!email.includes('@')) {
-      Alert.alert('خطأ', 'يرجى إدخال بريد إلكتروني صحيح')
-      return
-    }
-
-    setIsLoading(true)
+    setLoading(true)
     try {
-      await resetPassword(email)
-      setEmailSent(true)
-      Alert.alert(
-        'تم إرسال الرابط',
-        'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني',
-        [
-          {
-            text: 'موافق',
-            onPress: () => router.back(),
-          },
-        ]
-      )
+      const response = await fetch('/api/auth/supabase/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setEmailSent(true)
+        Alert.alert(
+          'تم الإرسال بنجاح',
+          'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد والبريد المهمل.',
+          [{ text: 'حسناً', onPress: () => router.back() }]
+        )
+      } else {
+        Alert.alert('خطأ', data.message || 'فشل في إرسال رابط إعادة التعيين')
+      }
     } catch (error) {
-      Alert.alert('خطأ', error instanceof Error ? error.message : 'حدث خطأ غير متوقع')
+      console.error('Password reset error:', error)
+      Alert.alert('خطأ', 'حدث خطأ أثناء إرسال رابط إعادة التعيين')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
+  if (emailSent) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.successContainer}>
+          <View style={styles.successIcon}>
+            <Text style={styles.successIconText}>✅</Text>
+          </View>
+          <Text style={styles.successTitle}>تم الإرسال بنجاح!</Text>
+          <Text style={styles.successMessage}>
+            تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.
+            يرجى التحقق من صندوق الوارد والبريد المهمل.
+          </Text>
+          
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            data-testid="button-back-to-login"
+          >
+            <LinearGradient colors={['#EF2D50', '#DC2626']} style={styles.gradientButton}>
+              <Text style={styles.backButtonText}>العودة لتسجيل الدخول</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )
+  }
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
+    <KeyboardAvoidingView 
+      style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <LinearGradient colors={['#ffffff', '#f8f9fa']} style={styles.gradient}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../../assets/logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.title}>نسيت كلمة المرور؟</Text>
-            <Text style={styles.subtitle}>
-              أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.logo}>اطبعلي</Text>
+          <Text style={styles.headerTitle}>نسيت كلمة المرور؟</Text>
+          <Text style={styles.headerSubtitle}>
+            لا تقلق، سنرسل لك رابط إعادة تعيين كلمة المرور
+          </Text>
+        </View>
+
+        {/* Reset Form */}
+        <View style={styles.formContainer}>
+          <View style={styles.instructionsContainer}>
+            <Text style={styles.instructionsText}>
+              أدخل بريدك الإلكتروني وسنرسل لك رابط لإعادة تعيين كلمة المرور الخاصة بك.
             </Text>
           </View>
 
-          <View style={styles.formContainer}>
-            {!emailSent ? (
-              <>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>البريد الإلكتروني</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="أدخل بريدك الإلكتروني"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    textAlign="right"
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.resetButton, isLoading && styles.disabledButton]}
-                  onPress={handleResetPassword}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.resetButtonText}>
-                    {isLoading ? 'جاري الإرسال...' : 'إرسال رابط إعادة التعيين'}
-                  </Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <View style={styles.successContainer}>
-                <Text style={styles.successTitle}>تم إرسال الرابط!</Text>
-                <Text style={styles.successMessage}>
-                  تحقق من بريدك الإلكتروني واتبع التعليمات لإعادة تعيين كلمة المرور
-                </Text>
-                <TouchableOpacity
-                  style={styles.resendButton}
-                  onPress={() => {
-                    setEmailSent(false)
-                    setEmail('')
-                  }}
-                >
-                  <Text style={styles.resendButtonText}>إرسال مرة أخرى</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <View style={styles.backContainer}>
-              <Link href="/(auth)/login">
-                <Text style={styles.backLink}>العودة إلى تسجيل الدخول</Text>
-              </Link>
+          {/* Email Input */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>البريد الإلكتروني</Text>
+            <View style={[styles.inputContainer, errors.email && styles.inputError]}>
+              <TextInput
+                style={styles.textInput}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="أدخل بريدك الإلكتروني"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                textAlign="right"
+                data-testid="input-reset-email"
+              />
             </View>
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
-        </ScrollView>
-      </LinearGradient>
+
+          {/* Reset Button */}
+          <TouchableOpacity
+            style={[styles.resetButton, loading && styles.disabledButton]}
+            onPress={handleResetPassword}
+            disabled={loading}
+            data-testid="button-reset-password"
+          >
+            <LinearGradient colors={['#EF2D50', '#DC2626']} style={styles.gradientButton}>
+              <Text style={styles.resetButtonText}>
+                {loading ? 'جاري الإرسال...' : 'إرسال رابط إعادة التعيين'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* Help Section */}
+        <View style={styles.helpContainer}>
+          <Text style={styles.helpTitle}>هل تحتاج مساعدة؟</Text>
+          <Text style={styles.helpText}>
+            إذا لم تتلقى الرسالة خلال 5 دقائق، تحقق من مجلد البريد المهمل أو جرب إدخال بريد إلكتروني آخر.
+          </Text>
+        </View>
+
+        {/* Back to Login Link */}
+        <View style={styles.loginContainer}>
+          <Text style={styles.loginText}>تذكرت كلمة المرور؟ </Text>
+          <Link href="/(auth)/login" asChild>
+            <TouchableOpacity data-testid="link-back-to-login">
+              <Text style={styles.loginLink}>تسجيل الدخول</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
+
+        {/* Security Notice */}
+        <View style={styles.securityNotice}>
+          <View style={styles.securityIcon}>
+            <Text style={styles.securityIconText}>🔒</Text>
+          </View>
+          <Text style={styles.securityText}>
+            نحن نأخذ أمان حسابك على محمل الجد. لن نرسل كلمة المرور الخاصة بك عبر البريد الإلكتروني أبداً.
+          </Text>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   )
 }
@@ -134,99 +188,201 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  gradient: {
-    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    padding: 20,
+    paddingTop: 80,
   },
-  logoContainer: {
+  header: {
     alignItems: 'center',
     marginBottom: 40,
   },
   logo: {
-    width: 80,
-    height: 80,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: 'bold',
     color: '#EF2D50',
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: 'center',
   },
-  subtitle: {
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  headerSubtitle: {
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 16,
+    lineHeight: 22,
   },
   formContainer: {
-    width: '100%',
-  },
-  inputContainer: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-    textAlign: 'right',
-  },
-  input: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    textAlign: 'right',
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 24,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  resetButton: {
-    backgroundColor: '#EF2D50',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#EF2D50',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
+  instructionsContainer: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3B82F6',
+  },
+  instructionsText: {
+    fontSize: 14,
+    color: '#1E40AF',
+    lineHeight: 20,
+    textAlign: 'right',
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'right',
+  },
+  inputContainer: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+  textInput: {
+    padding: 16,
+    fontSize: 16,
+    color: '#1F2937',
+    textAlign: 'right',
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  resetButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
   disabledButton: {
     opacity: 0.6,
+  },
+  gradientButton: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   resetButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  successContainer: {
+  helpContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  helpTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'right',
+  },
+  helpText: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+    textAlign: 'right',
+  },
+  loginContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 24,
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  loginText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  loginLink: {
+    fontSize: 16,
+    color: '#EF2D50',
+    fontWeight: '600',
+  },
+  securityNotice: {
+    flexDirection: 'row',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  securityIcon: {
+    marginLeft: 12,
+    marginTop: 2,
+  },
+  securityIconText: {
+    fontSize: 16,
+  },
+  securityText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#16A34A',
+    lineHeight: 18,
+    textAlign: 'right',
+  },
+  // Success Screen Styles
+  successContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  successIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  successIconText: {
+    fontSize: 40,
   },
   successTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#10B981',
-    marginBottom: 12,
+    color: '#1F2937',
+    marginBottom: 16,
     textAlign: 'center',
   },
   successMessage: {
@@ -234,36 +390,16 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 24,
+    marginBottom: 32,
   },
-  resendButton: {
-    backgroundColor: '#ffffff',
+  backButton: {
     borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EF2D50',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    overflow: 'hidden',
+    width: '100%',
   },
-  resendButtonText: {
-    color: '#EF2D50',
+  backButtonText: {
+    color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  backContainer: {
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  backLink: {
-    color: '#EF2D50',
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
 })

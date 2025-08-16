@@ -1,185 +1,281 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { authService, User, AuthState } from '../services/auth'
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface AuthContextType extends AuthState {
-  signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, fullName?: string) => Promise<void>
-  signOut: () => Promise<void>
-  signInWithGoogle: () => Promise<void>
-  signInWithFacebook: () => Promise<void>
-  resetPassword: (email: string) => Promise<void>
+export interface User {
+  id: string;
+  email: string;
+  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+  provider: 'supabase' | 'replit' | 'google' | 'facebook';
+  isPremium?: boolean;
+  points?: number;
+  level?: number;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+interface AuthSession {
+  user: User;
+  token: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  rememberMe?: boolean;
+}
+
+interface AuthContextType {
+  user: User | null;
+  session: AuthSession | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+  signIn: (user: User, token: string, rememberMe?: boolean) => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshSession: () => Promise<void>;
+  updateUser: (userData: Partial<User>) => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const STORAGE_KEYS = {
+  SESSION: 'auth_session',
+  REMEMBER_ME: 'remember_me',
+  USER_PREFERENCES: 'user_preferences',
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    loading: true,
-    error: null,
-  })
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session
-    const initializeAuth = async () => {
-      try {
-        const session = await authService.getSession()
-        if (session?.user) {
-          setState({
-            user: {
-              id: session.user.id,
-              email: session.user.email!,
-              full_name: session.user.user_metadata?.full_name,
-              avatar_url: session.user.user_metadata?.avatar_url,
-            },
-            loading: false,
-            error: null,
-          })
-        } else {
-          setState(prev => ({ ...prev, loading: false }))
-        }
-      } catch (error) {
-        setState({
-          user: null,
-          loading: false,
-          error: error instanceof Error ? error.message : 'حدث خطأ غير متوقع',
-        })
-      }
-    }
+    initializeAuth();
+  }, []);
 
-    initializeAuth()
-
-    // Listen for auth changes
-    const { data: { subscription } } = authService.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setState({
-            user: {
-              id: session.user.id,
-              email: session.user.email!,
-              full_name: session.user.user_metadata?.full_name,
-              avatar_url: session.user.user_metadata?.avatar_url,
-            },
-            loading: false,
-            error: null,
-          })
+  const initializeAuth = async () => {
+    try {
+      // Check for existing session
+      const sessionJson = await AsyncStorage.getItem(STORAGE_KEYS.SESSION);
+      const rememberMe = await AsyncStorage.getItem(STORAGE_KEYS.REMEMBER_ME);
+      
+      if (sessionJson) {
+        const storedSession: AuthSession = JSON.parse(sessionJson);
+        
+        // Check if session is expired
+        if (storedSession.expiresAt && Date.now() > storedSession.expiresAt) {
+          if (storedSession.refreshToken) {
+            await refreshTokens(storedSession);
+          } else {
+            await clearSession();
+          }
         } else {
-          setState({
-            user: null,
-            loading: false,
-            error: null,
-          })
+          // Only restore session if remember me was enabled or session is recent
+          const shouldRestoreSession = rememberMe === 'true' || 
+            !storedSession.expiresAt || 
+            (Date.now() - (storedSession.expiresAt - 86400000)) < 3600000; // Within 1 hour of creation
+          
+          if (shouldRestoreSession) {
+            setSession(storedSession);
+            
+            // Validate session with backend
+            await validateSession(storedSession.token);
+          } else {
+            await clearSession();
+          }
         }
       }
-    )
-
-    return () => {
-      subscription?.unsubscribe()
-    }
-  }, [])
-
-  const signIn = async (email: string, password: string) => {
-    setState(prev => ({ ...prev, loading: true, error: null }))
-    try {
-      await authService.signIn(email, password)
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'فشل في تسجيل الدخول',
-      }))
-      throw error
+      console.error('Auth initialization error:', error);
+      await clearSession();
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
-    setState(prev => ({ ...prev, loading: true, error: null }))
+  const validateSession = async (token: string) => {
     try {
-      await authService.signUp(email, password, fullName)
+      // For Replit Auth, check the session endpoint
+      const response = await fetch('/api/auth/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Session validation failed');
+      }
+
+      const userData = await response.json();
+      
+      // Update user data if it changed
+      if (session && userData) {
+        const updatedSession = {
+          ...session,
+          user: { ...session.user, ...userData },
+        };
+        setSession(updatedSession);
+        await AsyncStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(updatedSession));
+      }
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'فشل في إنشاء الحساب',
-      }))
-      throw error
+      console.error('Session validation error:', error);
+      // Don't clear session immediately, allow offline usage
+      // but mark for re-validation when online
     }
-  }
+  };
+
+  const refreshTokens = async (currentSession: AuthSession) => {
+    try {
+      if (!currentSession.refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      // This would typically call a refresh token endpoint
+      // For now, we'll extend the current session
+      const newExpiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days
+      const refreshedSession = {
+        ...currentSession,
+        expiresAt: newExpiresAt,
+      };
+
+      setSession(refreshedSession);
+      await AsyncStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(refreshedSession));
+      
+      return refreshedSession;
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      await clearSession();
+      throw error;
+    }
+  };
+
+  const signIn = async (user: User, token: string, rememberMe: boolean = false) => {
+    try {
+      setLoading(true);
+      
+      const expiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days
+      const newSession: AuthSession = {
+        user: {
+          ...user,
+          points: user.points || 0,
+          level: user.level || 1,
+        },
+        token,
+        expiresAt,
+        rememberMe,
+      };
+
+      // Store session
+      await AsyncStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(newSession));
+      await AsyncStorage.setItem(STORAGE_KEYS.REMEMBER_ME, rememberMe.toString());
+      
+      // Store user preferences
+      const preferences = {
+        provider: user.provider,
+        language: 'ar',
+        theme: 'light',
+        notifications: true,
+      };
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(preferences));
+
+      setSession(newSession);
+      
+      // Track sign-in event
+      console.log('User signed in:', {
+        provider: user.provider,
+        userId: user.id,
+        rememberMe,
+      });
+      
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const signOut = async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }))
     try {
-      await authService.signOut()
+      setLoading(true);
+      
+      // If using Replit Auth, redirect to logout endpoint
+      if (session?.user.provider === 'replit') {
+        // This would typically redirect to /api/auth/logout
+        // For mobile, we'll just clear local session
+      }
+      
+      await clearSession();
+      
+      console.log('User signed out');
+      
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'فشل في تسجيل الخروج',
-      }))
-      throw error
+      console.error('Sign out error:', error);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const signInWithGoogle = async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }))
+  const clearSession = async () => {
     try {
-      await authService.signInWithGoogle()
+      await Promise.all([
+        AsyncStorage.removeItem(STORAGE_KEYS.SESSION),
+        AsyncStorage.removeItem(STORAGE_KEYS.REMEMBER_ME),
+      ]);
+      setSession(null);
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'فشل في تسجيل الدخول بجوجل',
-      }))
-      throw error
+      console.error('Clear session error:', error);
     }
-  }
+  };
 
-  const signInWithFacebook = async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }))
+  const refreshSession = async () => {
+    if (!session) return;
+    
     try {
-      await authService.signInWithFacebook()
+      await refreshTokens(session);
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'فشل في تسجيل الدخول بفيسبوك',
-      }))
-      throw error
+      console.error('Session refresh failed:', error);
+      // Force sign out if refresh fails
+      await signOut();
     }
-  }
+  };
 
-  const resetPassword = async (email: string) => {
-    setState(prev => ({ ...prev, loading: true, error: null }))
+  const updateUser = async (userData: Partial<User>) => {
+    if (!session) return;
+
     try {
-      await authService.resetPassword(email)
-      setState(prev => ({ ...prev, loading: false }))
+      const updatedUser = { ...session.user, ...userData };
+      const updatedSession = { ...session, user: updatedUser };
+      
+      setSession(updatedSession);
+      await AsyncStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(updatedSession));
+      
+      console.log('User data updated:', userData);
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'فشل في إعادة تعيين كلمة المرور',
-      }))
-      throw error
+      console.error('Update user error:', error);
+      throw error;
     }
-  }
+  };
 
   const value: AuthContextType = {
-    ...state,
+    user: session?.user || null,
+    session,
+    loading,
+    isAuthenticated: !!session?.user,
     signIn,
-    signUp,
     signOut,
-    signInWithGoogle,
-    signInWithFacebook,
-    resetPassword,
-  }
+    refreshSession,
+    updateUser,
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context
+  return context;
 }

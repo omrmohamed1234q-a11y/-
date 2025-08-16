@@ -2,11 +2,258 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { insertUserSchema, insertProductSchema, insertPrintJobSchema, insertOrderSchema, insertCartItemSchema } from "@shared/schema";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Since we're using Supabase for data persistence, most CRUD operations
-  // will be handled directly from the frontend. These routes can be used
-  // for server-side operations that require additional processing.
+  // Setup Replit Auth
+  await setupAuth(app);
+
+  // Authentication routes
+  
+  // Replit Auth user info
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = {
+        id: req.user.claims.sub,
+        email: req.user.claims.email,
+        fullName: req.user.claims.first_name && req.user.claims.last_name 
+          ? `${req.user.claims.first_name} ${req.user.claims.last_name}`
+          : req.user.claims.first_name || 'مستخدم عزيز',
+        firstName: req.user.claims.first_name,
+        lastName: req.user.claims.last_name,
+        profileImageUrl: req.user.claims.profile_image_url,
+        provider: 'replit'
+      };
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Supabase authentication routes
+  app.post('/api/auth/supabase/login', async (req, res) => {
+    try {
+      const { email, password, rememberMe } = req.body;
+      
+      // TODO: Implement actual Supabase authentication
+      // For now, return a mock response
+      console.log("Supabase login attempt:", { email, rememberMe });
+      
+      res.json({ 
+        success: true, 
+        message: "تم تسجيل الدخول بنجاح",
+        user: { 
+          id: `user_${Date.now()}`,
+          email, 
+          fullName: "مستخدم عزيز",
+          provider: 'supabase',
+          isPremium: false
+        },
+        token: `sb_token_${Date.now()}`
+      });
+    } catch (error) {
+      console.error("Supabase login error:", error);
+      res.status(400).json({ message: "فشل في تسجيل الدخول" });
+    }
+  });
+
+  app.post('/api/auth/supabase/signup', async (req, res) => {
+    try {
+      const { email, password, fullName, agreeToTerms } = req.body;
+      
+      if (!agreeToTerms) {
+        return res.status(400).json({ message: "يجب الموافقة على الشروط والأحكام" });
+      }
+      
+      // TODO: Implement actual Supabase user registration
+      console.log("Supabase signup attempt:", { email, fullName });
+      
+      res.json({ 
+        success: true, 
+        message: "تم إنشاء الحساب بنجاح",
+        user: { 
+          id: `user_${Date.now()}`,
+          email, 
+          fullName,
+          provider: 'supabase',
+          isPremium: false
+        },
+        token: `sb_token_${Date.now()}`
+      });
+    } catch (error) {
+      console.error("Supabase signup error:", error);
+      res.status(400).json({ message: "فشل في إنشاء الحساب" });
+    }
+  });
+
+  app.post('/api/auth/supabase/forgot-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "البريد الإلكتروني مطلوب" 
+        });
+      }
+
+      // TODO: Implement actual Supabase password reset
+      console.log("Password reset requested for:", email);
+      
+      // Simulate email sending delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      res.json({ 
+        success: true, 
+        message: "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني"
+      });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "فشل في إرسال رابط إعادة التعيين" 
+      });
+    }
+  });
+
+  // Google and Facebook OAuth routes for mobile
+  app.post('/api/auth/google', async (req, res) => {
+    try {
+      const { idToken, accessToken } = req.body;
+      
+      // TODO: Verify Google tokens and extract user info
+      console.log("Google OAuth attempt");
+      
+      res.json({ 
+        success: true, 
+        message: "تم تسجيل الدخول بجوجل بنجاح",
+        user: { 
+          id: `google_${Date.now()}`,
+          email: "user@gmail.com", 
+          fullName: "مستخدم جوجل",
+          provider: 'google',
+          profileImageUrl: "https://lh3.googleusercontent.com/default"
+        },
+        token: `google_token_${Date.now()}`
+      });
+    } catch (error) {
+      console.error("Google OAuth error:", error);
+      res.status(400).json({ message: "فشل في تسجيل الدخول بجوجل" });
+    }
+  });
+
+  app.post('/api/auth/facebook', async (req, res) => {
+    try {
+      const { accessToken } = req.body;
+      
+      // TODO: Verify Facebook token and extract user info
+      console.log("Facebook OAuth attempt");
+      
+      res.json({ 
+        success: true, 
+        message: "تم تسجيل الدخول بفيسبوك بنجاح",
+        user: { 
+          id: `facebook_${Date.now()}`,
+          email: "user@facebook.com", 
+          fullName: "مستخدم فيسبوك",
+          provider: 'facebook',
+          profileImageUrl: "https://graph.facebook.com/default/picture"
+        },
+        token: `facebook_token_${Date.now()}`
+      });
+    } catch (error) {
+      console.error("Facebook OAuth error:", error);
+      res.status(400).json({ message: "فشل في تسجيل الدخول بفيسبوك" });
+    }
+  });
+
+  // Protected route example
+  app.get("/api/protected", isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    res.json({ 
+      message: "هذا محتوى محمي", 
+      userId: userId,
+      user: {
+        id: req.user.claims.sub,
+        email: req.user.claims.email,
+        fullName: req.user.claims.first_name && req.user.claims.last_name 
+          ? `${req.user.claims.first_name} ${req.user.claims.last_name}`
+          : req.user.claims.first_name || 'مستخدم عزيز',
+        provider: 'replit'
+      }
+    });
+  });
+
+  app.post('/api/auth/supabase/forgot-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      // TODO: Implement actual password reset
+      console.log("Password reset request for:", email);
+      
+      res.json({ 
+        success: true, 
+        message: "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني" 
+      });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      res.status(400).json({ message: "فشل في إرسال رابط إعادة التعيين" });
+    }
+  });
+
+  // Social authentication routes
+  app.post('/api/auth/google', async (req, res) => {
+    try {
+      const { token } = req.body;
+      
+      // TODO: Implement actual Google token verification
+      console.log("Google auth attempt");
+      
+      res.json({ 
+        success: true, 
+        message: "تم تسجيل الدخول بنجاح باستخدام Google",
+        user: { 
+          id: `google_user_${Date.now()}`,
+          email: "user@gmail.com",
+          fullName: "مستخدم Google",
+          provider: 'google',
+          profileImageUrl: "https://via.placeholder.com/150",
+          isPremium: false
+        },
+        token: `google_token_${Date.now()}`
+      });
+    } catch (error) {
+      console.error("Google auth error:", error);
+      res.status(400).json({ message: "فشل في تسجيل الدخول باستخدام Google" });
+    }
+  });
+
+  app.post('/api/auth/facebook', async (req, res) => {
+    try {
+      const { token } = req.body;
+      
+      // TODO: Implement actual Facebook token verification
+      console.log("Facebook auth attempt");
+      
+      res.json({ 
+        success: true, 
+        message: "تم تسجيل الدخول بنجاح باستخدام Facebook",
+        user: { 
+          id: `fb_user_${Date.now()}`,
+          email: "user@facebook.com",
+          fullName: "مستخدم Facebook",
+          provider: 'facebook',
+          profileImageUrl: "https://via.placeholder.com/150",
+          isPremium: false
+        },
+        token: `fb_token_${Date.now()}`
+      });
+    } catch (error) {
+      console.error("Facebook auth error:", error);
+      res.status(400).json({ message: "فشل في تسجيل الدخول باستخدام Facebook" });
+    }
+  });
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {

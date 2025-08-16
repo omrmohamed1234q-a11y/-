@@ -26,6 +26,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | null>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User>;
+  upsertUser(user: { id: string; email?: string; firstName?: string; lastName?: string; profileImageUrl?: string }): Promise<User>;
 
   // Product operations
   getProducts(filters?: {
@@ -106,6 +107,33 @@ export class SupabaseStorage implements IStorage {
 
     if (error || !data) {
       throw new Error(`Failed to update user: ${error?.message}`);
+    }
+
+    return data as User;
+  }
+
+  async upsertUser(userData: { id: string; email?: string; firstName?: string; lastName?: string; profileImageUrl?: string }): Promise<User> {
+    // Map Replit Auth data to our user schema
+    const userRecord = {
+      id: userData.id,
+      email: userData.email || '',
+      username: userData.email?.split('@')[0] || `user_${userData.id}`,
+      full_name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email?.split('@')[0] || 'مستخدم',
+      first_name: userData.firstName || null,
+      last_name: userData.lastName || null,
+      profile_image_url: userData.profileImageUrl || null,
+    };
+
+    const { data, error } = await supabase
+      .from('users')
+      .upsert(userRecord, {
+        onConflict: 'id'
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Failed to upsert user: ${error?.message}`);
     }
 
     return data as User;
