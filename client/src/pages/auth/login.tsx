@@ -115,6 +115,14 @@ export default function Login() {
           </CardHeader>
           
           <CardContent className="space-y-6">
+            {/* Admin Credentials Notice */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+              <div className="text-blue-800 font-semibold mb-2">🔑 بيانات تسجيل الدخول الإداري</div>
+              <div className="text-sm text-blue-600">
+                البيانات التالية معبأة مسبقاً للوصول إلى لوحة الإدارة
+              </div>
+            </div>
+
             {/* Form Fields */}
             <div className="space-y-4">
               <div>
@@ -151,7 +159,7 @@ export default function Login() {
             {/* Login Button */}
             <Button 
               onClick={handleLogin}
-              className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-3 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200"
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200"
               disabled={loading}
               data-testid="button-login"
             >
@@ -161,7 +169,7 @@ export default function Login() {
                   <span>جاري تسجيل الدخول...</span>
                 </div>
               ) : (
-                'تسجيل الدخول'
+                '🔑 دخول لوحة الإدارة'
               )}
             </Button>
 
