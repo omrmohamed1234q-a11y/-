@@ -62,7 +62,7 @@ export default function Landing() {
           // Email confirmation required
           toast({
             title: "تم إنشاء الحساب بنجاح",
-            description: "تم إرسال رابط التأكيد إلى بريدك الإلكتروني",
+            description: "ملاحظة: إرسال البريد الإلكتروني غير مُفعل حالياً. يمكنك تسجيل الدخول مباشرة.",
           })
         } else {
           // Immediate login (if email confirmation is disabled)
@@ -88,17 +88,15 @@ export default function Landing() {
     try {
       setLoading(true)
       
-      const { supabase } = await import('@/lib/supabase')
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`
-        }
+      // Show temporary message since OAuth providers need to be configured
+      toast({
+        title: `تسجيل الدخول بـ ${provider === 'google' ? 'Google' : 'Facebook'}`,
+        description: "يتطلب هذا إعداد موفر الهوية في Supabase أولاً",
+        variant: "destructive",
       })
       
-      if (error) throw error
+      setLoading(false)
       
-      // OAuth redirect will happen automatically
     } catch (error) {
       toast({
         title: "خطأ في تسجيل الدخول",
@@ -206,26 +204,26 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Social Login Options */}
+            {/* Social Login Options - Temporarily Disabled */}
             <div className="space-y-3">
               <Button
                 variant="outline"
                 onClick={() => handleSocialLogin('google')}
-                className="w-full h-12 text-right bg-white border-2 border-gray-300 hover:bg-gray-50 transition-all duration-200 text-gray-700"
-                disabled={loading}
+                className="w-full h-12 text-right bg-gray-100 border-2 border-gray-300 text-gray-500 cursor-not-allowed"
+                disabled={true}
               >
                 <span className="mr-3 text-xl font-bold text-blue-600">G</span>
-                تسجيل الدخول بـ Google
+                تسجيل الدخول بـ Google (قيد الإعداد)
               </Button>
 
               <Button
                 variant="outline"
                 onClick={() => handleSocialLogin('facebook')}
-                className="w-full h-12 text-right bg-gradient-to-r from-blue-600 to-blue-700 text-white border-none hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
-                disabled={loading}
+                className="w-full h-12 text-right bg-gray-100 border-2 border-gray-300 text-gray-500 cursor-not-allowed"
+                disabled={true}
               >
                 <span className="mr-3 text-xl">📘</span>
-                تسجيل الدخول بـ Facebook
+                تسجيل الدخول بـ Facebook (قيد الإعداد)
               </Button>
             </div>
 
