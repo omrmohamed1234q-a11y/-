@@ -2,7 +2,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
-import { Trophy, Target, Crown, Gift, PrinterIcon, ShoppingBag } from "lucide-react";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -67,48 +66,6 @@ export default function Home() {
                 <CardContent className="p-6 text-center">
                   <div className="text-4xl mb-3">🛒</div>
                   <div className="text-lg font-semibold">المتجر</div>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
-        </div>
-
-        {/* Gamification Section */}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">🎮 التحدي والمنافسة</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Link href="/challenges">
-              <Card className="bg-gradient-to-r from-orange-400 to-red-500 text-white cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">🎯</div>
-                  <div className="text-lg font-semibold">التحديات</div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/achievements">
-              <Card className="bg-gradient-to-r from-purple-400 to-purple-600 text-white cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">🏆</div>
-                  <div className="text-lg font-semibold">الإنجازات</div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/leaderboard">
-              <Card className="bg-gradient-to-r from-indigo-400 to-indigo-600 text-white cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">👑</div>
-                  <div className="text-lg font-semibold">المتصدرين</div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/rewards">
-              <Card className="bg-gradient-to-r from-emerald-400 to-emerald-600 text-white cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">🎁</div>
-                  <div className="text-lg font-semibold">الجوائز</div>
                 </CardContent>
               </Card>
             </Link>
