@@ -205,6 +205,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mock user endpoint for development
+  app.get('/api/auth/user', async (req: any, res) => {
+    try {
+      // For development, return a mock user
+      const mockUser = {
+        id: "user123",
+        email: "user@example.com",
+        username: "testuser",
+        fullName: "مستخدم تجريبي",
+        firstName: "مستخدم",
+        lastName: "تجريبي",
+        phone: "+966501234567",
+        isVip: false,
+        profileImageUrl: null,
+        bountyPoints: 1250,
+        level: 5,
+        experience: 2750,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      res.json(mockUser);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
   // Simple auth check endpoint for debugging
   app.get("/api/auth/status", async (req, res) => {
     res.json({ 
