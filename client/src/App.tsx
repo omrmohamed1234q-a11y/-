@@ -14,6 +14,9 @@ import Print from "@/pages/print";
 import Store from "@/pages/store";
 import Rewards from "@/pages/rewards";
 import Profile from "@/pages/profile";
+import Achievements from "@/pages/achievements";
+import Challenges from "@/pages/challenges";
+import Leaderboard from "@/pages/leaderboard";
 
 function Router() {
   const { user, loading } = useAuth();
@@ -61,6 +64,9 @@ function Router() {
       <Route path="/store" component={Store} />
       <Route path="/rewards" component={Rewards} />
       <Route path="/profile" component={Profile} />
+      <Route path="/achievements" component={Achievements} />
+      <Route path="/challenges" component={Challenges} />
+      <Route path="/leaderboard" component={Leaderboard} />
       <Route component={NotFound} />
     </Switch>
   );
