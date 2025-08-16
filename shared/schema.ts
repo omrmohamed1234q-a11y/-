@@ -154,6 +154,88 @@ export const templates = pgTable("templates", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Teacher subscription plans
+export const teacherPlans = pgTable("teacher_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  nameEn: text("name_en"),
+  description: text("description").notNull(),
+  descriptionEn: text("description_en"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  duration: integer("duration").notNull(), // Duration in days
+  features: text("features").array(),
+  featuresEn: text("features_en").array(),
+  maxStudents: integer("max_students").default(30),
+  maxMaterials: integer("max_materials").default(100),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Teacher subscriptions
+export const teacherSubscriptions = pgTable("teacher_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teacherId: varchar("teacher_id").notNull().references(() => users.id),
+  planId: varchar("plan_id").notNull().references(() => teacherPlans.id),
+  status: text("status").notNull().default("active"), // active, expired, cancelled
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date").notNull(),
+  autoRenew: boolean("auto_renew").default(true),
+  studentsCount: integer("students_count").default(0),
+  materialsCount: integer("materials_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Teacher materials
+export const teacherMaterials = pgTable("teacher_materials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teacherId: varchar("teacher_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  subject: text("subject").notNull(),
+  grade: text("grade").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size"),
+  fileType: text("file_type").notNull(),
+  isPublic: boolean("is_public").default(false),
+  downloadCount: integer("download_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Student subscriptions to teachers
+export const studentSubscriptions = pgTable("student_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentId: varchar("student_id").notNull().references(() => users.id),
+  teacherId: varchar("teacher_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("active"), // active, expired, cancelled
+  accessCode: text("access_code").notNull(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Chatbot conversations
+export const chatConversations = pgTable("chat_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  sessionId: text("session_id").notNull(),
+  messages: jsonb("messages").notNull(), // Array of {role, content, timestamp}
+  status: text("status").default("active"), // active, resolved, escalated
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Order tracking for animations
+export const orderTracking = pgTable("order_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  status: text("status").notNull(), // processing, printing, shipped, delivered
+  message: text("message"),
+  messageEn: text("message_en"),
+  estimatedTime: timestamp("estimated_time"),
+  actualTime: timestamp("actual_time"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -192,6 +274,37 @@ export const insertTemplateSchema = createInsertSchema(templates).omit({
   createdAt: true,
 });
 
+export const insertTeacherPlanSchema = createInsertSchema(teacherPlans).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTeacherSubscriptionSchema = createInsertSchema(teacherSubscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTeacherMaterialSchema = createInsertSchema(teacherMaterials).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertStudentSubscriptionSchema = createInsertSchema(studentSubscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOrderTrackingSchema = createInsertSchema(orderTracking).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -210,3 +323,17 @@ export type Template = typeof templates.$inferSelect;
 export type Challenge = typeof challenges.$inferSelect;
 export type UserChallenge = typeof userChallenges.$inferSelect;
 export type RewardRedemption = typeof rewardRedemptions.$inferSelect;
+
+// New types
+export type InsertTeacherPlan = z.infer<typeof insertTeacherPlanSchema>;
+export type TeacherPlan = typeof teacherPlans.$inferSelect;
+export type InsertTeacherSubscription = z.infer<typeof insertTeacherSubscriptionSchema>;
+export type TeacherSubscription = typeof teacherSubscriptions.$inferSelect;
+export type InsertTeacherMaterial = z.infer<typeof insertTeacherMaterialSchema>;
+export type TeacherMaterial = typeof teacherMaterials.$inferSelect;
+export type InsertStudentSubscription = z.infer<typeof insertStudentSubscriptionSchema>;
+export type StudentSubscription = typeof studentSubscriptions.$inferSelect;
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type InsertOrderTracking = z.infer<typeof insertOrderTrackingSchema>;
+export type OrderTracking = typeof orderTracking.$inferSelect;

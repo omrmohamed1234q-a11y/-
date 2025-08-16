@@ -1,9 +1,17 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
-import { insertUserSchema, insertProductSchema, insertPrintJobSchema, insertOrderSchema, insertCartItemSchema } from "@shared/schema";
+import { 
+  insertUserSchema, insertProductSchema, insertPrintJobSchema, insertOrderSchema, 
+  insertCartItemSchema, insertTeacherPlanSchema, insertOrderTrackingSchema, 
+  insertChatConversationSchema, users, products, orders, teacherPlans, 
+  teacherSubscriptions, chatConversations, orderTracking
+} from "@shared/schema";
 import { createClient } from '@supabase/supabase-js';
 import { storage } from "./storage";
+import { db } from "./db";
+import { eq, desc, count } from "drizzle-orm";
+import { generateChatResponse } from "./openai";
 
 // Initialize Supabase client with service role key
 const supabase = createClient(
@@ -717,6 +725,249 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test endpoint
   app.get("/api/test", async (req, res) => {
     res.json({ message: "Hello from the backend!" });
+  });
+
+  // Admin Routes
+  app.get('/api/admin/stats', async (req, res) => {
+    try {
+      const [usersCount] = await db.select({ count: count() }).from(users);
+      const [productsCount] = await db.select({ count: count() }).from(products);
+      const [ordersCount] = await db.select({ count: count() }).from(orders);
+      
+      res.json({
+        users: usersCount.count,
+        products: productsCount.count,
+        orders: ordersCount.count,
+        revenue: 15420.50, // Mock data - calculate from orders
+        growth: 12.5
+      });
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+      res.status(500).json({ error: 'فشل في جلب الإحصائيات' });
+    }
+  });
+
+  app.get('/api/admin/products', async (req, res) => {
+    try {
+      const allProducts = await db.select().from(products).orderBy(desc(products.createdAt));
+      res.json(allProducts);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      res.status(500).json({ error: 'فشل في جلب المنتجات' });
+    }
+  });
+
+  app.post('/api/admin/products', async (req, res) => {
+    try {
+      const validatedData = insertProductSchema.parse(req.body);
+      const [newProduct] = await db.insert(products).values(validatedData).returning();
+      res.json(newProduct);
+    } catch (error) {
+      console.error('Error creating product:', error);
+      res.status(500).json({ error: 'فشل في إضافة المنتج' });
+    }
+  });
+
+  app.put('/api/admin/products/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertProductSchema.parse(req.body);
+      const [updatedProduct] = await db
+        .update(products)
+        .set(validatedData)
+        .where(eq(products.id, id))
+        .returning();
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error('Error updating product:', error);
+      res.status(500).json({ error: 'فشل في تحديث المنتج' });
+    }
+  });
+
+  app.delete('/api/admin/products/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(products).where(eq(products.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      res.status(500).json({ error: 'فشل في حذف المنتج' });
+    }
+  });
+
+  app.get('/api/admin/orders', async (req, res) => {
+    try {
+      const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
+      res.json(allOrders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      res.status(500).json({ error: 'فشل في جلب الطلبات' });
+    }
+  });
+
+  app.patch('/api/admin/orders/:id/status', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({ status })
+        .where(eq(orders.id, id))
+        .returning();
+
+      // Add tracking entry
+      await db.insert(orderTracking).values({
+        orderId: id,
+        status,
+        message: `تم تحديث حالة الطلب إلى: ${status}`,
+        messageEn: `Order status updated to: ${status}`,
+        actualTime: new Date()
+      });
+
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      res.status(500).json({ error: 'فشل في تحديث حالة الطلب' });
+    }
+  });
+
+  app.get('/api/admin/teacher-plans', async (req, res) => {
+    try {
+      const plans = await db.select().from(teacherPlans).orderBy(desc(teacherPlans.createdAt));
+      res.json(plans);
+    } catch (error) {
+      console.error('Error fetching teacher plans:', error);
+      res.status(500).json({ error: 'فشل في جلب خطط المعلمين' });
+    }
+  });
+
+  app.post('/api/admin/teacher-plans', async (req, res) => {
+    try {
+      const validatedData = insertTeacherPlanSchema.parse(req.body);
+      const [newPlan] = await db.insert(teacherPlans).values(validatedData).returning();
+      res.json(newPlan);
+    } catch (error) {
+      console.error('Error creating teacher plan:', error);
+      res.status(500).json({ error: 'فشل في إضافة خطة المعلم' });
+    }
+  });
+
+  app.get('/api/admin/teacher-subscriptions', async (req, res) => {
+    try {
+      const subscriptions = await db
+        .select({
+          id: teacherSubscriptions.id,
+          teacherName: users.fullName,
+          planName: teacherPlans.name,
+          status: teacherSubscriptions.status,
+          startDate: teacherSubscriptions.startDate,
+          endDate: teacherSubscriptions.endDate,
+          studentsCount: teacherSubscriptions.studentsCount,
+          materialsCount: teacherSubscriptions.materialsCount
+        })
+        .from(teacherSubscriptions)
+        .leftJoin(users, eq(teacherSubscriptions.teacherId, users.id))
+        .leftJoin(teacherPlans, eq(teacherSubscriptions.planId, teacherPlans.id))
+        .orderBy(desc(teacherSubscriptions.createdAt));
+      
+      res.json(subscriptions);
+    } catch (error) {
+      console.error('Error fetching teacher subscriptions:', error);
+      res.status(500).json({ error: 'فشل في جلب اشتراكات المعلمين' });
+    }
+  });
+
+  // Chatbot Route
+  app.post('/api/chat', async (req, res) => {
+    try {
+      const { message, sessionId, userId, messages } = req.body;
+      
+      if (!message || !sessionId) {
+        return res.status(400).json({ error: 'Message and session ID are required' });
+      }
+
+      // Generate AI response
+      const aiResponse = await generateChatResponse(message, messages);
+
+      // Save conversation
+      const conversationData = {
+        userId: userId || null,
+        sessionId,
+        messages: [
+          ...messages || [],
+          { role: 'user', content: message, timestamp: new Date().toISOString() },
+          { role: 'assistant', content: aiResponse, timestamp: new Date().toISOString() }
+        ]
+      };
+
+      await db.insert(chatConversations).values(conversationData);
+
+      res.json({ 
+        message: aiResponse,
+        reply: aiResponse,
+        sessionId 
+      });
+    } catch (error) {
+      console.error('Chat error:', error);
+      res.status(500).json({ 
+        error: 'حدث خطأ في النظام',
+        message: 'عذراً، حدث خطأ مؤقت. يرجى المحاولة مرة أخرى.' 
+      });
+    }
+  });
+
+  // Order Tracking Route
+  app.get('/api/orders/:id/tracking', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const trackingData = await db
+        .select()
+        .from(orderTracking)
+        .where(eq(orderTracking.orderId, id))
+        .orderBy(desc(orderTracking.createdAt));
+
+      // Mock tracking steps with completion status
+      const steps = [
+        { 
+          id: '1', 
+          status: 'processing', 
+          message: 'تم استلام طلبك وهو قيد المعالجة',
+          messageEn: 'Order received and processing',
+          completed: true
+        },
+        { 
+          id: '2', 
+          status: 'printing', 
+          message: 'جاري طباعة طلبك',
+          messageEn: 'Your order is being printed',
+          completed: trackingData.length > 1
+        },
+        { 
+          id: '3', 
+          status: 'shipped', 
+          message: 'تم شحن طلبك وهو في الطريق إليك',
+          messageEn: 'Order shipped and on the way',
+          completed: trackingData.length > 2
+        },
+        { 
+          id: '4', 
+          status: 'delivered', 
+          message: 'تم تسليم طلبك بنجاح',
+          messageEn: 'Order delivered successfully',
+          completed: trackingData.length > 3
+        }
+      ];
+
+      res.json({
+        steps,
+        estimatedDelivery: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString()
+      });
+    } catch (error) {
+      console.error('Error fetching order tracking:', error);
+      res.status(500).json({ error: 'فشل في جلب تتبع الطلب' });
+    }
   });
 
   const httpServer = createServer(app);
