@@ -1,4 +1,4 @@
-import { supabase } from "../client/src/lib/supabase";
+import { createClient } from '@supabase/supabase-js';
 import type { 
   User, 
   InsertUser, 
@@ -14,6 +14,12 @@ import type {
   Challenge,
   UserChallenge
 } from "@shared/schema";
+
+// Initialize Supabase client for server operations
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // Since we're using Supabase as our primary database, this storage interface
 // serves as a wrapper around Supabase operations. Most operations will be
@@ -57,6 +63,17 @@ export interface IStorage {
   getAvailableRewards(): Promise<Reward[]>;
   getUserChallenges(userId: string): Promise<UserChallenge[]>;
   updateChallengeProgress(userId: string, challengeId: string, progress: number): Promise<void>;
+
+  // Admin operations
+  getUserCount(): Promise<number>;
+  getProductCount(): Promise<number>;
+  getOrderCount(): Promise<number>;
+  getTotalPointsDistributed(): Promise<number>;
+  getAllUsers(): Promise<User[]>;
+  getAllProducts(): Promise<Product[]>;
+  getAllOrders(): Promise<Order[]>;
+  getAllCategories(): Promise<any[]>;
+  getAllBounties(): Promise<any[]>;
 }
 
 export class SupabaseStorage implements IStorage {
@@ -393,6 +410,138 @@ export class SupabaseStorage implements IStorage {
 
     if (error) {
       throw new Error(`Failed to update challenge progress: ${error.message}`);
+    }
+  }
+
+  // Admin operations
+  async getUserCount(): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      console.error('Error getting user count:', error);
+      return 0;
+    }
+  }
+
+  async getProductCount(): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      console.error('Error getting product count:', error);
+      return 0;
+    }
+  }
+
+  async getOrderCount(): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      console.error('Error getting order count:', error);
+      return 0;
+    }
+  }
+
+  async getTotalPointsDistributed(): Promise<number> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('bounty_points');
+      
+      if (error) throw error;
+      return data?.reduce((sum, user) => sum + (user.bounty_points || 0), 0) || 0;
+    } catch (error) {
+      console.error('Error getting total points:', error);
+      return 0;
+    }
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
+  }
+
+  async getAllProducts(): Promise<Product[]> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting all products:', error);
+      return [];
+    }
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting all orders:', error);
+      return [];
+    }
+  }
+
+  async getAllCategories(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting categories:', error);
+      return [];
+    }
+  }
+
+  async getAllBounties(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('bounties')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting bounties:', error);
+      return [];
     }
   }
 }

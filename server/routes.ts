@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { z } from "zod";
 import { insertUserSchema, insertProductSchema, insertPrintJobSchema, insertOrderSchema, insertCartItemSchema } from "@shared/schema";
 import { createClient } from '@supabase/supabase-js';
+import { storage } from "./storage";
 
 // Initialize Supabase client with service role key
 const supabase = createClient(
@@ -445,6 +446,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       error: "Internal server error",
       message: error.message || "An unexpected error occurred"
     });
+  });
+
+  // Admin Dashboard Routes
+  app.get("/api/admin/stats", async (req, res) => {
+    try {
+      const totalUsers = await storage.getUserCount();
+      const totalProducts = await storage.getProductCount();
+      const totalOrders = await storage.getOrderCount();
+      const totalPointsDistributed = await storage.getTotalPointsDistributed();
+
+      res.json({
+        totalUsers,
+        totalProducts,
+        totalOrders,
+        totalPointsDistributed
+      });
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get("/api/admin/products", async (req, res) => {
+    try {
+      const products = await storage.getAllProducts();
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  app.get("/api/admin/orders", async (req, res) => {
+    try {
+      const orders = await storage.getAllOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  app.get("/api/admin/categories", async (req, res) => {
+    try {
+      const categories = await storage.getAllCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      res.status(500).json({ message: "Failed to fetch categories" });
+    }
+  });
+
+  app.get("/api/admin/bounties", async (req, res) => {
+    try {
+      const bounties = await storage.getAllBounties();
+      res.json(bounties);
+    } catch (error) {
+      console.error("Error fetching bounties:", error);
+      res.status(500).json({ message: "Failed to fetch bounties" });
+    }
+  });
+
+  // Test endpoint
+  app.get("/api/test", async (req, res) => {
+    res.json({ message: "Hello from the backend!" });
   });
 
   const httpServer = createServer(app);

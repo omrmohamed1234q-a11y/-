@@ -1,4 +1,4 @@
-import { useAuth } from '@/hooks/use-auth-simple';
+import { useAuth } from '@/hooks/use-auth';
 import { Bell, ShoppingCart, User } from 'lucide-react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
