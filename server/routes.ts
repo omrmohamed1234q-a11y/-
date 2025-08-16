@@ -581,6 +581,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Temporary endpoint to make user admin (for development)
+  app.post("/api/admin/make-admin", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      // Update user role to admin in database
+      await storage.updateUser(userId, { role: 'admin' });
+      
+      res.json({ success: true, message: "User role updated to admin" });
+    } catch (error) {
+      console.error("Error making user admin:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
   app.get("/api/admin/orders", async (req, res) => {
     try {
       const orders = await storage.getAllOrders();
