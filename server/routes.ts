@@ -581,6 +581,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Management Endpoints
+  app.get("/api/admin/admin-users", async (req, res) => {
+    try {
+      const adminUsers = await storage.getAdminUsers();
+      res.json(adminUsers);
+    } catch (error) {
+      console.error("Error fetching admin users:", error);
+      res.status(500).json({ message: "Failed to fetch admin users" });
+    }
+  });
+
+  app.post("/api/admin/add-admin", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Find user by email and update role
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found with this email" });
+      }
+
+      await storage.updateUser(user.id, { role: 'admin' });
+      res.json({ success: true, message: "User promoted to admin" });
+    } catch (error) {
+      console.error("Error adding admin:", error);
+      res.status(500).json({ message: "Failed to add admin" });
+    }
+  });
+
+  app.post("/api/admin/remove-admin", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Don't allow removing the main admin
+      if (email === 'printformead1@gmail.com') {
+        return res.status(403).json({ message: "Cannot remove main admin" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found with this email" });
+      }
+
+      await storage.updateUser(user.id, { role: 'user' });
+      res.json({ success: true, message: "Admin role removed" });
+    } catch (error) {
+      console.error("Error removing admin:", error);
+      res.status(500).json({ message: "Failed to remove admin" });
+    }
+  });
+
   // Temporary endpoint to make user admin (for development)
   app.post("/api/admin/make-admin", async (req, res) => {
     try {

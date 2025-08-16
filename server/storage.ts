@@ -570,6 +570,23 @@ export class SupabaseStorage implements IStorage {
       return [];
     }
   }
+
+  // Admin management methods
+  async getAdminUsers(): Promise<User[]> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .or('role.eq.admin,email.eq.printformead1@gmail.com')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting admin users:', error);
+      return [];
+    }
+  }
 }
 
 export const storage = new SupabaseStorage();

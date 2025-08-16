@@ -23,8 +23,11 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check if user is admin
-  if (!user || user.role !== 'admin') {
+  // Check if user is admin (specific email or role-based)
+  const isMainAdmin = user?.email === 'printformead1@gmail.com';
+  const isAdmin = user?.role === 'admin' || isMainAdmin;
+  
+  if (!user || !isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -643,6 +646,197 @@ export default function AdminDashboard() {
     );
   };
 
+  // Admin Management Component (only for main admin)
+  const AdminManagement = () => {
+    const [newAdminEmail, setNewAdminEmail] = useState('');
+    const [adminUsers, setAdminUsers] = useState([]);
+
+    // Fetch admin users
+    useEffect(() => {
+      const fetchAdminUsers = async () => {
+        try {
+          const response = await apiRequest('/api/admin/admin-users');
+          setAdminUsers(response);
+        } catch (error) {
+          console.error('Error fetching admin users:', error);
+        }
+      };
+      fetchAdminUsers();
+    }, []);
+
+    const addAdminMutation = useMutation({
+      mutationFn: (email: string) => apiRequest('/api/admin/add-admin', {
+        method: 'POST',
+        body: JSON.stringify({ email })
+      }),
+      onSuccess: () => {
+        setNewAdminEmail('');
+        toast({ title: "تم إضافة المدير بنجاح" });
+        // Refresh admin users list
+        window.location.reload();
+      },
+      onError: (error: any) => {
+        toast({ 
+          title: "خطأ", 
+          description: error.message || "فشل في إضافة المدير",
+          variant: "destructive" 
+        });
+      }
+    });
+
+    const removeAdminMutation = useMutation({
+      mutationFn: (email: string) => apiRequest('/api/admin/remove-admin', {
+        method: 'POST',
+        body: JSON.stringify({ email })
+      }),
+      onSuccess: () => {
+        toast({ title: "تم إزالة المدير بنجاح" });
+        // Refresh admin users list
+        window.location.reload();
+      },
+      onError: (error: any) => {
+        toast({ 
+          title: "خطأ", 
+          description: error.message || "فشل في إزالة المدير",
+          variant: "destructive" 
+        });
+      }
+    });
+
+    return (
+      <div className="space-y-6">
+        {/* Add New Admin */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 space-x-reverse">
+              <Plus className="w-5 h-5" />
+              <span>إضافة مدير جديد</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label htmlFor="admin-email">البريد الإلكتروني للمدير</Label>
+                <Input
+                  id="admin-email"
+                  type="email"
+                  placeholder="example@domain.com"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  data-testid="input-admin-email"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={() => addAdminMutation.mutate(newAdminEmail)}
+                  disabled={!newAdminEmail || addAdminMutation.isPending}
+                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                  data-testid="button-add-admin"
+                >
+                  <Plus className="w-4 h-4 ml-2" />
+                  إضافة مدير
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Current Admins List */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 space-x-reverse">
+              <Settings className="w-5 h-5" />
+              <span>المديرين الحاليين</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {adminUsers.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p>لا يوجد مديرين مضافين بعد</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {adminUsers.map((admin: any, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 border rounded-lg bg-gray-50"
+                    data-testid={`admin-item-${index}`}
+                  >
+                    <div className="flex items-center space-x-3 space-x-reverse">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Users className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{admin.email}</p>
+                        <p className="text-sm text-gray-500">
+                          {admin.firstName && admin.lastName ? 
+                            `${admin.firstName} ${admin.lastName}` : 
+                            'لم يتم تعيين الاسم بعد'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                        مدير
+                      </Badge>
+                      {admin.email !== 'printformead1@gmail.com' && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removeAdminMutation.mutate(admin.email)}
+                          disabled={removeAdminMutation.isPending}
+                          data-testid={`button-remove-admin-${index}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Admin Privileges Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 space-x-reverse">
+              <Eye className="w-5 h-5" />
+              <span>صلاحيات المديرين</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">✓</Badge>
+                <span className="text-sm">إدارة المنتجات (إضافة، تحديث، حذف)</span>
+              </div>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">✓</Badge>
+                <span className="text-sm">إدارة العروض والمكافآت</span>
+              </div>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">✓</Badge>
+                <span className="text-sm">عرض الإحصائيات والتقارير</span>
+              </div>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">✓</Badge>
+                <span className="text-sm">إدارة الطلبات والمستخدمين</span>
+              </div>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">×</Badge>
+                <span className="text-sm">إضافة أو إزالة مديرين آخرين (محصور على المدير الرئيسي)</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100" dir="rtl">
       {/* Header */}
@@ -731,13 +925,16 @@ export default function AdminDashboard() {
 
         {/* Management Tabs */}
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className={`grid w-full ${isMainAdmin ? 'grid-cols-7' : 'grid-cols-6'}`}>
             <TabsTrigger value="products">المنتجات</TabsTrigger>
             <TabsTrigger value="offers">العروض</TabsTrigger>
             <TabsTrigger value="awards">المكافآت</TabsTrigger>
             <TabsTrigger value="categories">الفئات</TabsTrigger>
             <TabsTrigger value="orders">الطلبات</TabsTrigger>
             <TabsTrigger value="users">المستخدمين</TabsTrigger>
+            {isMainAdmin && (
+              <TabsTrigger value="admin-management">إدارة المديرين</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="products">
@@ -784,6 +981,12 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {isMainAdmin && (
+            <TabsContent value="admin-management">
+              <AdminManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
