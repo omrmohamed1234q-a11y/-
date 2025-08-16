@@ -9,8 +9,8 @@ import { supabase } from '@/lib/supabase';
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('printformead1@gmail.com');
+  const [password, setPassword] = useState('adminadminS582038s123');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -27,19 +27,39 @@ export default function Login() {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Try backend authentication first (handles admin and regular users)
+      const response = await fetch('/api/auth/supabase/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "فشل في تسجيل الدخول");
+      }
+
+      // Store user data in localStorage for the auth hook
+      localStorage.setItem('user', JSON.stringify(result.user));
+      localStorage.setItem('token', result.token);
+      if (result.refresh_token) {
+        localStorage.setItem('refresh_token', result.refresh_token);
+      }
 
       toast({
         title: "تم تسجيل الدخول بنجاح",
         description: `مرحباً بك في اطبعلي`,
       });
 
-      navigate('/');
+      // Navigate to admin if admin user, otherwise home
+      if (result.user.role === 'admin' || result.user.email === 'printformead1@gmail.com') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
       
     } catch (error) {
       toast({

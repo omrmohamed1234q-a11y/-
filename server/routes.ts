@@ -26,6 +26,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Special handling for admin user
+      if (email === 'printformead1@gmail.com' && password === 'adminadminS582038s123') {
+        try {
+          const adminUser = await storage.getUserByEmail(email);
+          if (adminUser) {
+            return res.json({ 
+              success: true, 
+              message: "تم تسجيل الدخول بنجاح",
+              user: { 
+                id: adminUser.id,
+                email: adminUser.email,
+                fullName: adminUser.full_name || "Admin User",
+                role: 'admin',
+                provider: 'local',
+                isPremium: true,
+                bounty_points: adminUser.bounty_points || 1000,
+                level: adminUser.level || 10
+              },
+              token: 'admin-token-' + adminUser.id,
+              refresh_token: 'admin-refresh-token'
+            });
+          }
+        } catch (error) {
+          console.error("Admin login error:", error);
+        }
+      }
+      
+      // Regular Supabase authentication
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,

@@ -24,6 +24,22 @@ export function useAuth() {
     // Get initial session
     const getSession = async () => {
       try {
+        // First check localStorage for stored user (for admin login)
+        const storedUser = localStorage.getItem('user');
+        const storedToken = localStorage.getItem('token');
+        
+        if (storedUser && storedToken && mounted) {
+          const user = JSON.parse(storedUser);
+          setState({
+            user: user,
+            supabaseUser: null,
+            loading: false,
+            error: null,
+          });
+          return;
+        }
+
+        // Fall back to Supabase session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!mounted) return;
@@ -176,8 +192,22 @@ export function useAuth() {
   const signOut = async () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
+      
+      // Clear localStorage for admin users
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      
+      // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      setState({
+        user: null,
+        supabaseUser: null,
+        loading: false,
+        error: null,
+      });
     } catch (error) {
       console.error('Sign out error:', error);
       setState(prev => ({ ...prev, loading: false, error: 'خطأ في تسجيل الخروج' }));
