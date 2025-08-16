@@ -238,6 +238,19 @@ export default function Landing() {
               </button>
             </div>
 
+            {/* Admin Access */}
+            <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl text-center">
+              <p className="font-semibold mb-3">
+                🔑 دخول لوحة الإدارة
+              </p>
+              <Button 
+                onClick={() => window.location.href = '/auth/login'}
+                className="bg-white text-green-600 hover:bg-gray-100 font-semibold py-2 px-6 rounded-lg"
+              >
+                دخول لوحة الإدارة
+              </Button>
+            </div>
+
             {/* Welcome Message */}
             <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-xl text-center">
               <p className="font-semibold">
