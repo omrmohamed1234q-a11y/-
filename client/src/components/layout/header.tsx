@@ -1,4 +1,4 @@
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth-simple';
 import { Bell, ShoppingCart, User } from 'lucide-react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,7 @@ export default function Header() {
                 {user ? (
                   <div className="w-8 h-8 bg-accent/10 rounded-full flex items-center justify-center">
                     <span className="text-sm font-medium text-accent">
-                      {user.full_name.charAt(0)}
+                      {user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'U'}
                     </span>
                   </div>
                 ) : (

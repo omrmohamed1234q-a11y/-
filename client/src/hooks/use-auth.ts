@@ -35,7 +35,8 @@ export function useAuth() {
             .single();
 
           if (profileError && profileError.code !== 'PGRST116') {
-            throw profileError;
+            console.error('Profile fetch error:', profileError);
+            // Continue with basic user data from session if profile doesn't exist
           }
 
           setState({
