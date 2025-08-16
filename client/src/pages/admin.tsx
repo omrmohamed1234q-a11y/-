@@ -19,15 +19,41 @@ import {
 } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check if user is admin (specific email or role-based)
-  const isMainAdmin = user?.email === 'printformead1@gmail.com';
-  const isAdmin = user?.role === 'admin' || isMainAdmin;
+  // Check localStorage for admin user if auth hook hasn't loaded yet
+  const [localUser, setLocalUser] = useState(null);
   
-  if (!user || !isAdmin) {
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setLocalUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Failed to parse stored user:', error);
+      }
+    }
+  }, []);
+
+  const currentUser = user || localUser;
+  const isMainAdmin = currentUser?.email === 'printformead1@gmail.com';
+  const isAdmin = currentUser?.role === 'admin' || isMainAdmin;
+  
+  // Show loading if still checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري تحميل لوحة الإدارة...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!currentUser || !isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -38,8 +64,8 @@ export default function AdminDashboard() {
             <p className="text-gray-600 mb-4">
               ليس لديك صلاحية للوصول إلى لوحة الإدارة
             </p>
-            <Button onClick={() => window.location.href = '/'}>
-              العودة للرئيسية
+            <Button onClick={() => window.location.href = '/auth/login'}>
+              تسجيل الدخول كمدير
             </Button>
           </CardContent>
         </Card>

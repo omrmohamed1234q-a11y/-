@@ -54,12 +54,14 @@ export default function Login() {
         description: `مرحباً بك في اطبعلي`,
       });
 
-      // Navigate to admin if admin user, otherwise home
-      if (result.user.role === 'admin' || result.user.email === 'printformead1@gmail.com') {
-        navigate('/admin');
-      } else {
-        navigate('/');
-      }
+      // Force page reload to ensure auth state is updated
+      setTimeout(() => {
+        if (result.user.role === 'admin' || result.user.email === 'printformead1@gmail.com') {
+          window.location.href = '/admin';
+        } else {
+          window.location.href = '/';
+        }
+      }, 1000);
       
     } catch (error) {
       toast({

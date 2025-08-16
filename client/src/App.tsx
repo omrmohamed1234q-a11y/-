@@ -56,6 +56,7 @@ function Router() {
         <Route path="/auth/login" component={Login} />
         <Route path="/auth/signup" component={Signup} />
         <Route path="/auth/callback" component={AuthCallback} />
+        <Route path="/admin" component={AdminDashboard} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>
