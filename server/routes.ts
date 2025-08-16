@@ -478,6 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Products Management
   app.get("/api/admin/products", async (req, res) => {
     try {
       const products = await storage.getAllProducts();
@@ -485,6 +486,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching products:", error);
       res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  app.post("/api/admin/products", async (req, res) => {
+    try {
+      const product = await storage.createProduct(req.body);
+      res.json(product);
+    } catch (error) {
+      console.error("Error creating product:", error);
+      res.status(500).json({ message: "Failed to create product" });
+    }
+  });
+
+  app.put("/api/admin/products/:id", async (req, res) => {
+    try {
+      const product = await storage.updateProduct(req.params.id, req.body);
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+
+  app.delete("/api/admin/products/:id", async (req, res) => {
+    try {
+      await storage.deleteProduct(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
+  // Offers Management
+  app.get("/api/admin/offers", async (req, res) => {
+    try {
+      const offers = await storage.getAllOffers();
+      res.json(offers);
+    } catch (error) {
+      console.error("Error fetching offers:", error);
+      res.status(500).json({ message: "Failed to fetch offers" });
+    }
+  });
+
+  app.post("/api/admin/offers", async (req, res) => {
+    try {
+      const offer = await storage.createOffer(req.body);
+      res.json(offer);
+    } catch (error) {
+      console.error("Error creating offer:", error);
+      res.status(500).json({ message: "Failed to create offer" });
+    }
+  });
+
+  app.put("/api/admin/offers/:id", async (req, res) => {
+    try {
+      const offer = await storage.updateOffer(req.params.id, req.body);
+      res.json(offer);
+    } catch (error) {
+      console.error("Error updating offer:", error);
+      res.status(500).json({ message: "Failed to update offer" });
+    }
+  });
+
+  // Awards Management
+  app.get("/api/admin/awards", async (req, res) => {
+    try {
+      const awards = await storage.getAllAwards();
+      res.json(awards);
+    } catch (error) {
+      console.error("Error fetching awards:", error);
+      res.status(500).json({ message: "Failed to fetch awards" });
+    }
+  });
+
+  app.post("/api/admin/awards", async (req, res) => {
+    try {
+      const award = await storage.createAward(req.body);
+      res.json(award);
+    } catch (error) {
+      console.error("Error creating award:", error);
+      res.status(500).json({ message: "Failed to create award" });
+    }
+  });
+
+  app.put("/api/admin/awards/:id", async (req, res) => {
+    try {
+      const award = await storage.updateAward(req.params.id, req.body);
+      res.json(award);
+    } catch (error) {
+      console.error("Error updating award:", error);
+      res.status(500).json({ message: "Failed to update award" });
     }
   });
 

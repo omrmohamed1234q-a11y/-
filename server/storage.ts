@@ -65,6 +65,32 @@ export interface IStorage {
   updateChallengeProgress(userId: string, challengeId: string, progress: number): Promise<void>;
 
   // Admin operations
+  getAllUsers(): Promise<User[]>;
+  getAllProducts(): Promise<Product[]>;
+  createProduct(product: any): Promise<Product>;
+  updateProduct(id: string, updates: any): Promise<Product>;
+  deleteProduct(id: string): Promise<void>;
+  getAllOffers(): Promise<any[]>;
+  createOffer(offer: any): Promise<any>;
+  updateOffer(id: string, updates: any): Promise<any>;
+  getAllAwards(): Promise<any[]>;
+  createAward(award: any): Promise<any>;
+  updateAward(id: string, updates: any): Promise<any>;
+  getAllOrders(): Promise<Order[]>;
+  getAllCategories(): Promise<any[]>;
+  getAllBounties(): Promise<Reward[]>;
+  getAdminStats(): Promise<{
+    totalUsers: number;
+    totalProducts: number;
+    totalOrders: number;
+    totalPointsDistributed: number;
+  }>;
+  getUserCount(): Promise<number>;
+  getProductCount(): Promise<number>;
+  getOrderCount(): Promise<number>;
+  getTotalPointsDistributed(): Promise<number>;
+
+  // Admin operations
   getUserCount(): Promise<number>;
   getProductCount(): Promise<number>;
   getOrderCount(): Promise<number>;
