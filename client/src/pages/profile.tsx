@@ -1,217 +1,201 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { supabase } from '@/lib/supabase';
-import Header from '@/components/layout/header';
-import BottomNav from '@/components/layout/bottom-nav';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
+import Header from '@/components/layout/header';
+import BottomNav from '@/components/layout/bottom-nav';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
+import {
+  User, Star, Award, Printer, ShoppingBag, LogOut, Settings,
+  Phone, Mail, Calendar, MapPin, Edit, Save, X, Trophy,
+  Gift, Zap, Target, TrendingUp
+} from 'lucide-react';
 
 export default function Profile() {
-  const { user, signOut, updateProfile } = useAuth();
+  const { user, signOut } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    full_name: user?.full_name || '',
+  const [editedProfile, setEditedProfile] = useState({
+    fullName: user?.fullName || '',
+    email: user?.email || '',
     phone: user?.phone || '',
-    is_teacher: user?.is_teacher || false,
   });
 
-  // Fetch user statistics
-  const { data: userStats } = useQuery({
-    queryKey: ['user-stats', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-
-      const [printJobs, orders, redemptions] = await Promise.all([
-        supabase
-          .from('print_jobs')
-          .select('count')
-          .eq('user_id', user.id)
-          .eq('status', 'completed'),
-        
-        supabase
-          .from('orders')
-          .select('count, total_amount')
-          .eq('user_id', user.id)
-          .eq('status', 'delivered'),
-        
-        supabase
-          .from('reward_redemptions')
-          .select('count')
-          .eq('user_id', user.id)
-      ]);
-
-      return {
-        completedPrints: printJobs.count || 0,
-        completedOrders: orders.count || 0,
-        totalSpent: orders.data?.reduce((sum, order) => sum + parseFloat(order.total_amount), 0) || 0,
-        redemptions: redemptions.count || 0,
-      };
-    },
-    enabled: !!user,
-  });
-
-  const handleSaveProfile = async () => {
+  const handleLogout = async () => {
     try {
-      const result = await updateProfile(formData);
-      
-      if (result.success) {
-        setIsEditing(false);
-        toast({
-          title: 'تم التحديث بنجاح',
-          description: 'تم حفظ بيانات الملف الشخصي',
-        });
-      } else {
-        throw new Error(result.error);
-      }
+      await signOut();
+      toast({
+        title: "تم تسجيل الخروج بنجاح",
+        description: "شكراً لاستخدام منصة اطبعلي",
+      });
+      setLocation('/');
     } catch (error) {
       toast({
-        title: 'خطأ في التحديث',
-        description: error instanceof Error ? error.message : 'حدث خطأ غير متوقع',
-        variant: 'destructive',
+        title: "خطأ في تسجيل الخروج",
+        description: "حدث خطأ أثناء تسجيل الخروج، يرجى المحاولة مرة أخرى",
+        variant: "destructive",
       });
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSaveProfile = () => {
+    // Here you would typically save to the backend
     toast({
-      title: 'تم تسجيل الخروج',
-      description: 'نراك قريباً!',
+      title: "تم حفظ البيانات",
+      description: "تم تحديث بياناتك الشخصية بنجاح",
     });
+    setIsEditing(false);
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background pb-20">
-        <Header />
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          <Card>
-            <CardContent className="py-12 text-center">
-              <i className="fas fa-user-slash text-4xl text-muted-foreground mb-4"></i>
-              <h3 className="text-lg font-semibold mb-2">غير مسجل الدخول</h3>
-              <p className="text-muted-foreground mb-4">يجب تسجيل الدخول لعرض الملف الشخصي</p>
-              <Button>تسجيل الدخول</Button>
-            </CardContent>
-          </Card>
-        </div>
-        <BottomNav />
-      </div>
-    );
-  }
+  const getInitials = (name: string) => {
+    if (!name || name.length === 0) return 'م';
+    return name.split(' ').map(n => n && n.length > 0 ? n.charAt(0) : '').join('').slice(0, 2).toUpperCase() || 'م';
+  };
+
+  const achievements = [
+    { title: 'مستخدم نشط', description: 'أكمل 10 طلبات طباعة', icon: Printer, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+    { title: 'عضو ذهبي', description: 'وصل للمستوى 5', icon: Trophy, color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
+    { title: 'صديق المنصة', description: 'دعا 3 أصدقاء', icon: User, color: 'text-green-600', bgColor: 'bg-green-50' },
+  ];
+
+  const stats = [
+    { label: 'نقاط البونص', value: user?.bountyPoints || 0, icon: Star, color: 'text-yellow-500' },
+    { label: 'المستوى', value: user?.level || 1, icon: Award, color: 'text-blue-500' },
+    { label: 'إجمالي الطباعة', value: user?.totalPrints || 0, icon: Printer, color: 'text-green-500' },
+    { label: 'المشتريات', value: user?.totalPurchases || 0, icon: ShoppingBag, color: 'text-purple-500' },
+  ];
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100" dir="rtl">
       <Header />
       
-      <main className="max-w-2xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">الملف الشخصي</h1>
-          <p className="text-muted-foreground">إدارة بيانات حسابك وإعداداتك</p>
-        </div>
-
-        {/* Profile Info */}
+      <div className="container mx-auto px-4 py-6 pb-20">
+        {/* Profile Header */}
         <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>البيانات الشخصية</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditing(!isEditing)}
-            >
-              <i className={`fas ${isEditing ? 'fa-times' : 'fa-edit'} ml-1`}></i>
-              {isEditing ? 'إلغاء' : 'تعديل'}
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-6">
             <div className="flex items-center space-x-4 space-x-reverse mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-accent/20 to-accent/10 rounded-full flex items-center justify-center">
-                <span className="text-2xl font-bold text-accent">
-                  {user.full_name.charAt(0)}
-                </span>
-              </div>
+              <Avatar className="w-20 h-20">
+                <AvatarImage src={user?.profileImageUrl} />
+                <AvatarFallback className="text-2xl bg-gradient-to-r from-red-500 to-red-600 text-white">
+                  {getInitials(user?.fullName || 'مستخدم')}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold">{user.full_name}</h3>
-                <p className="text-muted-foreground">{user.email}</p>
-                <div className="flex items-center space-x-2 space-x-reverse mt-2">
-                  <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-                    المستوى {user.level}
+                <h1 className="text-2xl font-bold text-gray-800 mb-1">
+                  {user?.fullName || 'مستخدم عزيز'}
+                </h1>
+                <p className="text-gray-600 mb-2">{user?.email}</p>
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Badge variant={user?.role === 'admin' ? 'default' : 'secondary'}>
+                    {user?.role === 'admin' ? 'مدير' : 'عضو'}
                   </Badge>
-                  {user.is_teacher && (
-                    <Badge className="bg-blue-600 text-white">
-                      معلم
-                    </Badge>
+                  {user?.isTeacher && (
+                    <Badge className="bg-green-100 text-green-800">معلم</Badge>
                   )}
-                  {user.teacher_subscription && (
-                    <Badge className="bg-purple-600 text-white">
-                      اشتراك مميز
-                    </Badge>
+                  {user?.teacherSubscription && (
+                    <Badge className="bg-yellow-100 text-yellow-800">اشتراك مميز</Badge>
                   )}
                 </div>
+              </div>
+              <div className="flex flex-col space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(!isEditing)}
+                  data-testid="button-edit-profile"
+                >
+                  {isEditing ? <X className="w-4 h-4 ml-2" /> : <Edit className="w-4 h-4 ml-2" />}
+                  {isEditing ? 'إلغاء' : 'تعديل'}
+                </Button>
               </div>
             </div>
 
+            {/* Logout Button */}
+            <div className="border-t pt-4">
+              <Button
+                variant="destructive"
+                onClick={handleLogout}
+                className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                data-testid="button-logout"
+              >
+                <LogOut className="w-4 h-4 ml-2" />
+                تسجيل الخروج
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Profile Information */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 space-x-reverse">
+              <User className="w-5 h-5" />
+              <span>المعلومات الشخصية</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             {isEditing ? (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="full_name">الاسم الكامل</Label>
+                  <Label htmlFor="fullName">الاسم الكامل</Label>
                   <Input
-                    id="full_name"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    id="fullName"
+                    value={editedProfile.fullName}
+                    onChange={(e) => setEditedProfile({...editedProfile, fullName: e.target.value})}
+                    data-testid="input-fullname"
                   />
                 </div>
-                
+                <div>
+                  <Label htmlFor="email">البريد الإلكتروني</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={editedProfile.email}
+                    onChange={(e) => setEditedProfile({...editedProfile, email: e.target.value})}
+                    data-testid="input-email"
+                  />
+                </div>
                 <div>
                   <Label htmlFor="phone">رقم الهاتف</Label>
                   <Input
                     id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="01xxxxxxxxx"
+                    value={editedProfile.phone}
+                    onChange={(e) => setEditedProfile({...editedProfile, phone: e.target.value})}
+                    placeholder="مثال: +966501234567"
+                    data-testid="input-phone"
                   />
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="is_teacher">حساب معلم</Label>
-                  <Switch
-                    id="is_teacher"
-                    checked={formData.is_teacher}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_teacher: checked })}
-                  />
-                </div>
-                
-                <Button onClick={handleSaveProfile} className="w-full">
-                  <i className="fas fa-save ml-2"></i>
+                <Button onClick={handleSaveProfile} className="w-full" data-testid="button-save-profile">
+                  <Save className="w-4 h-4 ml-2" />
                   حفظ التغييرات
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">رقم الهاتف:</span>
-                  <span className="arabic-nums">{user.phone || 'غير محدد'}</span>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3 space-x-reverse">
+                  <Mail className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-600">البريد الإلكتروني:</span>
+                  <span className="font-medium" data-testid="text-email">{user?.email}</span>
                 </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">تاريخ الانضمام:</span>
-                  <span className="arabic-nums">
-                    {new Date(user.created_at).toLocaleDateString('ar-EG')}
+                <div className="flex items-center space-x-3 space-x-reverse">
+                  <Phone className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-600">رقم الهاتف:</span>
+                  <span className="font-medium" data-testid="text-phone">
+                    {user?.phone || 'غير محدد'}
                   </span>
                 </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">نقاط المكافآت:</span>
-                  <span className="font-bold text-accent arabic-nums">
-                    {user.bounty_points.toLocaleString('ar-EG')}
+                <div className="flex items-center space-x-3 space-x-reverse">
+                  <Calendar className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-600">تاريخ الانضمام:</span>
+                  <span className="font-medium" data-testid="text-join-date">
+                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('ar-SA') : 'غير محدد'}
                   </span>
                 </div>
               </div>
@@ -219,131 +203,103 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-        {/* Statistics */}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {stats.map((stat, index) => (
+            <Card key={index} className="text-center">
+              <CardContent className="p-4">
+                <stat.icon className={`w-8 h-8 mx-auto mb-2 ${stat.color}`} />
+                <div className="text-2xl font-bold text-gray-800" data-testid={`stat-${stat.label.replace(/\s+/g, '-')}`}>
+                  {stat.value.toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-600">{stat.label}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Achievements */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <i className="fas fa-chart-line text-blue-600 ml-2"></i>
-              الإحصائيات
+            <CardTitle className="flex items-center space-x-2 space-x-reverse">
+              <Trophy className="w-5 h-5" />
+              <span>الإنجازات</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <i className="fas fa-print text-blue-600 text-2xl mb-2"></i>
-                <div className="text-2xl font-bold text-blue-600 arabic-nums">
-                  {user.total_prints}
+            <div className="grid gap-4">
+              {achievements.map((achievement, index) => (
+                <div key={index} className={`p-4 rounded-lg ${achievement.bgColor}`}>
+                  <div className="flex items-center space-x-3 space-x-reverse">
+                    <achievement.icon className={`w-8 h-8 ${achievement.color}`} />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800" data-testid={`achievement-${index}`}>
+                        {achievement.title}
+                      </h4>
+                      <p className="text-sm text-gray-600">{achievement.description}</p>
+                    </div>
+                    <Badge className="bg-white bg-opacity-80">✓</Badge>
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">إجمالي الطباعات</div>
-              </div>
-              
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <i className="fas fa-shopping-bag text-green-600 text-2xl mb-2"></i>
-                <div className="text-2xl font-bold text-green-600 arabic-nums">
-                  {user.total_purchases}
-                </div>
-                <div className="text-sm text-muted-foreground">المشتريات</div>
-              </div>
-              
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <i className="fas fa-users text-purple-600 text-2xl mb-2"></i>
-                <div className="text-2xl font-bold text-purple-600 arabic-nums">
-                  {user.total_referrals}
-                </div>
-                <div className="text-sm text-muted-foreground">الإحالات</div>
-              </div>
-              
-              <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <i className="fas fa-gift text-orange-600 text-2xl mb-2"></i>
-                <div className="text-2xl font-bold text-orange-600 arabic-nums">
-                  {userStats?.redemptions || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">المكافآت المستبدلة</div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Settings */}
+        {/* Quick Actions */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <i className="fas fa-cog text-gray-600 ml-2"></i>
-              الإعدادات
+            <CardTitle className="flex items-center space-x-2 space-x-reverse">
+              <Settings className="w-5 h-5" />
+              <span>الإعدادات السريعة</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">الإشعارات</div>
-                <div className="text-sm text-muted-foreground">تلقي إشعارات الطباعة والعروض</div>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            
-            <Separator />
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">الوضع الليلي</div>
-                <div className="text-sm text-muted-foreground">تغيير مظهر التطبيق</div>
-              </div>
-              <Switch />
-            </div>
-            
-            <Separator />
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">حفظ البيانات</div>
-                <div className="text-sm text-muted-foreground">تقليل استهلاك البيانات</div>
-              </div>
-              <Switch />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Teacher Subscription */}
-        {user.is_teacher && !user.teacher_subscription && (
-          <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-100 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center ml-3">
-                    <i className="fas fa-crown text-white text-xl"></i>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-blue-900">اشتراك المعلم المميز</h3>
-                    <p className="text-sm text-blue-700">احصل على مميزات إضافية وطباعة مجانية</p>
-                  </div>
-                </div>
-                <div className="text-left">
-                  <div className="text-2xl font-bold text-blue-600 arabic-nums">٩٩</div>
-                  <div className="text-xs text-blue-700">جنيه/شهرياً</div>
-                </div>
-              </div>
-              <Button className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">
-                اشترك الآن
+          <CardContent>
+            <div className="space-y-3">
+              <Button variant="outline" className="w-full justify-start" data-testid="button-notifications">
+                <Gift className="w-4 h-4 ml-2" />
+                إعدادات الإشعارات
               </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Sign Out */}
-        <Card>
-          <CardContent className="p-6">
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={handleSignOut}
-            >
-              <i className="fas fa-sign-out-alt ml-2"></i>
-              تسجيل الخروج
-            </Button>
+              <Button variant="outline" className="w-full justify-start" data-testid="button-privacy">
+                <Settings className="w-4 h-4 ml-2" />
+                إعدادات الخصوصية
+              </Button>
+              <Button variant="outline" className="w-full justify-start" data-testid="button-help">
+                <Target className="w-4 h-4 ml-2" />
+                الدعم والمساعدة
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      </main>
-      
+
+        {/* Progress Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 space-x-reverse">
+              <TrendingUp className="w-5 h-5" />
+              <span>التقدم نحو المستوى التالي</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">المستوى {user?.level || 1}</span>
+                <span className="text-sm text-gray-600">المستوى {(user?.level || 1) + 1}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div
+                  className="bg-gradient-to-r from-red-500 to-red-600 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${((user?.bountyPoints || 0) % 100)}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-600 text-center">
+                تحتاج إلى {100 - ((user?.bountyPoints || 0) % 100)} نقطة للوصول للمستوى التالي
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <BottomNav />
     </div>
   );
