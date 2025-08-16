@@ -1,33 +1,29 @@
 import { Tabs } from 'expo-router'
-import { Text } from 'react-native'
+import React from 'react'
+import { useColorScheme, Text } from 'react-native'
 
 export default function TabLayout() {
+  const colorScheme = useColorScheme()
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#EF2D50',
-        tabBarInactiveTintColor: '#9CA3AF',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
-          paddingTop: 8,
-          paddingBottom: 8,
-          height: 60,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
+        tabBarInactiveTintColor: '#7f8c8d',
         headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colorScheme === 'dark' ? '#2c3e50' : '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: colorScheme === 'dark' ? '#34495e' : '#e9ecef',
+        },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
           title: 'الرئيسية',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>🏠</Text>
+          tabBarIcon: ({ focused, color, size }) => (
+            <Text style={{ fontSize: size, color }}>🏠</Text>
           ),
         }}
       />
@@ -35,8 +31,8 @@ export default function TabLayout() {
         name="print"
         options={{
           title: 'طباعة',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>🖨️</Text>
+          tabBarIcon: ({ focused, color, size }) => (
+            <Text style={{ fontSize: size, color }}>🖨️</Text>
           ),
         }}
       />
@@ -44,17 +40,17 @@ export default function TabLayout() {
         name="store"
         options={{
           title: 'المتجر',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>🛍️</Text>
+          tabBarIcon: ({ focused, color, size }) => (
+            <Text style={{ fontSize: size, color }}>🛒</Text>
           ),
         }}
       />
       <Tabs.Screen
         name="rewards"
         options={{
-          title: 'النقاط',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>⭐</Text>
+          title: 'المكافآت',
+          tabBarIcon: ({ focused, color, size }) => (
+            <Text style={{ fontSize: size, color }}>🎁</Text>
           ),
         }}
       />
@@ -62,8 +58,8 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'الملف الشخصي',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>👤</Text>
+          tabBarIcon: ({ focused, color, size }) => (
+            <Text style={{ fontSize: size, color }}>👤</Text>
           ),
         }}
       />

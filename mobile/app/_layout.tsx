@@ -8,14 +8,14 @@ SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
   useEffect(() => {
-    // Hide splash screen after initial setup
+    // Hide expo splash screen after initial setup
     SplashScreen.hideAsync()
   }, [])
 
   return (
     <AuthProvider>
       <Stack>
-        <Stack.Screen name="splash" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
