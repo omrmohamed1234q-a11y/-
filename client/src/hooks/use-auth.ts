@@ -19,28 +19,36 @@ export function useAuth() {
   });
 
   useEffect(() => {
+    let mounted = true;
+
     // Get initial session
     const getSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (error) throw error;
+        if (!mounted) return;
 
         if (session?.user) {
-          // Fetch user profile from our database
-          const { data: profile, error: profileError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profileError && profileError.code !== 'PGRST116') {
-            console.error('Profile fetch error:', profileError);
-            // Continue with basic user data from session if profile doesn't exist
-          }
+          // Create a basic user object from session data
+          const basicUser: User = {
+            id: session.user.id,
+            username: session.user.email?.split('@')[0] || 'user',
+            email: session.user.email || '',
+            fullName: session.user.user_metadata?.full_name || 'مستخدم عزيز',
+            phone: null,
+            role: 'customer',
+            bountyPoints: 0,
+            level: 1,
+            totalPrints: 0,
+            totalPurchases: 0,
+            totalReferrals: 0,
+            isTeacher: false,
+            teacherSubscription: false,
+            createdAt: new Date()
+          };
 
           setState({
-            user: profile as User,
+            user: basicUser,
             supabaseUser: session.user,
             loading: false,
             error: null,
@@ -54,39 +62,57 @@ export function useAuth() {
           });
         }
       } catch (error) {
-        setState({
-          user: null,
-          supabaseUser: null,
-          loading: false,
-          error: error instanceof Error ? error.message : 'Authentication error',
-        });
+        if (mounted) {
+          console.error('Auth error:', error);
+          setState({
+            user: null,
+            supabaseUser: null,
+            loading: false,
+            error: null,
+          });
+        }
       }
     };
+
+    // Set loading timeout as fallback
+    const timeoutId = setTimeout(() => {
+      if (mounted) {
+        setState(prev => ({ ...prev, loading: false }));
+      }
+    }, 2000);
 
     getSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          // Fetch user profile
-          const { data: profile, error: profileError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+        if (!mounted) return;
 
-          if (profileError && profileError.code !== 'PGRST116') {
-            console.error('Profile fetch error:', profileError);
-          }
+        if (event === 'SIGNED_IN' && session?.user) {
+          const basicUser: User = {
+            id: session.user.id,
+            username: session.user.email?.split('@')[0] || 'user',
+            email: session.user.email || '',
+            fullName: session.user.user_metadata?.full_name || 'مستخدم عزيز',
+            phone: null,
+            role: 'customer',
+            bountyPoints: 0,
+            level: 1,
+            totalPrints: 0,
+            totalPurchases: 0,
+            totalReferrals: 0,
+            isTeacher: false,
+            teacherSubscription: false,
+            createdAt: new Date()
+          };
 
           setState({
-            user: profile as User,
+            user: basicUser,
             supabaseUser: session.user,
             loading: false,
             error: null,
           });
-        } else {
+        } else if (event === 'SIGNED_OUT') {
           setState({
             user: null,
             supabaseUser: null,
@@ -97,7 +123,11 @@ export function useAuth() {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -111,98 +141,57 @@ export function useAuth() {
 
       if (error) throw error;
 
-      return { success: true, data };
+      return { data, error: null };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Sign in failed';
-      setState(prev => ({ ...prev, loading: false, error: message }));
-      return { success: false, error: message };
+      const errorMessage = error instanceof Error ? error.message : 'خطأ في تسجيل الدخول';
+      setState(prev => ({ ...prev, loading: false, error: errorMessage }));
+      return { data: null, error: errorMessage };
     }
   };
 
-  const signUp = async (email: string, password: string, userData: {
-    username: string;
-    fullName: string;
-    phone?: string;
-  }) => {
+  const signUp = async (email: string, password: string, fullName?: string) => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            username: userData.username,
-            full_name: userData.fullName,
-            phone: userData.phone,
+            full_name: fullName || '',
           }
         }
       });
 
       if (error) throw error;
 
-      // Insert user profile
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert([{
-            id: data.user.id,
-            email: data.user.email!,
-            username: userData.username,
-            full_name: userData.fullName,
-            phone: userData.phone,
-          }]);
-
-        if (profileError) throw profileError;
-      }
-
-      return { success: true, data };
+      return { data, error: null };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Sign up failed';
-      setState(prev => ({ ...prev, loading: false, error: message }));
-      return { success: false, error: message };
+      const errorMessage = error instanceof Error ? error.message : 'خطأ في إنشاء الحساب';
+      setState(prev => ({ ...prev, loading: false, error: errorMessage }));
+      return { data: null, error: errorMessage };
     }
   };
 
   const signOut = async () => {
     try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error) {
       console.error('Sign out error:', error);
-    }
-  };
-
-  const updateProfile = async (updates: Partial<User>) => {
-    try {
-      if (!state.user) throw new Error('No authenticated user');
-
-      const { data, error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', state.user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setState(prev => ({
-        ...prev,
-        user: data as User,
-      }));
-
-      return { success: true, data };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Profile update failed';
-      return { success: false, error: message };
+      setState(prev => ({ ...prev, loading: false, error: 'خطأ في تسجيل الخروج' }));
     }
   };
 
   return {
-    ...state,
+    user: state.user,
+    supabaseUser: state.supabaseUser,
+    loading: state.loading,
+    error: state.error,
+    isAuthenticated: !!state.user,
     signIn,
     signUp,
     signOut,
-    updateProfile,
   };
 }
