@@ -26,21 +26,57 @@ export default function Landing() {
     setLoading(true)
     
     try {
-      // Simulate authentication
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      const { supabase } = await import('@/lib/supabase')
       
-      toast({
-        title: isLogin ? "تم تسجيل الدخول بنجاح" : "تم إنشاء الحساب بنجاح",
-        description: `مرحباً بك ${fullName || 'في اطبعلي'}`,
-      })
-      
-      // This would normally redirect to the authenticated app
-      window.location.href = '/home'
+      if (isLogin) {
+        // Sign in existing user
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        
+        if (error) throw error
+        
+        toast({
+          title: "تم تسجيل الدخول بنجاح",
+          description: `مرحباً بك في اطبعلي`,
+        })
+        
+        // Redirect will happen automatically via auth state change
+        
+      } else {
+        // Sign up new user
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+            }
+          }
+        })
+        
+        if (error) throw error
+        
+        if (data.user && !data.session) {
+          // Email confirmation required
+          toast({
+            title: "تم إنشاء الحساب بنجاح",
+            description: "تم إرسال رابط التأكيد إلى بريدك الإلكتروني",
+          })
+        } else {
+          // Immediate login (if email confirmation is disabled)
+          toast({
+            title: "تم إنشاء الحساب بنجاح",
+            description: `مرحباً بك ${fullName}`,
+          })
+        }
+      }
       
     } catch (error) {
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء المعالجة",
+        description: error instanceof Error ? error.message : "حدث خطأ أثناء المعالجة",
         variant: "destructive",
       })
     }
@@ -48,14 +84,28 @@ export default function Landing() {
     setLoading(false)
   }
 
-  const handleSocialLogin = (provider: string) => {
-    toast({
-      title: `تسجيل الدخول بـ ${provider}`,
-      description: "جاري التوصيل...",
-    })
-    
-    if (provider === 'Replit') {
-      window.location.href = '/api/login'
+  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
+    try {
+      setLoading(true)
+      
+      const { supabase } = await import('@/lib/supabase')
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      })
+      
+      if (error) throw error
+      
+      // OAuth redirect will happen automatically
+    } catch (error) {
+      toast({
+        title: "خطأ في تسجيل الدخول",
+        description: error instanceof Error ? error.message : "فشل في تسجيل الدخول",
+        variant: "destructive",
+      })
+      setLoading(false)
     }
   }
 
@@ -160,31 +210,21 @@ export default function Landing() {
             <div className="space-y-3">
               <Button
                 variant="outline"
-                onClick={() => handleSocialLogin('Replit')}
-                className="w-full h-12 text-right bg-gradient-to-r from-blue-500 to-purple-600 text-white border-none hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
+                onClick={() => handleSocialLogin('google')}
+                className="w-full h-12 text-right bg-white border-2 border-gray-300 hover:bg-gray-50 transition-all duration-200 text-gray-700"
                 disabled={loading}
               >
-                <span className="mr-2">🔗</span>
-                تسجيل الدخول بـ Replit
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => handleSocialLogin('Google')}
-                className="w-full h-12 text-right border-gray-300 hover:bg-gray-50 transition-all duration-200"
-                disabled={loading}
-              >
-                <span className="mr-2 text-xl font-bold text-blue-600">G</span>
+                <span className="mr-3 text-xl font-bold text-blue-600">G</span>
                 تسجيل الدخول بـ Google
               </Button>
 
               <Button
                 variant="outline"
-                onClick={() => handleSocialLogin('Facebook')}
+                onClick={() => handleSocialLogin('facebook')}
                 className="w-full h-12 text-right bg-gradient-to-r from-blue-600 to-blue-700 text-white border-none hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
                 disabled={loading}
               >
-                <span className="mr-2">📘</span>
+                <span className="mr-3 text-xl">📘</span>
                 تسجيل الدخول بـ Facebook
               </Button>
             </div>
@@ -200,10 +240,10 @@ export default function Landing() {
               </button>
             </div>
 
-            {/* VIP Notice */}
-            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-4 rounded-xl text-center">
+            {/* Welcome Message */}
+            <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-xl text-center">
               <p className="font-semibold">
-                👑 انضم لعضوية VIP واحصل على مزايا حصرية!
+                📄 مرحباً بك في اطبعلي - منصة الطباعة الذكية
               </p>
             </div>
           </CardContent>

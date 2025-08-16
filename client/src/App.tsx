@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { SplashScreen } from "@/components/SplashScreen";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import AuthCallback from "@/pages/auth-callback";
 import Home from "@/pages/home";
 import Print from "@/pages/print";
 import Store from "@/pages/store";
@@ -55,6 +56,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/home" component={Home} />
+      <Route path="/auth/callback" component={AuthCallback} />
       <Route path="/print" component={Print} />
       <Route path="/store" component={Store} />
       <Route path="/rewards" component={Rewards} />

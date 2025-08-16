@@ -2,59 +2,59 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { insertUserSchema, insertProductSchema, insertPrintJobSchema, insertOrderSchema, insertCartItemSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client with service role key
+const supabase = createClient(
+  process.env.SUPABASE_URL || 'https://fvahcgubddynggktqklz.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ2YWhjZ3ViZGR5bmdna3Rxa2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzI0MDcsImV4cCI6MjA3MDM0ODQwN30.M08VvM756YpAAUfpX0WLUK3FyQFLD5wgutkHQyWWbpY'
+);
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup Replit Auth
-  await setupAuth(app);
+  // Authentication routes - Real Supabase implementation
 
-  // Authentication routes
-  
-  // Replit Auth user info
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = {
-        id: req.user.claims.sub,
-        email: req.user.claims.email,
-        fullName: req.user.claims.first_name && req.user.claims.last_name 
-          ? `${req.user.claims.first_name} ${req.user.claims.last_name}`
-          : req.user.claims.first_name || 'مستخدم عزيز',
-        firstName: req.user.claims.first_name,
-        lastName: req.user.claims.last_name,
-        profileImageUrl: req.user.claims.profile_image_url,
-        provider: 'replit'
-      };
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
-  // Supabase authentication routes
+  // Supabase authentication routes - Real implementation
   app.post('/api/auth/supabase/login', async (req, res) => {
     try {
       const { email, password, rememberMe } = req.body;
       
-      // TODO: Implement actual Supabase authentication
-      // For now, return a mock response
-      console.log("Supabase login attempt:", { email, rememberMe });
+      if (!email || !password) {
+        return res.status(400).json({ 
+          success: false,
+          message: "البريد الإلكتروني وكلمة المرور مطلوبان" 
+        });
+      }
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      
+      if (!data.user || !data.session) {
+        throw new Error("فشل في تسجيل الدخول");
+      }
       
       res.json({ 
         success: true, 
         message: "تم تسجيل الدخول بنجاح",
         user: { 
-          id: `user_${Date.now()}`,
-          email, 
-          fullName: "مستخدم عزيز",
+          id: data.user.id,
+          email: data.user.email,
+          fullName: data.user.user_metadata?.full_name || "مستخدم عزيز",
           provider: 'supabase',
           isPremium: false
         },
-        token: `sb_token_${Date.now()}`
+        token: data.session.access_token,
+        refresh_token: data.session.refresh_token
       });
     } catch (error) {
       console.error("Supabase login error:", error);
-      res.status(400).json({ message: "فشل في تسجيل الدخول" });
+      res.status(400).json({ 
+        success: false,
+        message: error instanceof Error ? error.message : "فشل في تسجيل الدخول" 
+      });
     }
   });
 
@@ -63,27 +63,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password, fullName, agreeToTerms } = req.body;
       
       if (!agreeToTerms) {
-        return res.status(400).json({ message: "يجب الموافقة على الشروط والأحكام" });
+        return res.status(400).json({ 
+          success: false,
+          message: "يجب الموافقة على الشروط والأحكام" 
+        });
       }
       
-      // TODO: Implement actual Supabase user registration
-      console.log("Supabase signup attempt:", { email, fullName });
+      if (!email || !password) {
+        return res.status(400).json({ 
+          success: false,
+          message: "البريد الإلكتروني وكلمة المرور مطلوبان" 
+        });
+      }
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (!data.user) {
+        throw new Error("فشل في إنشاء الحساب");
+      }
+      
+      const message = data.session 
+        ? "تم إنشاء الحساب بنجاح"
+        : "تم إنشاء الحساب بنجاح. يرجى تأكيد بريدك الإلكتروني.";
       
       res.json({ 
         success: true, 
-        message: "تم إنشاء الحساب بنجاح",
+        message,
         user: { 
-          id: `user_${Date.now()}`,
-          email, 
-          fullName,
+          id: data.user.id,
+          email: data.user.email,
+          fullName: data.user.user_metadata?.full_name || fullName,
           provider: 'supabase',
-          isPremium: false
+          isPremium: false,
+          emailConfirmed: !!data.session
         },
-        token: `sb_token_${Date.now()}`
+        token: data.session?.access_token,
+        refresh_token: data.session?.refresh_token,
+        requiresEmailConfirmation: !data.session
       });
     } catch (error) {
       console.error("Supabase signup error:", error);
-      res.status(400).json({ message: "فشل في إنشاء الحساب" });
+      res.status(400).json({ 
+        success: false,
+        message: error instanceof Error ? error.message : "فشل في إنشاء الحساب" 
+      });
     }
   });
 
@@ -98,11 +131,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // TODO: Implement actual Supabase password reset
-      console.log("Password reset requested for:", email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${req.protocol}://${req.get('host')}/auth/reset-password`
+      });
       
-      // Simulate email sending delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (error) throw error;
       
       res.json({ 
         success: true, 
@@ -168,92 +201,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Protected route example
-  app.get("/api/protected", isAuthenticated, async (req: any, res) => {
-    const userId = req.user?.claims?.sub;
+  // Simple auth check endpoint for debugging
+  app.get("/api/auth/status", async (req, res) => {
     res.json({ 
-      message: "هذا محتوى محمي", 
-      userId: userId,
-      user: {
-        id: req.user.claims.sub,
-        email: req.user.claims.email,
-        fullName: req.user.claims.first_name && req.user.claims.last_name 
-          ? `${req.user.claims.first_name} ${req.user.claims.last_name}`
-          : req.user.claims.first_name || 'مستخدم عزيز',
-        provider: 'replit'
-      }
+      message: "Auth endpoint working", 
+      timestamp: new Date().toISOString()
     });
   });
 
-  app.post('/api/auth/supabase/forgot-password', async (req, res) => {
-    try {
-      const { email } = req.body;
-      
-      // TODO: Implement actual password reset
-      console.log("Password reset request for:", email);
-      
-      res.json({ 
-        success: true, 
-        message: "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني" 
-      });
-    } catch (error) {
-      console.error("Password reset error:", error);
-      res.status(400).json({ message: "فشل في إرسال رابط إعادة التعيين" });
-    }
-  });
 
-  // Social authentication routes
-  app.post('/api/auth/google', async (req, res) => {
-    try {
-      const { token } = req.body;
-      
-      // TODO: Implement actual Google token verification
-      console.log("Google auth attempt");
-      
-      res.json({ 
-        success: true, 
-        message: "تم تسجيل الدخول بنجاح باستخدام Google",
-        user: { 
-          id: `google_user_${Date.now()}`,
-          email: "user@gmail.com",
-          fullName: "مستخدم Google",
-          provider: 'google',
-          profileImageUrl: "https://via.placeholder.com/150",
-          isPremium: false
-        },
-        token: `google_token_${Date.now()}`
-      });
-    } catch (error) {
-      console.error("Google auth error:", error);
-      res.status(400).json({ message: "فشل في تسجيل الدخول باستخدام Google" });
-    }
-  });
 
-  app.post('/api/auth/facebook', async (req, res) => {
-    try {
-      const { token } = req.body;
-      
-      // TODO: Implement actual Facebook token verification
-      console.log("Facebook auth attempt");
-      
-      res.json({ 
-        success: true, 
-        message: "تم تسجيل الدخول بنجاح باستخدام Facebook",
-        user: { 
-          id: `fb_user_${Date.now()}`,
-          email: "user@facebook.com",
-          fullName: "مستخدم Facebook",
-          provider: 'facebook',
-          profileImageUrl: "https://via.placeholder.com/150",
-          isPremium: false
-        },
-        token: `fb_token_${Date.now()}`
-      });
-    } catch (error) {
-      console.error("Facebook auth error:", error);
-      res.status(400).json({ message: "فشل في تسجيل الدخول باستخدام Facebook" });
-    }
-  });
+
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {
