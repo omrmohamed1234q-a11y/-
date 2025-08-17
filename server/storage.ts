@@ -56,11 +56,7 @@ export class DatabaseStorage implements IStorage {
   async createProduct(productData: any): Promise<Product> {
     const [product] = await db
       .insert(products)
-      .values({
-        ...productData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
+      .values(productData)
       .returning();
     return product;
   }
@@ -68,10 +64,7 @@ export class DatabaseStorage implements IStorage {
   async updateProduct(id: string, updates: any): Promise<Product> {
     const [product] = await db
       .update(products)
-      .set({
-        ...updates,
-        updatedAt: new Date()
-      })
+      .set(updates)
       .where(eq(products.id, id))
       .returning();
     return product;
@@ -89,11 +82,7 @@ export class DatabaseStorage implements IStorage {
   async createOrder(orderData: any): Promise<Order> {
     const [order] = await db
       .insert(orders)
-      .values({
-        ...orderData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
+      .values(orderData)
       .returning();
     return order;
   }
@@ -101,10 +90,7 @@ export class DatabaseStorage implements IStorage {
   async updateOrderStatus(id: string, status: string): Promise<Order> {
     const [order] = await db
       .update(orders)
-      .set({
-        status,
-        updatedAt: new Date()
-      })
+      .set({ status })
       .where(eq(orders.id, id))
       .returning();
     return order;
@@ -118,11 +104,7 @@ export class DatabaseStorage implements IStorage {
   async createPrintJob(printJobData: any): Promise<PrintJob> {
     const [printJob] = await db
       .insert(printJobs)
-      .values({
-        ...printJobData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
+      .values(printJobData)
       .returning();
     return printJob;
   }
@@ -130,10 +112,7 @@ export class DatabaseStorage implements IStorage {
   async updatePrintJobStatus(id: string, status: string): Promise<PrintJob> {
     const [printJob] = await db
       .update(printJobs)
-      .set({
-        status,
-        updatedAt: new Date()
-      })
+      .set({ status })
       .where(eq(printJobs.id, id))
       .returning();
     return printJob;

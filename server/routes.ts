@@ -255,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/google-pay/payment", isAuthenticated, async (req, res) => {
     try {
       const { amount, currency = "EGP", paymentData } = req.body;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       
       // In a real implementation, you would:
       // 1. Verify the payment token with Google Pay API
@@ -328,6 +328,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Vodafone Cash payment error:", error);
       res.status(500).json({ message: "Failed to process Vodafone Cash payment" });
+    }
+  });
+
+  // Teacher management routes
+  app.get('/api/admin/teacher-plans', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      // Return mock teacher plans for now
+      const teacherPlans = [
+        {
+          id: '1',
+          name: 'خطة المعلم الأساسية',
+          nameEn: 'Basic Teacher Plan',
+          description: 'خطة أساسية للمعلمين الجدد',
+          price: '99.00',
+          duration: 30,
+          maxStudents: 30,
+          maxMaterials: 100,
+          active: true
+        }
+      ];
+      
+      res.json(teacherPlans);
+    } catch (error) {
+      console.error("Error fetching teacher plans:", error);
+      res.status(500).json({ message: "Failed to fetch teacher plans" });
+    }
+  });
+
+  app.get('/api/admin/teacher-subscriptions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      // Return mock teacher subscriptions for now
+      const teacherSubscriptions = [
+        {
+          id: '1',
+          teacherName: 'أحمد محمد',
+          planName: 'خطة المعلم الأساسية',
+          status: 'active',
+          endDate: '2024-12-31'
+        }
+      ];
+      
+      res.json(teacherSubscriptions);
+    } catch (error) {
+      console.error("Error fetching teacher subscriptions:", error);
+      res.status(500).json({ message: "Failed to fetch teacher subscriptions" });
     }
   });
 

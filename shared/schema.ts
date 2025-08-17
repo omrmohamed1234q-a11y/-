@@ -341,15 +341,11 @@ export const insertStudentSubscriptionSchema = createInsertSchema(studentSubscri
   createdAt: true,
 });
 
-// Adding missing types
+// Additional types
 export type AdminSetting = typeof adminSettings.$inferSelect;
 export type InsertAdminSetting = z.infer<typeof insertAdminSettingSchema>;
 export type AdminUpload = typeof adminUploads.$inferSelect;
 export type InsertAdminUpload = z.infer<typeof insertAdminUploadSchema>;
-export type OrderTracking = typeof orderTracking.$inferSelect;
-export type InsertOrderTracking = z.infer<typeof insertOrderTrackingSchema>;
-export type ChatConversation = typeof chatConversations.$inferSelect;
-export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -379,7 +375,7 @@ export type InsertTeacherMaterial = z.infer<typeof insertTeacherMaterialSchema>;
 export type TeacherMaterial = typeof teacherMaterials.$inferSelect;
 export type InsertStudentSubscription = z.infer<typeof insertStudentSubscriptionSchema>;
 export type StudentSubscription = typeof studentSubscriptions.$inferSelect;
-export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 export type ChatConversation = typeof chatConversations.$inferSelect;
-export type InsertOrderTracking = z.infer<typeof insertOrderTrackingSchema>;
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 export type OrderTracking = typeof orderTracking.$inferSelect;
+export type InsertOrderTracking = z.infer<typeof insertOrderTrackingSchema>;

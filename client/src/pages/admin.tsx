@@ -111,6 +111,10 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/teacher-subscriptions']
   });
 
+  const { data: teacherPlans } = useQuery({
+    queryKey: ['/api/admin/teacher-plans']
+  });
+
   // Fetch admin settings for UI configuration
   const { data: adminSettings } = useQuery({
     queryKey: ['/api/admin/settings']
@@ -121,7 +125,7 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/files']
   });
 
-  const currentUser = user || localUser;
+  const currentUser = user;
   const isMainAdmin = currentUser?.email === 'printformead1@gmail.com';
   const isAdmin = currentUser?.role === 'admin' || isMainAdmin;
   
@@ -427,10 +431,7 @@ export default function AdminDashboard() {
     });
 
     const addProductMutation = useMutation({
-      mutationFn: (product: any) => apiRequest('/api/admin/products', {
-        method: 'POST',
-        body: JSON.stringify(product)
-      }),
+      mutationFn: (product: any) => apiRequest('POST', '/api/admin/products', product),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
         setNewProduct({
@@ -442,10 +443,7 @@ export default function AdminDashboard() {
     });
 
     const updateProductMutation = useMutation({
-      mutationFn: (product: any) => apiRequest(`/api/admin/products/${product.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(product)
-      }),
+      mutationFn: (product: any) => apiRequest('PUT', `/api/admin/products/${product.id}`, product),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
         setEditingProduct(null);
@@ -454,9 +452,7 @@ export default function AdminDashboard() {
     });
 
     const deleteProductMutation = useMutation({
-      mutationFn: (id: string) => apiRequest(`/api/admin/products/${id}`, {
-        method: 'DELETE'
-      }),
+      mutationFn: (id: string) => apiRequest('DELETE', `/api/admin/products/${id}`),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
         toast({ title: "تم حذف المنتج بنجاح" });
@@ -548,7 +544,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products?.map((product: any) => (
+              {(products || []).map((product: any) => (
                 <Card key={product.id} className="border">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start mb-2">
@@ -589,10 +585,7 @@ export default function AdminDashboard() {
   function OrdersManagement() {
     const updateOrderMutation = useMutation({
       mutationFn: ({ orderId, status }: { orderId: string; status: string }) => 
-        apiRequest(`/api/admin/orders/${orderId}/status`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status })
-        }),
+        apiRequest('PUT', `/api/admin/orders/${orderId}/status`, { status }),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
         toast({ title: "تم تحديث حالة الطلب بنجاح" });
@@ -625,7 +618,7 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {orders?.map((order: any) => (
+            {(orders || []).map((order: any) => (
               <Card key={order.id} className="border">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
@@ -694,10 +687,7 @@ export default function AdminDashboard() {
     });
 
     const addPlanMutation = useMutation({
-      mutationFn: (plan: any) => apiRequest('/api/admin/teacher-plans', {
-        method: 'POST',
-        body: JSON.stringify(plan)
-      }),
+      mutationFn: (plan: any) => apiRequest('POST', '/api/admin/teacher-plans', plan),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['/api/admin/teacher-plans'] });
         setNewPlan({
@@ -789,7 +779,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {teacherPlans?.map((plan: any) => (
+              {(teacherPlans || []).map((plan: any) => (
                 <Card key={plan.id} className="border">
                   <CardContent className="p-4">
                     <h3 className="font-semibold mb-2">{plan.name}</h3>
@@ -825,7 +815,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {teacherSubscriptions?.map((subscription: any) => (
+              {(teacherSubscriptions || []).map((subscription: any) => (
                 <Card key={subscription.id} className="border">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
