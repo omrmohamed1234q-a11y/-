@@ -17,6 +17,7 @@ import Print from "@/pages/print";
 import Store from "@/pages/store";
 import Rewards from "@/pages/rewards";
 import Profile from "@/pages/profile";
+import Payment from "@/pages/payment";
 import AdminDashboard from "@/pages/admin";
 
 function Router() {
@@ -75,6 +76,7 @@ function Router() {
         <Route path="/store" component={Store} />
         <Route path="/rewards" component={Rewards} />
         <Route path="/profile" component={Profile} />
+        <Route path="/payment" component={Payment} />
         <Route path="/admin" component={AdminDashboard} />
         <Route component={NotFound} />
       </Switch>
