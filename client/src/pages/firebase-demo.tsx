@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion } from 'framer-motion';
 import FirebaseFileUploader from '@/components/firebase/FirebaseFileUploader';
+import EnhancedFileUploader from '@/components/firebase/EnhancedFileUploader';
 import { 
   Zap, Upload, Bell, BarChart3, Shield, Globe,
   CheckCircle, ArrowRight, Star, Smartphone,
@@ -248,8 +249,9 @@ export default function FirebaseDemo() {
 
         {/* Tabs Demo */}
         <Tabs defaultValue="upload" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="upload">نظام الرفع المحسن</TabsTrigger>
+            <TabsTrigger value="enhanced">الرفع المتطور</TabsTrigger>
             <TabsTrigger value="comparison">مقارنة الميزات</TabsTrigger>
             <TabsTrigger value="benefits">الفوائد المالية</TabsTrigger>
           </TabsList>
@@ -270,6 +272,28 @@ export default function FirebaseDemo() {
                   maxFiles={3}
                   maxSize={20}
                   storagePath="demo-uploads"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="enhanced" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 space-x-reverse">
+                  <Zap className="w-6 h-6 text-orange-500" />
+                  <span>نظام Firebase المتكامل مع البيانات الحقيقية</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EnhancedFileUploader
+                  category="demo-prints"
+                  maxFiles={5}
+                  maxSize={25}
+                  showStats={true}
+                  onUploadComplete={(files) => {
+                    console.log('Files uploaded:', files);
+                  }}
                 />
               </CardContent>
             </Card>
