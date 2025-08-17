@@ -35,6 +35,8 @@ export async function uploadToFirebaseStorage(
   onProgress?: (progress: number) => void
 ): Promise<string> {
   try {
+    console.log('Starting Firebase upload for:', file.name, 'Size:', file.size);
+    
     // Generate unique filename
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2);
@@ -43,14 +45,15 @@ export async function uploadToFirebaseStorage(
     
     // Create storage reference
     const storageRef = ref(storage, `${folder}/${fileName}`);
+    console.log('Storage ref created:', storageRef.fullPath);
     
     // Track upload progress
     if (onProgress) {
-      onProgress(0);
+      onProgress(10);
     }
     
-    // Upload file
-    const snapshot = await uploadBytes(storageRef, file, {
+    // Upload file with timeout
+    const uploadPromise = uploadBytes(storageRef, file, {
       contentType: file.type,
       customMetadata: {
         originalName: file.name,
@@ -59,13 +62,26 @@ export async function uploadToFirebaseStorage(
       }
     });
     
+    // Set timeout for upload
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('رفع الملف استغرق وقتاً طويلاً. تحقق من إعدادات Firebase Storage Rules')), 30000)
+    );
+    
+    const snapshot = await Promise.race([uploadPromise, timeoutPromise]);
+    console.log('Upload completed:', snapshot.ref.fullPath);
+    
     // Complete progress
     if (onProgress) {
-      onProgress(100);
+      onProgress(90);
     }
     
     // Get download URL
     const downloadURL = await getDownloadURL(snapshot.ref);
+    console.log('Download URL obtained:', downloadURL);
+    
+    if (onProgress) {
+      onProgress(100);
+    }
     
     console.log('File uploaded successfully:', {
       path: snapshot.ref.fullPath,
@@ -74,27 +90,21 @@ export async function uploadToFirebaseStorage(
     });
     
     return downloadURL;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Firebase upload error:', error);
     
-    // Check if Firebase Storage is properly configured
-    if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.appId) {
-      throw new Error('Firebase configuration is missing required credentials');
+    let errorMessage = 'خطأ في رفع الملف';
+    if (error?.code === 'storage/unauthorized') {
+      errorMessage = 'غير مصرح. تحقق من Firebase Storage Rules';
+    } else if (error?.code === 'storage/retry-limit-exceeded') {
+      errorMessage = 'انتهت مهلة الرفع. تحقق من اتصال الإنترنت أو Firebase Rules';
+    } else if (error?.message?.includes('وقتاً طويلاً')) {
+      errorMessage = error.message;
+    } else if (error instanceof Error) {
+      errorMessage = `فشل الرفع: ${error.message}`;
     }
     
-    // Check specific Firebase errors
-    if (error instanceof Error) {
-      if (error.message.includes('storage/unauthorized')) {
-        throw new Error('لا توجد صلاحيات للرفع. تحقق من إعدادات Firebase Storage');
-      } else if (error.message.includes('storage/quota-exceeded')) {
-        throw new Error('تم تجاوز المساحة المسموحة في Firebase Storage');
-      } else if (error.message.includes('network')) {
-        throw new Error('مشكلة في الاتصال. تحقق من الإنترنت وحاول مرة أخرى');
-      }
-      throw new Error(`خطأ في رفع الملف: ${error.message}`);
-    }
-    
-    throw new Error('فشل في رفع الملف لسبب غير معروف');
+    throw new Error(errorMessage);
   }
 }
 

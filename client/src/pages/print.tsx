@@ -24,7 +24,7 @@ import {
 import { DocumentScanner } from '@/components/upload/DocumentScanner';
 import { CameraCapture } from '@/components/camera/CameraCapture';
 import { DragDropUpload } from '@/components/upload/DragDropUpload';
-import { testFirebaseConnection } from '@/lib/firebase-debug';
+import { PDFToolsModal } from '@/components/pdf/PDFToolsModal';
 
 export default function Print() {
   const { user } = useAuth();
@@ -108,28 +108,13 @@ export default function Print() {
               />
               
               {/* Camera and Scanner Integration */}
-              <div className="grid grid-cols-3 gap-3 mt-6">
+              <div className="grid grid-cols-2 gap-3 mt-6">
                 <CameraCapture
                   onCapture={handleCameraCapture}
                   allowedTypes={['document', 'image']}
                   maxFileSize={20 * 1024 * 1024}
                 />
                 <DocumentScanner onScan={handleCameraCapture} />
-                <Button 
-                  variant="outline" 
-                  className="w-full h-full"
-                  onClick={async () => {
-                    try {
-                      const result = await testFirebaseConnection();
-                      console.log('Firebase test result:', result);
-                    } catch (error) {
-                      console.error('Firebase test failed:', error);
-                    }
-                  }}
-                >
-                  <FileText className="w-4 h-4 ml-2" />
-                  اختبر Firebase
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -258,20 +243,25 @@ export default function Print() {
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { icon: 'fas fa-compress', label: 'ضغط PDF', action: 'compress' },
-                { icon: 'fas fa-object-group', label: 'دمج ملفات', action: 'merge' },
-                { icon: 'fas fa-cut', label: 'تقسيم PDF', action: 'split' },
-                { icon: 'fas fa-sync-alt', label: 'تدوير الصفحات', action: 'rotate' },
+                { icon: 'fas fa-compress', label: 'ضغط PDF', action: 'compress' as const },
+                { icon: 'fas fa-object-group', label: 'دمج ملفات', action: 'merge' as const },
+                { icon: 'fas fa-cut', label: 'تقسيم PDF', action: 'split' as const },
+                { icon: 'fas fa-sync-alt', label: 'تدوير الصفحات', action: 'rotate' as const },
               ].map((tool) => (
-                <Button
+                <PDFToolsModal
                   key={tool.action}
-                  variant="outline"
-                  className="h-20 flex flex-col items-center justify-center hover-lift"
-                  onClick={() => console.log('Tool:', tool.action)}
+                  tool={tool.action}
+                  icon={tool.icon}
+                  title={tool.label}
                 >
-                  <i className={`${tool.icon} text-2xl text-accent mb-2`}></i>
-                  <span className="text-sm">{tool.label}</span>
-                </Button>
+                  <Button
+                    variant="outline"
+                    className="h-20 flex flex-col items-center justify-center hover-lift w-full"
+                  >
+                    <i className={`${tool.icon} text-2xl text-accent mb-2`}></i>
+                    <span className="text-sm">{tool.label}</span>
+                  </Button>
+                </PDFToolsModal>
               ))}
             </div>
           </CardContent>
