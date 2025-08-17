@@ -1,592 +1,160 @@
-import { createClient } from '@supabase/supabase-js';
-import type { 
-  User, 
-  InsertUser, 
-  Product, 
-  InsertProduct, 
-  PrintJob, 
-  InsertPrintJob,
-  Order,
-  InsertOrder,
-  CartItem,
-  InsertCartItem,
-  Reward,
-  Challenge,
-  UserChallenge
-} from "@shared/schema";
-
-// Initialize Supabase client for server operations
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-// Since we're using Supabase as our primary database, this storage interface
-// serves as a wrapper around Supabase operations. Most operations will be
-// performed directly from the frontend, but these methods can be used for
-// server-side operations when needed.
+import { users, products, orders, printJobs, type User, type Product, type Order, type PrintJob } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
-  getUser(id: string): Promise<User | null>;
-  getUserByEmail(email: string): Promise<User | null>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUser(id: string, updates: Partial<User>): Promise<User>;
-  upsertUser(user: { id: string; email?: string; firstName?: string; lastName?: string; profileImageUrl?: string }): Promise<User>;
-
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: any): Promise<User>;
+  
   // Product operations
-  getProducts(filters?: {
-    category?: string;
-    search?: string;
-    featured?: boolean;
-  }): Promise<Product[]>;
-  getProduct(id: string): Promise<Product | null>;
-  createProduct(product: InsertProduct): Promise<Product>;
-
-  // Print job operations
-  getPrintJobs(userId: string): Promise<PrintJob[]>;
-  createPrintJob(printJob: InsertPrintJob): Promise<PrintJob>;
-  updatePrintJob(id: string, updates: Partial<PrintJob>): Promise<PrintJob>;
-
-  // Order operations
-  getUserOrders(userId: string): Promise<Order[]>;
-  createOrder(order: InsertOrder): Promise<Order>;
-  updateOrder(id: string, updates: Partial<Order>): Promise<Order>;
-
-  // Cart operations
-  getCartItems(userId: string): Promise<CartItem[]>;
-  addToCart(cartItem: InsertCartItem): Promise<CartItem>;
-  updateCartItem(id: string, quantity: number): Promise<CartItem>;
-  removeFromCart(id: string): Promise<void>;
-
-  // Reward operations
-  getAvailableRewards(): Promise<Reward[]>;
-  getUserChallenges(userId: string): Promise<UserChallenge[]>;
-  updateChallengeProgress(userId: string, challengeId: string, progress: number): Promise<void>;
-
-  // Admin operations
-  getAllUsers(): Promise<User[]>;
   getAllProducts(): Promise<Product[]>;
   createProduct(product: any): Promise<Product>;
   updateProduct(id: string, updates: any): Promise<Product>;
   deleteProduct(id: string): Promise<void>;
-  getAllOffers(): Promise<any[]>;
-  createOffer(offer: any): Promise<any>;
-  updateOffer(id: string, updates: any): Promise<any>;
-  getAllAwards(): Promise<any[]>;
-  createAward(award: any): Promise<any>;
-  updateAward(id: string, updates: any): Promise<any>;
-  getAllOrders(): Promise<Order[]>;
-  getAllCategories(): Promise<any[]>;
-  getAllBounties(): Promise<Reward[]>;
-  getAdminStats(): Promise<{
-    totalUsers: number;
-    totalProducts: number;
-    totalOrders: number;
-    totalPointsDistributed: number;
-  }>;
-  getUserCount(): Promise<number>;
-  getProductCount(): Promise<number>;
-  getOrderCount(): Promise<number>;
-  getTotalPointsDistributed(): Promise<number>;
-
-  // Admin operations
-  getUserCount(): Promise<number>;
-  getProductCount(): Promise<number>;
-  getOrderCount(): Promise<number>;
-  getTotalPointsDistributed(): Promise<number>;
-  getAllUsers(): Promise<User[]>;
-  getAllProducts(): Promise<Product[]>;
-  getAllOrders(): Promise<Order[]>;
-  getAllCategories(): Promise<any[]>;
-  getAllBounties(): Promise<any[]>;
-}
-
-export class SupabaseStorage implements IStorage {
   
-  async getUser(id: string): Promise<User | null> {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single();
+  // Order operations
+  getAllOrders(): Promise<Order[]>;
+  createOrder(order: any): Promise<Order>;
+  updateOrderStatus(id: string, status: string): Promise<Order>;
+  
+  // Print Job operations
+  getAllPrintJobs(): Promise<PrintJob[]>;
+  createPrintJob(printJob: any): Promise<PrintJob>;
+  updatePrintJobStatus(id: string, status: string): Promise<PrintJob>;
+  
+  // Admin statistics
+  getAdminStats(): Promise<any>;
+}
 
-    if (error || !data) return null;
-    return data as User;
+export class DatabaseStorage implements IStorage {
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
-  async getUserByEmail(email: string): Promise<User | null> {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
-
-    if (error || !data) return null;
-    return data as User;
-  }
-
-  async createUser(user: InsertUser): Promise<User> {
-    const { data, error } = await supabase
-      .from('users')
-      .insert([user])
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to create user: ${error?.message}`);
-    }
-
-    return data as User;
-  }
-
-  async updateUser(id: string, updates: Partial<User>): Promise<User> {
-    const { data, error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to update user: ${error?.message}`);
-    }
-
-    return data as User;
-  }
-
-  async upsertUser(userData: { id: string; email?: string; firstName?: string; lastName?: string; profileImageUrl?: string }): Promise<User> {
-    // Map Replit Auth data to our user schema
-    const userRecord = {
-      id: userData.id,
-      email: userData.email || '',
-      username: userData.email?.split('@')[0] || `user_${userData.id}`,
-      full_name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email?.split('@')[0] || 'مستخدم',
-      first_name: userData.firstName || null,
-      last_name: userData.lastName || null,
-      profile_image_url: userData.profileImageUrl || null,
-    };
-
-    const { data, error } = await supabase
-      .from('users')
-      .upsert(userRecord, {
-        onConflict: 'id'
+  async upsertUser(userData: any): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
       })
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to upsert user: ${error?.message}`);
-    }
-
-    return data as User;
+      .returning();
+    return user;
   }
 
-  async getProducts(filters?: {
-    category?: string;
-    search?: string;
-    featured?: boolean;
-  }): Promise<Product[]> {
-    let query = supabase.from('products').select('*');
-
-    if (filters?.category) {
-      query = query.eq('category', filters.category);
-    }
-
-    if (filters?.search) {
-      query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-    }
-
-    if (filters?.featured) {
-      query = query.eq('featured', true);
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: false });
-
-    if (error) {
-      throw new Error(`Failed to fetch products: ${error.message}`);
-    }
-
-    return data as Product[];
-  }
-
-  async getProduct(id: string): Promise<Product | null> {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error || !data) return null;
-    return data as Product;
-  }
-
-  async createProduct(product: InsertProduct): Promise<Product> {
-    const { data, error } = await supabase
-      .from('products')
-      .insert([product])
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to create product: ${error?.message}`);
-    }
-
-    return data as Product;
-  }
-
-  async getPrintJobs(userId: string): Promise<PrintJob[]> {
-    const { data, error } = await supabase
-      .from('print_jobs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw new Error(`Failed to fetch print jobs: ${error.message}`);
-    }
-
-    return data as PrintJob[];
-  }
-
-  async createPrintJob(printJob: InsertPrintJob): Promise<PrintJob> {
-    const { data, error } = await supabase
-      .from('print_jobs')
-      .insert([printJob])
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to create print job: ${error?.message}`);
-    }
-
-    return data as PrintJob;
-  }
-
-  async updatePrintJob(id: string, updates: Partial<PrintJob>): Promise<PrintJob> {
-    const { data, error } = await supabase
-      .from('print_jobs')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to update print job: ${error?.message}`);
-    }
-
-    return data as PrintJob;
-  }
-
-  async getUserOrders(userId: string): Promise<Order[]> {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw new Error(`Failed to fetch orders: ${error.message}`);
-    }
-
-    return data as Order[];
-  }
-
-  async createOrder(order: InsertOrder): Promise<Order> {
-    const { data, error } = await supabase
-      .from('orders')
-      .insert([order])
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to create order: ${error?.message}`);
-    }
-
-    return data as Order;
-  }
-
-  async updateOrder(id: string, updates: Partial<Order>): Promise<Order> {
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to update order: ${error?.message}`);
-    }
-
-    return data as Order;
-  }
-
-  async getCartItems(userId: string): Promise<CartItem[]> {
-    const { data, error } = await supabase
-      .from('cart_items')
-      .select(`
-        *,
-        products (*)
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw new Error(`Failed to fetch cart items: ${error.message}`);
-    }
-
-    return data as CartItem[];
-  }
-
-  async addToCart(cartItem: InsertCartItem): Promise<CartItem> {
-    // Check if item already exists in cart
-    const { data: existing } = await supabase
-      .from('cart_items')
-      .select('*')
-      .eq('user_id', cartItem.user_id)
-      .eq('product_id', cartItem.product_id)
-      .single();
-
-    if (existing) {
-      // Update quantity if item exists
-      return this.updateCartItem(existing.id, existing.quantity + (cartItem.quantity || 1));
-    }
-
-    const { data, error } = await supabase
-      .from('cart_items')
-      .insert([cartItem])
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to add to cart: ${error?.message}`);
-    }
-
-    return data as CartItem;
-  }
-
-  async updateCartItem(id: string, quantity: number): Promise<CartItem> {
-    const { data, error } = await supabase
-      .from('cart_items')
-      .update({ quantity })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to update cart item: ${error?.message}`);
-    }
-
-    return data as CartItem;
-  }
-
-  async removeFromCart(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('cart_items')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      throw new Error(`Failed to remove from cart: ${error.message}`);
-    }
-  }
-
-  async getAvailableRewards(): Promise<Reward[]> {
-    const { data, error } = await supabase
-      .from('rewards')
-      .select('*')
-      .eq('available', true)
-      .order('points_cost');
-
-    if (error) {
-      throw new Error(`Failed to fetch rewards: ${error.message}`);
-    }
-
-    return data as Reward[];
-  }
-
-  async getUserChallenges(userId: string): Promise<UserChallenge[]> {
-    const { data, error } = await supabase
-      .from('user_challenges')
-      .select(`
-        *,
-        challenges (*)
-      `)
-      .eq('user_id', userId)
-      .eq('date::date', new Date().toISOString().split('T')[0]);
-
-    if (error) {
-      throw new Error(`Failed to fetch user challenges: ${error.message}`);
-    }
-
-    return data as UserChallenge[];
-  }
-
-  async updateChallengeProgress(userId: string, challengeId: string, progress: number): Promise<void> {
-    const { error } = await supabase
-      .from('user_challenges')
-      .upsert({
-        user_id: userId,
-        challenge_id: challengeId,
-        current_progress: progress,
-        completed: progress >= 100,
-        completed_at: progress >= 100 ? new Date().toISOString() : null,
-        date: new Date().toISOString(),
-      });
-
-    if (error) {
-      throw new Error(`Failed to update challenge progress: ${error.message}`);
-    }
-  }
-
-  // Admin operations
-  async getUserCount(): Promise<number> {
-    try {
-      const { count, error } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true });
-      
-      if (error) throw error;
-      return count || 0;
-    } catch (error) {
-      console.error('Error getting user count:', error);
-      return 0;
-    }
-  }
-
-  async getProductCount(): Promise<number> {
-    try {
-      const { count, error } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true });
-      
-      if (error) throw error;
-      return count || 0;
-    } catch (error) {
-      console.error('Error getting product count:', error);
-      return 0;
-    }
-  }
-
-  async getOrderCount(): Promise<number> {
-    try {
-      const { count, error } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true });
-      
-      if (error) throw error;
-      return count || 0;
-    } catch (error) {
-      console.error('Error getting order count:', error);
-      return 0;
-    }
-  }
-
-  async getTotalPointsDistributed(): Promise<number> {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('bounty_points');
-      
-      if (error) throw error;
-      return data?.reduce((sum, user) => sum + (user.bounty_points || 0), 0) || 0;
-    } catch (error) {
-      console.error('Error getting total points:', error);
-      return 0;
-    }
-  }
-
-  async getAllUsers(): Promise<User[]> {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error getting all users:', error);
-      return [];
-    }
-  }
-
+  // Product operations
   async getAllProducts(): Promise<Product[]> {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error getting all products:', error);
-      return [];
-    }
+    return await db.select().from(products).orderBy(desc(products.createdAt));
   }
 
+  async createProduct(productData: any): Promise<Product> {
+    const [product] = await db
+      .insert(products)
+      .values({
+        ...productData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    return product;
+  }
+
+  async updateProduct(id: string, updates: any): Promise<Product> {
+    const [product] = await db
+      .update(products)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(products.id, id))
+      .returning();
+    return product;
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    await db.delete(products).where(eq(products.id, id));
+  }
+
+  // Order operations
   async getAllOrders(): Promise<Order[]> {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error getting all orders:', error);
-      return [];
-    }
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
   }
 
-  async getAllCategories(): Promise<any[]> {
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error getting categories:', error);
-      return [];
-    }
+  async createOrder(orderData: any): Promise<Order> {
+    const [order] = await db
+      .insert(orders)
+      .values({
+        ...orderData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    return order;
   }
 
-  async getAllBounties(): Promise<any[]> {
-    try {
-      const { data, error } = await supabase
-        .from('bounties')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error getting bounties:', error);
-      return [];
-    }
+  async updateOrderStatus(id: string, status: string): Promise<Order> {
+    const [order] = await db
+      .update(orders)
+      .set({
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
   }
 
-  // Admin management methods
-  async getAdminUsers(): Promise<User[]> {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .or('role.eq.admin,email.eq.printformead1@gmail.com')
-        .order('created_at', { ascending: false });
+  // Print Job operations
+  async getAllPrintJobs(): Promise<PrintJob[]> {
+    return await db.select().from(printJobs).orderBy(desc(printJobs.createdAt));
+  }
 
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error getting admin users:', error);
-      return [];
-    }
+  async createPrintJob(printJobData: any): Promise<PrintJob> {
+    const [printJob] = await db
+      .insert(printJobs)
+      .values({
+        ...printJobData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    return printJob;
+  }
+
+  async updatePrintJobStatus(id: string, status: string): Promise<PrintJob> {
+    const [printJob] = await db
+      .update(printJobs)
+      .set({
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(printJobs.id, id))
+      .returning();
+    return printJob;
+  }
+
+  // Admin statistics
+  async getAdminStats(): Promise<any> {
+    const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
+    const [productCount] = await db.select({ count: sql<number>`count(*)` }).from(products);
+    const [orderCount] = await db.select({ count: sql<number>`count(*)` }).from(orders);
+    const [printJobCount] = await db.select({ count: sql<number>`count(*)` }).from(printJobs);
+
+    return {
+      totalUsers: userCount.count,
+      totalProducts: productCount.count,
+      totalOrders: orderCount.count,
+      totalPrintJobs: printJobCount.count,
+      revenue: 15000, // This would be calculated from actual orders
+      monthlyGrowth: 25
+    };
   }
 }
 
-export const storage = new SupabaseStorage();
+export const storage = new DatabaseStorage();

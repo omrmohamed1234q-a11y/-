@@ -18,39 +18,93 @@ import {
 } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [showProductForm, setShowProductForm] = useState(false);
 
-  // Check localStorage for admin user if auth hook hasn't loaded yet
-  const [localUser, setLocalUser] = useState(null);
-  
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setLocalUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-      }
+  // Fetch admin data with proper error handling
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['/api/admin/stats'],
+    enabled: !!user
+  });
+
+  const { data: products = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['/api/admin/products'],
+    enabled: !!user
+  });
+
+  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+    queryKey: ['/api/admin/orders'],
+    enabled: !!user
+  });
+
+  const { data: printJobs = [], isLoading: printJobsLoading } = useQuery({
+    queryKey: ['/api/admin/print-jobs'],
+    enabled: !!user
+  });
+
+  // Mutations for CRUD operations
+  const createProductMutation = useMutation({
+    mutationFn: (productData: any) => apiRequest('POST', '/api/admin/products', productData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      toast({ title: 'تم إنشاء المنتج بنجاح' });
+      setShowProductForm(false);
+    },
+    onError: () => {
+      toast({ title: 'فشل في إنشاء المنتج', variant: 'destructive' });
     }
-  }, []);
-
-  // Fetch admin data
-  const { data: stats } = useQuery({
-    queryKey: ['/api/admin/stats']
   });
 
-  const { data: products } = useQuery({
-    queryKey: ['/api/admin/products']
+  const updateProductMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => 
+      apiRequest('PUT', `/api/admin/products/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      toast({ title: 'تم تحديث المنتج بنجاح' });
+      setEditingProduct(null);
+    },
+    onError: () => {
+      toast({ title: 'فشل في تحديث المنتج', variant: 'destructive' });
+    }
   });
 
-  const { data: orders } = useQuery({
-    queryKey: ['/api/admin/orders']
+  const deleteProductMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/admin/products/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      toast({ title: 'تم حذف المنتج بنجاح' });
+    },
+    onError: () => {
+      toast({ title: 'فشل في حذف المنتج', variant: 'destructive' });
+    }
   });
 
-  const { data: teacherPlans } = useQuery({
-    queryKey: ['/api/admin/teacher-plans']
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      apiRequest('PUT', `/api/admin/orders/${id}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      toast({ title: 'تم تحديث حالة الطلب بنجاح' });
+    },
+    onError: () => {
+      toast({ title: 'فشل في تحديث حالة الطلب', variant: 'destructive' });
+    }
+  });
+
+  const updatePrintJobStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      apiRequest('PUT', `/api/admin/print-jobs/${id}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/print-jobs'] });
+      toast({ title: 'تم تحديث حالة الطباعة بنجاح' });
+    },
+    onError: () => {
+      toast({ title: 'فشل في تحديث حالة الطباعة', variant: 'destructive' });
+    }
   });
 
   const { data: teacherSubscriptions } = useQuery({
