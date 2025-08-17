@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import Header from '@/components/layout/header';
 import BottomNav from '@/components/layout/bottom-nav';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Printer, 
+  FileText, 
+  Clock, 
+  DollarSign, 
+  Download,
+  Upload,
+  Scan,
+  Camera
+} from 'lucide-react';
+import { DocumentScanner } from '@/components/upload/DocumentScanner';
+import { CameraCapture } from '@/components/camera/CameraCapture';
 
 export default function Print() {
   const { user } = useAuth();
@@ -30,13 +43,18 @@ export default function Print() {
     }
   };
 
+  const handleCameraCapture = async (file: File, downloadUrl: string) => {
+    setSelectedFile(file);
+    console.log('File captured:', file.name, 'URL:', downloadUrl);
+  };
+
   const handlePrint = async () => {
     if (!selectedFile || !user) return;
 
     setIsUploading(true);
     
     try {
-      // TODO: Upload file to Supabase Storage
+      // TODO: Upload file to Firebase Storage
       // TODO: Create print job in database
       // TODO: Add to print queue
       
@@ -116,14 +134,15 @@ export default function Print() {
                 </div>
               )}
               
-              {/* Quick Actions */}
+              {/* Camera and Scanner Integration */}
               <div className="grid grid-cols-2 gap-3 mt-6">
+                <CameraCapture
+                  onCapture={handleCameraCapture}
+                  allowedTypes={['document', 'image']}
+                  maxFileSize={20 * 1024 * 1024}
+                />
                 <Button variant="outline" className="w-full">
-                  <i className="fas fa-camera ml-2"></i>
-                  التقط صورة
-                </Button>
-                <Button variant="outline" className="w-full">
-                  <i className="fas fa-scan ml-2"></i>
+                  <Scan className="w-4 h-4 ml-2" />
                   مسح ضوئي
                 </Button>
               </div>
