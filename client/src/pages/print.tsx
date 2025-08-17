@@ -23,10 +23,13 @@ import {
 } from 'lucide-react';
 import { DocumentScanner } from '@/components/upload/DocumentScanner';
 import { CameraCapture } from '@/components/camera/CameraCapture';
+import { DragDropUpload } from '@/components/upload/DragDropUpload';
+import { testFirebaseConnection } from '@/lib/firebase-debug';
 
 export default function Print() {
   const { user } = useAuth();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
   const [printSettings, setPrintSettings] = useState({
     copies: 1,
     colorMode: 'grayscale',
@@ -36,29 +39,26 @@ export default function Print() {
   });
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
+  const handleDragDropUpload = (files: File[], urls: string[]) => {
+    setSelectedFiles(files);
+    setUploadedUrls(urls);
+    console.log('Files uploaded:', files.map(f => f.name), 'URLs:', urls);
   };
 
   const handleCameraCapture = async (file: File, downloadUrl: string) => {
-    setSelectedFile(file);
+    setSelectedFiles([file]);
+    setUploadedUrls([downloadUrl]);
     console.log('File captured:', file.name, 'URL:', downloadUrl);
   };
 
   const handlePrint = async () => {
-    if (!selectedFile || !user) return;
+    if (selectedFiles.length === 0 || !user) return;
 
     setIsUploading(true);
     
     try {
-      // TODO: Upload file to Firebase Storage
-      // TODO: Create print job in database
-      // TODO: Add to print queue
-      
-      console.log('Printing file:', selectedFile.name, 'with settings:', printSettings);
+      console.log('Printing files:', selectedFiles.map(f => f.name), 'with settings:', printSettings);
+      console.log('Firebase URLs:', uploadedUrls);
       
       // Simulate printing process
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -71,11 +71,11 @@ export default function Print() {
   };
 
   const calculateCost = () => {
-    if (!selectedFile) return 0;
+    if (selectedFiles.length === 0) return 0;
     
     // Mock cost calculation - replace with actual pricing logic
     const basePrice = printSettings.colorMode === 'color' ? 2 : 1; // per page
-    const pages = 10; // Mock page count
+    const pages = selectedFiles.length * 10; // Mock page count per file
     const total = pages * printSettings.copies * basePrice;
     
     return total;
@@ -100,50 +100,35 @@ export default function Print() {
                 رفع الملف
               </h2>
               
-              <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center mb-4">
-                <input
-                  type="file"
-                  id="file-upload"
-                  className="hidden"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={handleFileSelect}
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer"
-                >
-                  <i className="fas fa-cloud-upload-alt text-4xl text-muted-foreground mb-4"></i>
-                  <p className="text-lg font-medium mb-2">اسحب وأفلت ملفك هنا</p>
-                  <p className="text-sm text-muted-foreground mb-4">أو انقر للاختيار</p>
-                  <Button variant="outline">اختيار ملف</Button>
-                </label>
-              </div>
-              
-              {selectedFile && (
-                <div className="bg-secondary/50 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <i className="fas fa-file text-accent text-2xl ml-3"></i>
-                    <div className="flex-1">
-                      <h4 className="font-medium">{selectedFile.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                    <Badge variant="secondary">جاهز للطباعة</Badge>
-                  </div>
-                </div>
-              )}
+              <DragDropUpload
+                onUpload={handleDragDropUpload}
+                maxFiles={5}
+                maxSize={50 * 1024 * 1024} // 50MB
+                acceptedTypes={['image/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']}
+              />
               
               {/* Camera and Scanner Integration */}
-              <div className="grid grid-cols-2 gap-3 mt-6">
+              <div className="grid grid-cols-3 gap-3 mt-6">
                 <CameraCapture
                   onCapture={handleCameraCapture}
                   allowedTypes={['document', 'image']}
                   maxFileSize={20 * 1024 * 1024}
                 />
-                <Button variant="outline" className="w-full">
-                  <Scan className="w-4 h-4 ml-2" />
-                  مسح ضوئي
+                <DocumentScanner onScan={handleCameraCapture} />
+                <Button 
+                  variant="outline" 
+                  className="w-full h-full"
+                  onClick={async () => {
+                    try {
+                      const result = await testFirebaseConnection();
+                      console.log('Firebase test result:', result);
+                    } catch (error) {
+                      console.error('Firebase test failed:', error);
+                    }
+                  }}
+                >
+                  <FileText className="w-4 h-4 ml-2" />
+                  اختبر Firebase
                 </Button>
               </div>
             </CardContent>
@@ -244,7 +229,7 @@ export default function Print() {
                 <Button
                   className="w-full bg-accent hover:bg-accent/90 text-white"
                   onClick={handlePrint}
-                  disabled={!selectedFile || isUploading}
+                  disabled={selectedFiles.length === 0 || isUploading}
                 >
                   {isUploading ? (
                     <>

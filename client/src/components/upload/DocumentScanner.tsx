@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { CameraCapture } from '@/components/camera/CameraCapture';
 import { useToast } from '@/hooks/use-toast';
-import { uploadToFirebase } from '@/lib/firebase-storage';
+import { uploadToFirebaseStorage } from '@/lib/firebase-storage';
 
 interface ScannedDocument {
   id: string;
@@ -31,13 +31,18 @@ interface ScannedDocument {
   processed: boolean;
 }
 
-export function DocumentScanner() {
+interface DocumentScannerProps {
+  onScan?: (file: File, downloadUrl: string) => void;
+}
+
+export function DocumentScanner({ onScan }: DocumentScannerProps) {
   const [documents, setDocuments] = useState<ScannedDocument[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const { toast } = useToast();
 
   const handleDocumentCapture = async (file: File, downloadUrl: string) => {
+    onScan?.(file, downloadUrl);
     setIsProcessing(true);
     setProcessingProgress(0);
 
@@ -117,27 +122,12 @@ export function DocumentScanner() {
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 space-x-reverse">
-            <Scan className="w-5 h-5" />
-            <span>ماسح المستندات الذكي</span>
-          </CardTitle>
-          <p className="text-sm text-gray-600">
-            امسح المستندات باستخدام الكاميرا أو ارفع ملفات من جهازك
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center">
-            <CameraCapture
-              onCapture={handleDocumentCapture}
-              allowedTypes={['document', 'image']}
-              maxFileSize={20 * 1024 * 1024} // 20MB for documents
-            />
-          </div>
-        </CardContent>
-      </Card>
+    <>
+      <CameraCapture
+        onCapture={handleDocumentCapture}
+        allowedTypes={['document', 'image']}
+        maxFileSize={20 * 1024 * 1024} // 20MB for documents
+      />
 
       {/* Processing indicator */}
       {isProcessing && (
@@ -259,6 +249,6 @@ export function DocumentScanner() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </>
   );
 }
