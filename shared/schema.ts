@@ -224,6 +224,31 @@ export const chatConversations = pgTable("chat_conversations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Admin settings for configurable UI elements
+export const adminSettings = pgTable("admin_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  value: jsonb("value").notNull(),
+  description: text("description"),
+  category: text("category").default("general"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Admin file uploads
+export const adminUploads = pgTable("admin_uploads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  filename: text("filename").notNull(),
+  originalName: text("original_name").notNull(),
+  filePath: text("file_path").notNull(),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
+  category: text("category").default("general"),
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Order tracking for animations
 export const orderTracking = pgTable("order_tracking", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -279,6 +304,28 @@ export const insertTeacherPlanSchema = createInsertSchema(teacherPlans).omit({
   createdAt: true,
 });
 
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAdminSettingSchema = createInsertSchema(adminSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAdminUploadSchema = createInsertSchema(adminUploads).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertOrderTrackingSchema = createInsertSchema(orderTracking).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertTeacherSubscriptionSchema = createInsertSchema(teacherSubscriptions).omit({
   id: true,
   createdAt: true,
@@ -294,16 +341,15 @@ export const insertStudentSubscriptionSchema = createInsertSchema(studentSubscri
   createdAt: true,
 });
 
-export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertOrderTrackingSchema = createInsertSchema(orderTracking).omit({
-  id: true,
-  createdAt: true,
-});
+// Adding missing types
+export type AdminSetting = typeof adminSettings.$inferSelect;
+export type InsertAdminSetting = z.infer<typeof insertAdminSettingSchema>;
+export type AdminUpload = typeof adminUploads.$inferSelect;
+export type InsertAdminUpload = z.infer<typeof insertAdminUploadSchema>;
+export type OrderTracking = typeof orderTracking.$inferSelect;
+export type InsertOrderTracking = z.infer<typeof insertOrderTrackingSchema>;
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;

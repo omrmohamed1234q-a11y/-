@@ -970,6 +970,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin settings endpoints
+  app.get('/api/admin/settings', async (req, res) => {
+    try {
+      // Return hardcoded settings for now since schema may not be synced
+      const defaultSettings = [
+        {
+          id: '1',
+          key: 'quick_actions',
+          value: [
+            { id: 'print', title: 'طباعة سريعة', description: 'ارفع ملفك واطبع فوراً', icon: 'printer', enabled: true },
+            { id: 'store', title: 'المتجر الرقمي', description: 'تسوق المنتجات التعليمية', icon: 'shopping-bag', enabled: true },
+            { id: 'rewards', title: 'المكافآت', description: 'استبدل نقاطك بجوائز', icon: 'coins', enabled: true },
+            { id: 'profile', title: 'الملف الشخصي', description: 'إدارة حسابك ونقاطك', icon: 'user-circle', enabled: true }
+          ],
+          description: 'Quick action cards configuration',
+          category: 'ui'
+        },
+        {
+          id: '2',
+          key: 'feature_cards',
+          value: [
+            { title: 'محرك الطباعة الشامل', description: 'طباعة عالية الجودة لجميع أنواع الملفات', icon: 'printer', enabled: true },
+            { title: 'المسح الذكي + OCR', description: 'تحويل الصور إلى نصوص قابلة للتحرير', icon: 'camera', enabled: true },
+            { title: 'صندوق أدوات PDF', description: 'تحرير ودمج وضغط ملفات PDF', icon: 'folder-open', enabled: true }
+          ],
+          description: 'Feature cards carousel configuration',
+          category: 'ui'
+        }
+      ];
+      res.json(defaultSettings);
+    } catch (error) {
+      console.error('Error fetching admin settings:', error);
+      res.status(500).json({ error: 'Failed to fetch settings' });
+    }
+  });
+
+  // File management endpoints
+  app.get('/api/admin/files', async (req, res) => {
+    try {
+      // Return mock data for now
+      const mockFiles = [
+        {
+          id: '1',
+          filename: 'guide_math_grade3.pdf',
+          originalName: 'دليل الرياضيات - الصف الثالث.pdf',
+          filePath: '/uploads/guides/guide_math_grade3.pdf',
+          fileSize: 2048000,
+          mimeType: 'application/pdf',
+          category: 'teacher_guides',
+          uploadedBy: 'admin',
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: '2',
+          filename: 'template_certificate.png',
+          originalName: 'قالب شهادة تقدير.png',
+          filePath: '/uploads/templates/template_certificate.png',
+          fileSize: 512000,
+          mimeType: 'image/png',
+          category: 'templates',
+          uploadedBy: 'admin',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      res.json(mockFiles);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      res.status(500).json({ error: 'Failed to fetch files' });
+    }
+  });
+
+  // Order tracking
+  app.get('/api/orders/:orderId/tracking', async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      // Mock tracking data
+      const mockTracking = [
+        { id: '1', orderId, status: 'processing', message: 'تم استلام الطلب وجاري المعالجة', createdAt: new Date(Date.now() - 3600000).toISOString() },
+        { id: '2', orderId, status: 'printing', message: 'بدأت عملية الطباعة', createdAt: new Date(Date.now() - 1800000).toISOString() },
+        { id: '3', orderId, status: 'shipped', message: 'تم الشحن وجاري التوصيل', createdAt: new Date().toISOString() }
+      ];
+      res.json(mockTracking);
+    } catch (error) {
+      console.error('Error fetching tracking:', error);
+      res.status(500).json({ error: 'Failed to fetch tracking' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

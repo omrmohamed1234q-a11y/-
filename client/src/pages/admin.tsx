@@ -57,6 +57,16 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/teacher-subscriptions']
   });
 
+  // Fetch admin settings for UI configuration
+  const { data: adminSettings } = useQuery({
+    queryKey: ['/api/admin/settings']
+  });
+
+  // Fetch uploaded files
+  const { data: adminFiles } = useQuery({
+    queryKey: ['/api/admin/files']
+  });
+
   const currentUser = user || localUser;
   const isMainAdmin = currentUser?.email === 'printformead1@gmail.com';
   const isAdmin = currentUser?.role === 'admin' || isMainAdmin;
@@ -224,11 +234,13 @@ export default function AdminDashboard() {
 
         {/* Management Tabs */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">
             <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
+            <TabsTrigger value="ui-config">واجهة التطبيق</TabsTrigger>
+            <TabsTrigger value="files">إدارة الملفات</TabsTrigger>
+            <TabsTrigger value="orders">تتبع الطلبات</TabsTrigger>
             <TabsTrigger value="users">المستخدمين</TabsTrigger>
             <TabsTrigger value="products">المنتجات</TabsTrigger>
-            <TabsTrigger value="orders">الطلبات</TabsTrigger>
             <TabsTrigger value="teachers">المعلمين</TabsTrigger>
             <TabsTrigger value="rewards">المكافآت</TabsTrigger>
             <TabsTrigger value="settings">الإعدادات</TabsTrigger>
