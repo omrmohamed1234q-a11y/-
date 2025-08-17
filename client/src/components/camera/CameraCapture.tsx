@@ -127,6 +127,8 @@ export function CameraCapture({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log('File selected:', file.name, file.type, file.size);
+
     if (file.size > maxFileSize) {
       toast({
         title: 'حجم الملف كبير',
@@ -138,7 +140,10 @@ export function CameraCapture({
 
     setIsUploading(true);
     try {
-      const downloadUrl = await uploadToFirebase(file, 'uploads');
+      console.log('Starting Firebase upload...');
+      const downloadUrl = await uploadToFirebaseStorage(file, 'uploads');
+      console.log('Upload successful, URL:', downloadUrl);
+      
       onCapture(file, downloadUrl);
       
       toast({
@@ -147,11 +152,16 @@ export function CameraCapture({
       });
       
       setIsOpen(false);
+      
+      // Clear the input value to allow selecting the same file again
+      if (event.target) {
+        event.target.value = '';
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast({
         title: 'خطأ في الرفع',
-        description: 'فشل في رفع الملف. حاول مرة أخرى.',
+        description: error instanceof Error ? error.message : 'فشل في رفع الملف. حاول مرة أخرى.',
         variant: 'destructive'
       });
     } finally {
