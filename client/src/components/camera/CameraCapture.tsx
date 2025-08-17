@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Camera, Upload, RotateCcw, Check, X, FileText, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { uploadToFirebase } from '@/lib/firebase-storage';
+import { uploadToFirebaseStorage } from '@/lib/firebase-storage';
 
 interface CameraCaptureProps {
   onCapture: (file: File, downloadUrl: string) => void;
@@ -98,8 +98,8 @@ export function CameraCapture({
 
         const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
         
-        // Upload to Firebase
-        const downloadUrl = await uploadToFirebase(file, 'captures');
+        // Upload to Firebase Storage
+        const downloadUrl = await uploadToFirebaseStorage(file, 'camera-captures');
         
         onCapture(file, downloadUrl);
         

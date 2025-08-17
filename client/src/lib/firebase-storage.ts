@@ -1,29 +1,38 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, getMetadata } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'demo-api-key',
-  authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID || 'demo-project'}.firebaseapp.com`,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'demo-project',
-  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID || 'demo-project'}.firebasestorage.app`,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '123456789',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || 'demo-app-id',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebasestorage.app`,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+console.log('Firebase config check:', {
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasProjectId: !!firebaseConfig.projectId,
+  hasAppId: !!firebaseConfig.appId,
+  projectId: firebaseConfig.projectId
+});
+
+// Initialize Firebase (prevent duplicate initialization)
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+
 export const storage = getStorage(app);
 export const auth = getAuth(app);
 
 /**
  * Upload file to Firebase Storage
  */
-export async function uploadToFirebase(
+export async function uploadToFirebaseStorage(
   file: File, 
   folder: string = 'uploads',
-  customFileName?: string
+  customFileName?: string,
+  onProgress?: (progress: number) => void
 ): Promise<string> {
   try {
     // Generate unique filename
@@ -35,6 +44,11 @@ export async function uploadToFirebase(
     // Create storage reference
     const storageRef = ref(storage, `${folder}/${fileName}`);
     
+    // Track upload progress
+    if (onProgress) {
+      onProgress(0);
+    }
+    
     // Upload file
     const snapshot = await uploadBytes(storageRef, file, {
       contentType: file.type,
@@ -44,6 +58,11 @@ export async function uploadToFirebase(
         size: file.size.toString()
       }
     });
+    
+    // Complete progress
+    if (onProgress) {
+      onProgress(100);
+    }
     
     // Get download URL
     const downloadURL = await getDownloadURL(snapshot.ref);
@@ -69,7 +88,7 @@ export async function uploadMultipleToFirebase(
   folder: string = 'uploads'
 ): Promise<string[]> {
   const uploadPromises = Array.from(files).map(file => 
-    uploadToFirebase(file, folder)
+    uploadToFirebaseStorage(file, folder)
   );
   
   try {
