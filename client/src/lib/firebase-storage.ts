@@ -76,7 +76,25 @@ export async function uploadToFirebaseStorage(
     return downloadURL;
   } catch (error) {
     console.error('Firebase upload error:', error);
-    throw new Error(`فشل في رفع الملف: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+    
+    // Check if Firebase Storage is properly configured
+    if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.appId) {
+      throw new Error('Firebase configuration is missing required credentials');
+    }
+    
+    // Check specific Firebase errors
+    if (error instanceof Error) {
+      if (error.message.includes('storage/unauthorized')) {
+        throw new Error('لا توجد صلاحيات للرفع. تحقق من إعدادات Firebase Storage');
+      } else if (error.message.includes('storage/quota-exceeded')) {
+        throw new Error('تم تجاوز المساحة المسموحة في Firebase Storage');
+      } else if (error.message.includes('network')) {
+        throw new Error('مشكلة في الاتصال. تحقق من الإنترنت وحاول مرة أخرى');
+      }
+      throw new Error(`خطأ في رفع الملف: ${error.message}`);
+    }
+    
+    throw new Error('فشل في رفع الملف لسبب غير معروف');
   }
 }
 
