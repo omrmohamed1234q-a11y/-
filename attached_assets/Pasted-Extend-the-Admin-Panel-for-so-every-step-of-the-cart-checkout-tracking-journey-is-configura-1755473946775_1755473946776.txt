@@ -1,0 +1,46 @@
+Extend the Admin Panel for "اطبعلي" so every step of the cart→checkout→tracking journey is configurable and reflected instantly in the customer app.
+
+Stack:
+- Admin web: React (Vite/Next) + Firebase Admin SDK
+- Reuse existing Firestore collections
+
+Admin features:
+1) Orders
+   - Table + filters (status, date, payment).
+   - Detail drawer with timeline editor (append event, change ETA, add note).
+   - Actions: update status (processing/printing/out_for_delivery/delivered/canceled), refund, resend receipt.
+   - Assign delivery (courier name/phone), add tracking link, push FCM.
+
+2) Products & Inventory
+   - CRUD products, variants, price, stock, images.
+   - Toggle flags: isDigital, teacherOnly, vip.
+   - Bulk update stock; import/export CSV.
+
+3) Vouchers & Rewards
+   - CRUD vouchers (value %, flat, expiry, minSubtotal).
+   - Rewards rules (event → points): purchase, daily login, referral, challenge.
+   - Manual adjust user points with audit log.
+
+4) Settings (Live)
+   - Delivery slots (create time windows), shipping fees by zone/weight, cancellation window (mins), ETA rules.
+   - Payment methods toggles (play_billing/gateway/cod).
+   - Teacher Subscription pricing (monthly/yearly), gate access.
+
+5) Teacher Materials
+   - Upload PDFs, tag by curriculum/grade/region.
+   - Restrict to subscribers; preview link.
+
+6) Analytics
+   - KPIs: orders today, conversion, avg basket, top products, voucher usage, on-time delivery rate.
+   - Export CSV for accounting.
+
+Requirements:
+- All edits write to Firestore `settings`, `vouchers`, `rewards_rules`, `products`, `orders`.
+- Changes reflect immediately in client via listeners.
+- Role-based access: only admin users can access; audit all changes.
+- Provide minimal, clean Arabic-first UI; RTL support.
+
+Deliver:
+- React admin app with routes (Orders, Products, Vouchers, Rewards, Settings, Teacher)
+- Firebase Admin SDK server utilities for secure mutations
+- Deployed preview + README for environment variables

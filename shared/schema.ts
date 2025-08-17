@@ -41,6 +41,9 @@ export const products = pgTable("products", {
   ratingCount: integer("rating_count").default(0),
   tags: text("tags").array(),
   featured: boolean("featured").default(false),
+  teacherOnly: boolean("teacher_only").default(false),
+  vip: boolean("vip").default(false),
+  variants: jsonb("variants").default([]), // Array of {name, price, stock}
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -68,11 +71,19 @@ export const orders = pgTable("orders", {
   userId: varchar("user_id").notNull().references(() => users.id),
   items: jsonb("items").notNull(), // Array of {productId, quantity, price}
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull(), // "pending" | "confirmed" | "shipped" | "delivered" | "cancelled"
+  status: text("status").notNull(), // "pending" | "processing" | "printing" | "out_for_delivery" | "delivered" | "cancelled"
   shippingAddress: jsonb("shipping_address"),
   paymentMethod: text("payment_method"),
   paymentStatus: text("payment_status").default("pending"),
   pointsUsed: integer("points_used").default(0),
+  deliverySlot: text("delivery_slot"),
+  courierName: text("courier_name"),
+  courierPhone: text("courier_phone"),
+  trackingNumber: text("tracking_number"),
+  trackingUrl: text("tracking_url"),
+  estimatedDelivery: timestamp("estimated_delivery"),
+  timeline: jsonb("timeline").default([]), // Array of {event, timestamp, note}
+  notes: text("notes"),
   pointsEarned: integer("points_earned").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -235,6 +246,44 @@ export const adminSettings = pgTable("admin_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Vouchers for discount management
+export const vouchers = pgTable("vouchers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: text("code").notNull().unique(),
+  type: text("type").notNull(), // "percentage" | "fixed"
+  value: decimal("value", { precision: 10, scale: 2 }).notNull(),
+  minSubtotal: decimal("min_subtotal", { precision: 10, scale: 2 }).default("0.00"),
+  maxDiscount: decimal("max_discount", { precision: 10, scale: 2 }),
+  usageLimit: integer("usage_limit").default(1),
+  usageCount: integer("usage_count").default(0),
+  validFrom: timestamp("valid_from").defaultNow(),
+  validUntil: timestamp("valid_until"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Rewards rules for gamification
+export const rewardsRules = pgTable("rewards_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  event: text("event").notNull(), // "purchase" | "daily_login" | "referral" | "challenge"
+  points: integer("points").notNull(),
+  conditions: jsonb("conditions").default({}), // Event-specific conditions
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Audit log for admin actions
+export const auditLog = pgTable("audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull().references(() => users.id),
+  action: text("action").notNull(),
+  tableName: text("table_name").notNull(),
+  recordId: text("record_id"),
+  oldData: jsonb("old_data"),
+  newData: jsonb("new_data"),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
 // Admin file uploads
 export const adminUploads = pgTable("admin_uploads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -341,11 +390,32 @@ export const insertStudentSubscriptionSchema = createInsertSchema(studentSubscri
   createdAt: true,
 });
 
+export const insertVoucherSchema = createInsertSchema(vouchers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRewardsRuleSchema = createInsertSchema(rewardsRules).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLog).omit({
+  id: true,
+  timestamp: true,
+});
+
 // Additional types
 export type AdminSetting = typeof adminSettings.$inferSelect;
 export type InsertAdminSetting = z.infer<typeof insertAdminSettingSchema>;
 export type AdminUpload = typeof adminUploads.$inferSelect;
 export type InsertAdminUpload = z.infer<typeof insertAdminUploadSchema>;
+export type Voucher = typeof vouchers.$inferSelect;
+export type InsertVoucher = z.infer<typeof insertVoucherSchema>;
+export type RewardsRule = typeof rewardsRules.$inferSelect;
+export type InsertRewardsRule = z.infer<typeof insertRewardsRuleSchema>;
+export type AuditLog = typeof auditLog.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
