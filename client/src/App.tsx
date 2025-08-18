@@ -19,6 +19,7 @@ import Rewards from "@/pages/rewards";
 import Profile from "@/pages/profile";
 import Payment from "@/pages/payment";
 import AdminDashboard from "@/pages/admin";
+import AdminProducts from "@/pages/admin-products";
 
 function Router() {
   const { user, loading } = useAuth();
@@ -59,6 +60,7 @@ function Router() {
         <Route path="/auth/signup" component={Signup} />
         <Route path="/auth/callback" component={AuthCallback} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/products" component={AdminProducts} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>
@@ -78,6 +80,7 @@ function Router() {
         <Route path="/profile" component={Profile} />
         <Route path="/payment" component={Payment} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/products" component={AdminProducts} />
         <Route component={NotFound} />
       </Switch>
       <ChatBot />

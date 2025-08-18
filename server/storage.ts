@@ -25,6 +25,10 @@ export interface IStorage {
   
   // Admin statistics
   getAdminStats(): Promise<any>;
+  
+  // Teacher plan operations  
+  getAllTeacherPlans(): Promise<any[]>;
+  getAllTeacherSubscriptions(): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -133,6 +137,37 @@ export class DatabaseStorage implements IStorage {
       revenue: 15000, // This would be calculated from actual orders
       monthlyGrowth: 25
     };
+  }
+
+  // Teacher plan operations  
+  async getAllTeacherPlans(): Promise<any[]> {
+    // Return mock teacher plans for now
+    return [
+      {
+        id: '1',
+        name: 'خطة المعلم الأساسية',
+        nameEn: 'Basic Teacher Plan',
+        description: 'خطة أساسية للمعلمين الجدد',
+        price: '99.00',
+        duration: 30,
+        maxStudents: 30,
+        maxMaterials: 100,
+        active: true
+      }
+    ];
+  }
+
+  async getAllTeacherSubscriptions(): Promise<any[]> {
+    // Return mock teacher subscriptions for now
+    return [
+      {
+        id: '1',
+        teacherName: 'أحمد محمد',
+        planName: 'خطة المعلم الأساسية',
+        status: 'active',
+        endDate: '2024-12-31'
+      }
+    ];
   }
 }
 

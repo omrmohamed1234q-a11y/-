@@ -44,11 +44,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/admin/products', isAdminAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
-      if (user?.role !== 'admin') {
-      }
-
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.createProduct(productData);
       res.json(product);
@@ -60,11 +55,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/admin/products/:id', isAdminAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
-      if (user?.role !== 'admin') {
-      }
-
       const { id } = req.params;
       const updates = insertProductSchema.partial().parse(req.body);
       const product = await storage.updateProduct(id, updates);
@@ -77,11 +67,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/admin/products/:id', isAdminAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
-      if (user?.role !== 'admin') {
-      }
-
       const { id } = req.params;
       await storage.deleteProduct(id);
       res.json({ success: true });
@@ -93,11 +78,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/admin/orders', isAdminAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
-      if (user?.role !== 'admin') {
-      }
-
       const orders = await storage.getAllOrders();
       res.json(orders);
     } catch (error) {
@@ -108,11 +88,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/admin/orders/:id/status', isAdminAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
-      if (user?.role !== 'admin') {
-      }
-
       const { id } = req.params;
       const { status } = req.body;
       const order = await storage.updateOrderStatus(id, status);
@@ -125,11 +100,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/admin/print-jobs', isAdminAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
-      if (user?.role !== 'admin') {
-      }
-
       const printJobs = await storage.getAllPrintJobs();
       res.json(printJobs);
     } catch (error) {
@@ -140,11 +110,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/admin/print-jobs/:id/status', isAdminAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
-      if (user?.role !== 'admin') {
-      }
-
       const { id } = req.params;
       const { status } = req.body;
       const printJob = await storage.updatePrintJobStatus(id, status);
@@ -341,26 +306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Teacher management routes
   app.get('/api/admin/teacher-plans', isAdminAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
-      if (user?.role !== 'admin') {
-      }
-
-      // Return mock teacher plans for now
-      const teacherPlans = [
-        {
-          id: '1',
-          name: 'خطة المعلم الأساسية',
-          nameEn: 'Basic Teacher Plan',
-          description: 'خطة أساسية للمعلمين الجدد',
-          price: '99.00',
-          duration: 30,
-          maxStudents: 30,
-          maxMaterials: 100,
-          active: true
-        }
-      ];
-      
+      const teacherPlans = await storage.getAllTeacherPlans();
       res.json(teacherPlans);
     } catch (error) {
       console.error("Error fetching teacher plans:", error);
@@ -370,22 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/admin/teacher-subscriptions', isAdminAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
-      if (user?.role !== 'admin') {
-      }
-
-      // Return mock teacher subscriptions for now
-      const teacherSubscriptions = [
-        {
-          id: '1',
-          teacherName: 'أحمد محمد',
-          planName: 'خطة المعلم الأساسية',
-          status: 'active',
-          endDate: '2024-12-31'
-        }
-      ];
-      
+      const teacherSubscriptions = await storage.getAllTeacherSubscriptions();
       res.json(teacherSubscriptions);
     } catch (error) {
       console.error("Error fetching teacher subscriptions:", error);

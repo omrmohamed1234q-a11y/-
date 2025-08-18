@@ -16,17 +16,17 @@ interface Product {
   name: string;
   description: string;
   price: string;
-  original_price: string | null;
-  image_url: string | null;
+  originalPrice?: string | null;
+  imageUrl?: string | null;
   category: string;
-  rating: string;
-  rating_count: number;
-  featured: boolean;
-  is_digital: boolean;
-  grade: string | null;
-  subject: string | null;
-  stock: number;
-  tags: string[] | null;
+  rating?: string;
+  ratingCount?: number;
+  featured?: boolean;
+  isDigital?: boolean;
+  grade?: string | null;
+  subject?: string | null;
+  stock?: number;
+  tags?: string[] | null;
 }
 
 const categories = [
@@ -79,42 +79,7 @@ export default function Store() {
 
   // Fetch products
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products', selectedCategory, searchQuery, sortBy, priceRange],
-    queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select('*');
-
-      if (selectedCategory) {
-        query = query.eq('category', selectedCategory);
-      }
-
-      if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-      }
-
-      switch (sortBy) {
-        case 'price_low':
-          query = query.order('price', { ascending: true });
-          break;
-        case 'price_high':
-          query = query.order('price', { ascending: false });
-          break;
-        case 'rating':
-          query = query.order('rating', { ascending: false });
-          break;
-        case 'newest':
-          query = query.order('created_at', { ascending: false });
-          break;
-        default:
-          query = query.order('featured', { ascending: false });
-      }
-
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      return data as Product[];
-    },
+    queryKey: ['/api/admin/products'],
   });
 
   // Add to cart mutation
@@ -273,7 +238,7 @@ export default function Store() {
             {products.map((product) => (
               <Card key={product.id} className="overflow-hidden hover-lift border">
                 <img
-                  src={product.image_url || '/api/placeholder/400/250'}
+                  src={product.imageUrl || 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250'}
                   alt={product.name}
                   className="w-full h-40 object-cover"
                   onError={(e) => {
@@ -286,14 +251,14 @@ export default function Store() {
                       {product.featured && (
                         <Badge className="bg-accent text-white">مميز</Badge>
                       )}
-                      {product.is_digital && (
+                      {product.isDigital && (
                         <Badge className="bg-purple-100 text-purple-600">رقمي</Badge>
                       )}
-                      {product.stock === 0 && (
+                      {(product.stock || 0) === 0 && (
                         <Badge variant="destructive">نفدت الكمية</Badge>
                       )}
                     </div>
-                    {renderStars(parseFloat(product.rating))}
+                    {product.rating && renderStars(parseFloat(product.rating))}
                   </div>
                   
                   <h3 className="font-bold text-sm mb-1 line-clamp-2">{product.name}</h3>
@@ -314,9 +279,9 @@ export default function Store() {
                       <span className="text-lg font-bold text-accent arabic-nums">
                         {formatPrice(product.price)} جنيه
                       </span>
-                      {product.original_price && (
+                      {product.originalPrice && (
                         <span className="text-sm text-muted-foreground line-through arabic-nums">
-                          {formatPrice(product.original_price)} جنيه
+                          {formatPrice(product.originalPrice)} جنيه
                         </span>
                       )}
                     </div>
@@ -324,9 +289,9 @@ export default function Store() {
                       size="sm"
                       className="bg-accent hover:bg-accent/90 text-white"
                       onClick={() => handleAddToCart(product.id)}
-                      disabled={product.stock === 0 || addToCartMutation.isPending}
+                      disabled={(product.stock || 0) === 0 || addToCartMutation.isPending}
                     >
-                      {product.is_digital ? (
+                      {product.isDigital ? (
                         <>
                           <i className="fas fa-download ml-1"></i>
                           تحميل فوري
@@ -341,9 +306,9 @@ export default function Store() {
                   </div>
                   
                   <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                    <span className="arabic-nums">{product.rating_count} تقييم</span>
-                    {!product.is_digital && (
-                      <span className="arabic-nums">متوفر: {product.stock}</span>
+                    <span className="arabic-nums">{product.ratingCount || 0} تقييم</span>
+                    {!product.isDigital && (
+                      <span className="arabic-nums">متوفر: {product.stock || 0}</span>
                     )}
                   </div>
                 </CardContent>
