@@ -1113,12 +1113,17 @@ Total Print Jobs: 2156
   app.post('/api/orders', async (req, res) => {
     try {
       const orderData = req.body;
+      console.log('Order data that failed:', orderData);
+      
+      // Use the existing admin user ID instead of hardcoded "admin-user"
+      const adminUserId = '48c03e72-d53b-4a3f-a729-c38276268315'; // Existing admin user from database
       
       // Generate order number
       const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       
       const newOrder = {
         ...orderData,
+        userId: adminUserId, // Fixed: Use valid admin user ID
         orderNumber,
         status: 'pending',
         statusText: 'معلق',
@@ -1135,7 +1140,8 @@ Total Print Jobs: 2156
       res.json(order);
     } catch (error) {
       console.error('Error creating order:', error);
-      res.status(500).json({ message: 'Failed to create order' });
+      console.error('Order data that failed:', req.body);
+      res.status(500).json({ message: 'Failed to create order', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
