@@ -22,7 +22,7 @@ import AdminDashboard from "@/pages/admin";
 import AdminProducts from "@/pages/admin-products";
 import Checkout from "@/pages/checkout";
 import OrderTracking from "@/pages/order-tracking";
-import CloudinaryTest from "@/pages/cloudinary-test";
+
 
 function Router() {
   const { user, loading } = useAuth();
@@ -84,7 +84,6 @@ function Router() {
         <Route path="/payment" component={Payment} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/order-tracking/:id" component={OrderTracking} />
-        <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route component={NotFound} />

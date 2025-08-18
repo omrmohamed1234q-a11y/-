@@ -126,21 +126,11 @@ export default function Print() {
             previewUrl: result.previewUrl
           });
 
-          // Notify server about successful upload (optional tracking)
-          try {
-            await apiRequest('POST', '/api/upload-file', {
-              fileName: file.name,
-              fileType: file.type,
-              uploadProvider: result.provider,
-              fileUrl: result.url
-            });
-          } catch (trackingError) {
-            console.warn('Failed to track upload on server:', trackingError);
-          }
+          // Server automatically tracks uploads via the upload service
 
           toast({
-            title: 'تم رفع الملف بنجاح',
-            description: `${file.name} - باستخدام ${result.provider === 'cloudinary' ? 'Cloudinary' : 'Firebase'}`,
+            title: 'تم رفع الملف بنجاح ☁️',
+            description: `${file.name} - تم الرفع إلى التخزين السحابي`,
           });
         } else {
           errors.push({
