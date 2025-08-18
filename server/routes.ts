@@ -994,6 +994,39 @@ Total Print Jobs: 2156
     }
   });
 
+  // Add item to cart
+  app.post('/api/cart/add', async (req, res) => {
+    try {
+      const { productId, quantity = 1 } = req.body;
+      
+      if (!productId) {
+        return res.status(400).json({ message: 'Product ID is required' });
+      }
+
+      // Use existing admin user for cart operations
+      const adminUserId = '48c03e72-d53b-4a3f-a729-c38276268315';
+      
+      // Create cart item in database
+      const cartItem = await storage.addToCart({
+        userId: adminUserId,
+        productId,
+        quantity
+      });
+      
+      res.json({ 
+        success: true, 
+        cartItem,
+        message: 'تمت إضافة المنتج للسلة بنجاح'
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      res.status(500).json({ 
+        message: 'Failed to add item to cart',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Add print job to cart
   app.post('/api/cart/print-job', async (req, res) => {
     try {

@@ -1,4 +1,4 @@
-import { users, products, orders, printJobs, type User, type Product, type Order, type PrintJob } from "@shared/schema";
+import { users, products, orders, printJobs, cartItems, type User, type Product, type Order, type PrintJob, type CartItem } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 
@@ -27,6 +27,9 @@ export interface IStorage {
   getAllPrintJobs(): Promise<PrintJob[]>;
   createPrintJob(printJob: any): Promise<PrintJob>;
   updatePrintJobStatus(id: string, status: string): Promise<PrintJob>;
+  
+  // Cart operations
+  addToCart(cartData: { userId: string; productId: string; quantity: number }): Promise<CartItem>;
   
   // Admin statistics
   getAdminStats(): Promise<any>;
@@ -208,6 +211,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(printJobs.id, id))
       .returning();
     return printJob;
+  }
+
+  // Cart operations
+  async addToCart(cartData: { userId: string; productId: string; quantity: number }): Promise<CartItem> {
+    const [cartItem] = await db
+      .insert(cartItems)
+      .values(cartData)
+      .returning();
+    return cartItem;
   }
 
   // Admin statistics

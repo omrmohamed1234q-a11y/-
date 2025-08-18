@@ -25,6 +25,8 @@
 - **Quick Order Creation**: One-click "طلب سريع" button for instant cash-on-delivery orders
 - **Active Orders Display**: Toggle view in cart to see all active/ongoing orders with tracking links
 - **Inline Tracking Buttons**: Each ordered item shows a "تتبع الطلب" (Track Order) button for immediate access
+- **Cart Schema Cache Fixed**: Resolved "cart_items table not found" error by implementing missing addToCart API route
+- **Database Integration**: Cart items now properly stored in PostgreSQL with foreign key relationships to products
 
 ## Comprehensive Order Tracking System (January 2025)
 - **Complete Purchase Journey**: Full Talabat/Amazon-style cart, checkout, and delivery tracking
