@@ -10,7 +10,7 @@ import { apiRequest } from '@/lib/queryClient';
 import {
   BarChart3, Users, Package, Printer, ShoppingCart, TrendingUp,
   Plus, Edit, Trash2, FileText, Settings, Home, LogOut,
-  Eye, Calendar, BookOpen, GraduationCap
+  Eye, Download, Calendar, BookOpen, GraduationCap
 } from 'lucide-react';
 import AdminAnalytics from '@/pages/admin/analytics';
 
@@ -147,11 +147,83 @@ export default function AdminDashboard() {
 
   // Safe default values for stats
   const safeStats = {
-    totalUsers: stats?.totalUsers || 0,
-    totalOrders: stats?.totalOrders || 0,
-    totalPrintJobs: stats?.totalPrintJobs || 0,
-    totalRevenue: stats?.totalRevenue || 0,
-    ...stats
+    totalUsers: (stats as any)?.totalUsers || 0,
+    totalOrders: (stats as any)?.totalOrders || 0,
+    totalPrintJobs: (stats as any)?.totalPrintJobs || 0,
+    totalRevenue: (stats as any)?.totalRevenue || 0,
+    ...(stats as any)
+  };
+
+  // Handle viewing file
+  const handleViewFile = (job: any) => {
+    if (job.fileUrl) {
+      // Check if it's a base64 data URL or Firebase URL
+      if (job.fileUrl.startsWith('data:')) {
+        // Create blob URL for base64 data
+        const byteCharacters = atob(job.fileUrl.split(',')[1]);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      } else {
+        // Direct URL
+        window.open(job.fileUrl, '_blank');
+      }
+    } else {
+      toast({
+        title: "خطأ",
+        description: "رابط الملف غير متوفر",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle downloading file
+  const handleDownloadFile = (job: any) => {
+    if (job.fileUrl) {
+      if (job.fileUrl.startsWith('data:')) {
+        // Create download link for base64 data
+        const byteCharacters = atob(job.fileUrl.split(',')[1]);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = job.filename || 'document.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      } else {
+        // Direct download
+        const link = document.createElement('a');
+        link.href = job.fileUrl;
+        link.download = job.filename || 'document.pdf';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      toast({
+        title: "نجح التحميل",
+        description: `تم تحميل الملف: ${job.filename}`,
+      });
+    } else {
+      toast({
+        title: "خطأ",
+        description: "رابط الملف غير متوفر",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -312,7 +384,7 @@ export default function AdminDashboard() {
 
             {/* Products Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map((product: any) => (
+              {(products as any[]).map((product: any) => (
                 <Card key={product.id} className="hover:shadow-lg transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start mb-2">
@@ -363,7 +435,7 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {orders.map((order: any) => (
+                      {(orders as any[]).map((order: any) => (
                         <tr key={order.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm">#{order.id}</td>
                           <td className="px-4 py-3 text-sm">{order.customerName}</td>
@@ -391,19 +463,56 @@ export default function AdminDashboard() {
           <TabsContent value="print-jobs" className="space-y-6">
             <h2 className="text-2xl font-bold">مهام الطباعة</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {printJobs.map((job: any) => (
+              {(printJobs as any[]).map((job: any) => (
                 <Card key={job.id} className="hover:shadow-lg transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold">مهمة #{job.id}</h3>
+                      <h3 className="font-semibold text-right">مهمة #{job.id.slice(0, 8)}</h3>
                       <Badge variant={job.status === 'completed' ? 'default' : 'secondary'}>
-                        {job.status === 'completed' ? 'مكتملة' : 'قيد التنفيذ'}
+                        {job.status === 'completed' ? 'مكتملة' : 
+                         job.status === 'pending' ? 'في الانتظار' :
+                         job.status === 'printing' ? 'جاري الطباعة' :
+                         job.status === 'failed' ? 'فشل' : 'قيد التنفيذ'}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{job.fileName}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">{job.pages} صفحة</span>
-                      <span className="font-bold">{job.cost} ر.س</span>
+                    <div className="space-y-2 mb-4">
+                      <p className="text-sm text-gray-800 font-medium text-right">{job.filename}</p>
+                      <div className="flex justify-between items-center text-sm text-gray-600">
+                        <span>{job.pages} صفحة</span>
+                        <span>{job.copies} نسخة</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm text-gray-600">
+                        <span>{job.colorMode === 'color' ? 'ملون' : 'أبيض وأسود'}</span>
+                        <span>{job.paperSize}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">{job.doubleSided ? 'وجهين' : 'وجه واحد'}</span>
+                        <span className="font-bold text-green-600">{job.cost} ر.س</span>
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 mt-4">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => handleViewFile(job)}
+                        data-testid={`button-view-${job.id}`}
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        عرض الملف
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => handleDownloadFile(job)}
+                        data-testid={`button-download-${job.id}`}
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        تحميل
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
