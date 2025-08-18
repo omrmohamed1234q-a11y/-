@@ -64,9 +64,11 @@ interface ProductFormProps {
   initialData?: any;
   onSubmit: (data: ProductFormData) => void;
   isLoading?: boolean;
+  isEdit?: boolean;
+  product?: any;
 }
 
-export default function ProductForm({ initialData, onSubmit, isLoading }: ProductFormProps) {
+export default function ProductForm({ initialData, onSubmit, isLoading, isEdit = false, product }: ProductFormProps) {
   const [selectedProductTypes, setSelectedProductTypes] = useState<string[]>(
     initialData?.productTypes || []
   );
@@ -130,7 +132,7 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
       ...data,
       price: data.price || '0',
       originalPrice: data.originalPrice && data.originalPrice !== '' ? data.originalPrice : undefined,
-      availableCopies: data.availableCopies || 0,
+      availableCopies: data.availableCopies !== undefined && data.availableCopies !== null ? parseInt(data.availableCopies.toString()) : (isEdit && product?.availableCopies ? product.availableCopies : 50),
       productTypes: selectedProductTypes,
       imageUrl: coverImageUrl,
     };

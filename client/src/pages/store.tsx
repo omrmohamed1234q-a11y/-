@@ -78,7 +78,7 @@ export default function Store() {
   const [priceRange, setPriceRange] = useState<string>('');
 
   // Fetch products
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ['/api/admin/products'],
   });
 
@@ -217,7 +217,7 @@ export default function Store() {
         </Card>
 
         {/* Products Grid */}
-        {products.length === 0 ? (
+        {(products as Product[]).length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <i className="fas fa-search text-4xl text-muted-foreground mb-4"></i>
@@ -227,7 +227,7 @@ export default function Store() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product) => (
+            {(products as Product[]).map((product: Product) => (
               <Card key={product.id} className="overflow-hidden hover-lift border">
                 <img
                   src={product.imageUrl || 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250'}
@@ -299,8 +299,8 @@ export default function Store() {
                   
                   <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                     <span className="arabic-nums">{product.ratingCount || 0} تقييم</span>
-                    {!product.isDigital && (
-                      <span className="arabic-nums">متوفر: {product.availableCopies || 0}</span>
+                    {!product.isDigital && (product.availableCopies || 0) > 0 && (
+                      <span className="text-green-600">متوفر</span>
                     )}
                   </div>
                 </CardContent>

@@ -35,6 +35,13 @@
 - **Three-Dot Menu Integration**: Unified AdminActionsMenu across all admin sections with edit/delete controls
 - **Direct Store Access**: Added multiple navigation paths to admin store page from main admin panel
 
+## Customer Store Inventory Display Enhancement (January 2025)
+- **Hidden Inventory Numbers**: Customer store no longer shows exact copy counts to avoid confusion
+- **Clean Stock Status**: Shows simple "متوفر" (Available) for in-stock items instead of specific numbers
+- **Fixed Field Mapping**: Resolved stock checking from non-existent `stock` field to correct `availableCopies`
+- **Preserved Admin Control**: Admins can still edit exact inventory numbers in admin panel
+- **Form Data Persistence**: Fixed ProductForm to properly save and preserve availableCopies during edits
+
 ## Comprehensive Order Tracking System (January 2025)
 - **Complete Purchase Journey**: Full Talabat/Amazon-style cart, checkout, and delivery tracking
 - **Database Schema**: Enhanced orders table with 40+ fields for complete tracking lifecycle
