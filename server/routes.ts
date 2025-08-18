@@ -782,9 +782,12 @@ Total Print Jobs: 2156
         doubleSidedDiscount
       );
 
+      // Use existing admin user for print jobs (since we don't have authentication)
+      const adminUserId = '48c03e72-d53b-4a3f-a729-c38276268315'; // Existing admin user from database
+
       // Create print job record for admin panel
       const printJobRecord = {
-        userId: 'guest-user', // Since we don't have auth, use guest user
+        userId: adminUserId,
         filename: printJobData.filename,
         fileUrl: printJobData.fileUrl,
         fileSize: printJobData.fileSize,
