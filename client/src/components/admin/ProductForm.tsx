@@ -136,7 +136,9 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
   };
 
   return (
-    <form onSubmit={form.handleSubmit(submitForm)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(submitForm, (errors) => {
+      console.log('❌ Form validation errors:', errors);
+    })} className="space-y-6">
       {/* Basic Information */}
       <Card>
         <CardHeader>
@@ -182,6 +184,31 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
             )}
           </div>
 
+          <div>
+            <Label htmlFor="category">الفئة *</Label>
+            <Select 
+              value={form.watch('category')} 
+              onValueChange={(value) => form.setValue('category', value)}
+            >
+              <SelectTrigger data-testid="select-category">
+                <SelectValue placeholder="اختر الفئة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="books">كتب دراسية</SelectItem>
+                <SelectItem value="notebooks">كراسات وملازم</SelectItem>
+                <SelectItem value="exams">امتحانات ونماذج</SelectItem>
+                <SelectItem value="worksheets">أوراق عمل</SelectItem>
+                <SelectItem value="presentations">عروض تقديمية</SelectItem>
+                <SelectItem value="educational_games">ألعاب تعليمية</SelectItem>
+                <SelectItem value="teacher_resources">موارد المعلمين</SelectItem>
+                <SelectItem value="digital_content">محتوى رقمي</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.formState.errors.category && (
+              <p className="text-sm text-red-500 mt-1">{form.formState.errors.category.message}</p>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="price">السعر (جنيه) *</Label>
@@ -193,6 +220,9 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
                 placeholder="50.00"
                 data-testid="input-product-price"
               />
+              {form.formState.errors.price && (
+                <p className="text-sm text-red-500 mt-1">{form.formState.errors.price.message}</p>
+              )}
             </div>
             
             <div>
@@ -514,6 +544,12 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
           type="submit" 
           disabled={isLoading}
           data-testid="button-submit-product"
+          onClick={() => {
+            console.log('🔘 Submit button clicked');
+            console.log('📊 Form state:', form.formState);
+            console.log('🔍 Form errors:', form.formState.errors);
+            console.log('✅ Form is valid:', form.formState.isValid);
+          }}
         >
           {isLoading ? 'جاري الحفظ...' : (initialData ? 'تحديث المنتج' : 'إضافة المنتج')}
         </Button>
