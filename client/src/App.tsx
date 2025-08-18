@@ -21,6 +21,7 @@ import Payment from "@/pages/payment";
 import AdminDashboard from "@/pages/admin";
 import AdminProducts from "@/pages/admin-products";
 import Checkout from "@/pages/checkout";
+import OrderTracking from "@/pages/order-tracking";
 
 function Router() {
   const { user, loading } = useAuth();
@@ -81,6 +82,7 @@ function Router() {
         <Route path="/profile" component={Profile} />
         <Route path="/payment" component={Payment} />
         <Route path="/checkout" component={Checkout} />
+        <Route path="/orders/:id" component={OrderTracking} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route component={NotFound} />

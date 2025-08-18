@@ -469,6 +469,207 @@ Total Print Jobs: 2156
     }
   });
 
+  // Order tracking endpoints
+  app.get('/api/orders/:id', async (req, res) => {
+    try {
+      const orderId = req.params.id;
+      const order = await storage.getOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      res.json(order);
+    } catch (error) {
+      console.error('Error fetching order:', error);
+      res.status(500).json({ message: 'Failed to fetch order' });
+    }
+  });
+
+  // Get driver location (mock for now)
+  app.get('/api/driver-location/:driverId', async (req, res) => {
+    try {
+      // In production, this would fetch real-time driver location
+      const mockLocation = {
+        lat: 30.0444 + (Math.random() - 0.5) * 0.01,
+        lng: 31.2357 + (Math.random() - 0.5) * 0.01,
+        heading: Math.floor(Math.random() * 360),
+        speed: 20 + Math.floor(Math.random() * 30),
+        updatedAt: new Date().toISOString()
+      };
+      
+      res.json(mockLocation);
+    } catch (error) {
+      console.error('Error fetching driver location:', error);
+      res.status(500).json({ message: 'Failed to fetch driver location' });
+    }
+  });
+
+  // Submit order rating
+  app.post('/api/orders/:id/rating', async (req, res) => {
+    try {
+      const orderId = req.params.id;
+      const { rating, review } = req.body;
+      
+      await storage.updateOrderRating(orderId, rating, review);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      res.status(500).json({ message: 'Failed to submit rating' });
+    }
+  });
+
+  // Cancel order
+  app.post('/api/orders/:id/cancel', async (req, res) => {
+    try {
+      const orderId = req.params.id;
+      
+      await storage.cancelOrder(orderId);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      res.status(500).json({ message: 'Failed to cancel order' });
+    }
+  });
+
+  // Send message to driver
+  app.post('/api/orders/:id/driver-message', async (req, res) => {
+    try {
+      const orderId = req.params.id;
+      const { message } = req.body;
+      
+      // In production, this would send a real message to the driver
+      await storage.addDriverNote(orderId, message);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      res.status(500).json({ message: 'Failed to send message' });
+    }
+  });
+
+  // Get order invoice
+  app.get('/api/orders/:id/invoice', async (req, res) => {
+    try {
+      const orderId = req.params.id;
+      const order = await storage.getOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      // In production, generate a proper PDF invoice
+      const invoiceContent = `
+        فاتورة - Invoice
+        =================
+        رقم الطلب: ${order.orderNumber}
+        التاريخ: ${new Date(order.createdAt).toLocaleDateString('ar-EG')}
+        
+        المنتجات:
+        ${order.items.map((item: any) => `${item.name} × ${item.quantity} = ${item.price * item.quantity} ر.س`).join('\n')}
+        
+        المجموع الفرعي: ${order.subtotal} ر.س
+        الخصم: ${order.discount} ر.س
+        رسوم التوصيل: ${order.deliveryFee} ر.س
+        الضريبة: ${order.tax} ر.س
+        =================
+        الإجمالي: ${order.totalAmount} ر.س
+      `;
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.orderNumber}.pdf"`);
+      res.send(invoiceContent);
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      res.status(500).json({ message: 'Failed to generate invoice' });
+    }
+  });
+
+  // Get delivery slots
+  app.get('/api/delivery-slots', async (req, res) => {
+    try {
+      const slots = [
+        { id: 'asap', label: 'في أقرب وقت ممكن', time: '30-45 دقيقة' },
+        { id: 'morning', label: 'صباحاً', time: '9:00 - 12:00' },
+        { id: 'afternoon', label: 'بعد الظهر', time: '12:00 - 17:00' },
+        { id: 'evening', label: 'مساءً', time: '17:00 - 21:00' }
+      ];
+      
+      res.json(slots);
+    } catch (error) {
+      console.error('Error fetching delivery slots:', error);
+      res.status(500).json({ message: 'Failed to fetch delivery slots' });
+    }
+  });
+
+  // Get user addresses
+  app.get('/api/addresses', async (req, res) => {
+    try {
+      // In production, fetch from database
+      const addresses = [
+        {
+          id: '1',
+          label: 'منزل',
+          street: 'شارع التحرير',
+          building: '15',
+          floor: '3',
+          apartment: '12',
+          area: 'مدينة نصر',
+          city: 'القاهرة',
+          phone: '01012345678'
+        },
+        {
+          id: '2',
+          label: 'العمل',
+          street: 'شارع جامعة الدول',
+          building: '42',
+          floor: '5',
+          apartment: '8',
+          area: 'المهندسين',
+          city: 'الجيزة',
+          phone: '01098765432'
+        }
+      ];
+      
+      res.json(addresses);
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+      res.status(500).json({ message: 'Failed to fetch addresses' });
+    }
+  });
+
+  // Create new order
+  app.post('/api/orders', async (req, res) => {
+    try {
+      const orderData = req.body;
+      
+      // Generate order number
+      const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      
+      const newOrder = {
+        ...orderData,
+        orderNumber,
+        status: 'pending',
+        statusText: 'معلق',
+        createdAt: new Date(),
+        timeline: [{
+          event: 'order_placed',
+          timestamp: new Date(),
+          note: 'تم استلام الطلب'
+        }]
+      };
+      
+      const order = await storage.createOrder(newOrder);
+      
+      res.json(order);
+    } catch (error) {
+      console.error('Error creating order:', error);
+      res.status(500).json({ message: 'Failed to create order' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

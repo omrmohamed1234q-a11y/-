@@ -83,6 +83,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(orders).orderBy(desc(orders.createdAt));
   }
 
+  async getOrder(id: string): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order;
+  }
+
   async createOrder(orderData: any): Promise<Order> {
     const [order] = await db
       .insert(orders)
@@ -94,7 +99,52 @@ export class DatabaseStorage implements IStorage {
   async updateOrderStatus(id: string, status: string): Promise<Order> {
     const [order] = await db
       .update(orders)
-      .set({ status })
+      .set({ 
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
+  }
+
+  async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> {
+    const [order] = await db
+      .update(orders)
+      .set({ 
+        rating,
+        review,
+        updatedAt: new Date()
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
+  }
+
+  async cancelOrder(id: string): Promise<Order> {
+    const [order] = await db
+      .update(orders)
+      .set({ 
+        status: 'cancelled',
+        statusText: 'ملغي',
+        cancelledAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
+  }
+
+  async addDriverNote(id: string, note: string): Promise<Order> {
+    const [existingOrder] = await db.select().from(orders).where(eq(orders.id, id));
+    const currentNotes = existingOrder.driverNotes || '';
+    
+    const [order] = await db
+      .update(orders)
+      .set({ 
+        driverNotes: currentNotes + '\n' + note,
+        updatedAt: new Date()
+      })
       .where(eq(orders.id, id))
       .returning();
     return order;

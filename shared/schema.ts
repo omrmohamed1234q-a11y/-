@@ -69,22 +69,62 @@ export const printJobs = pgTable("print_jobs", {
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
-  items: jsonb("items").notNull(), // Array of {productId, quantity, price}
+  orderNumber: text("order_number").notNull().unique(),
+  items: jsonb("items").notNull(), // Array of {productId, quantity, price, name}
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
+  deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).default("0"),
+  tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull(), // "pending" | "processing" | "printing" | "out_for_delivery" | "delivered" | "cancelled"
-  shippingAddress: jsonb("shipping_address"),
-  paymentMethod: text("payment_method"),
+  status: text("status").notNull(), // "pending" | "confirmed" | "preparing" | "ready" | "out_for_delivery" | "delivered" | "cancelled"
+  statusText: text("status_text"), // Arabic status text
+  
+  // Address and delivery
+  deliveryAddress: text("delivery_address"),
+  shippingAddress: jsonb("shipping_address"), // Detailed address object
+  deliveryMethod: text("delivery_method"), // "delivery" | "pickup"
+  deliverySlot: text("delivery_slot"), // "asap" | "scheduled"
+  scheduledDate: text("scheduled_date"),
+  scheduledTime: text("scheduled_time"),
+  
+  // Payment
+  paymentMethod: text("payment_method"), // "cash" | "card" | "vodafone_cash" | "paymob" | "paytabs" | "fawry"
+  paymentMethodText: text("payment_method_text"), // Arabic payment method text
   paymentStatus: text("payment_status").default("pending"),
+  
+  // Points and vouchers
   pointsUsed: integer("points_used").default(0),
-  deliverySlot: text("delivery_slot"),
-  courierName: text("courier_name"),
-  courierPhone: text("courier_phone"),
+  pointsEarned: integer("points_earned").default(0),
+  voucherCode: text("voucher_code"),
+  voucherDiscount: decimal("voucher_discount", { precision: 10, scale: 2 }).default("0"),
+  
+  // Driver and tracking
+  driverId: varchar("driver_id"),
+  driverName: text("driver_name"),
+  driverPhone: text("driver_phone"),
   trackingNumber: text("tracking_number"),
   trackingUrl: text("tracking_url"),
-  estimatedDelivery: timestamp("estimated_delivery"),
+  estimatedDelivery: integer("estimated_delivery"), // Minutes
+  
+  // Notes and instructions
+  deliveryNotes: text("delivery_notes"), // Customer notes for delivery
+  driverNotes: text("driver_notes"), // Driver notes about delivery
+  adminNotes: text("admin_notes"), // Admin internal notes
+  
+  // Ratings and feedback
+  rating: integer("rating"), // 1-5 stars
+  review: text("review"),
+  
+  // Timeline tracking
   timeline: jsonb("timeline").default([]), // Array of {event, timestamp, note}
-  notes: text("notes"),
-  pointsEarned: integer("points_earned").default(0),
+  confirmedAt: timestamp("confirmed_at"),
+  preparingAt: timestamp("preparing_at"),
+  readyAt: timestamp("ready_at"),
+  outForDeliveryAt: timestamp("out_for_delivery_at"),
+  deliveredAt: timestamp("delivered_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  
+  // System fields
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
