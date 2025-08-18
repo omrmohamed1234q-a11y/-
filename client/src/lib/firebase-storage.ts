@@ -26,86 +26,131 @@ export const storage = getStorage(app);
 export const auth = getAuth(app);
 
 /**
- * Upload file to Firebase Storage
+ * Upload file to Firebase Storage with retry logic
  */
 export async function uploadToFirebaseStorage(
   file: File, 
   folder: string = 'uploads',
   customFileName?: string,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  maxRetries: number = 3
 ): Promise<string> {
-  try {
-    console.log('Starting Firebase upload for:', file.name, 'Size:', file.size);
-    
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(2);
-    const fileExtension = file.name.split('.').pop();
-    const fileName = customFileName || `${timestamp}_${randomId}.${fileExtension}`;
-    
-    // Create storage reference
-    const storageRef = ref(storage, `${folder}/${fileName}`);
-    console.log('Storage ref created:', storageRef.fullPath);
-    
-    // Track upload progress
-    if (onProgress) {
-      onProgress(10);
-    }
-    
-    // Upload file with timeout
-    const uploadPromise = uploadBytes(storageRef, file, {
-      contentType: file.type,
-      customMetadata: {
-        originalName: file.name,
-        uploadedAt: new Date().toISOString(),
-        size: file.size.toString()
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Starting Firebase upload attempt ${attempt}/${maxRetries} for:`, file.name, 'Size:', file.size);
+      
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2);
+      const fileExtension = file.name.split('.').pop();
+      const fileName = customFileName || `${timestamp}_${randomId}.${fileExtension}`;
+      
+      // Create storage reference
+      const storageRef = ref(storage, `${folder}/${fileName}`);
+      console.log('Storage ref created:', storageRef.fullPath);
+      
+      // Track upload progress
+      if (onProgress) {
+        onProgress(10 + (attempt - 1) * 5);
       }
-    });
-    
-    // Set timeout for upload (increased to 60 seconds)
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('TIMEOUT: رفع الملف استغرق وقتاً طويلاً. قد تحتاج إلى التحقق من سرعة الإنترنت')), 60000)
-    );
-    
-    const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as any;
-    console.log('Upload completed:', snapshot.ref.fullPath);
-    
-    // Complete progress
-    if (onProgress) {
-      onProgress(90);
+      
+      // Test Firebase connection first
+      try {
+        await fetch(`https://firebasestorage.googleapis.com/v0/b/${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebasestorage.app/o`, {
+          method: 'GET',
+          mode: 'cors'
+        });
+      } catch (connectionError) {
+        throw new Error('فشل في الاتصال بـ Firebase Storage. تحقق من الإنترنت');
+      }
+      
+      // Upload file with dynamic timeout based on file size
+      const timeoutMs = Math.max(30000, file.size / 1024 * 10); // 10ms per KB, minimum 30s
+      console.log(`Upload timeout set to: ${timeoutMs}ms for ${file.size} bytes`);
+      
+      const uploadPromise = uploadBytes(storageRef, file, {
+        contentType: file.type,
+        customMetadata: {
+          originalName: file.name,
+          uploadedAt: new Date().toISOString(),
+          size: file.size.toString(),
+          attempt: attempt.toString()
+        }
+      });
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`TIMEOUT_ATTEMPT_${attempt}`)), timeoutMs)
+      );
+      
+      const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as any;
+      console.log('Upload completed:', snapshot.ref.fullPath);
+      
+      // Complete progress
+      if (onProgress) {
+        onProgress(80 + attempt * 5);
+      }
+      
+      // Get download URL with timeout
+      const urlTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('DOWNLOAD_URL_TIMEOUT')), 15000)
+      );
+      
+      const downloadURL = await Promise.race([
+        getDownloadURL(snapshot.ref),
+        urlTimeoutPromise
+      ]) as string;
+      
+      console.log('Download URL obtained:', downloadURL);
+      
+      if (onProgress) {
+        onProgress(100);
+      }
+      
+      console.log('File uploaded successfully:', {
+        path: snapshot.ref.fullPath,
+        downloadURL,
+        size: file.size,
+        attempt
+      });
+      
+      return downloadURL;
+      
+    } catch (error: any) {
+      lastError = error;
+      console.error(`Firebase upload attempt ${attempt} failed:`, error);
+      
+      // If it's the last attempt, don't retry
+      if (attempt === maxRetries) {
+        break;
+      }
+      
+      // Wait before retry (exponential backoff)
+      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+      console.log(`Waiting ${waitTime}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
     }
-    
-    // Get download URL
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    console.log('Download URL obtained:', downloadURL);
-    
-    if (onProgress) {
-      onProgress(100);
-    }
-    
-    console.log('File uploaded successfully:', {
-      path: snapshot.ref.fullPath,
-      downloadURL,
-      size: file.size
-    });
-    
-    return downloadURL;
-  } catch (error: any) {
-    console.error('Firebase upload error:', error);
-    
-    let errorMessage = 'خطأ في رفع الملف';
-    if (error?.code === 'storage/unauthorized') {
-      errorMessage = 'غير مصرح. تحقق من Firebase Storage Rules';
-    } else if (error?.code === 'storage/retry-limit-exceeded') {
-      errorMessage = 'انتهت مهلة الرفع. تحقق من اتصال الإنترنت أو Firebase Rules';
-    } else if (error?.message?.includes('وقتاً طويلاً')) {
-      errorMessage = error.message;
-    } else if (error instanceof Error) {
-      errorMessage = `فشل الرفع: ${error.message}`;
-    }
-    
-    throw new Error(errorMessage);
   }
+  
+  // All attempts failed, throw comprehensive error
+  let errorMessage = 'فشل في رفع الملف بعد عدة محاولات';
+  
+  if (lastError?.code === 'storage/unauthorized') {
+    errorMessage = 'غير مصرح. تحقق من إعدادات Firebase Storage Rules';
+  } else if (lastError?.code === 'storage/retry-limit-exceeded') {
+    errorMessage = 'تم تجاوز حد المحاولات. تحقق من الاتصال';
+  } else if (lastError?.message?.includes('TIMEOUT_ATTEMPT')) {
+    errorMessage = `انتهت مهلة الرفع بعد ${maxRetries} محاولات. الملف قد يكون كبيراً جداً أو الاتصال بطيء`;
+  } else if (lastError?.message?.includes('Firebase Storage')) {
+    errorMessage = 'مشكلة في إعدادات Firebase Storage. تحقق من القواعد';
+  } else if (lastError?.message?.includes('الاتصال')) {
+    errorMessage = lastError.message;
+  } else if (lastError instanceof Error) {
+    errorMessage = `خطأ غير متوقع: ${lastError.message}`;
+  }
+  
+  throw new Error(errorMessage);
 }
 
 /**

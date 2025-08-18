@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Upload, FileText, Image, X, Check } from 'lucide-react';
-import { uploadToFirebaseStorage } from '@/lib/firebase-storage';
+import { uploadWithFallback } from '@/lib/firebase-simple-upload';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseRulesError } from '@/components/storage/FirebaseRulesError';
 
@@ -41,8 +41,8 @@ export function DragDropUpload({
         const file = acceptedFiles[i];
         console.log(`Uploading file ${i + 1}/${acceptedFiles.length}:`, file.name);
         
-        // Upload to Firebase
-        const downloadUrl = await uploadToFirebaseStorage(file, 'drag-drop-uploads', undefined, (fileProgress) => {
+        // Upload to Firebase with fallback
+        const downloadUrl = await uploadWithFallback(file, 'drag-drop-uploads', (fileProgress) => {
           const totalProgress = ((i / acceptedFiles.length) * 100) + ((fileProgress / acceptedFiles.length));
           setProgress(totalProgress);
         });
@@ -66,7 +66,11 @@ export function DragDropUpload({
       // Check if it's a Firebase Storage Rules error
       if (errorMessage.includes('Firebase Storage Rules') || 
           errorMessage.includes('unauthorized') || 
-          errorMessage.includes('وقتاً طويلاً')) {
+          errorMessage.includes('غير مصرح') ||
+          errorMessage.includes('Firebase') ||
+          errorMessage.includes('وقتاً طويلاً') ||
+          errorMessage.includes('انتهت مهلة') ||
+          errorMessage.includes('بكلا الطريقتين')) {
         setFirebaseError(errorMessage);
       } else {
         toast({

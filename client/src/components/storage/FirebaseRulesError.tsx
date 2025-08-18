@@ -45,9 +45,12 @@ service firebase.storage {
       <CardContent className="space-y-4">
         <Alert>
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>مطلوب تحديث إعدادات Firebase Storage</AlertTitle>
+          <AlertTitle>مشكلة في رفع الملفات</AlertTitle>
           <AlertDescription>
-            يبدو أن قواعد Firebase Storage Rules تمنع رفع الملفات. اتبع الخطوات التالية لحل المشكلة:
+            {error.includes('انتهت مهلة') || error.includes('وقتاً طويلاً') ? 
+              'مهلة الرفع انتهت. قد تكون المشكلة في سرعة الإنترنت أو إعدادات Firebase Storage.' :
+              'يبدو أن قواعد Firebase Storage Rules تمنع رفع الملفات.'
+            } اتبع الخطوات التالية لحل المشكلة:
           </AlertDescription>
         </Alert>
 
@@ -55,19 +58,30 @@ service firebase.storage {
           <h4 className="font-semibold text-sm">خطوات الحل:</h4>
           
           <ol className="list-decimal list-inside space-y-2 text-sm">
-            <li>
-              افتح{' '}
-              <Button 
-                variant="link" 
-                className="p-0 h-auto font-normal underline"
-                onClick={() => window.open('https://console.firebase.google.com/', '_blank')}
-              >
-                Firebase Console
-                <ExternalLink className="w-3 h-3 ml-1" />
-              </Button>
-            </li>
-            <li>اذهب إلى Storage ← Rules</li>
-            <li>استبدل القواعد الحالية بالقواعد التالية:</li>
+            {error.includes('انتهت مهلة') || error.includes('وقتاً طويلاً') ? (
+              <>
+                <li>تحقق من سرعة اتصالك بالإنترنت</li>
+                <li>جرب ملف أصغر حجماً (أقل من 1 ميجابايت)</li>
+                <li>تحقق من إعدادات Firebase Storage Rules (الخطوات أدناه)</li>
+                <li>إذا استمرت المشكلة، جرب إعادة تحميل الصفحة</li>
+              </>
+            ) : (
+              <>
+                <li>
+                  افتح{' '}
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto font-normal underline"
+                    onClick={() => window.open('https://console.firebase.google.com/', '_blank')}
+                  >
+                    Firebase Console
+                    <ExternalLink className="w-3 h-3 ml-1" />
+                  </Button>
+                </li>
+                <li>اذهب إلى Storage ← Rules</li>
+                <li>استبدل القواعد الحالية بالقواعد التالية:</li>
+              </>
+            )}
           </ol>
 
           <div className="bg-gray-900 text-green-400 p-3 rounded text-sm font-mono relative">
