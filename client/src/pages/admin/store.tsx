@@ -18,7 +18,7 @@ import {
   getCurriculumLabel, 
   getGradeLevelLabel, 
   getSubjectLabel, 
-  getProductTypesLabels 
+  PRODUCT_TYPES 
 } from '@/lib/constants/education';
 
 const categories = [
@@ -312,7 +312,7 @@ export default function AdminStore() {
                         <div className="flex flex-wrap gap-1 mb-2">
                           {product.productTypes.map((type, index) => (
                             <Badge key={index} variant="outline" className="text-xs">
-                              {getProductTypesLabels()[type] || type}
+                              {PRODUCT_TYPES.find(item => item.value === type)?.label || type}
                             </Badge>
                           ))}
                         </div>

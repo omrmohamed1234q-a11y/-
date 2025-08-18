@@ -39,10 +39,10 @@ export default function AdminActionsMenu({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 p-0 hover:bg-gray-100 border border-gray-200"
           data-testid={`menu-actions-${itemId}`}
         >
-          <MoreVertical className="h-4 w-4" />
+          <MoreVertical className="h-4 w-4 text-gray-600" />
           <span className="sr-only">فتح القائمة</span>
         </Button>
       </DropdownMenuTrigger>
