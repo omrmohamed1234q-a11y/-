@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
@@ -27,6 +27,7 @@ interface Product {
   subject?: string | null;
   availableCopies?: number;
   tags?: string[] | null;
+  createdAt?: string;
 }
 
 const categories = [
@@ -75,12 +76,88 @@ export default function Store() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('featured');
-  const [priceRange, setPriceRange] = useState<string>('');
+  const [priceRange, setPriceRange] = useState<string>('all');
 
   // Fetch products
-  const { data: products = [], isLoading } = useQuery<Product[]>({
+  const { data: allProducts = [], isLoading } = useQuery<Product[]>({
     queryKey: ['/api/admin/products'],
   });
+
+  // Filter and sort products
+  const products = useMemo(() => {
+    let filtered = [...(allProducts as Product[])];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(product => 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.subject && product.subject.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (product.grade && product.grade.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    // Category filter
+    if (selectedCategory) {
+      filtered = filtered.filter(product => {
+        switch (selectedCategory) {
+          case 'teachers':
+            return product.teacherOnly || product.category.includes('teacher');
+          case 'students':
+            return !product.teacherOnly && product.category.includes('student');
+          case 'supplies':
+            return product.category === 'supplies' || product.category === 'stationery';
+          case 'digital':
+            return product.isDigital;
+          case 'tools':
+            return product.category === 'tools' || product.category === 'equipment';
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Price range filter
+    if (priceRange && priceRange !== 'all') {
+      filtered = filtered.filter(product => {
+        const price = parseFloat(product.price);
+        switch (priceRange) {
+          case 'under-50':
+            return price < 50;
+          case '50-100':
+            return price >= 50 && price <= 100;
+          case '100-200':
+            return price >= 100 && price <= 200;
+          case 'over-200':
+            return price > 200;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Sort products
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'featured':
+          if (a.featured && !b.featured) return -1;
+          if (!a.featured && b.featured) return 1;
+          return 0;
+        case 'newest':
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case 'price_low':
+          return parseFloat(a.price) - parseFloat(b.price);
+        case 'price_high':
+          return parseFloat(b.price) - parseFloat(a.price);
+        case 'rating':
+          return parseFloat(b.rating || '0') - parseFloat(a.rating || '0');
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [allProducts, searchQuery, selectedCategory, priceRange, sortBy]);
 
   // Add to cart mutation
   const addToCartMutation = useMutation({
@@ -184,18 +261,33 @@ export default function Store() {
                   className="w-full"
                 />
               </div>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="ترتيب حسب" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="featured">المميزة</SelectItem>
-                  <SelectItem value="newest">الأحدث</SelectItem>
-                  <SelectItem value="price_low">السعر: من الأقل للأعلى</SelectItem>
-                  <SelectItem value="price_high">السعر: من الأعلى للأقل</SelectItem>
-                  <SelectItem value="rating">الأعلى تقييماً</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="ترتيب حسب" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="featured">المميزة</SelectItem>
+                    <SelectItem value="newest">الأحدث</SelectItem>
+                    <SelectItem value="price_low">السعر: من الأقل للأعلى</SelectItem>
+                    <SelectItem value="price_high">السعر: من الأعلى للأقل</SelectItem>
+                    <SelectItem value="rating">الأعلى تقييماً</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select value={priceRange} onValueChange={setPriceRange}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="فلترة بالسعر" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع الأسعار</SelectItem>
+                    <SelectItem value="under-50">أقل من 50 جنيه</SelectItem>
+                    <SelectItem value="50-100">50 - 100 جنيه</SelectItem>
+                    <SelectItem value="100-200">100 - 200 جنيه</SelectItem>
+                    <SelectItem value="over-200">أكثر من 200 جنيه</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Category Filters */}
@@ -216,8 +308,29 @@ export default function Store() {
           </CardContent>
         </Card>
 
+        {/* Results Summary */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-muted-foreground">
+            {isLoading ? 'جاري التحميل...' : `تم العثور على ${products.length} منتج`}
+            {searchQuery && ` عن "${searchQuery}"`}
+          </p>
+          {(searchQuery || selectedCategory || (priceRange && priceRange !== 'all')) && (
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('');
+                setPriceRange('all');
+              }}
+              className="text-sm"
+            >
+              مسح الفلاتر
+            </Button>
+          )}
+        </div>
+
         {/* Products Grid */}
-        {(products as Product[]).length === 0 ? (
+        {products.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <i className="fas fa-search text-4xl text-muted-foreground mb-4"></i>
@@ -227,7 +340,7 @@ export default function Store() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(products as Product[]).map((product: Product) => (
+            {products.map((product: Product) => (
               <Card key={product.id} className="overflow-hidden hover-lift border">
                 <img
                   src={product.imageUrl || 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250'}
