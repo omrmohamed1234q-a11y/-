@@ -7,6 +7,8 @@ import { Upload, FileText, Image, X, Check } from 'lucide-react';
 import { uploadWithFallback } from '@/lib/firebase-simple-upload';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseRulesError } from '@/components/storage/FirebaseRulesError';
+import { runFirebaseDiagnostics, generateFixInstructions } from '@/lib/firebase-diagnostics';
+import { processFilesLocally, getFileUrls } from '@/lib/local-file-handler';
 
 interface DragDropUploadProps {
   onUpload: (files: File[], urls: string[]) => void;
@@ -25,7 +27,63 @@ export function DragDropUpload({
   const [progress, setProgress] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<{ file: File; url: string }[]>([]);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<any>(null);
+  const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const { toast } = useToast();
+
+  const runDiagnostics = async () => {
+    setIsRunningDiagnostics(true);
+    try {
+      const results = await runFirebaseDiagnostics();
+      setDiagnostics(results);
+      const instructions = generateFixInstructions(results);
+      console.log('🔍 Firebase Diagnostics Results:', results);
+      console.log('📋 Fix Instructions:', instructions);
+      
+      toast({
+        title: 'تم فحص Firebase',
+        description: 'انظر في وحدة التحكم للحصول على تفاصيل المشكلة',
+      });
+    } catch (error) {
+      console.error('Diagnostics failed:', error);
+      toast({
+        title: 'فشل الفحص',
+        description: 'لا يمكن فحص إعدادات Firebase',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsRunningDiagnostics(false);
+    }
+  };
+
+  const uploadWithLocalFallback = async (acceptedFiles: File[]) => {
+    console.log('🚀 Trying local processing first while Firebase issues are resolved...');
+    
+    try {
+      const processedFiles = await processFilesLocally(acceptedFiles, (progress) => {
+        setProgress(progress);
+      });
+      
+      const urls = getFileUrls(processedFiles);
+      const uploads = acceptedFiles.map((file, index) => ({
+        file,
+        url: urls[index]
+      }));
+      
+      setUploadedFiles(uploads);
+      onUpload(uploads.map(u => u.file), uploads.map(u => u.url));
+      
+      toast({
+        title: 'تم معالجة الملفات محلياً',
+        description: `تم معالجة ${uploads.length} ملف بنجاح (مؤقتاً بدون Firebase)`,
+      });
+      
+      return true;
+    } catch (localError) {
+      console.error('Local processing failed:', localError);
+      return false;
+    }
+  };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -35,6 +93,8 @@ export function DragDropUpload({
     setFirebaseError(null);
     
     try {
+      // First try Firebase upload
+      console.log('Attempting Firebase upload...');
       const uploads: { file: File; url: string }[] = [];
       
       for (let i = 0; i < acceptedFiles.length; i++) {
@@ -60,24 +120,30 @@ export function DragDropUpload({
       });
       
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('Firebase upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'فشل في رفع الملفات';
       
-      // Check if it's a Firebase Storage Rules error
-      if (errorMessage.includes('Firebase Storage Rules') || 
-          errorMessage.includes('unauthorized') || 
-          errorMessage.includes('غير مصرح') ||
-          errorMessage.includes('Firebase') ||
-          errorMessage.includes('وقتاً طويلاً') ||
-          errorMessage.includes('انتهت مهلة') ||
-          errorMessage.includes('بكلا الطريقتين')) {
-        setFirebaseError(errorMessage);
-      } else {
-        toast({
-          title: 'خطأ في الرفع',
-          description: errorMessage,
-          variant: 'destructive'
-        });
+      // Try local processing as immediate fallback
+      console.log('Firebase failed, trying local processing...');
+      const localSuccess = await uploadWithLocalFallback(acceptedFiles);
+      
+      if (!localSuccess) {
+        // Check if it's a Firebase Storage Rules error
+        if (errorMessage.includes('Firebase Storage Rules') || 
+            errorMessage.includes('unauthorized') || 
+            errorMessage.includes('غير مصرح') ||
+            errorMessage.includes('Firebase') ||
+            errorMessage.includes('وقتاً طويلاً') ||
+            errorMessage.includes('انتهت مهلة') ||
+            errorMessage.includes('بكلا الطريقتين')) {
+          setFirebaseError(errorMessage);
+        } else {
+          toast({
+            title: 'خطأ في الرفع',
+            description: errorMessage,
+            variant: 'destructive'
+          });
+        }
       }
     } finally {
       setUploading(false);
@@ -111,10 +177,22 @@ export function DragDropUpload({
     <div className="space-y-4" dir="rtl">
       {/* Firebase Rules Error */}
       {firebaseError && (
-        <FirebaseRulesError 
-          error={firebaseError} 
-          onRetry={() => setFirebaseError(null)} 
-        />
+        <div className="space-y-3">
+          <FirebaseRulesError 
+            error={firebaseError} 
+            onRetry={() => setFirebaseError(null)} 
+          />
+          <div className="text-center">
+            <Button 
+              onClick={runDiagnostics} 
+              disabled={isRunningDiagnostics}
+              variant="outline"
+              className="bg-yellow-50 border-yellow-300 text-yellow-800 hover:bg-yellow-100"
+            >
+              {isRunningDiagnostics ? 'جاري الفحص...' : '🔍 فحص مشكلة Firebase'}
+            </Button>
+          </div>
+        </div>
       )}
       
       <Card 
