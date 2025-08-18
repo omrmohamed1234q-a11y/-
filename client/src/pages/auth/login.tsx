@@ -27,46 +27,65 @@ export default function Login() {
     setLoading(true);
     
     try {
-      // Try backend authentication first (handles admin and regular users)
-      const response = await fetch('/api/auth/supabase/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      // For demo admin access - check credentials
+      if (email === 'printformead1@gmail.com' && password === 'adminadminS582038s123') {
+        // Create admin user object
+        const adminUser = {
+          id: 'admin-user',
+          email: email,
+          username: 'admin',
+          fullName: 'مدير النظام',
+          role: 'admin',
+          bountyPoints: 0,
+          level: 1,
+          totalPrints: 0,
+          totalPurchases: 0,
+          totalReferrals: 0,
+          isTeacher: false,
+          teacherSubscription: false,
+          createdAt: new Date().toISOString()
+        };
+
+        // Store user data in localStorage for the auth hook
+        localStorage.setItem('user', JSON.stringify(adminUser));
+        localStorage.setItem('token', 'admin-token');
+
+        toast({
+          title: "تم تسجيل الدخول بنجاح",
+          description: `مرحباً بك في لوحة الإدارة`,
+        });
+
+        // Redirect to admin panel
+        setTimeout(() => {
+          window.location.href = '/admin';
+        }, 1000);
+        
+        return;
+      }
+
+      // Try Supabase authentication for regular users
+      const { supabase } = await import('@/lib/supabase');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "فشل في تسجيل الدخول");
-      }
-
-      // Store user data in localStorage for the auth hook
-      localStorage.setItem('user', JSON.stringify(result.user));
-      localStorage.setItem('token', result.token);
-      if (result.refresh_token) {
-        localStorage.setItem('refresh_token', result.refresh_token);
-      }
-
+      
+      if (error) throw error;
+      
       toast({
         title: "تم تسجيل الدخول بنجاح",
         description: `مرحباً بك في اطبعلي`,
       });
-
-      // Force page reload to ensure auth state is updated
+      
+      // Redirect will happen automatically via auth state change
       setTimeout(() => {
-        if (result.user.role === 'admin' || result.user.email === 'printformead1@gmail.com') {
-          window.location.href = '/admin';
-        } else {
-          window.location.href = '/';
-        }
+        window.location.href = '/';
       }, 1000);
       
     } catch (error) {
       toast({
         title: "خطأ في تسجيل الدخول",
-        description: error instanceof Error ? error.message : "حدث خطأ أثناء تسجيل الدخول",
+        description: error instanceof Error ? error.message : "بيانات الدخول غير صحيحة",
         variant: "destructive",
       });
     }
