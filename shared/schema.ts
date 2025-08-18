@@ -30,13 +30,31 @@ export const products = pgTable("products", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }),
   imageUrl: text("image_url"),
+  
+  // Educational Curriculum Fields
+  curriculumType: text("curriculum_type"), // "egyptian_arabic" | "egyptian_languages" | "azhar" | "igcse" | "american" | "ib" | "stem"
+  subject: text("subject"), // "arabic" | "math" | "science" | "chemistry" | "physics" | "biology" | etc.
+  gradeLevel: text("grade_level"), // "primary_1" | "primary_2" | ... | "secondary_12" | "university"
+  authorPublisher: text("author_publisher"), // Teacher/Author/Publisher name
+  
+  // Product Type and Format
+  productTypes: text("product_types").array(), // ["book", "pdf", "worksheets", "exams", "solutions"]
   isDigital: boolean("is_digital").default(false),
   downloadUrl: text("download_url"),
+  
+  // Print Options
+  coverType: text("cover_type"), // "color" | "black_white"
+  availableCopies: integer("available_copies").default(0),
+  downloadLimits: text("download_limits"), // "once" | "unlimited"
+  canPrintDirectly: boolean("can_print_directly").default(false),
+  
+  // Legacy fields for backwards compatibility
   grade: text("grade"),
-  subject: text("subject"),
   publisher: text("publisher"),
   curriculum: text("curriculum"),
   stock: integer("stock").default(0),
+  
+  // Ratings and engagement
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
   ratingCount: integer("rating_count").default(0),
   tags: text("tags").array(),

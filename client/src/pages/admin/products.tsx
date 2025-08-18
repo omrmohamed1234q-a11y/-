@@ -2,16 +2,18 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Product, InsertProduct } from '@shared/schema';
+import ProductForm from '@/components/admin/ProductForm';
+import { 
+  getCurriculumLabel,
+  getSubjectLabel,
+  getGradeLevelLabel,
+  getProductTypesLabels
+} from '@/lib/constants/education';
 import {
   Plus,
   Edit,
@@ -78,27 +80,11 @@ export default function AdminProducts() {
     }
   });
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    
+  const handleFormSubmit = (formData: any) => {
     const productData: InsertProduct = {
-      name: formData.get('name') as string,
-      nameEn: formData.get('nameEn') as string,
-      description: formData.get('description') as string,
-      descriptionEn: formData.get('descriptionEn') as string,
-      category: formData.get('category') as string,
-      price: formData.get('price') as string,
-      originalPrice: formData.get('originalPrice') as string || null,
-      stock: parseInt(formData.get('stock') as string) || 0,
-      grade: formData.get('grade') as string || null,
-      subject: formData.get('subject') as string || null,
-      curriculum: formData.get('curriculum') as string || null,
-      isDigital: formData.get('isDigital') === 'on',
-      teacherOnly: formData.get('teacherOnly') === 'on',
-      vip: formData.get('vip') === 'on',
-      featured: formData.get('featured') === 'on',
-      tags: (formData.get('tags') as string)?.split(',').map(tag => tag.trim()).filter(Boolean) || [],
+      ...formData,
+      category: formData.category || 'education',
+      availableCopies: formData.availableCopies || 0,
     };
 
     if (editingProduct) {
@@ -135,10 +121,48 @@ export default function AdminProducts() {
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {products?.map((product) => (
-          <Card key={product.id} className="relative">
+          <Card key={product.id} className="relative hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
-                <CardTitle className="text-lg line-clamp-2">{product.name}</CardTitle>
+                <div className="flex-1">
+                  <CardTitle className="text-lg line-clamp-2 mb-2">{product.name}</CardTitle>
+                  
+                  {/* Educational Badges */}
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {product.curriculumType && (
+                      <Badge variant="outline" className="text-xs">
+                        {getCurriculumLabel(product.curriculumType)}
+                      </Badge>
+                    )}
+                    {product.gradeLevel && (
+                      <Badge variant="secondary" className="text-xs">
+                        {getGradeLevelLabel(product.gradeLevel)}
+                      </Badge>
+                    )}
+                    {product.subject && (
+                      <Badge variant="default" className="text-xs">
+                        {getSubjectLabel(product.subject)}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {product.authorPublisher && (
+                    <p className="text-sm text-muted-foreground mb-2">
+                      بواسطة: {product.authorPublisher}
+                    </p>
+                  )}
+                  
+                  {product.productTypes && product.productTypes.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {getProductTypesLabels(product.productTypes).map((type, index) => (
+                        <Badge key={index} variant="outline" className="text-xs bg-blue-50">
+                          {type}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
                 <div className="flex space-x-1 space-x-reverse">
                   <Button
                     size="sm"
@@ -147,6 +171,7 @@ export default function AdminProducts() {
                       setEditingProduct(product);
                       setDialogOpen(true);
                     }}
+                    data-testid={`button-edit-product-${product.id}`}
                   >
                     <Edit className="w-3 h-3" />
                   </Button>
@@ -158,6 +183,7 @@ export default function AdminProducts() {
                         deleteProductMutation.mutate(product.id);
                       }
                     }}
+                    data-testid={`button-delete-product-${product.id}`}
                   >
                     <Trash2 className="w-3 h-3" />
                   </Button>
@@ -216,197 +242,18 @@ export default function AdminProducts() {
 
       {/* Add/Edit Product Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
-            <DialogTitle>
-              {editingProduct ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+            <DialogTitle className="text-xl">
+              {editingProduct ? 'تحديث المنتج' : 'إضافة منتج جديد'}
             </DialogTitle>
           </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">اسم المنتج (عربي) *</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  defaultValue={editingProduct?.name || ''}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="nameEn">اسم المنتج (إنجليزي)</Label>
-                <Input
-                  id="nameEn"
-                  name="nameEn"
-                  defaultValue={editingProduct?.nameEn || ''}
-                />
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="description">الوصف (عربي) *</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  defaultValue={editingProduct?.description || ''}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="descriptionEn">الوصف (إنجليزي)</Label>
-                <Textarea
-                  id="descriptionEn"
-                  name="descriptionEn"
-                  defaultValue={editingProduct?.descriptionEn || ''}
-                />
-              </div>
-            </div>
-
-            {/* Category & Classification */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="category">الفئة *</Label>
-                <Select name="category" defaultValue={editingProduct?.category || ''}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الفئة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="books">كتب</SelectItem>
-                    <SelectItem value="stationery">قرطاسية</SelectItem>
-                    <SelectItem value="digital">منتجات رقمية</SelectItem>
-                    <SelectItem value="educational">تعليمية</SelectItem>
-                    <SelectItem value="printing">طباعة</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="grade">الصف الدراسي</Label>
-                <Input
-                  id="grade"
-                  name="grade"
-                  defaultValue={editingProduct?.grade || ''}
-                  placeholder="الصف الأول الثانوي"
-                />
-              </div>
-              <div>
-                <Label htmlFor="subject">المادة</Label>
-                <Input
-                  id="subject"
-                  name="subject"
-                  defaultValue={editingProduct?.subject || ''}
-                  placeholder="الرياضيات"
-                />
-              </div>
-            </div>
-
-            {/* Pricing & Stock */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="price">السعر *</Label>
-                <Input
-                  id="price"
-                  name="price"
-                  type="number"
-                  step="0.01"
-                  defaultValue={editingProduct?.price || ''}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="originalPrice">السعر الأصلي</Label>
-                <Input
-                  id="originalPrice"
-                  name="originalPrice"
-                  type="number"
-                  step="0.01"
-                  defaultValue={editingProduct?.originalPrice || ''}
-                />
-              </div>
-              <div>
-                <Label htmlFor="stock">المخزون</Label>
-                <Input
-                  id="stock"
-                  name="stock"
-                  type="number"
-                  defaultValue={editingProduct?.stock || '0'}
-                />
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div>
-              <Label htmlFor="tags">العلامات (مفصولة بفواصل)</Label>
-              <Input
-                id="tags"
-                name="tags"
-                defaultValue={editingProduct?.tags?.join(', ') || ''}
-                placeholder="جديد, مميز, أكثر مبيعاً"
-              />
-            </div>
-
-            {/* Flags */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <Switch
-                  id="isDigital"
-                  name="isDigital"
-                  defaultChecked={editingProduct?.isDigital || false}
-                />
-                <Label htmlFor="isDigital">منتج رقمي</Label>
-              </div>
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <Switch
-                  id="teacherOnly"
-                  name="teacherOnly"
-                  defaultChecked={editingProduct?.teacherOnly || false}
-                />
-                <Label htmlFor="teacherOnly">للمعلمين فقط</Label>
-              </div>
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <Switch
-                  id="vip"
-                  name="vip"
-                  defaultChecked={editingProduct?.vip || false}
-                />
-                <Label htmlFor="vip">VIP</Label>
-              </div>
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <Switch
-                  id="featured"
-                  name="featured"
-                  defaultChecked={editingProduct?.featured || false}
-                />
-                <Label htmlFor="featured">مميز</Label>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-3 space-x-reverse">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                إلغاء
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={createProductMutation.isPending || updateProductMutation.isPending}
-              >
-                {(createProductMutation.isPending || updateProductMutation.isPending) ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
-                    جاري الحفظ...
-                  </>
-                ) : (
-                  <>
-                    <Package className="w-4 h-4 ml-2" />
-                    {editingProduct ? 'تحديث المنتج' : 'إضافة المنتج'}
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
+          
+          <ProductForm
+            initialData={editingProduct}
+            onSubmit={handleFormSubmit}
+            isLoading={createProductMutation.isPending || updateProductMutation.isPending}
+          />
         </DialogContent>
       </Dialog>
     </div>
