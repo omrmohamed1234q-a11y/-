@@ -1,0 +1,80 @@
+Enhance my existing Kotlin + Jetpack Compose Android app "اطبعلي" so the entire post–add-to-cart journey is fully functional (not mock UI). Use Firebase (Auth, Firestore, Storage, Functions, Cloud Messaging) and Google Play Billing for digital subscriptions. For physical items, keep payment provider hooks abstract with interfaces (e.g., Paymob) so we can plug later.
+
+A) Data model (Firestore):
+- users/{uid}
+  - profile, addresses[], bounty.points
+- carts/{uid}/items/{itemId}
+  - productId, title, image, variant, qty, price, isDigital
+- orders/{orderId}
+  - userId, items[], totals {sub, shipping, discount, tax, grand}
+  - delivery {type: delivery|pickup, addressRef, slot, eta, fees}
+  - payment {method: play_billing|gateway|cod, status: pending|paid|failed, txnId}
+  - status: created|processing|printing|out_for_delivery|delivered|canceled
+  - timeline[] (event, at, meta)
+  - voucher {code, value}, bounty {spent, earned}
+  - createdAt, updatedAt
+- vouchers/{code}
+  - type, value, minSubtotal, expiry, active
+- settings/
+  - shippingRules, deliverySlots, fees, cancellationWindow
+- products/{productId}
+  - title, images[], price, variants[], stock, isDigital, category, flags (teacherOnly, vip)
+- rewards_rules/{id}
+  - event, points
+- teacher_materials/{id}
+  - meta {subject, grade, region}, access: subscription, fileRef
+
+B) Security rules:
+- Only owner can read/write their cart.
+- Orders: owner read; admin read/write.
+- Vouchers/settings/rewards: read public, write admin.
+- Teacher materials: read if user has active subscription.
+
+C) Cloud Functions:
+1) onCartCheckout(orderDraft):
+   - Validate stock & prices, compute totals, apply voucher & bounty spend.
+   - If digital-only → route to Google Play Billing flow.
+   - If physical items → create payment intent via abstract GatewayService (stub Paymob).
+   - Save order, write first timeline event (created).
+2) onPaymentWebhook (play billing / gateway):
+   - Verify signature, mark payment=paid, push timeline “processing”.
+   - If contains printing jobs → push “printing”.
+3) onStatusUpdate(admin):
+   - Update status, recompute ETA, append timeline event, send FCM notification.
+4) onOrderDelivered:
+   - Award bounty points (rewards_rules), issue receipt PDF, email link.
+5) nightlyHousekeeping:
+   - Auto-cancel unpaid orders past timeouts, restock items.
+
+D) Android app (Compose):
+- Cart Screen:
+  - Editable quantities, remove item, voucher input, show shipping estimate, reward toggle (spend points).
+  - CTA: "تابع إلى الدفع".
+- Checkout Flow (Stepper): العنوان → الموعد → الدفع → المراجعة
+  - Address picker + map pin; delivery vs pickup; slot selector UI.
+  - Payment:
+    - Digital items: Google Play Billing (subscriptions for Teacher’s Section & VIP).
+    - Physical items: show gateway stub button (to be wired to Paymob later) + COD.
+  - Review Screen: totals, ETA preview, place order.
+- Order Confirmation:
+  - Show order number + animated timeline (processing → printing → in transit → delivered).
+  - Real-time Firestore listener for status updates; FCM notifications.
+- My Orders:
+  - List + details with timeline and invoice download.
+- Bounty:
+  - Show current points, how many used/earned per order.
+
+E) Admin reflectivity:
+- All settings (fees, slots, ETA rules, vouchers, rewards) read from Firestore settings and update live.
+- Product stock decrements on paid orders; guard against oversell.
+
+F) Localization:
+- Full RTL Arabic labels for steps and buttons, plus English/French/Spanish strings placeholders.
+
+Deliver:
+- Firestore indexes & rules
+- Functions code (TypeScript/Node) with unit tests for totals & rewards
+- Compose screens wired to Firestore
+- Play Billing integration for digital subscriptions
+- GatewayService interface + mock for physical
+- FCM notifications for timeline events

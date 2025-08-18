@@ -20,6 +20,7 @@ import Profile from "@/pages/profile";
 import Payment from "@/pages/payment";
 import AdminDashboard from "@/pages/admin";
 import AdminProducts from "@/pages/admin-products";
+import Checkout from "@/pages/checkout";
 
 function Router() {
   const { user, loading } = useAuth();
@@ -79,6 +80,7 @@ function Router() {
         <Route path="/rewards" component={Rewards} />
         <Route path="/profile" component={Profile} />
         <Route path="/payment" component={Payment} />
+        <Route path="/checkout" component={Checkout} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route component={NotFound} />
