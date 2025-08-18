@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
-import { supabase } from '@/lib/supabase';
+import { apiRequest } from '@/lib/queryClient';
 import Header from '@/components/layout/header';
 import BottomNav from '@/components/layout/bottom-nav';
 import { Card, CardContent } from '@/components/ui/card';
@@ -85,20 +85,12 @@ export default function Store() {
   // Add to cart mutation
   const addToCartMutation = useMutation({
     mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
-      if (!user) throw new Error('يجب تسجيل الدخول أولاً');
-
-      const { data, error } = await supabase
-        .from('cart_items')
-        .insert([{
-          user_id: user.id,
-          product_id: productId,
-          quantity,
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      // Use our Express API instead of Supabase direct access
+      const response = await apiRequest('POST', '/api/cart/add', {
+        productId,
+        quantity
+      });
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
