@@ -42,7 +42,7 @@ export async function uploadFile(file: File): Promise<UploadResult> {
       await notifyServerUpload(file, uploadResult);
       return uploadResult;
     } else {
-      throw new Error(result.message || 'Cloudinary upload failed');
+      throw new Error(result.error || 'Cloudinary upload failed');
     }
   } catch (error) {
     console.error('❌ Cloudinary upload failed:', error);
