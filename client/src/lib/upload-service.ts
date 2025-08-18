@@ -1,7 +1,6 @@
-// Hybrid Upload Service - Cloudinary Primary, Firebase Backup
-// Now integrated with user account API
+// Primary Cloudinary Upload Service
+// Integrated with user account API for tracking and management
 import { uploadToCloudinary, testCloudinaryConnection } from './cloudinary';
-import { uploadToFirebaseStorage } from './firebase-storage';
 import { apiRequest } from './queryClient';
 
 export interface UploadResult {
@@ -14,62 +13,39 @@ export interface UploadResult {
   fileId?: string;
 }
 
-// Upload file with automatic fallback and account integration
+// Upload file using Cloudinary with account integration
 export async function uploadFile(file: File): Promise<UploadResult> {
-  console.log(`📤 Uploading file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+  console.log(`📤 Uploading to Cloudinary: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
   
-  let uploadResult: UploadResult;
-
-  // Try Cloudinary first (recommended for PDFs)
   try {
+    // Test Cloudinary connection first
     const cloudinaryTest = await testCloudinaryConnection();
-    if (cloudinaryTest.success) {
-      console.log('🟡 Using Cloudinary for upload...');
-      const result = await uploadToCloudinary(file);
+    if (!cloudinaryTest.success) {
+      throw new Error(`Cloudinary not available: ${cloudinaryTest.message}`);
+    }
+
+    console.log('☁️ Uploading to Cloudinary...');
+    const result = await uploadToCloudinary(file);
+    
+    if (result.success) {
+      console.log('✅ Cloudinary upload successful!');
+      const uploadResult = {
+        success: true,
+        url: result.url!,
+        downloadUrl: result.url!,
+        previewUrl: result.previewUrl,
+        provider: 'cloudinary' as const,
+        fileId: result.publicId
+      };
       
-      if (result.success) {
-        console.log('✅ Cloudinary upload successful!');
-        uploadResult = {
-          success: true,
-          url: result.url!,
-          downloadUrl: result.url!,
-          previewUrl: result.previewUrl,
-          provider: 'cloudinary',
-          fileId: result.publicId
-        };
-        
-        // Notify server about successful upload
-        await notifyServerUpload(file, uploadResult);
-        return uploadResult;
-      } else {
-        console.warn('⚠️ Cloudinary upload failed, trying Firebase...');
-      }
+      // Notify server about successful upload
+      await notifyServerUpload(file, uploadResult);
+      return uploadResult;
     } else {
-      console.log('🟡 Cloudinary not configured, using Firebase...');
+      throw new Error(result.message || 'Cloudinary upload failed');
     }
   } catch (error) {
-    console.warn('⚠️ Cloudinary error, falling back to Firebase:', error);
-  }
-
-  // Fallback to Firebase Storage
-  try {
-    console.log('🔥 Using Firebase Storage for upload...');
-    const downloadURL = await uploadToFirebaseStorage(file, 'uploads');
-    
-    console.log('✅ Firebase upload successful!');
-    uploadResult = {
-      success: true,
-      url: downloadURL,
-      downloadUrl: downloadURL,
-      provider: 'firebase',
-      fileId: file.name
-    };
-
-    // Notify server about successful upload
-    await notifyServerUpload(file, uploadResult);
-    return uploadResult;
-  } catch (error) {
-    console.error('❌ Both upload services failed:', error);
+    console.error('❌ Cloudinary upload failed:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Upload failed',
@@ -105,15 +81,14 @@ async function notifyServerUpload(file: File, result: UploadResult): Promise<voi
   }
 }
 
-// Check upload service status
+// Check Cloudinary service status
 export async function checkUploadServiceStatus(): Promise<{
   cloudinary: { available: boolean; message: string };
-  firebase: { available: boolean; message: string };
-  recommended: 'cloudinary' | 'firebase' | 'none';
+  recommended: 'cloudinary' | 'none';
 }> {
-  console.log('🔍 Checking upload services status...');
+  console.log('🔍 Checking Cloudinary status...');
 
-  // Test Cloudinary
+  // Test Cloudinary connection
   let cloudinaryStatus;
   try {
     cloudinaryStatus = await testCloudinaryConnection();
@@ -124,46 +99,13 @@ export async function checkUploadServiceStatus(): Promise<{
     };
   }
 
-  // Test Firebase (simple check)
-  let firebaseStatus;
-  try {
-    const hasFirebaseConfig = import.meta.env.VITE_FIREBASE_PROJECT_ID && 
-                              import.meta.env.VITE_FIREBASE_API_KEY;
-    firebaseStatus = {
-      success: hasFirebaseConfig,
-      message: hasFirebaseConfig ? 'Firebase configured' : 'Firebase not configured'
-    };
-  } catch (error) {
-    firebaseStatus = { 
-      success: false, 
-      message: error instanceof Error ? error.message : 'Configuration check failed' 
-    };
-  }
-
-  // Determine recommended service
-  let recommended: 'cloudinary' | 'firebase' | 'none';
-  if (cloudinaryStatus.success) {
-    recommended = 'cloudinary';
-  } else if (firebaseStatus.success) {
-    recommended = 'firebase';
-  } else {
-    recommended = 'none';
-  }
-
-  const status = {
+  return {
     cloudinary: {
       available: cloudinaryStatus.success,
       message: cloudinaryStatus.message
     },
-    firebase: {
-      available: firebaseStatus.success,
-      message: firebaseStatus.message
-    },
-    recommended
+    recommended: cloudinaryStatus.success ? 'cloudinary' : 'none'
   };
-
-  console.log('Upload services status:', status);
-  return status;
 }
 
 // Get file preview URL based on provider

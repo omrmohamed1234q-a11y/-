@@ -7,12 +7,13 @@
 - **Mobile Application**: React Native (Expo) mobile app with comprehensive multi-provider authentication
 - **Backend Services**: Express.js API with Supabase integration and secure session management
 
-## Recent Authentication Enhancements
-- **Multi-Provider Authentication**: Complete integration of Supabase, Replit Auth, Google, and Facebook OAuth
-- **Secure Token Management**: Enhanced session handling with refresh tokens and remember me functionality
-- **Mobile-First Auth Service**: Comprehensive authentication service supporting all providers with proper error handling
-- **Password Reset Flow**: Complete forgot password functionality with email-based reset links
-- **VIP User Experience**: Premium user highlights and gradient-based UI enhancements
+## Recent Cloudinary Integration (January 2025)
+- **Primary File Storage**: Cloudinary now serves as the main file upload and storage service
+- **User Account Integration**: All file uploads tracked per authenticated user account
+- **Auto User Sync**: Supabase users automatically sync with backend account system
+- **Premium PDF Processing**: Cloudinary's advanced PDF optimization and 300 DPI print quality
+- **Generous Storage**: 25GB free tier with enterprise-grade features and reliability
+- **Upload Tracking**: Server logs all file activity with comprehensive metadata and user association
 
 ## Cart and Order Tracking Enhancements (January 2025)
 - **Integrated Cart Tracking**: Order tracking functionality now appears directly in the cart drawer

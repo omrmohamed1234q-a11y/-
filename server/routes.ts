@@ -55,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📋 Fetching user info for: ${userId}`);
       
       // Try to get user from storage first
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId);
       
       if (user) {
         res.json(user);
@@ -84,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`👤 Syncing user account: ${userId}`);
       
       // Check if user exists, create or update
-      let user = await storage.getUserById(userId);
+      let user = await storage.getUser(userId);
       
       if (!user) {
         // Create new user
@@ -123,6 +123,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         error: 'Failed to sync user account' 
+      });
+    }
+  });
+
+  // Upload file notification endpoint
+  app.post('/api/upload-file', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { fileName, fileType, fileSize, uploadProvider, fileUrl } = req.body;
+      
+      console.log(`📤 File uploaded by user ${userId}: ${fileName} (${uploadProvider})`);
+      console.log(`   Size: ${(fileSize / 1024 / 1024).toFixed(2)}MB`);
+      console.log(`   URL: ${fileUrl}`);
+      
+      res.json({
+        success: true,
+        message: 'Upload tracked successfully',
+        fileInfo: {
+          fileName,
+          fileType,
+          fileSize,
+          provider: uploadProvider,
+          url: fileUrl,
+          userId
+        }
+      });
+    } catch (error) {
+      console.error('Error tracking upload:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to track upload' 
       });
     }
   });
