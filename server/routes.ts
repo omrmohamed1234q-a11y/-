@@ -124,16 +124,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/print-jobs', isAdminAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      console.log('Creating print job for user:', userId);
+      console.log('Request body keys:', Object.keys(req.body));
+      console.log('Files count:', req.body.files?.length || 0);
+      
       const printJobData = insertPrintJobSchema.parse({
         ...req.body,
         userId
       });
       
+      console.log('Parsed print job data:', {
+        ...printJobData,
+        filename: printJobData.filename,
+        fileUrl: printJobData.fileUrl
+      });
+      
       const printJob = await storage.createPrintJob(printJobData);
+      console.log('Print job created successfully:', printJob.id);
+      
       res.json(printJob);
     } catch (error) {
       console.error("Error creating print job:", error);
-      res.status(500).json({ message: "Failed to create print job" });
+      console.error("Request body that failed:", req.body);
+      res.status(500).json({ 
+        message: "Failed to create print job",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
@@ -180,7 +196,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating order:", error);
       console.error("Order data that failed:", req.body);
-      res.status(500).json({ message: "Failed to create order", error: error.message });
+      res.status(500).json({ 
+        message: "Failed to create order", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

@@ -10,7 +10,7 @@ const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-key",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "printforme-demo.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "printforme-demo",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "printforme-demo.appspot.com",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789:web:demo",
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-DEMO"
@@ -27,8 +27,8 @@ export const storage = getStorage(app);
 // Initialize Analytics (only in browser)
 export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
-// Connect to emulators in development
-if (import.meta.env.DEV) {
+// Only connect to emulators if explicitly enabled (not by default in development)
+if (import.meta.env.VITE_FIREBASE_USE_EMULATORS === 'true') {
   console.log('🔥 Firebase emulators connected for development');
   
   // Connect to Auth emulator
@@ -51,6 +51,8 @@ if (import.meta.env.DEV) {
   } catch (error) {
     console.log('Storage emulator connection skipped (already connected)');
   }
+} else {
+  console.log('🔥 Using production Firebase services');
 }
 
 export default app;

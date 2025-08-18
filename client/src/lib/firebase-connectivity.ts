@@ -1,111 +1,123 @@
-/**
- * Firebase connectivity and diagnostics utilities
- */
+// Firebase Connection Test Utilities
 
-export async function testFirebaseConnectivity(): Promise<{
-  connected: boolean;
-  latency?: number;
-  error?: string;
+/**
+ * Test Firebase Storage connectivity
+ */
+export async function testFirebaseStorageConnection(): Promise<{
+  success: boolean;
+  message: string;
+  details?: any;
 }> {
   try {
-    const startTime = Date.now();
-    
-    // Test basic connectivity to Firebase Storage
-    const response = await fetch(
-      `https://firebasestorage.googleapis.com/v0/b/${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebasestorage.app/o`,
-      {
-        method: 'GET',
-        mode: 'cors',
-        signal: AbortSignal.timeout(10000) // 10 second timeout
+    const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+    if (!projectId) {
+      return {
+        success: false,
+        message: 'Firebase Project ID not configured'
+      };
+    }
+
+    console.log('Testing Firebase Storage connectivity...');
+    console.log('Project ID:', projectId);
+
+    // Test basic connectivity to Firebase Storage API
+    const testUrl = `https://firebasestorage.googleapis.com/v0/b/${projectId}.appspot.com/o`;
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Accept': 'application/json'
       }
-    );
-    
-    const latency = Date.now() - startTime;
-    
-    if (response.ok || response.status === 401) {
-      // 401 is expected for unauthenticated requests, but means Firebase is reachable
-      return { connected: true, latency };
-    } else {
-      return { 
-        connected: false, 
-        error: `HTTP ${response.status}: ${response.statusText}` 
-      };
-    }
-  } catch (error: any) {
-    console.error('Firebase connectivity test failed:', error);
-    
-    if (error.name === 'TimeoutError') {
-      return { 
-        connected: false, 
-        error: 'انتهت مهلة الاتصال بـ Firebase (اتصال بطيء)' 
-      };
-    } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      return { 
-        connected: false, 
-        error: 'فشل في الاتصال بـ Firebase (تحقق من الإنترنت)' 
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        success: true,
+        message: 'Firebase Storage connection successful',
+        details: {
+          status: response.status,
+          bucket: `${projectId}.appspot.com`,
+          itemCount: data?.items?.length || 0
+        }
       };
     } else {
-      return { 
-        connected: false, 
-        error: `خطأ في الاتصال: ${error.message}` 
+      return {
+        success: false,
+        message: `Firebase Storage returned ${response.status}: ${response.statusText}`,
+        details: {
+          status: response.status,
+          statusText: response.statusText
+        }
       };
     }
+  } catch (error) {
+    return {
+      success: false,
+      message: 'Firebase Storage connection failed',
+      details: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        type: error instanceof Error ? error.name : 'UnknownError'
+      }
+    };
   }
 }
 
-export async function diagnoseProblem(file: File): Promise<{
-  recommendations: string[];
-  severity: 'low' | 'medium' | 'high';
+/**
+ * Test Firebase configuration validity
+ */
+export function validateFirebaseConfig(): {
+  valid: boolean;
+  issues: string[];
+  config: Record<string, any>;
+} {
+  const config = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`
+  };
+
+  const issues: string[] = [];
+
+  if (!config.apiKey) {
+    issues.push('VITE_FIREBASE_API_KEY is missing');
+  }
+  if (!config.projectId) {
+    issues.push('VITE_FIREBASE_PROJECT_ID is missing');
+  }
+  if (!config.appId) {
+    issues.push('VITE_FIREBASE_APP_ID is missing');
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    config
+  };
+}
+
+/**
+ * Run comprehensive Firebase connectivity test
+ */
+export async function runFirebaseHealthCheck(): Promise<{
+  overall: boolean;
+  configCheck: ReturnType<typeof validateFirebaseConfig>;
+  connectivityTest: Awaited<ReturnType<typeof testFirebaseStorageConnection>>;
 }> {
-  const recommendations: string[] = [];
-  let severity: 'low' | 'medium' | 'high' = 'low';
-  
-  // Check file size
-  if (file.size > 5 * 1024 * 1024) { // > 5MB
-    recommendations.push('الملف كبير جداً (أكثر من 5 ميجابايت). جرب ضغط الملف أو تقسيمه');
-    severity = 'high';
-  } else if (file.size > 2 * 1024 * 1024) { // > 2MB
-    recommendations.push('الملف كبير نسبياً. قد يستغرق وقتاً أطول للرفع');
-    severity = 'medium';
-  }
-  
-  // Check file type
-  const isPDF = file.type === 'application/pdf';
-  const isImage = file.type.startsWith('image/');
-  
-  if (isPDF && file.size > 1024 * 1024) { // PDF > 1MB
-    recommendations.push('ملف PDF كبير. جرب ضغطه باستخدام أدوات ضغط PDF أونلاين');
-  }
-  
-  if (isImage && file.size > 500 * 1024) { // Image > 500KB
-    recommendations.push('صورة كبيرة. جرب تقليل الدقة أو الجودة');
-  }
-  
-  // Test connectivity
-  const connectivity = await testFirebaseConnectivity();
-  if (!connectivity.connected) {
-    recommendations.push(`مشكلة في الاتصال: ${connectivity.error}`);
-    severity = 'high';
-  } else if (connectivity.latency && connectivity.latency > 3000) {
-    recommendations.push('الاتصال بطيء. قد تحتاج إلى صبر أكثر أو ملف أصغر');
-    if (severity !== 'high') severity = 'medium';
-  }
-  
-  // General recommendations
-  if (recommendations.length === 0) {
-    recommendations.push('جرب إعادة الرفع أو إعادة تحميل الصفحة');
-  }
-  
-  return { recommendations, severity };
-}
+  console.log('🔥 Running Firebase Health Check...');
 
-export function getOptimalChunkSize(fileSize: number): number {
-  // Calculate optimal chunk size based on file size
-  if (fileSize < 1024 * 1024) { // < 1MB
-    return 256 * 1024; // 256KB chunks
-  } else if (fileSize < 10 * 1024 * 1024) { // < 10MB
-    return 512 * 1024; // 512KB chunks
-  } else {
-    return 1024 * 1024; // 1MB chunks
-  }
+  const configCheck = validateFirebaseConfig();
+  console.log('Config validation:', configCheck);
+
+  const connectivityTest = await testFirebaseStorageConnection();
+  console.log('Connectivity test:', connectivityTest);
+
+  const overall = configCheck.valid && connectivityTest.success;
+
+  return {
+    overall,
+    configCheck,
+    connectivityTest
+  };
 }
