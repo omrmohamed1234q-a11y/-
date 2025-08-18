@@ -151,16 +151,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/orders', isAdminAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
+      // Generate order number if not provided
+      const orderNumber = req.body.orderNumber || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Calculate totals if not provided
+      const items = req.body.items || [];
+      const subtotal = req.body.subtotal || items.reduce((sum: number, item: any) => sum + (parseFloat(item.price || 0) * (item.quantity || 1)), 0);
+      const deliveryFee = req.body.deliveryFee || (req.body.deliveryMethod === 'delivery' ? 15 : 0);
+      const discount = req.body.discount || 0;
+      const totalAmount = req.body.totalAmount || (subtotal + deliveryFee - discount);
+      
       const orderData = insertOrderSchema.parse({
         ...req.body,
-        userId
+        userId,
+        orderNumber,
+        items,
+        subtotal: subtotal.toString(),
+        deliveryFee: deliveryFee.toString(),
+        discount: discount.toString(),
+        totalAmount: totalAmount.toString(),
+        status: req.body.status || "pending",
+        statusText: req.body.statusText || "قيد المراجعة"
       });
       
       const order = await storage.createOrder(orderData);
       res.json(order);
     } catch (error) {
       console.error("Error creating order:", error);
-      res.status(500).json({ message: "Failed to create order" });
+      console.error("Order data that failed:", req.body);
+      res.status(500).json({ message: "Failed to create order", error: error.message });
     }
   });
 

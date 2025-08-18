@@ -64,10 +64,10 @@ export async function uploadToFirebaseStorage(
     
     // Set timeout for upload
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('رفع الملف استغرق وقتاً طويلاً. تحقق من إعدادات Firebase Storage Rules')), 30000)
+      setTimeout(() => reject(new Error('TIMEOUT: رفع الملف استغرق وقتاً طويلاً. تحقق من إعدادات Firebase Storage Rules')), 30000)
     );
     
-    const snapshot = await Promise.race([uploadPromise, timeoutPromise]);
+    const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as any;
     console.log('Upload completed:', snapshot.ref.fullPath);
     
     // Complete progress

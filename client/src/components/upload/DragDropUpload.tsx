@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Upload, FileText, Image, X, Check } from 'lucide-react';
 import { uploadToFirebaseStorage } from '@/lib/firebase-storage';
 import { useToast } from '@/hooks/use-toast';
+import { FirebaseRulesError } from '@/components/storage/FirebaseRulesError';
 
 interface DragDropUploadProps {
   onUpload: (files: File[], urls: string[]) => void;
@@ -23,6 +24,7 @@ export function DragDropUpload({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<{ file: File; url: string }[]>([]);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -30,6 +32,7 @@ export function DragDropUpload({
 
     setUploading(true);
     setProgress(0);
+    setFirebaseError(null);
     
     try {
       const uploads: { file: File; url: string }[] = [];
@@ -58,11 +61,20 @@ export function DragDropUpload({
       
     } catch (error) {
       console.error('Upload error:', error);
-      toast({
-        title: 'خطأ في الرفع',
-        description: error instanceof Error ? error.message : 'فشل في رفع الملفات',
-        variant: 'destructive'
-      });
+      const errorMessage = error instanceof Error ? error.message : 'فشل في رفع الملفات';
+      
+      // Check if it's a Firebase Storage Rules error
+      if (errorMessage.includes('Firebase Storage Rules') || 
+          errorMessage.includes('unauthorized') || 
+          errorMessage.includes('وقتاً طويلاً')) {
+        setFirebaseError(errorMessage);
+      } else {
+        toast({
+          title: 'خطأ في الرفع',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+      }
     } finally {
       setUploading(false);
       setProgress(0);
@@ -93,6 +105,14 @@ export function DragDropUpload({
 
   return (
     <div className="space-y-4" dir="rtl">
+      {/* Firebase Rules Error */}
+      {firebaseError && (
+        <FirebaseRulesError 
+          error={firebaseError} 
+          onRetry={() => setFirebaseError(null)} 
+        />
+      )}
+      
       <Card 
         className={`border-2 border-dashed transition-colors ${
           isDragActive 

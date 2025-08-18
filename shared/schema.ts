@@ -371,6 +371,13 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  // Make required fields optional with sensible defaults
+  orderNumber: z.string().optional(),
+  items: z.array(z.any()).default([]),
+  subtotal: z.string().or(z.number()).optional(),
+  totalAmount: z.string().or(z.number()).optional(),
+  status: z.string().default("pending"),
 });
 
 export const insertRewardSchema = createInsertSchema(rewards).omit({
