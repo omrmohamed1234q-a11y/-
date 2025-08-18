@@ -782,15 +782,38 @@ Total Print Jobs: 2156
         doubleSidedDiscount
       );
 
+      // Create print job record for admin panel
+      const printJobRecord = {
+        userId: 'guest-user', // Since we don't have auth, use guest user
+        filename: printJobData.filename,
+        fileUrl: printJobData.fileUrl,
+        fileSize: printJobData.fileSize,
+        fileType: printJobData.fileType,
+        pages: printJobData.pages,
+        copies: printJobData.copies,
+        colorMode: printJobData.colorMode,
+        paperSize: printJobData.paperSize,
+        doubleSided: printJobData.doubleSided,
+        pageRange: printJobData.pageRange,
+        cost: totalCost,
+        status: 'pending',
+        priority: 'normal'
+      };
+
+      // Save print job to storage (this will make it appear in admin panel)
+      const createdPrintJob = await storage.createPrintJob(printJobRecord);
+      console.log('Print job created in admin panel:', createdPrintJob);
+
       // Create cart item for print job
       const cartItem = {
-        id: `print-job-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+        id: `print-job-${createdPrintJob.id}`,
         productId: 'print-service',
         productName: `طباعة: ${printJobData.filename}`,
         productImage: '/print-icon.png',
         price: totalCost,
         quantity: 1,
         isPrintJob: true,
+        printJobId: createdPrintJob.id, // Link to the actual print job record
         printJob: {
           filename: printJobData.filename,
           fileUrl: printJobData.fileUrl,
@@ -812,12 +835,13 @@ Total Print Jobs: 2156
         }
       };
 
-      console.log('Print job added to cart:', cartItem);
+      console.log('Print job added to cart and admin panel:', cartItem);
       
       res.json({ 
         success: true, 
         cartItem,
-        message: 'تمت إضافة مهمة الطباعة للسلة بنجاح'
+        printJob: createdPrintJob,
+        message: 'تمت إضافة مهمة الطباعة للسلة ولوحة الإدارة بنجاح'
       });
       
     } catch (error) {
