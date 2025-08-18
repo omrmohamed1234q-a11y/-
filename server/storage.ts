@@ -106,6 +106,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProduct(id: string): Promise<void> {
+    // First delete any cart items that reference this product
+    await db.delete(cartItems).where(eq(cartItems.productId, id));
+    // Then delete the product
     await db.delete(products).where(eq(products.id, id));
   }
 
