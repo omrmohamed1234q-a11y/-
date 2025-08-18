@@ -29,10 +29,11 @@ export default function CloudinaryTest() {
   const testFileUpload = async () => {
     setLoading(true);
     try {
-      // Create a test file
-      const testContent = `Test file created at ${new Date().toISOString()}\nCloudinary integration test for اطبعلي`;
-      const testBlob = new Blob([testContent], { type: 'text/plain' });
-      const testFile = new File([testBlob], 'cloudinary-test.txt', { type: 'text/plain' });
+      // Create a small test image (1x1 pixel PNG)
+      const testImageData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const response = await fetch(testImageData);
+      const blob = await response.blob();
+      const testFile = new File([blob], 'cloudinary-test.png', { type: 'image/png' });
       
       const result = await uploadFile(testFile);
       setUploadResult(result);

@@ -23,20 +23,31 @@ export async function uploadToCloudinary(file: File): Promise<{
     formData.append('file', file);
     formData.append('upload_preset', UPLOAD_PRESET);
     
-    // Configure for PDF files
+    // Determine resource type and endpoint
+    let resourceType = 'image';
+    let endpoint = 'image/upload';
+    
     if (file.type === 'application/pdf') {
-      formData.append('resource_type', 'image'); // Convert PDF to image
+      resourceType = 'image'; // Convert PDF to image
       formData.append('format', 'jpg');
       formData.append('quality', '90');
-      formData.append('dpi', '300'); // Print quality
+      formData.append('dpi', '300');
+    } else if (file.type.startsWith('video/')) {
+      resourceType = 'video';
+      endpoint = 'video/upload';
+    } else if (!file.type.startsWith('image/')) {
+      resourceType = 'raw';
+      endpoint = 'raw/upload';
     }
+    
+    // Note: resource_type is typically not needed for image uploads with unsigned presets
 
     // Arabic filename handling
     const arabicSafeFilename = encodeURIComponent(file.name);
     formData.append('public_id', `print-jobs/${Date.now()}-${arabicSafeFilename}`);
 
     const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${endpoint}`,
       {
         method: 'POST',
         body: formData
@@ -44,7 +55,13 @@ export async function uploadToCloudinary(file: File): Promise<{
     );
 
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Cloudinary upload error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const result = await response.json();
