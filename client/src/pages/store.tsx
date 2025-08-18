@@ -25,7 +25,7 @@ interface Product {
   isDigital?: boolean;
   grade?: string | null;
   subject?: string | null;
-  stock?: number;
+  availableCopies?: number;
   tags?: string[] | null;
 }
 
@@ -246,7 +246,7 @@ export default function Store() {
                       {product.isDigital && (
                         <Badge className="bg-purple-100 text-purple-600">رقمي</Badge>
                       )}
-                      {(product.stock || 0) === 0 && (
+                      {(product.availableCopies || 0) === 0 && (
                         <Badge variant="destructive">نفدت الكمية</Badge>
                       )}
                     </div>
@@ -281,7 +281,7 @@ export default function Store() {
                       size="sm"
                       className="bg-accent hover:bg-accent/90 text-white"
                       onClick={() => handleAddToCart(product.id)}
-                      disabled={(product.stock || 0) === 0 || addToCartMutation.isPending}
+                      disabled={(product.availableCopies || 0) === 0 || addToCartMutation.isPending}
                     >
                       {product.isDigital ? (
                         <>
@@ -300,7 +300,7 @@ export default function Store() {
                   <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                     <span className="arabic-nums">{product.ratingCount || 0} تقييم</span>
                     {!product.isDigital && (
-                      <span className="arabic-nums">متوفر: {product.stock || 0}</span>
+                      <span className="arabic-nums">متوفر: {product.availableCopies || 0}</span>
                     )}
                   </div>
                 </CardContent>
