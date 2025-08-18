@@ -20,6 +20,7 @@ import Profile from "@/pages/profile";
 import Payment from "@/pages/payment";
 import AdminDashboard from "@/pages/admin";
 import AdminProducts from "@/pages/admin-products";
+import AdminStore from "@/pages/admin/store";
 import Checkout from "@/pages/checkout";
 import OrderTracking from "@/pages/order-tracking";
 
@@ -63,6 +64,7 @@ function Router() {
         <Route path="/auth/signup" component={Signup} />
         <Route path="/auth/callback" component={AuthCallback} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/store" component={AdminStore} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
@@ -85,6 +87,7 @@ function Router() {
         <Route path="/checkout" component={Checkout} />
         <Route path="/order-tracking/:id" component={OrderTracking} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/store" component={AdminStore} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route component={NotFound} />
       </Switch>

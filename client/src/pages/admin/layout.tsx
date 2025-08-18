@@ -14,7 +14,8 @@ import {
   BarChart3,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Store
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -23,8 +24,9 @@ interface AdminLayoutProps {
 
 const navigation = [
   { name: 'لوحة التحكم', href: '/admin', icon: LayoutDashboard },
-  { name: 'الطلبات', href: '/admin/orders', icon: ShoppingCart },
+  { name: 'المتجر', href: '/admin/store', icon: Store },
   { name: 'المنتجات', href: '/admin/products', icon: Package },
+  { name: 'الطلبات', href: '/admin/orders', icon: ShoppingCart },
   { name: 'الكوبونات', href: '/admin/vouchers', icon: Ticket },
   { name: 'المكافآت', href: '/admin/rewards', icon: Gift },
   { name: 'المواد التعليمية', href: '/admin/teacher-materials', icon: GraduationCap },
