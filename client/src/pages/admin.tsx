@@ -58,13 +58,18 @@ export default function AdminDashboard() {
 
   // Mutations
   const createProductMutation = useMutation({
-    mutationFn: (productData: any) => apiRequest('POST', '/api/admin/products', productData),
-    onSuccess: () => {
+    mutationFn: (productData: any) => {
+      console.log('🚀 Making API request with data:', productData);
+      return apiRequest('POST', '/api/admin/products', productData);
+    },
+    onSuccess: (response) => {
+      console.log('✅ Product creation successful:', response);
       queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
       toast({ title: "تم إضافة المنتج بنجاح" });
       setShowProductForm(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('❌ Product creation failed:', error);
       toast({ title: "خطأ في إضافة المنتج", variant: "destructive" });
     }
   });
@@ -591,6 +596,7 @@ export default function AdminDashboard() {
               </div>
               <ProductForm
                 onSubmit={(data) => {
+                  console.log('🔄 Admin page received form data:', data);
                   createProductMutation.mutate(data);
                 }}
                 isLoading={createProductMutation.isPending}

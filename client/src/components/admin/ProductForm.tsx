@@ -121,11 +121,18 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
   };
 
   const submitForm = (data: ProductFormData) => {
-    onSubmit({
+    console.log('📝 Form submitted with data:', data);
+    console.log('🏷️ Selected product types:', selectedProductTypes);
+    console.log('🖼️ Cover image URL:', coverImageUrl);
+    
+    const finalData = {
       ...data,
       productTypes: selectedProductTypes,
       imageUrl: coverImageUrl,
-    });
+    };
+    
+    console.log('📤 Final data being sent:', finalData);
+    onSubmit(finalData);
   };
 
   return (
