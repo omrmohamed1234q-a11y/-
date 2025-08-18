@@ -998,15 +998,30 @@ Total Print Jobs: 2156
   app.post('/api/cart/print-job', async (req, res) => {
     try {
       const printJobData = req.body;
+      console.log('Received print job data:', printJobData);
       
-      // Calculate print job cost
-      const baseCostPerPage = printJobData.colorMode === 'color' ? 2 : 1; // جنيه per page
-      const paperSizeMultiplier = printJobData.paperSize === 'A4' ? 1 : 1.2;
-      const doubleSidedDiscount = printJobData.doubleSided ? 0.8 : 1;
+      // Extract data from the request - frontend sends individual print job objects
+      const filename = printJobData.filename || 'طباعة جديدة';
+      const fileUrl = printJobData.fileUrl;
+      
+      if (!fileUrl) {
+        return res.status(400).json({ message: 'No file URL provided for printing' });
+      }
+      
+      // Calculate print job cost with safe defaults
+      const pages = printJobData.pages || 1;
+      const copies = printJobData.copies || 1;
+      const colorMode = printJobData.colorMode || 'grayscale';
+      const paperSize = printJobData.paperSize || 'A4';
+      const doubleSided = printJobData.doubleSided || false;
+      
+      const baseCostPerPage = colorMode === 'color' ? 2 : 1; // جنيه per page
+      const paperSizeMultiplier = paperSize === 'A4' ? 1 : 1.2;
+      const doubleSidedDiscount = doubleSided ? 0.8 : 1;
       
       const totalCost = Math.ceil(
-        printJobData.pages * 
-        printJobData.copies * 
+        pages * 
+        copies * 
         baseCostPerPage * 
         paperSizeMultiplier * 
         doubleSidedDiscount
@@ -1015,20 +1030,20 @@ Total Print Jobs: 2156
       // Use existing admin user for print jobs (since we don't have authentication)
       const adminUserId = '48c03e72-d53b-4a3f-a729-c38276268315'; // Existing admin user from database
 
-      // Create print job record for admin panel
+      // Create print job record for admin panel with proper field mapping
       const printJobRecord = {
         userId: adminUserId,
-        filename: printJobData.filename,
-        fileUrl: printJobData.fileUrl,
-        fileSize: printJobData.fileSize,
-        fileType: printJobData.fileType,
-        pages: printJobData.pages,
-        copies: printJobData.copies,
-        colorMode: printJobData.colorMode,
-        paperSize: printJobData.paperSize,
-        doubleSided: printJobData.doubleSided,
-        pageRange: printJobData.pageRange,
-        cost: totalCost,
+        filename: filename,
+        fileUrl: fileUrl,
+        fileSize: printJobData.fileSize || 0,
+        fileType: printJobData.fileType || 'application/pdf',
+        pages: pages,
+        copies: copies,
+        colorMode: colorMode, // This will map to color_mode in DB
+        paperSize: paperSize, // This will map to paper_size in DB
+        doubleSided: doubleSided, // This will map to double_sided in DB
+        pageRange: printJobData.pageRange || 'all',
+        cost: totalCost.toString(), // Convert to string for decimal field
         status: 'pending',
         priority: 'normal'
       };
