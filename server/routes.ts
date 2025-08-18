@@ -764,6 +764,68 @@ Total Print Jobs: 2156
     }
   });
 
+  // Add print job to cart
+  app.post('/api/cart/print-job', async (req, res) => {
+    try {
+      const printJobData = req.body;
+      
+      // Calculate print job cost
+      const baseCostPerPage = printJobData.colorMode === 'color' ? 2 : 1; // جنيه per page
+      const paperSizeMultiplier = printJobData.paperSize === 'A4' ? 1 : 1.2;
+      const doubleSidedDiscount = printJobData.doubleSided ? 0.8 : 1;
+      
+      const totalCost = Math.ceil(
+        printJobData.pages * 
+        printJobData.copies * 
+        baseCostPerPage * 
+        paperSizeMultiplier * 
+        doubleSidedDiscount
+      );
+
+      // Create cart item for print job
+      const cartItem = {
+        id: `print-job-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+        productId: 'print-service',
+        productName: `طباعة: ${printJobData.filename}`,
+        productImage: '/print-icon.png',
+        price: totalCost,
+        quantity: 1,
+        isPrintJob: true,
+        printJob: {
+          filename: printJobData.filename,
+          fileUrl: printJobData.fileUrl,
+          fileSize: printJobData.fileSize,
+          fileType: printJobData.fileType,
+          pages: printJobData.pages,
+          copies: printJobData.copies,
+          colorMode: printJobData.colorMode,
+          paperSize: printJobData.paperSize,
+          doubleSided: printJobData.doubleSided,
+          pageRange: printJobData.pageRange,
+          cost: totalCost
+        },
+        variant: {
+          copies: printJobData.copies,
+          colorMode: printJobData.colorMode === 'color' ? 'ملون' : 'أبيض وأسود',
+          paperSize: printJobData.paperSize,
+          doubleSided: printJobData.doubleSided ? 'وجهين' : 'وجه واحد'
+        }
+      };
+
+      console.log('Print job added to cart:', cartItem);
+      
+      res.json({ 
+        success: true, 
+        cartItem,
+        message: 'تمت إضافة مهمة الطباعة للسلة بنجاح'
+      });
+      
+    } catch (error) {
+      console.error('Error adding print job to cart:', error);
+      res.status(500).json({ message: 'Failed to add print job to cart' });
+    }
+  });
+
   // Get active orders
   app.get('/api/orders/active', async (req, res) => {
     try {

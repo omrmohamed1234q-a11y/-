@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 import Header from '@/components/layout/header';
 import BottomNav from '@/components/layout/bottom-nav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +22,8 @@ import {
   Download,
   Upload,
   Scan,
-  Camera
+  Camera,
+  ShoppingCart
 } from 'lucide-react';
 import { DocumentScanner } from '@/components/upload/DocumentScanner';
 import { CameraCapture } from '@/components/camera/CameraCapture';
@@ -28,6 +32,8 @@ import { PDFToolsModal } from '@/components/pdf/PDFToolsModal';
 
 export default function Print() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
   const [printSettings, setPrintSettings] = useState({
@@ -38,6 +44,29 @@ export default function Print() {
     pages: 'all',
   });
   const [isUploading, setIsUploading] = useState(false);
+
+  // Mutation to add print jobs to cart
+  const addToCartMutation = useMutation({
+    mutationFn: async (printJobData: any) => {
+      return await apiRequest('POST', '/api/cart/print-job', printJobData);
+    },
+    onSuccess: () => {
+      // Invalidate cart queries to refresh the cart
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      toast({
+        title: 'تمت إضافة المهمة للسلة',
+        description: 'تم إضافة ملفاتك للطباعة إلى السلة بنجاح',
+      });
+    },
+    onError: (error) => {
+      console.error('Error adding to cart:', error);
+      toast({
+        title: 'خطأ في إضافة المهمة',
+        description: 'فشل في إضافة ملفات الطباعة للسلة',
+        variant: 'destructive'
+      });
+    }
+  });
 
   const handleDragDropUpload = (files: File[], urls: string[]) => {
     setSelectedFiles(files);
@@ -52,19 +81,53 @@ export default function Print() {
   };
 
   const handlePrint = async () => {
-    if (selectedFiles.length === 0 || !user) return;
+    if (selectedFiles.length === 0 || !user) {
+      toast({
+        title: 'لا توجد ملفات',
+        description: 'يرجى رفع ملف واحد على الأقل للطباعة',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     setIsUploading(true);
     
     try {
-      console.log('Printing files:', selectedFiles.map(f => f.name), 'with settings:', printSettings);
-      console.log('Firebase URLs:', uploadedUrls);
+      console.log('Adding print jobs to cart:', selectedFiles.map(f => f.name), 'with settings:', printSettings);
+      console.log('File URLs:', uploadedUrls);
       
-      // Simulate printing process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create print job data for each file
+      const printJobs = selectedFiles.map((file, index) => ({
+        filename: file.name,
+        fileUrl: uploadedUrls[index],
+        fileSize: file.size,
+        fileType: file.type,
+        pages: 1, // Will be calculated properly later
+        copies: printSettings.copies,
+        colorMode: printSettings.colorMode,
+        paperSize: printSettings.paperSize,
+        doubleSided: printSettings.doubleSided,
+        pageRange: printSettings.pages
+      }));
+
+      // Add each print job to cart
+      for (const printJob of printJobs) {
+        await addToCartMutation.mutateAsync(printJob);
+      }
+      
+      // Clear the form after success
+      setSelectedFiles([]);
+      setUploadedUrls([]);
+      setPrintSettings({
+        copies: 1,
+        colorMode: 'grayscale',
+        paperSize: 'A4',
+        doubleSided: false,
+        pages: 'all',
+      });
       
     } catch (error) {
-      console.error('Print failed:', error);
+      console.error('Failed to add print jobs to cart:', error);
     } finally {
       setIsUploading(false);
     }
@@ -214,17 +277,18 @@ export default function Print() {
                 <Button
                   className="w-full bg-accent hover:bg-accent/90 text-white"
                   onClick={handlePrint}
-                  disabled={selectedFiles.length === 0 || isUploading}
+                  disabled={selectedFiles.length === 0 || isUploading || addToCartMutation.isPending}
+                  data-testid="button-start-printing"
                 >
-                  {isUploading ? (
+                  {isUploading || addToCartMutation.isPending ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
-                      جاري الرفع...
+                      {addToCartMutation.isPending ? 'إضافة للسلة...' : 'جاري الرفع...'}
                     </>
                   ) : (
                     <>
-                      <i className="fas fa-print ml-2"></i>
-                      ابدأ الطباعة
+                      <ShoppingCart className="w-4 h-4 ml-2" />
+                      إضافة للسلة - ابدأ الطباعة
                     </>
                   )}
                 </Button>
