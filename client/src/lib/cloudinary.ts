@@ -28,10 +28,9 @@ export async function uploadToCloudinary(file: File): Promise<{
     let endpoint = 'image/upload';
     
     if (file.type === 'application/pdf') {
-      resourceType = 'image'; // Convert PDF to image
-      formData.append('format', 'jpg');
-      formData.append('quality', '90');
-      formData.append('dpi', '300');
+      resourceType = 'raw'; // Store PDF as raw file for unsigned uploads
+      endpoint = 'raw/upload';
+      // Note: PDF conversion requires signed uploads, storing as raw for now
     } else if (file.type.startsWith('video/')) {
       resourceType = 'video';
       endpoint = 'video/upload';
@@ -40,7 +39,7 @@ export async function uploadToCloudinary(file: File): Promise<{
       endpoint = 'raw/upload';
     }
     
-    // Note: resource_type is typically not needed for image uploads with unsigned presets
+    // Note: No additional parameters needed for unsigned uploads
 
     // Arabic filename handling
     const arabicSafeFilename = encodeURIComponent(file.name);

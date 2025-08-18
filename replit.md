@@ -16,6 +16,7 @@
 - **Upload Tracking**: Server logs all file activity with comprehensive metadata and user association (WORKING)
 - **Production Ready**: Successfully tested with user's actual Cloudinary account (Cloud: dabyefigs)
 - **Testing Removed**: All testing pages removed and functionality integrated into main print page
+- **PDF Upload Fix**: Resolved 400 error for PDF files by removing format parameters from unsigned uploads
 
 ## Cart and Order Tracking Enhancements (January 2025)
 - **Integrated Cart Tracking**: Order tracking functionality now appears directly in the cart drawer

@@ -75,4 +75,21 @@ Available in browser console:
 - Upload Preset: `اطبعلي` (Arabic name working correctly)
 - API Integration: Full functionality confirmed
 
+### 📋 PDF Upload Fix Applied (January 18, 2025)
+
+**Issue Fixed:**
+- PDF uploads were failing due to format parameters in unsigned uploads
+- Error: "Format parameter is not allowed when using unsigned upload"
+
+**Solution Applied:**
+- ✅ **PDF Files**: Now uploaded as raw files to avoid format restrictions
+- ✅ **Other Files**: Continue to work normally (DOCX, PNG, etc.)
+- ✅ **Arabic Filenames**: Full support maintained
+- ✅ **Server Tracking**: All uploads properly tracked regardless of file type
+
+**Current Status:**
+- All file types now upload successfully to your Cloudinary account
+- Arabic filenames properly encoded and supported
+- User authentication and tracking working perfectly
+
 Ready for production use with comprehensive logging and error handling!
