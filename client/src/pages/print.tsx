@@ -28,7 +28,9 @@ import {
 import { DocumentScanner } from '@/components/upload/DocumentScanner';
 import { CameraCapture } from '@/components/camera/CameraCapture';
 import { DragDropUpload } from '@/components/upload/DragDropUpload';
+import { uploadFile, validateFile, checkUploadServiceStatus } from '@/lib/upload-service';
 import { PDFToolsModal } from '@/components/pdf/PDFToolsModal';
+import { UploadStatus } from '@/components/upload/UploadStatus';
 
 export default function Print() {
   const { user } = useAuth();
@@ -44,6 +46,16 @@ export default function Print() {
     pages: 'all',
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadResults, setUploadResults] = useState<Array<{
+    name: string;
+    url: string;
+    provider?: 'cloudinary' | 'firebase';
+    previewUrl?: string;
+  }>>([]);
+  const [uploadErrors, setUploadErrors] = useState<Array<{
+    name: string;
+    error: string;
+  }>>([]);
 
   // Mutation to add print jobs to cart
   const addToCartMutation = useMutation({
@@ -68,10 +80,109 @@ export default function Print() {
     }
   });
 
+  // Enhanced upload handler using hybrid upload service
+  const handleFileUpload = async (files: File[]) => {
+    setIsUploading(true);
+    setUploadResults([]);
+    setUploadErrors([]);
+    
+    const uploadedFiles: string[] = [];
+    const results: typeof uploadResults = [];
+    const errors: typeof uploadErrors = [];
+
+    try {
+      console.log(`📤 Starting upload of ${files.length} files...`);
+      
+      // Check upload service status first
+      const serviceStatus = await checkUploadServiceStatus();
+      console.log('Upload service status:', serviceStatus);
+
+      for (const file of files) {
+        // Validate file
+        const validation = validateFile(file);
+        if (!validation.valid) {
+          errors.push({
+            name: file.name,
+            error: validation.error || 'ملف غير صالح'
+          });
+          
+          toast({
+            title: 'ملف غير صالح',
+            description: validation.error,
+            variant: 'destructive'
+          });
+          continue;
+        }
+
+        // Upload using hybrid service
+        const result = await uploadFile(file);
+        
+        if (result.success && result.url) {
+          uploadedFiles.push(result.url);
+          results.push({
+            name: file.name,
+            url: result.url,
+            provider: result.provider,
+            previewUrl: result.previewUrl
+          });
+
+          // Notify server about successful upload (optional tracking)
+          try {
+            await apiRequest('POST', '/api/upload-file', {
+              fileName: file.name,
+              fileType: file.type,
+              uploadProvider: result.provider,
+              fileUrl: result.url
+            });
+          } catch (trackingError) {
+            console.warn('Failed to track upload on server:', trackingError);
+          }
+
+          toast({
+            title: 'تم رفع الملف بنجاح',
+            description: `${file.name} - باستخدام ${result.provider === 'cloudinary' ? 'Cloudinary' : 'Firebase'}`,
+          });
+        } else {
+          errors.push({
+            name: file.name,
+            error: result.error || 'فشل في الرفع'
+          });
+          
+          console.error('Upload failed for file:', file.name, result.error);
+          toast({
+            title: 'فشل في رفع الملف',
+            description: `${file.name}: ${result.error}`,
+            variant: 'destructive'
+          });
+        }
+      }
+
+      // Update state with results
+      setSelectedFiles(files);
+      setUploadedUrls(uploadedFiles);
+      setUploadResults(results);
+      setUploadErrors(errors);
+      
+      if (uploadedFiles.length > 0) {
+        console.log(`✅ Successfully uploaded ${uploadedFiles.length}/${files.length} files`);
+        console.log('Upload results:', results);
+      }
+
+    } catch (error) {
+      console.error('Upload process error:', error);
+      toast({
+        title: 'خطأ في عملية الرفع',
+        description: error instanceof Error ? error.message : 'خطأ غير معروف',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleDragDropUpload = (files: File[], urls: string[]) => {
-    setSelectedFiles(files);
-    setUploadedUrls(urls);
-    console.log('Files uploaded:', files.map(f => f.name), 'URLs:', urls);
+    // For backward compatibility, but use new upload handler
+    handleFileUpload(files);
   };
 
   const handleCameraCapture = async (file: File, downloadUrl: string) => {
@@ -168,6 +279,13 @@ export default function Print() {
                 maxFiles={5}
                 maxSize={50 * 1024 * 1024} // 50MB
                 acceptedTypes={['image/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']}
+              />
+              
+              {/* Upload Status Display */}
+              <UploadStatus 
+                isUploading={isUploading}
+                uploadResults={uploadResults}
+                uploadErrors={uploadErrors}
               />
               
               {/* Camera and Scanner Integration */}

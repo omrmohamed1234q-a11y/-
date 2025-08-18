@@ -11,6 +11,7 @@ declare global {
     runFirebaseHealthCheck: () => Promise<any>;
     testCloudinaryConnection: () => Promise<void>;
     checkUploadServiceStatus: () => Promise<void>;
+    testServerConnection: () => Promise<any>;
   }
 }
 
@@ -121,6 +122,20 @@ export function initFirebaseDebugTools() {
     }
   };
 
+  // Test server connection
+  window.testServerConnection = async () => {
+    console.log('🌐 Testing server connection...');
+    try {
+      const response = await fetch('/api/upload-status');
+      const data = await response.json();
+      console.log('✅ Server response:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Server connection failed:', error);
+      throw error;
+    }
+  };
+
   console.log('🔥 Firebase debug tools loaded!');
   console.log('Available commands:');
   console.log('- testFirebaseConnection()');
@@ -128,4 +143,5 @@ export function initFirebaseDebugTools() {
   console.log('- runFirebaseHealthCheck()');
   console.log('- testCloudinaryConnection()');
   console.log('- checkUploadServiceStatus()');
+  console.log('- testServerConnection()');
 }

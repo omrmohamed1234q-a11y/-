@@ -120,6 +120,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload service status check endpoint
+  app.get('/api/upload-status', async (req: any, res) => {
+    try {
+      // Return simple status that can be checked by the frontend
+      const status = {
+        server: 'ready',
+        maxFileSize: '50MB',
+        supportedProviders: ['cloudinary', 'firebase'],
+        acceptedTypes: [
+          'application/pdf',
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ]
+      };
+
+      res.json(status);
+    } catch (error) {
+      console.error('Error checking upload status:', error);
+      res.status(500).json({ error: 'Failed to check upload status' });
+    }
+  });
+
+  // File Upload endpoint (using Base64 for compatibility with current upload systems)
+  app.post('/api/upload-file', async (req: any, res) => {
+    try {
+      const { fileName, fileType, uploadProvider, fileUrl } = req.body;
+      
+      if (!fileName) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'File name is required' 
+        });
+      }
+
+      // Log upload details (without the actual file data for performance)
+      console.log(`📤 Received file upload: ${fileName} (${fileType || 'unknown'}) via ${uploadProvider || 'unknown'}`);
+
+      // For now, we'll just acknowledge the upload and return success
+      // The actual file processing is handled on the frontend by the upload service
+      const uploadResult = {
+        success: true,
+        fileName,
+        fileType,
+        provider: uploadProvider || 'unknown',
+        message: 'File upload acknowledged'
+      };
+
+      res.json(uploadResult);
+    } catch (error) {
+      console.error('Error processing file upload:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to process file upload',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Print Job routes
   app.post('/api/print-jobs', isAdminAuthenticated, async (req: any, res) => {
     try {
