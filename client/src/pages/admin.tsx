@@ -10,8 +10,9 @@ import { apiRequest } from '@/lib/queryClient';
 import {
   BarChart3, Users, Package, Printer, ShoppingCart, TrendingUp,
   Plus, Edit, Trash2, FileText, Settings, Home, LogOut,
-  Eye, Download, Calendar, BookOpen, GraduationCap
+  Eye, Download, Calendar, BookOpen, GraduationCap, Store
 } from 'lucide-react';
+import { Link } from 'wouter';
 import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
 import AdminAnalytics from '@/pages/admin/analytics';
 
@@ -336,6 +337,52 @@ export default function AdminDashboard() {
                   <p className="text-xs text-muted-foreground">
                     +{Math.floor(safeStats.totalRevenue * 0.12)} من الشهر الماضي
                   </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Access Links */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <Link href="/admin/store">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                  <CardContent className="p-6 text-center">
+                    <Store className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                    <div className="text-lg font-semibold text-blue-900">إدارة المتجر</div>
+                    <div className="text-sm text-blue-600">عرض وإدارة منتجات المتجر</div>
+                  </CardContent>
+                </Card>
+              </Link>
+              
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-green-50 to-green-100 border-green-200"
+                onClick={() => setActiveTab('products')}
+              >
+                <CardContent className="p-6 text-center">
+                  <Package className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                  <div className="text-lg font-semibold text-green-900">إدارة المنتجات</div>
+                  <div className="text-sm text-green-600">إضافة وتعديل المنتجات</div>
+                </CardContent>
+              </Card>
+              
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200"
+                onClick={() => setActiveTab('orders')}
+              >
+                <CardContent className="p-6 text-center">
+                  <ShoppingCart className="w-8 h-8 text-orange-600 mx-auto mb-2" />
+                  <div className="text-lg font-semibold text-orange-900">إدارة الطلبات</div>
+                  <div className="text-sm text-orange-600">متابعة وإدارة الطلبات</div>
+                </CardContent>
+              </Card>
+              
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200"
+                onClick={() => setActiveTab('analytics')}
+              >
+                <CardContent className="p-6 text-center">
+                  <TrendingUp className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                  <div className="text-lg font-semibold text-purple-900">التحليلات</div>
+                  <div className="text-sm text-purple-600">تقارير وإحصائيات مفصلة</div>
                 </CardContent>
               </Card>
             </div>
