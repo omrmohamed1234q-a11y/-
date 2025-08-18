@@ -26,6 +26,49 @@ export default function AdminDashboard() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [showProductForm, setShowProductForm] = useState(false);
 
+  // Show loading while auth is checking
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show admin login if not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-red-600">
+              دخول لوحة الإدارة
+            </CardTitle>
+            <p className="text-gray-600">يجب تسجيل الدخول أولاً للوصول إلى لوحة الإدارة</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={() => window.location.href = '/auth/login'}
+              className="w-full bg-red-600 hover:bg-red-700"
+            >
+              تسجيل الدخول
+            </Button>
+            <Button 
+              onClick={() => window.location.href = '/'}
+              variant="outline"
+              className="w-full"
+            >
+              العودة للصفحة الرئيسية
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Fetch admin data with proper error handling
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['/api/admin/stats'],

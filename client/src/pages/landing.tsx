@@ -244,7 +244,7 @@ export default function Landing() {
                 🔑 دخول لوحة الإدارة
               </p>
               <Button 
-                onClick={() => window.location.href = '/auth/login'}
+                onClick={() => window.location.href = '/admin'}
                 className="bg-white text-green-600 hover:bg-gray-100 font-semibold py-2 px-6 rounded-lg"
               >
                 دخول لوحة الإدارة
