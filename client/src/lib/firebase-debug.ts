@@ -1,72 +1,94 @@
-import { storage } from './firebase-storage';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+// Firebase Debug and Testing Utilities
+import { runFirebaseHealthCheck } from './firebase-connectivity';
 
-/**
- * Ultra-simple upload that bypasses all the complex logic
- * This is for debugging stuck uploads
- */
-export async function debugUpload(file: File): Promise<string> {
-  console.log('DEBUG: Starting ultra-simple upload for:', file.name);
-  
-  // Test basic Firebase connection first
-  try {
-    console.log('DEBUG: Testing Firebase connection...');
-    const testRef = ref(storage, 'test-connection');
-    console.log('DEBUG: Firebase connection test passed');
-  } catch (error) {
-    console.error('DEBUG: Firebase connection failed:', error);
-    throw new Error('لا يمكن الاتصال بـ Firebase Storage');
-  }
-  
-  // Generate simple filename
-  const timestamp = Date.now();
-  const fileName = `debug_${timestamp}.${file.name.split('.').pop()}`;
-  const storageRef = ref(storage, `debug-uploads/${fileName}`);
-  
-  console.log('DEBUG: Uploading to:', storageRef.fullPath);
-  console.log('DEBUG: File size:', file.size, 'bytes');
-  console.log('DEBUG: File type:', file.type);
-  
-  try {
-    // Simple upload with 30 second timeout
-    const uploadPromise = uploadBytes(storageRef, file);
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('DEBUG_TIMEOUT')), 30000)
-    );
-    
-    const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as any;
-    console.log('DEBUG: Upload completed successfully');
-    
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    console.log('DEBUG: Download URL:', downloadURL);
-    
-    return downloadURL;
-  } catch (error: any) {
-    console.error('DEBUG: Upload failed:', error);
-    
-    if (error.message === 'DEBUG_TIMEOUT') {
-      throw new Error('انتهت مهلة الرفع البسيط. المشكلة في الاتصال أو Firebase');
-    }
-    
-    throw new Error(`فشل الرفع البسيط: ${error.message}`);
+// Make Firebase test functions available globally for console testing
+declare global {
+  interface Window {
+    testFirebaseConnection: () => Promise<void>;
+    checkFirebaseConfig: () => void;
+    runFirebaseHealthCheck: () => Promise<void>;
   }
 }
 
-/**
- * Test function to diagnose Firebase issues
- */
-export async function testFirebaseRules(): Promise<void> {
-  console.log('Testing Firebase Storage Rules...');
-  
-  // Create a tiny test file
-  const testContent = new Blob(['test'], { type: 'text/plain' });
-  const testFile = new File([testContent], 'test.txt', { type: 'text/plain' });
-  
-  try {
-    const url = await debugUpload(testFile);
-    console.log('✅ Firebase rules test PASSED. Download URL:', url);
-  } catch (error) {
-    console.error('❌ Firebase rules test FAILED:', error);
-    throw error;
-  }
+export function initFirebaseDebugTools() {
+  // Test Firebase Storage connection
+  window.testFirebaseConnection = async () => {
+    console.log('🔥 Testing Firebase Storage Connection...');
+    
+    try {
+      const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+      const testUrl = `https://firebasestorage.googleapis.com/v0/b/${projectId}.appspot.com/o`;
+      
+      console.log('Testing URL:', testUrl);
+      
+      const response = await fetch(testUrl, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Firebase Storage connection successful!');
+        console.log('Response:', data);
+        console.log('Storage bucket:', `${projectId}.appspot.com`);
+        console.log('Files in bucket:', data?.items?.length || 0);
+      } else {
+        console.error('❌ Firebase Storage connection failed');
+        console.error('Status:', response.status, response.statusText);
+        
+        if (response.status === 403) {
+          console.error('🔒 Access denied - check Firebase Storage rules');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Firebase connection error:', error);
+    }
+  };
+
+  // Check Firebase configuration
+  window.checkFirebaseConfig = () => {
+    console.log('🔥 Firebase Configuration Check...');
+    
+    const config = {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY ? '✅ Set' : '❌ Missing',
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '❌ Missing',
+      appId: import.meta.env.VITE_FIREBASE_APP_ID ? '✅ Set' : '❌ Missing',
+      storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`
+    };
+    
+    console.table(config);
+    
+    if (import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+      console.log('🔗 Firebase Console Link:');
+      console.log(`https://console.firebase.google.com/project/${import.meta.env.VITE_FIREBASE_PROJECT_ID}/storage`);
+    }
+  };
+
+  // Run comprehensive health check
+  window.runFirebaseHealthCheck = async () => {
+    const result = await runFirebaseHealthCheck();
+    
+    if (result.overall) {
+      console.log('✅ Firebase is properly configured and accessible!');
+    } else {
+      console.log('❌ Firebase has issues:');
+      if (!result.configCheck.valid) {
+        console.log('Config issues:', result.configCheck.issues);
+      }
+      if (!result.connectivityTest.success) {
+        console.log('Connection issue:', result.connectivityTest.message);
+      }
+    }
+    
+    return result;
+  };
+
+  console.log('🔥 Firebase debug tools loaded!');
+  console.log('Available commands:');
+  console.log('- testFirebaseConnection()');
+  console.log('- checkFirebaseConfig()');
+  console.log('- runFirebaseHealthCheck()');
 }
