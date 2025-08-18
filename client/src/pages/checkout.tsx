@@ -214,33 +214,38 @@ export default function Checkout() {
                       
                       {/* Saved Addresses */}
                       {savedAddresses?.length > 0 && (
-                        <div className="space-y-2 mb-4">
-                          {savedAddresses.map((address: any) => (
-                            <div
-                              key={address.id}
-                              className={`p-3 border rounded-lg cursor-pointer transition-all
-                                ${orderData.addressId === address.id ? 'border-green-600 bg-green-50' : 'border-gray-200'}`}
-                              onClick={() => setOrderData({...orderData, addressId: address.id})}
-                            >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <div className="flex items-center gap-2 mb-1">
-                                    {address.label === 'منزل' ? <Home className="w-4 h-4" /> : <Building className="w-4 h-4" />}
-                                    <span className="font-semibold">{address.label}</span>
+                        <RadioGroup
+                          value={orderData.addressId}
+                          onValueChange={(value) => setOrderData({...orderData, addressId: value})}
+                        >
+                          <div className="space-y-2 mb-4">
+                            {savedAddresses.map((address: any) => (
+                              <div
+                                key={address.id}
+                                className={`p-3 border rounded-lg cursor-pointer transition-all
+                                  ${orderData.addressId === address.id ? 'border-green-600 bg-green-50' : 'border-gray-200'}`}
+                                onClick={() => setOrderData({...orderData, addressId: address.id})}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      {address.label === 'منزل' ? <Home className="w-4 h-4" /> : <Building className="w-4 h-4" />}
+                                      <span className="font-semibold">{address.label}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-600">
+                                      {address.street}، {address.building}، {address.area}، {address.city}
+                                    </p>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                      <Phone className="w-3 h-3 inline ml-1" />
+                                      {address.phone}
+                                    </p>
                                   </div>
-                                  <p className="text-sm text-gray-600">
-                                    {address.street}، {address.building}، {address.area}، {address.city}
-                                  </p>
-                                  <p className="text-sm text-gray-500 mt-1">
-                                    <Phone className="w-3 h-3 inline ml-1" />
-                                    {address.phone}
-                                  </p>
+                                  <RadioGroupItem value={address.id} />
                                 </div>
-                                <RadioGroupItem value={address.id} checked={orderData.addressId === address.id} />
                               </div>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        </RadioGroup>
                       )}
 
                       {/* Add New Address */}
