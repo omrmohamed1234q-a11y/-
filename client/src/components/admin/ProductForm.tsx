@@ -125,14 +125,18 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
     console.log('🏷️ Selected product types:', selectedProductTypes);
     console.log('🖼️ Cover image URL:', coverImageUrl);
     
-    const finalData = {
+    // Clean up the data - keep price as string but clean empty values
+    const cleanedData = {
       ...data,
+      price: data.price || '0',
+      originalPrice: data.originalPrice && data.originalPrice !== '' ? data.originalPrice : undefined,
+      availableCopies: data.availableCopies || 0,
       productTypes: selectedProductTypes,
       imageUrl: coverImageUrl,
     };
     
-    console.log('📤 Final data being sent:', finalData);
-    onSubmit(finalData);
+    console.log('📤 Final cleaned data being sent:', cleanedData);
+    onSubmit(cleanedData);
   };
 
   return (

@@ -181,8 +181,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/admin/products', isAdminAuthenticated, async (req: any, res) => {
     try {
-      const productData = insertProductSchema.parse(req.body);
+      console.log('🔍 Raw request body:', req.body);
+      
+      // Clean the data before validation - handle empty strings
+      const cleanedBody = {
+        ...req.body,
+        price: req.body.price || '0',
+        originalPrice: req.body.originalPrice && req.body.originalPrice !== '' ? req.body.originalPrice : undefined,
+        availableCopies: req.body.availableCopies || 0,
+      };
+      
+      console.log('🧹 Cleaned request body:', cleanedBody);
+      
+      const productData = insertProductSchema.parse(cleanedBody);
+      console.log('✅ Validated product data:', productData);
+      
       const product = await storage.createProduct(productData);
+      console.log('🎉 Product created successfully:', product);
+      
       res.json(product);
     } catch (error) {
       console.error("Error creating product:", error);
