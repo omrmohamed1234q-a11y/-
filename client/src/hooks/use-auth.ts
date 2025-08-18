@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { syncUserAccount } from '@/lib/user-sync';
 import { User } from '@shared/schema';
 
 interface AuthState {
@@ -45,30 +46,60 @@ export function useAuth() {
         if (!mounted) return;
 
         if (session?.user) {
-          // Create a basic user object from session data
-          const basicUser: User = {
-            id: session.user.id,
-            username: session.user.email?.split('@')[0] || 'user',
-            email: session.user.email || '',
-            fullName: session.user.user_metadata?.full_name || 'مستخدم عزيز',
-            phone: null,
-            role: 'customer',
-            bountyPoints: 0,
-            level: 1,
-            totalPrints: 0,
-            totalPurchases: 0,
-            totalReferrals: 0,
-            isTeacher: false,
-            teacherSubscription: false,
-            createdAt: new Date()
-          };
+          // Sync user with backend account system
+          try {
+            const syncResult = await syncUserAccount(session.user);
+            
+            const user = syncResult.success && syncResult.user ? syncResult.user : {
+              id: session.user.id,
+              username: session.user.email?.split('@')[0] || 'user',
+              email: session.user.email || '',
+              fullName: session.user.user_metadata?.full_name || 'مستخدم عزيز',
+              phone: null,
+              role: 'customer',
+              bountyPoints: 0,
+              level: 1,
+              totalPrints: 0,
+              totalPurchases: 0,
+              totalReferrals: 0,
+              isTeacher: false,
+              teacherSubscription: false,
+              createdAt: new Date()
+            };
 
-          setState({
-            user: basicUser,
-            supabaseUser: session.user,
-            loading: false,
-            error: null,
-          });
+            setState({
+              user,
+              supabaseUser: session.user,
+              loading: false,
+              error: null,
+            });
+          } catch (syncError) {
+            console.warn('User sync failed, using basic profile:', syncError);
+            // Fallback to basic profile if sync fails
+            const basicUser: User = {
+              id: session.user.id,
+              username: session.user.email?.split('@')[0] || 'user',
+              email: session.user.email || '',
+              fullName: session.user.user_metadata?.full_name || 'مستخدم عزيز',
+              phone: null,
+              role: 'customer',
+              bountyPoints: 0,
+              level: 1,
+              totalPrints: 0,
+              totalPurchases: 0,
+              totalReferrals: 0,
+              isTeacher: false,
+              teacherSubscription: false,
+              createdAt: new Date()
+            };
+
+            setState({
+              user: basicUser,
+              supabaseUser: session.user,
+              loading: false,
+              error: null,
+            });
+          }
         } else {
           setState({
             user: null,

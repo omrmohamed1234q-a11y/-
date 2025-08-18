@@ -136,6 +136,26 @@ export function initFirebaseDebugTools() {
     }
   };
 
+  // Test user connection
+  window.testUserConnection = async () => {
+    console.log('👤 Testing user authentication and account sync...');
+    try {
+      const { testUserConnection } = await import('@/lib/user-sync');
+      const result = await testUserConnection();
+      
+      if (result.success) {
+        console.log('✅ User connection successful:', result.user);
+      } else {
+        console.error('❌ User connection failed:', result.error);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ User connection test error:', error);
+      throw error;
+    }
+  };
+
   console.log('🔥 Firebase debug tools loaded!');
   console.log('Available commands:');
   console.log('- testFirebaseConnection()');
@@ -144,4 +164,5 @@ export function initFirebaseDebugTools() {
   console.log('- testCloudinaryConnection()');
   console.log('- checkUploadServiceStatus()');
   console.log('- testServerConnection()');
+  console.log('- testUserConnection()');
 }

@@ -1,6 +1,8 @@
 // Hybrid Upload Service - Cloudinary Primary, Firebase Backup
+// Now integrated with user account API
 import { uploadToCloudinary, testCloudinaryConnection } from './cloudinary';
 import { uploadToFirebaseStorage } from './firebase-storage';
+import { apiRequest } from './queryClient';
 
 export interface UploadResult {
   success: boolean;
@@ -12,9 +14,11 @@ export interface UploadResult {
   fileId?: string;
 }
 
-// Upload file with automatic fallback
+// Upload file with automatic fallback and account integration
 export async function uploadFile(file: File): Promise<UploadResult> {
   console.log(`📤 Uploading file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+  
+  let uploadResult: UploadResult;
 
   // Try Cloudinary first (recommended for PDFs)
   try {
@@ -25,7 +29,7 @@ export async function uploadFile(file: File): Promise<UploadResult> {
       
       if (result.success) {
         console.log('✅ Cloudinary upload successful!');
-        return {
+        uploadResult = {
           success: true,
           url: result.url!,
           downloadUrl: result.url!,
@@ -33,6 +37,10 @@ export async function uploadFile(file: File): Promise<UploadResult> {
           provider: 'cloudinary',
           fileId: result.publicId
         };
+        
+        // Notify server about successful upload
+        await notifyServerUpload(file, uploadResult);
+        return uploadResult;
       } else {
         console.warn('⚠️ Cloudinary upload failed, trying Firebase...');
       }
@@ -49,13 +57,17 @@ export async function uploadFile(file: File): Promise<UploadResult> {
     const downloadURL = await uploadToFirebaseStorage(file, 'uploads');
     
     console.log('✅ Firebase upload successful!');
-    return {
+    uploadResult = {
       success: true,
       url: downloadURL,
       downloadUrl: downloadURL,
       provider: 'firebase',
       fileId: file.name
     };
+
+    // Notify server about successful upload
+    await notifyServerUpload(file, uploadResult);
+    return uploadResult;
   } catch (error) {
     console.error('❌ Both upload services failed:', error);
     return {
@@ -63,6 +75,33 @@ export async function uploadFile(file: File): Promise<UploadResult> {
       error: error instanceof Error ? error.message : 'Upload failed',
       provider: undefined
     };
+  }
+}
+
+// Notify server about file upload for account integration
+async function notifyServerUpload(file: File, result: UploadResult): Promise<void> {
+  try {
+    console.log('🔔 Notifying server about upload...');
+    
+    const uploadData = {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      uploadProvider: result.provider,
+      fileUrl: result.url,
+    };
+
+    const response = await apiRequest('POST', '/api/upload-file', uploadData);
+    const serverResult = await response.json();
+    
+    if (serverResult.success) {
+      console.log('✅ Server notified about upload:', serverResult);
+    } else {
+      console.warn('⚠️ Server notification failed:', serverResult.error);
+    }
+  } catch (error) {
+    console.error('❌ Failed to notify server about upload:', error);
+    // Don't throw error - upload was successful, just tracking failed
   }
 }
 

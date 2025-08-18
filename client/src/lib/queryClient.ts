@@ -7,14 +7,49 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Helper to get authentication headers
+export async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    // First try localStorage (for admin/manual login)
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      return {
+        'X-User-ID': user.id,
+        'X-User-Role': user.role || 'customer',
+      };
+    }
+
+    // Fallback to Supabase session
+    const { supabase } = await import('./supabase');
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user) {
+      return {
+        'X-User-ID': session.user.id,
+        'X-User-Role': session.user.user_metadata?.role || 'customer',
+      };
+    }
+  } catch (error) {
+    console.warn('Failed to get authentication headers:', error);
+  }
+  
+  return {};
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const authHeaders = await getAuthHeaders();
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: { 
+      ...(data ? { "Content-Type": "application/json" } : {}),
+      ...authHeaders,
+    },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
