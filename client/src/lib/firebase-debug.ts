@@ -1,42 +1,72 @@
 import { storage } from './firebase-storage';
-import { ref, listAll } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-export async function listFirebaseFiles(folderPath: string = '') {
+/**
+ * Ultra-simple upload that bypasses all the complex logic
+ * This is for debugging stuck uploads
+ */
+export async function debugUpload(file: File): Promise<string> {
+  console.log('DEBUG: Starting ultra-simple upload for:', file.name);
+  
+  // Test basic Firebase connection first
   try {
-    console.log('Listing files in Firebase Storage folder:', folderPath);
-    
-    const listRef = ref(storage, folderPath);
-    const result = await listAll(listRef);
-    
-    console.log('Files found:');
-    result.items.forEach((itemRef) => {
-      console.log('- File:', itemRef.fullPath);
-    });
-    
-    console.log('Folders found:');
-    result.prefixes.forEach((folderRef) => {
-      console.log('- Folder:', folderRef.fullPath);
-    });
-    
-    return {
-      files: result.items.map(item => item.fullPath),
-      folders: result.prefixes.map(folder => folder.fullPath)
-    };
+    console.log('DEBUG: Testing Firebase connection...');
+    const testRef = ref(storage, 'test-connection');
+    console.log('DEBUG: Firebase connection test passed');
   } catch (error) {
-    console.error('Error listing Firebase Storage files:', error);
-    throw error;
+    console.error('DEBUG: Firebase connection failed:', error);
+    throw new Error('لا يمكن الاتصال بـ Firebase Storage');
+  }
+  
+  // Generate simple filename
+  const timestamp = Date.now();
+  const fileName = `debug_${timestamp}.${file.name.split('.').pop()}`;
+  const storageRef = ref(storage, `debug-uploads/${fileName}`);
+  
+  console.log('DEBUG: Uploading to:', storageRef.fullPath);
+  console.log('DEBUG: File size:', file.size, 'bytes');
+  console.log('DEBUG: File type:', file.type);
+  
+  try {
+    // Simple upload with 30 second timeout
+    const uploadPromise = uploadBytes(storageRef, file);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('DEBUG_TIMEOUT')), 30000)
+    );
+    
+    const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as any;
+    console.log('DEBUG: Upload completed successfully');
+    
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    console.log('DEBUG: Download URL:', downloadURL);
+    
+    return downloadURL;
+  } catch (error: any) {
+    console.error('DEBUG: Upload failed:', error);
+    
+    if (error.message === 'DEBUG_TIMEOUT') {
+      throw new Error('انتهت مهلة الرفع البسيط. المشكلة في الاتصال أو Firebase');
+    }
+    
+    throw new Error(`فشل الرفع البسيط: ${error.message}`);
   }
 }
 
-// Add this function to test Firebase Storage visibility
-export async function testFirebaseConnection() {
+/**
+ * Test function to diagnose Firebase issues
+ */
+export async function testFirebaseRules(): Promise<void> {
+  console.log('Testing Firebase Storage Rules...');
+  
+  // Create a tiny test file
+  const testContent = new Blob(['test'], { type: 'text/plain' });
+  const testFile = new File([testContent], 'test.txt', { type: 'text/plain' });
+  
   try {
-    console.log('Testing Firebase Storage connection...');
-    const result = await listFirebaseFiles('uploads');
-    console.log('✓ Firebase Storage is accessible');
-    return result;
+    const url = await debugUpload(testFile);
+    console.log('✅ Firebase rules test PASSED. Download URL:', url);
   } catch (error) {
-    console.error('✗ Firebase Storage connection failed:', error);
+    console.error('❌ Firebase rules test FAILED:', error);
     throw error;
   }
 }

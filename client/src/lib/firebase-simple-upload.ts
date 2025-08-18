@@ -10,6 +10,10 @@ export async function simpleFirebaseUpload(
   onProgress?: (progress: number) => void
 ): Promise<string> {
   return new Promise((resolve, reject) => {
+    let progressTimer: NodeJS.Timeout | null = null;
+    let lastProgress = 0;
+    let stuckCount = 0;
+    
     try {
       // Generate unique filename
       const timestamp = Date.now();
@@ -32,12 +36,37 @@ export async function simpleFirebaseUpload(
         }
       });
       
+      // Monitor for stuck uploads
+      progressTimer = setInterval(() => {
+        if (lastProgress === 0) {
+          stuckCount++;
+          if (stuckCount > 10) { // 10 seconds stuck at 0%
+            console.log('Upload appears stuck, canceling...');
+            uploadTask.cancel();
+            clearInterval(progressTimer);
+            reject(new Error('STUCK_UPLOAD: الرفع متوقف عند 0%. جرب ملف أصغر أو تحقق من الاتصال'));
+          }
+        } else {
+          stuckCount = 0; // Reset if progress is moving
+        }
+      }, 1000);
+      
+      // Overall timeout
+      const overallTimeout = setTimeout(() => {
+        console.log('Upload timeout reached, canceling...');
+        uploadTask.cancel();
+        clearInterval(progressTimer);
+        reject(new Error('UPLOAD_TIMEOUT: انتهت مهلة الرفع. جرب ملف أصغر'));
+      }, 60000); // 60 seconds total timeout
+      
       // Set up upload event listeners
       uploadTask.on('state_changed',
         // Progress function
         (snapshot) => {
           const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log(`Upload is ${progress}% done`);
+          lastProgress = progress;
+          console.log(`Upload is ${progress}% done - ${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes`);
+          
           if (onProgress) {
             onProgress(progress);
           }
@@ -53,7 +82,10 @@ export async function simpleFirebaseUpload(
         },
         // Error function
         (error) => {
+          if (progressTimer) clearInterval(progressTimer);
+          clearTimeout(overallTimeout);
           console.error('Simple upload error:', error);
+          
           let errorMessage = 'فشل في رفع الملف';
           
           switch (error.code) {
@@ -77,6 +109,9 @@ export async function simpleFirebaseUpload(
         },
         // Complete function
         async () => {
+          if (progressTimer) clearInterval(progressTimer);
+          clearTimeout(overallTimeout);
+          
           try {
             console.log('Upload completed, getting download URL...');
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
@@ -90,6 +125,7 @@ export async function simpleFirebaseUpload(
       );
       
     } catch (error) {
+      if (progressTimer) clearInterval(progressTimer);
       console.error('Error initializing upload:', error);
       reject(new Error('فشل في بدء عملية الرفع'));
     }
@@ -97,7 +133,7 @@ export async function simpleFirebaseUpload(
 }
 
 /**
- * Upload with automatic fallback
+ * Upload with automatic fallback - bypasses resumable upload that gets stuck
  */
 export async function uploadWithFallback(
   file: File,
@@ -106,18 +142,25 @@ export async function uploadWithFallback(
 ): Promise<string> {
   console.log('Attempting upload with fallback for:', file.name);
   
+  // Skip resumable upload entirely and go straight to simple upload
+  console.log('Using simple upload method to avoid getting stuck...');
+  
+  // Import the debug upload function
+  const { debugUpload } = await import('./firebase-debug');
+  
   try {
-    // Try resumable upload first (better for large files and slow connections)
-    console.log('Trying resumable upload...');
-    return await simpleFirebaseUpload(file, folder, onProgress);
-  } catch (error) {
-    console.warn('Resumable upload failed, trying standard method:', error);
+    // Use debug upload method (simple and direct)
+    if (onProgress) onProgress(10);
+    const result = await debugUpload(file);
+    if (onProgress) onProgress(100);
+    return result;
+  } catch (debugError) {
+    console.warn('Debug upload failed, trying standard method:', debugError);
     
-    // Import the standard upload function
+    // Fallback to the enhanced upload function
     const { uploadToFirebaseStorage } = await import('./firebase-storage');
     
     try {
-      // Try standard upload with single retry
       return await uploadToFirebaseStorage(file, folder, undefined, onProgress, 1);
     } catch (standardError) {
       console.error('Both upload methods failed:', standardError);
