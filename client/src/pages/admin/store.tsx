@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Eye, ShoppingCart, Store as StoreIcon, Package } from 'lucide-react';
 import ProductForm from '@/components/admin/ProductForm';
+import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
 import type { Product, InsertProduct } from '@shared/schema';
 import { 
   getCurriculumLabel, 
@@ -319,27 +320,18 @@ export default function AdminStore() {
                     </div>
                     
                     {/* Admin Actions */}
-                    <div className="flex flex-col space-y-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <AdminActionsMenu
+                        itemId={product.id}
+                        itemType="product"
+                        onEdit={() => {
                           setEditingProduct(product);
                           setDialogOpen(true);
                         }}
-                        data-testid={`button-edit-${product.id}`}
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => deleteProductMutation.mutate(product.id)}
-                        className="text-red-600 hover:text-red-700"
-                        data-testid={`button-delete-${product.id}`}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
+                        onDelete={() => deleteProductMutation.mutate(product.id)}
+                        showView={false}
+                        showDuplicate={false}
+                      />
                     </div>
                   </div>
                 </CardHeader>

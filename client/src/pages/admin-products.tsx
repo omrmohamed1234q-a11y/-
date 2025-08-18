@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Package, DollarSign, Tag } from 'lucide-react';
+import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
 import type { products } from '@shared/schema';
 
 type Product = typeof products.$inferSelect;
@@ -435,13 +436,23 @@ export default function AdminProductsPage() {
                       {product.description}
                     </p>
                   </div>
-                  {product.imageUrl && (
-                    <img 
-                      src={product.imageUrl} 
-                      alt={product.name} 
-                      className="w-16 h-16 object-cover rounded-lg mr-3"
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    {product.imageUrl && (
+                      <img 
+                        src={product.imageUrl} 
+                        alt={product.name} 
+                        className="w-16 h-16 object-cover rounded-lg"
+                      />
+                    )}
+                    <AdminActionsMenu
+                      itemId={product.id}
+                      itemType="product"
+                      onEdit={() => startEditing(product)}
+                      onDelete={() => deleteProductMutation.mutate(product.id)}
+                      showView={false}
+                      showDuplicate={false}
                     />
-                  )}
+                  </div>
                 </div>
 
                 <div className="space-y-2 mb-4">
@@ -484,27 +495,7 @@ export default function AdminProductsPage() {
                   )}
                 </div>
 
-                <div className="flex justify-between space-x-2 space-x-reverse">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => startEditing(product)}
-                    data-testid={`button-edit-${product.id}`}
-                  >
-                    <Edit className="w-4 h-4 ml-1" />
-                    تحرير
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteProductMutation.mutate(product.id)}
-                    disabled={deleteProductMutation.isPending}
-                    data-testid={`button-delete-${product.id}`}
-                  >
-                    <Trash2 className="w-4 h-4 ml-1" />
-                    حذف
-                  </Button>
-                </div>
+
               </CardContent>
             </Card>
           ))}

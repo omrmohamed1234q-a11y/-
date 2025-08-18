@@ -12,6 +12,7 @@ import {
   Plus, Edit, Trash2, FileText, Settings, Home, LogOut,
   Eye, Download, Calendar, BookOpen, GraduationCap
 } from 'lucide-react';
+import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
 import AdminAnalytics from '@/pages/admin/analytics';
 
 export default function AdminDashboard() {
@@ -394,18 +395,14 @@ export default function AdminDashboard() {
                     <p className="text-sm text-gray-600 mb-2">{product.description}</p>
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-green-600">{product.price} ر.س</span>
-                      <div className="flex space-x-2 space-x-reverse">
-                        <Button size="sm" variant="outline">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="destructive"
-                          onClick={() => deleteProductMutation.mutate(product.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      <AdminActionsMenu
+                        itemId={product.id}
+                        itemType="product"
+                        onEdit={() => setEditingProduct(product)}
+                        onDelete={() => deleteProductMutation.mutate(product.id)}
+                        showView={false}
+                        showDuplicate={false}
+                      />
                     </div>
                   </CardContent>
                 </Card>
