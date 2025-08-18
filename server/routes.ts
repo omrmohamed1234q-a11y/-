@@ -37,7 +37,7 @@ const isAdminAuthenticated = (req: any, res: any, next: any) => {
     };
     next();
   } else {
-    req.user = { claims: { sub: 'admin-user' }, role: 'admin' };
+    req.user = { claims: { sub: '48c03e72-d53b-4a3f-a729-c38276268315' }, role: 'admin' };
     next();
   }
 };
@@ -815,10 +815,10 @@ Total Print Jobs: 2156
         فاتورة - Invoice
         =================
         رقم الطلب: ${order.orderNumber}
-        التاريخ: ${new Date(order.createdAt).toLocaleDateString('ar-EG')}
+        التاريخ: ${order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : 'غير محدد'}
         
         المنتجات:
-        ${order.items.map((item: any) => `${item.name} × ${item.quantity} = ${item.price * item.quantity} ر.س`).join('\n')}
+        ${Array.isArray(order.items) ? (order.items as any[]).map((item: any) => `${item.name} × ${item.quantity} = ${item.price * item.quantity} ر.س`).join('\n') : 'لا توجد منتجات'}
         
         المجموع الفرعي: ${order.subtotal} ر.س
         الخصم: ${order.discount} ر.س

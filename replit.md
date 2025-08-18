@@ -17,6 +17,7 @@
 - **Production Ready**: Successfully tested with user's actual Cloudinary account (Cloud: dabyefigs)
 - **Testing Removed**: All testing pages removed and functionality integrated into main print page
 - **PDF Upload Fix**: Resolved 400 error for PDF files by removing format parameters from unsigned uploads
+- **Database Issues Fixed**: Fixed user authentication and database schema synchronization errors
 
 ## Cart and Order Tracking Enhancements (January 2025)
 - **Integrated Cart Tracking**: Order tracking functionality now appears directly in the cart drawer
