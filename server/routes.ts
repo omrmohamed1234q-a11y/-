@@ -443,6 +443,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Analytics endpoints
+  app.get('/api/admin/analytics', async (req, res) => {
+    try {
+      const { from, to, compare } = req.query;
+      
+      // Generate comprehensive analytics data
+      const analytics = {
+        totalOrders: 1247,
+        totalRevenue: 45750.50,
+        totalUsers: 834,
+        totalPrintJobs: 2156,
+        avgOrderValue: 36.70,
+        conversionRate: 12.8,
+        customerSatisfaction: 4.3,
+        repeatCustomerRate: 28.5,
+        
+        // Growth rates (compared to previous period)
+        orderGrowth: 15.2,
+        revenueGrowth: 23.8,
+        userGrowth: 8.7,
+        
+        // Charts data
+        dailyOrders: [
+          { date: '2025-01-01', orders: 45, revenue: 1650 },
+          { date: '2025-01-02', orders: 52, revenue: 1920 },
+          { date: '2025-01-03', orders: 38, revenue: 1390 },
+          { date: '2025-01-04', orders: 67, revenue: 2460 },
+          { date: '2025-01-05', orders: 48, revenue: 1760 },
+          { date: '2025-01-06', orders: 72, revenue: 2640 },
+          { date: '2025-01-07', orders: 56, revenue: 2050 },
+        ],
+        
+        ordersByStatus: [
+          { status: 'مكتمل', count: 987, color: '#00C49F' },
+          { status: 'قيد التنفيذ', count: 156, color: '#FFBB28' },
+          { status: 'ملغي', count: 45, color: '#FF8042' },
+          { status: 'معلق', count: 59, color: '#8884D8' }
+        ],
+        
+        revenueByCategory: [
+          { category: 'طباعة المستندات', revenue: 18500 },
+          { category: 'المواد التعليمية', revenue: 12300 },
+          { category: 'التصوير والمسح', revenue: 8900 },
+          { category: 'الطباعة الملونة', revenue: 6050 }
+        ],
+        
+        topProducts: [
+          { name: 'طباعة مستندات A4', orders: 145, revenue: 4350 },
+          { name: 'كتاب رياضيات للصف الثالث', orders: 98, revenue: 2940 },
+          { name: 'مسح وتحويل PDF', orders: 87, revenue: 1740 },
+          { name: 'طباعة صور', orders: 76, revenue: 2280 },
+          { name: 'كراسة التدريبات', orders: 65, revenue: 1950 }
+        ],
+        
+        userActivity: [
+          { hour: '00:00', users: 12 },
+          { hour: '06:00', users: 25 },
+          { hour: '09:00', users: 156 },
+          { hour: '12:00', users: 198 },
+          { hour: '15:00', users: 145 },
+          { hour: '18:00', users: 187 },
+          { hour: '21:00', users: 134 }
+        ],
+        
+        geographicDistribution: [
+          { region: 'القاهرة', orders: 456, percentage: 36.6 },
+          { region: 'الجيزة', orders: 298, percentage: 23.9 },
+          { region: 'الإسكندرية', orders: 187, percentage: 15.0 },
+          { region: 'الشرقية', orders: 156, percentage: 12.5 },
+          { region: 'أخرى', orders: 150, percentage: 12.0 }
+        ],
+        
+        printJobTypes: [
+          { type: 'مستندات', count: 856, avgTime: 15 },
+          { type: 'صور', count: 453, avgTime: 8 },
+          { type: 'كتب', count: 298, avgTime: 45 },
+          { type: 'مخططات', count: 187, avgTime: 25 },
+          { type: 'أخرى', count: 362, avgTime: 20 }
+        ],
+        
+        teacherMaterials: [
+          { subject: 'الرياضيات', downloads: 234, rating: 4.8 },
+          { subject: 'العلوم', downloads: 198, rating: 4.6 },
+          { subject: 'اللغة العربية', downloads: 187, rating: 4.7 },
+          { subject: 'التاريخ', downloads: 156, rating: 4.4 },
+          { subject: 'الجغرافيا', downloads: 134, rating: 4.5 }
+        ]
+      };
+      
+      res.json(analytics);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      res.status(500).json({ message: 'Failed to fetch analytics data' });
+    }
+  });
+
+  // Analytics export endpoint
+  app.get('/api/admin/analytics/export', async (req, res) => {
+    try {
+      const { format, from, to, compare } = req.query;
+      
+      // In a real implementation, you would generate the actual export file
+      const filename = `analytics-${format}-${new Date().toISOString().split('T')[0]}`;
+      
+      // Set appropriate headers for file download
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}.${format}"`);
+      res.setHeader('Content-Type', 
+        format === 'csv' ? 'text/csv' : 
+        format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
+        'application/pdf'
+      );
+      
+      // Return sample export data (in production, this would be actual file content)
+      const exportData = `Analytics Report
+Generated: ${new Date().toISOString()}
+Period: ${from} to ${to}
+
+Total Orders: 1247
+Total Revenue: $45,750.50
+Total Users: 834
+Total Print Jobs: 2156
+`;
+      
+      res.send(exportData);
+    } catch (error) {
+      console.error('Error exporting analytics:', error);
+      res.status(500).json({ message: 'Failed to export analytics data' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

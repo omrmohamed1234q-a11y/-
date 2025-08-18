@@ -16,6 +16,7 @@ import {
   TrendingUp, Gift, Trophy, LogOut, Shield, Plus, Edit, Trash2, 
   Eye, Save, X, BookOpen, GraduationCap, FileText, Calendar
 } from 'lucide-react';
+import AdminAnalytics from '@/pages/admin/analytics';
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
@@ -292,8 +293,9 @@ export default function AdminDashboard() {
 
         {/* Management Tabs */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-10">
             <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
+            <TabsTrigger value="analytics">التحليلات</TabsTrigger>
             <TabsTrigger value="ui-config">واجهة التطبيق</TabsTrigger>
             <TabsTrigger value="files">إدارة الملفات</TabsTrigger>
             <TabsTrigger value="orders">تتبع الطلبات</TabsTrigger>
@@ -372,6 +374,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="products" className="space-y-6">
             <ProductsManagement />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <AdminAnalytics />
           </TabsContent>
 
           <TabsContent value="orders" className="space-y-6">

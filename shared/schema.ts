@@ -449,3 +449,102 @@ export type ChatConversation = typeof chatConversations.$inferSelect;
 export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 export type OrderTracking = typeof orderTracking.$inferSelect;
 export type InsertOrderTracking = z.infer<typeof insertOrderTrackingSchema>;
+
+// Delivery slots for configurable time windows
+export const deliverySlots = pgTable("delivery_slots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  startTime: text("start_time").notNull(), // "09:00"
+  endTime: text("end_time").notNull(), // "12:00"
+  days: text("days").array().notNull(), // ["monday", "tuesday", etc.]
+  isActive: boolean("is_active").default(true),
+  maxOrders: integer("max_orders").default(50),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Shipping fees configuration
+export const shippingFees = pgTable("shipping_fees", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  zone: text("zone").notNull(), // "cairo", "giza", "alexandria", etc.
+  weightMin: decimal("weight_min", { precision: 5, scale: 2 }).default("0.00"),
+  weightMax: decimal("weight_max", { precision: 5, scale: 2 }).notNull(),
+  fee: decimal("fee", { precision: 10, scale: 2 }).notNull(),
+  freeShippingThreshold: decimal("free_shipping_threshold", { precision: 10, scale: 2 }),
+  estimatedDays: integer("estimated_days").default(1),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Payment methods configuration
+export const paymentMethods = pgTable("payment_methods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  nameEn: text("name_en").notNull(),
+  type: text("type").notNull(), // "google_pay", "vodafone_cash", "bank_transfer", "cod"
+  isActive: boolean("is_active").default(true),
+  processingFee: decimal("processing_fee", { precision: 5, scale: 2 }).default("0.00"),
+  minAmount: decimal("min_amount", { precision: 10, scale: 2 }).default("0.00"),
+  maxAmount: decimal("max_amount", { precision: 10, scale: 2 }),
+  config: jsonb("config").default({}), // Provider-specific configuration
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// System analytics for tracking business metrics
+export const systemAnalytics = pgTable("system_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: timestamp("date").notNull(),
+  metric: text("metric").notNull(), // "orders_total", "revenue_total", "conversion_rate", etc.
+  value: decimal("value", { precision: 15, scale: 2 }).notNull(),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Curriculum and education metadata
+export const curriculum = pgTable("curriculum", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  nameEn: text("name_en").notNull(),
+  country: text("country").default("egypt"),
+  grades: text("grades").array().notNull(), // ["grade-1", "grade-2", etc.]
+  subjects: text("subjects").array().notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for new tables
+export const insertDeliverySlotSchema = createInsertSchema(deliverySlots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertShippingFeeSchema = createInsertSchema(shippingFees).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSystemAnalyticsSchema = createInsertSchema(systemAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCurriculumSchema = createInsertSchema(curriculum).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for new tables
+export type DeliverySlot = typeof deliverySlots.$inferSelect;
+export type InsertDeliverySlot = z.infer<typeof insertDeliverySlotSchema>;
+export type ShippingFee = typeof shippingFees.$inferSelect;
+export type InsertShippingFee = z.infer<typeof insertShippingFeeSchema>;
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
+export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
+export type SystemAnalytics = typeof systemAnalytics.$inferSelect;
+export type InsertSystemAnalytics = z.infer<typeof insertSystemAnalyticsSchema>;
+export type Curriculum = typeof curriculum.$inferSelect;
+export type InsertCurriculum = z.infer<typeof insertCurriculumSchema>;
