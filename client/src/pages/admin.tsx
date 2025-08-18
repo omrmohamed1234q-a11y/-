@@ -338,7 +338,7 @@ export default function AdminDashboard() {
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{safeStats.totalRevenue} ر.س</div>
+                  <div className="text-2xl font-bold">{safeStats.totalRevenue} جنيه</div>
                   <p className="text-xs text-muted-foreground">
                     +{Math.floor(safeStats.totalRevenue * 0.12)} من الشهر الماضي
                   </p>
@@ -446,7 +446,7 @@ export default function AdminDashboard() {
                     </div>
                     <p className="text-sm text-gray-600 mb-2">{product.description}</p>
                     <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-green-600">{product.price} ر.س</span>
+                      <span className="text-lg font-bold text-green-600">{product.price} جنيه</span>
                       <AdminActionsMenu
                         itemId={product.id}
                         itemType="product"
@@ -488,7 +488,7 @@ export default function AdminDashboard() {
                         <tr key={order.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm">#{order.id}</td>
                           <td className="px-4 py-3 text-sm">{order.customerName}</td>
-                          <td className="px-4 py-3 text-sm">{order.total} ر.س</td>
+                          <td className="px-4 py-3 text-sm">{order.total} جنيه</td>
                           <td className="px-4 py-3">
                             <Badge variant={order.status === 'completed' ? 'default' : 'secondary'}>
                               {order.status === 'completed' ? 'مكتمل' : 'قيد التنفيذ'}
@@ -536,7 +536,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">{job.doubleSided ? 'وجهين' : 'وجه واحد'}</span>
-                        <span className="font-bold text-green-600">{job.cost} ر.س</span>
+                        <span className="font-bold text-green-600">{job.cost} جنيه</span>
                       </div>
                     </div>
                     

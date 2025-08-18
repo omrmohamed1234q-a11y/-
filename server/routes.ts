@@ -834,14 +834,14 @@ Total Print Jobs: 2156
         التاريخ: ${order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : 'غير محدد'}
         
         المنتجات:
-        ${Array.isArray(order.items) ? (order.items as any[]).map((item: any) => `${item.name} × ${item.quantity} = ${item.price * item.quantity} ر.س`).join('\n') : 'لا توجد منتجات'}
+        ${Array.isArray(order.items) ? (order.items as any[]).map((item: any) => `${item.name} × ${item.quantity} = ${item.price * item.quantity} جنيه`).join('\n') : 'لا توجد منتجات'}
         
-        المجموع الفرعي: ${order.subtotal} ر.س
-        الخصم: ${order.discount} ر.س
-        رسوم التوصيل: ${order.deliveryFee} ر.س
-        الضريبة: ${order.tax} ر.س
+        المجموع الفرعي: ${order.subtotal} جنيه
+        الخصم: ${order.discount} جنيه
+        رسوم التوصيل: ${order.deliveryFee} جنيه
+        الضريبة: ${order.tax} جنيه
         =================
-        الإجمالي: ${order.totalAmount} ر.س
+        الإجمالي: ${order.totalAmount} جنيه
       `;
       
       res.setHeader('Content-Type', 'application/pdf');

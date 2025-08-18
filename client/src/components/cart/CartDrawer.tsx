@@ -308,7 +308,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                       
                       <div className="flex items-center justify-between mt-2">
                         <span className="font-bold text-green-600">
-                          {item.price} ر.س
+                          {item.price} جنيه
                         </span>
                         <div className="flex items-center gap-2">
                           <Button
@@ -359,7 +359,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           className="w-full h-24 object-cover rounded-md mb-1"
                         />
                         <p className="text-xs line-clamp-2">{product.name}</p>
-                        <p className="text-xs font-bold text-green-600">{product.price} ر.س</p>
+                        <p className="text-xs font-bold text-green-600">{product.price} جنيه</p>
                         <Button size="sm" variant="outline" className="mt-1 text-xs">
                           أضف للسلة
                         </Button>
@@ -395,7 +395,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <div className="flex items-center gap-2">
                       <Gift className="w-4 h-4 text-purple-600" />
                       <span className="text-sm">استخدم {cartData.availablePoints} نقطة</span>
-                      <Badge className="bg-purple-600">خصم {cartData.availablePoints * 0.1} ر.س</Badge>
+                      <Badge className="bg-purple-600">خصم {cartData.availablePoints * 0.1} جنيه</Badge>
                     </div>
                     <input
                       type="checkbox"
@@ -412,7 +412,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <Truck className="w-4 h-4 text-blue-600" />
                     <span className="text-sm">رسوم التوصيل المتوقعة</span>
                   </div>
-                  <span className="font-semibold text-blue-600">15 ر.س</span>
+                  <span className="font-semibold text-blue-600">15 جنيه</span>
                 </div>
 
                 {/* Order Note */}
@@ -429,28 +429,28 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>المجموع الفرعي</span>
-                  <span>{calculateSubtotal()} ر.س</span>
+                  <span>{calculateSubtotal()} جنيه</span>
                 </div>
                 {cartData?.discount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>خصم الكوبون ({cartData.discount}%)</span>
-                    <span>-{calculateSubtotal() * cartData.discount / 100} ر.س</span>
+                    <span>-{calculateSubtotal() * cartData.discount / 100} جنيه</span>
                   </div>
                 )}
                 {usePoints && (
                   <div className="flex justify-between text-sm text-purple-600">
                     <span>خصم النقاط</span>
-                    <span>-{cartData?.availablePoints * 0.1} ر.س</span>
+                    <span>-{cartData?.availablePoints * 0.1} جنيه</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span>رسوم التوصيل</span>
-                  <span>15 ر.س</span>
+                  <span>15 جنيه</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-bold text-lg">
                   <span>الإجمالي</span>
-                  <span className="text-green-600">{calculateTotal()} ر.س</span>
+                  <span className="text-green-600">{calculateTotal()} جنيه</span>
                 </div>
               </div>
             </>

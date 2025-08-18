@@ -162,7 +162,7 @@ export function PaymentForm({ amount, items = [], onSuccess, onError }: PaymentF
         paymentMethod: 'vodafone',
         transactionId: response.transactionId,
         amount,
-        currency: 'SAR'
+        currency: 'EGP'
       };
       
       toast({
@@ -233,7 +233,7 @@ export function PaymentForm({ amount, items = [], onSuccess, onError }: PaymentF
             {items.map((item, index) => (
               <div key={index} className="flex justify-between items-center">
                 <span className="text-gray-600">{item.name} × {item.quantity}</span>
-                <span className="font-medium">{item.price * item.quantity} ريال</span>
+                <span className="font-medium">{item.price * item.quantity} جنيه</span>
               </div>
             ))}
             <Separator />

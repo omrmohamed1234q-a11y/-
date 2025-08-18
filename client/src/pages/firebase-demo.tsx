@@ -365,7 +365,7 @@ export default function FirebaseDemo() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="text-center">
-                      <p className="text-3xl font-bold text-blue-600">+25,000 ر.س</p>
+                      <p className="text-3xl font-bold text-blue-600">+25,000 جنيه</p>
                       <p className="text-sm text-gray-600">زيادة شهرية متوقعة</p>
                     </div>
                     <div className="space-y-2 text-sm">

@@ -42,6 +42,13 @@
 - **Preserved Admin Control**: Admins can still edit exact inventory numbers in admin panel
 - **Form Data Persistence**: Fixed ProductForm to properly save and preserve availableCopies during edits
 
+## Complete Currency Standardization (January 2025)
+- **Egyptian Pounds Implementation**: Converted all currency references from Saudi Riyals ("ر.س") to Egyptian Pounds ("جنيه")
+- **Comprehensive Coverage**: Updated currency symbols across all components including payment forms, cart displays, checkout pages, order tracking, admin interfaces, and server-side invoice generation
+- **AI Assistant Integration**: Updated OpenAI chat prompts to reflect correct Egyptian pricing
+- **Database Consistency**: Maintained all price calculations while standardizing display currency throughout the application
+- **User Experience**: Provides localized pricing for Egyptian market targeting
+
 ## Comprehensive Order Tracking System (January 2025)
 - **Complete Purchase Journey**: Full Talabat/Amazon-style cart, checkout, and delivery tracking
 - **Database Schema**: Enhanced orders table with 40+ fields for complete tracking lifecycle

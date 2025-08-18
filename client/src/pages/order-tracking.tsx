@@ -551,10 +551,10 @@ export default function OrderTracking() {
                     </div>
                     <div>
                       <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-gray-600">{item.quantity} × {item.price} ر.س</p>
+                      <p className="text-sm text-gray-600">{item.quantity} × {item.price} جنيه</p>
                     </div>
                   </div>
-                  <p className="font-semibold">{item.quantity * item.price} ر.س</p>
+                  <p className="font-semibold">{item.quantity * item.price} جنيه</p>
                 </div>
               ))}
 
@@ -564,29 +564,29 @@ export default function OrderTracking() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>المجموع الفرعي</span>
-                  <span>{order.subtotal} ر.س</span>
+                  <span>{order.subtotal} جنيه</span>
                 </div>
                 {order.discount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>الخصم</span>
-                    <span>-{order.discount} ر.س</span>
+                    <span>-{order.discount} جنيه</span>
                   </div>
                 )}
                 {order.deliveryFee > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>رسوم التوصيل</span>
-                    <span>{order.deliveryFee} ر.س</span>
+                    <span>{order.deliveryFee} جنيه</span>
                   </div>
                 )}
                 {order.tax > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>الضريبة (15%)</span>
-                    <span>{order.tax} ر.س</span>
+                    <span>{order.tax} جنيه</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-lg pt-2">
                   <span>الإجمالي</span>
-                  <span className="text-green-600">{order.total} ر.س</span>
+                  <span className="text-green-600">{order.total} جنيه</span>
                 </div>
               </div>
             </div>

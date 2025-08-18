@@ -186,7 +186,7 @@ export default function Checkout() {
                               <span className="font-semibold">توصيل للمنزل</span>
                             </div>
                             <p className="text-sm text-gray-600">توصيل خلال 30-45 دقيقة</p>
-                            <p className="text-sm font-semibold text-green-600 mt-1">رسوم التوصيل: 15 ر.س</p>
+                            <p className="text-sm font-semibold text-green-600 mt-1">رسوم التوصيل: 15 جنيه</p>
                           </Label>
                         </div>
 
@@ -636,7 +636,7 @@ export default function Checkout() {
                             <p className="font-medium text-sm">{item.productName}</p>
                             <p className="text-xs text-gray-500">الكمية: {item.quantity}</p>
                           </div>
-                          <span className="font-semibold">{item.price * item.quantity} ر.س</span>
+                          <span className="font-semibold">{item.price * item.quantity} جنيه</span>
                         </div>
                       ))}
                     </div>
@@ -694,26 +694,26 @@ export default function Checkout() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>المجموع الفرعي</span>
-                      <span>{cartData?.subtotal} ر.س</span>
+                      <span>{cartData?.subtotal} جنيه</span>
                     </div>
                     {cartData?.discount > 0 && (
                       <div className="flex justify-between text-sm text-green-600">
                         <span>الخصم</span>
-                        <span>-{cartData.discount} ر.س</span>
+                        <span>-{cartData.discount} جنيه</span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm">
                       <span>رسوم التوصيل</span>
-                      <span>{orderData.deliveryMethod === 'delivery' ? '15' : '0'} ر.س</span>
+                      <span>{orderData.deliveryMethod === 'delivery' ? '15' : '0'} جنيه</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>الضريبة (15%)</span>
-                      <span>{(cartData?.subtotal * 0.15).toFixed(2)} ر.س</span>
+                      <span>{(cartData?.subtotal * 0.15).toFixed(2)} جنيه</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between font-bold text-lg">
                       <span>الإجمالي</span>
-                      <span className="text-green-600">{calculateTotal()} ر.س</span>
+                      <span className="text-green-600">{calculateTotal()} جنيه</span>
                     </div>
                   </div>
 
@@ -755,26 +755,26 @@ export default function Checkout() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>المجموع الفرعي</span>
-                    <span>{cartData?.subtotal || 0} ر.س</span>
+                    <span>{cartData?.subtotal || 0} جنيه</span>
                   </div>
                   {cartData?.discount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
                       <span>الخصم</span>
-                      <span>-{cartData.discount} ر.س</span>
+                      <span>-{cartData.discount} جنيه</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span>رسوم التوصيل</span>
-                    <span>{orderData.deliveryMethod === 'delivery' ? '15' : '0'} ر.س</span>
+                    <span>{orderData.deliveryMethod === 'delivery' ? '15' : '0'} جنيه</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>الضريبة (15%)</span>
-                    <span>{((cartData?.subtotal || 0) * 0.15).toFixed(2)} ر.س</span>
+                    <span>{((cartData?.subtotal || 0) * 0.15).toFixed(2)} جنيه</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>الإجمالي</span>
-                    <span className="text-green-600">{calculateTotal()} ر.س</span>
+                    <span className="text-green-600">{calculateTotal()} جنيه</span>
                   </div>
 
                   {/* Promo Section */}

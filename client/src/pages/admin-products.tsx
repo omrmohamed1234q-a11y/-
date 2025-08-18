@@ -243,7 +243,7 @@ export default function AdminProductsPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    السعر (ر.س) *
+                    السعر (جنيه) *
                   </label>
                   <Input
                     type="number"
@@ -459,7 +459,7 @@ export default function AdminProductsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">السعر:</span>
                     <span className="font-semibold text-green-600" data-testid={`text-product-price-${product.id}`}>
-                      {product.price} ر.س
+                      {product.price} جنيه
                     </span>
                   </div>
                   
