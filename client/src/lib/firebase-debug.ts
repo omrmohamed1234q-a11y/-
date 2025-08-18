@@ -1,12 +1,16 @@
 // Firebase Debug and Testing Utilities
 import { runFirebaseHealthCheck } from './firebase-connectivity';
+import { testCloudinaryConnection } from './cloudinary';
+import { checkUploadServiceStatus } from './upload-service';
 
 // Make Firebase test functions available globally for console testing
 declare global {
   interface Window {
     testFirebaseConnection: () => Promise<void>;
     checkFirebaseConfig: () => void;
-    runFirebaseHealthCheck: () => Promise<void>;
+    runFirebaseHealthCheck: () => Promise<any>;
+    testCloudinaryConnection: () => Promise<void>;
+    checkUploadServiceStatus: () => Promise<void>;
   }
 }
 
@@ -86,9 +90,42 @@ export function initFirebaseDebugTools() {
     return result;
   };
 
+  // Test Cloudinary connection
+  window.testCloudinaryConnection = async () => {
+    console.log('🟡 Testing Cloudinary Connection...');
+    const result = await testCloudinaryConnection();
+    
+    if (result.success) {
+      console.log('✅ Cloudinary connection successful!');
+      console.log('Details:', result.details);
+    } else {
+      console.error('❌ Cloudinary connection failed:', result.message);
+      console.log('Details:', result.details);
+    }
+  };
+
+  // Check all upload services
+  window.checkUploadServiceStatus = async () => {
+    console.log('🔍 Checking Upload Services Status...');
+    const status = await checkUploadServiceStatus();
+    
+    console.log('=== Upload Services Status ===');
+    console.log('Cloudinary:', status.cloudinary);
+    console.log('Firebase:', status.firebase);
+    console.log('Recommended:', status.recommended);
+    
+    if (status.recommended === 'none') {
+      console.warn('⚠️ No upload service is properly configured!');
+    } else {
+      console.log(`✅ Recommended service: ${status.recommended}`);
+    }
+  };
+
   console.log('🔥 Firebase debug tools loaded!');
   console.log('Available commands:');
   console.log('- testFirebaseConnection()');
   console.log('- checkFirebaseConfig()');
   console.log('- runFirebaseHealthCheck()');
+  console.log('- testCloudinaryConnection()');
+  console.log('- checkUploadServiceStatus()');
 }
