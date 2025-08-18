@@ -10,11 +10,12 @@ import { apiRequest } from '@/lib/queryClient';
 import {
   BarChart3, Users, Package, Printer, ShoppingCart, TrendingUp,
   Plus, Edit, Trash2, FileText, Settings, Home, LogOut,
-  Eye, Download, Calendar, BookOpen, GraduationCap, Store
+  Eye, Download, Calendar, BookOpen, GraduationCap, Store, X
 } from 'lucide-react';
 import { Link } from 'wouter';
 import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
 import AdminAnalytics from '@/pages/admin/analytics';
+import ProductForm from '@/components/admin/ProductForm';
 
 export default function AdminDashboard() {
   // All hooks must be at the top level
@@ -61,7 +62,6 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
       toast({ title: "تم إضافة المنتج بنجاح" });
-      setNewProduct({ name: '', description: '', price: '', category: '', stock: '', image: '' });
       setShowProductForm(false);
     },
     onError: () => {
@@ -574,6 +574,57 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Product Form Dialog */}
+        {showProductForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold">إضافة منتج جديد</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowProductForm(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <ProductForm
+                onSubmit={(data) => {
+                  createProductMutation.mutate(data);
+                }}
+                isLoading={createProductMutation.isPending}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Edit Product Dialog */}
+        {editingProduct && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold">تعديل المنتج</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setEditingProduct(null)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <ProductForm
+                initialData={editingProduct}
+                onSubmit={(data) => {
+                  // Update product logic here
+                  console.log('Update product:', data);
+                  setEditingProduct(null);
+                }}
+                isLoading={false}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
