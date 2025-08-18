@@ -82,7 +82,7 @@ function Router() {
         <Route path="/profile" component={Profile} />
         <Route path="/payment" component={Payment} />
         <Route path="/checkout" component={Checkout} />
-        <Route path="/orders/:id" component={OrderTracking} />
+        <Route path="/order-tracking/:id" component={OrderTracking} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route component={NotFound} />

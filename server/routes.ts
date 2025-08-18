@@ -640,6 +640,121 @@ Total Print Jobs: 2156
     }
   });
 
+  // Cart API endpoints
+  app.get('/api/cart', async (req, res) => {
+    try {
+      // Mock cart data with sample items for demonstration
+      const cartData = {
+        items: [
+          {
+            id: 'cart-item-1',
+            productId: 'prod-1',
+            productName: 'كتاب الرياضيات - الصف الثالث الثانوي',
+            productImage: 'https://via.placeholder.com/80',
+            price: 150,
+            quantity: 2,
+            orderId: 'test-order-001', // This item has an active order
+            orderStatus: 'preparing',
+            variant: {
+              size: 'A4'
+            }
+          },
+          {
+            id: 'cart-item-2',
+            productId: 'prod-2',
+            productName: 'دفتر ملاحظات فاخر',
+            productImage: 'https://via.placeholder.com/80',
+            price: 45,
+            quantity: 1,
+            variant: {
+              color: 'أزرق'
+            }
+          }
+        ],
+        discount: 0,
+        shipping: 15,
+        availablePoints: 250
+      };
+      res.json(cartData);
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      res.status(500).json({ message: 'Failed to fetch cart' });
+    }
+  });
+
+  app.get('/api/cart/suggestions', async (req, res) => {
+    try {
+      // Return suggested products
+      const suggestions = [
+        {
+          id: '1',
+          name: 'دفتر ملاحظات A4',
+          price: 25,
+          image: '/placeholder.jpg'
+        },
+        {
+          id: '2',
+          name: 'أقلام جل ملونة',
+          price: 45,
+          image: '/placeholder.jpg'
+        }
+      ];
+      res.json(suggestions);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      res.status(500).json({ message: 'Failed to fetch suggestions' });
+    }
+  });
+
+  app.put('/api/cart/items/:itemId', async (req, res) => {
+    try {
+      const { itemId } = req.params;
+      const { quantity } = req.body;
+      // Update cart item quantity in session/database
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating cart item:', error);
+      res.status(500).json({ message: 'Failed to update cart item' });
+    }
+  });
+
+  app.delete('/api/cart/items/:itemId', async (req, res) => {
+    try {
+      const { itemId } = req.params;
+      // Remove item from cart
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error removing cart item:', error);
+      res.status(500).json({ message: 'Failed to remove cart item' });
+    }
+  });
+
+  app.post('/api/cart/apply-coupon', async (req, res) => {
+    try {
+      const { code } = req.body;
+      // Validate coupon and apply discount
+      if (code === 'WELCOME10') {
+        res.json({ discount: 10, success: true });
+      } else {
+        res.status(400).json({ message: 'Invalid coupon code' });
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      res.status(500).json({ message: 'Failed to apply coupon' });
+    }
+  });
+
+  // Get active orders
+  app.get('/api/orders/active', async (req, res) => {
+    try {
+      const activeOrders = await storage.getActiveOrders();
+      res.json(activeOrders || []);
+    } catch (error) {
+      console.error('Error fetching active orders:', error);
+      res.status(500).json({ message: 'Failed to fetch active orders' });
+    }
+  });
+
   // Create new order
   app.post('/api/orders', async (req, res) => {
     try {

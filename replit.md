@@ -14,6 +14,13 @@
 - **Password Reset Flow**: Complete forgot password functionality with email-based reset links
 - **VIP User Experience**: Premium user highlights and gradient-based UI enhancements
 
+## Cart and Order Tracking Enhancements (January 2025)
+- **Integrated Cart Tracking**: Order tracking functionality now appears directly in the cart drawer
+- **Order Status Badges**: Visual indicators on cart items showing order status (preparing, in transit, delivered)
+- **Quick Order Creation**: One-click "طلب سريع" button for instant cash-on-delivery orders
+- **Active Orders Display**: Toggle view in cart to see all active/ongoing orders with tracking links
+- **Inline Tracking Buttons**: Each ordered item shows a "تتبع الطلب" (Track Order) button for immediate access
+
 ## Comprehensive Order Tracking System (January 2025)
 - **Complete Purchase Journey**: Full Talabat/Amazon-style cart, checkout, and delivery tracking
 - **Database Schema**: Enhanced orders table with 40+ fields for complete tracking lifecycle

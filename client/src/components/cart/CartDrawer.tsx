@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { ShoppingCart, Plus, Minus, Trash2, Tag, Gift, Truck, X } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Tag, Gift, Truck, X, Package } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 interface CartItem {
@@ -17,6 +17,8 @@ interface CartItem {
   productImage: string;
   price: number;
   quantity: number;
+  orderId?: string; // If this item is part of an active order
+  orderStatus?: string; // Current order status
   variant?: {
     size?: string;
     color?: string;
@@ -35,6 +37,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [couponCode, setCouponCode] = useState('');
   const [usePoints, setUsePoints] = useState(false);
   const [orderNote, setOrderNote] = useState('');
+  const [showActiveOrders, setShowActiveOrders] = useState(false);
 
   // Fetch cart items
   const { data: cartData, isLoading } = useQuery({
@@ -46,6 +49,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const { data: suggestedProducts } = useQuery({
     queryKey: ['/api/cart/suggestions'],
     enabled: isOpen,
+  });
+
+  // Fetch active orders
+  const { data: activeOrders } = useQuery({
+    queryKey: ['/api/orders/active'],
+    enabled: isOpen && showActiveOrders,
   });
 
   // Update quantity mutation
@@ -112,6 +121,50 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     onClose();
   };
 
+  const handleQuickOrder = async () => {
+    try {
+      // Create a quick order with current cart items
+      const orderData = {
+        items: cartData?.items || [],
+        subtotal: calculateSubtotal(),
+        discount: cartData?.discount || 0,
+        deliveryFee: 15,
+        tax: calculateSubtotal() * 0.05,
+        totalAmount: calculateTotal(),
+        deliveryMethod: 'delivery',
+        deliverySlot: 'asap',
+        paymentMethod: 'cash',
+        paymentMethodText: 'الدفع عند الاستلام',
+        statusText: 'جاري التحضير',
+        deliveryNotes: orderNote,
+        pointsUsed: usePoints ? (cartData?.availablePoints || 0) : 0,
+        voucherCode: couponCode || null,
+        voucherDiscount: cartData?.discount || 0
+      };
+
+      const response = await apiRequest('POST', '/api/orders', orderData);
+      const order = await response.json();
+
+      toast({
+        title: 'تم إنشاء الطلب',
+        description: `رقم الطلب: ${order.orderNumber}`,
+      });
+
+      // Navigate to tracking page
+      setLocation(`/order-tracking/${order.id}`);
+      onClose();
+      
+      // Clear cart after successful order
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+    } catch (error) {
+      toast({
+        title: 'خطأ في إنشاء الطلب',
+        description: 'حاول مرة أخرى',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const calculateSubtotal = () => {
     if (!cartData?.items) return 0;
     return cartData.items.reduce((sum: number, item: CartItem) => sum + (item.price * item.quantity), 0);
@@ -130,13 +183,62 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto" dir="rtl">
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5" />
-            سلة التسوق ({cartData?.items?.length || 0} منتج)
+          <SheetTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5" />
+              سلة التسوق ({cartData?.items?.length || 0} منتج)
+            </div>
+            {/* Active Orders Toggle */}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowActiveOrders(!showActiveOrders)}
+              className="text-xs"
+            >
+              <Package className="w-4 h-4 ml-1" />
+              {showActiveOrders ? 'إخفاء الطلبات النشطة' : 'عرض الطلبات النشطة'}
+            </Button>
           </SheetTitle>
         </SheetHeader>
 
         <div className="mt-6 space-y-4">
+          {/* Active Orders Section */}
+          {showActiveOrders && activeOrders && activeOrders.length > 0 && (
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                طلباتك النشطة
+              </h3>
+              <div className="space-y-2">
+                {activeOrders.map((order: any) => (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between p-2 bg-white rounded-md cursor-pointer hover:bg-gray-50"
+                    onClick={() => {
+                      setLocation(`/order-tracking/${order.id}`);
+                      onClose();
+                    }}
+                  >
+                    <div>
+                      <p className="text-sm font-medium">طلب #{order.orderNumber}</p>
+                      <p className="text-xs text-gray-500">
+                        {order.statusText || 'قيد المعالجة'}
+                      </p>
+                    </div>
+                    <Badge className={
+                      order.status === 'delivered' ? 'bg-green-600' :
+                      order.status === 'out_for_delivery' ? 'bg-blue-600' :
+                      order.status === 'preparing' ? 'bg-yellow-600' :
+                      'bg-gray-600'
+                    }>
+                      تتبع
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -154,7 +256,26 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               {/* Cart Items */}
               <div className="space-y-4">
                 {cartData?.items?.map((item: CartItem) => (
-                  <div key={item.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div key={item.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg relative">
+                    {/* Order Status Badge if item has an active order */}
+                    {item.orderId && (
+                      <div className="absolute top-2 left-2 z-10">
+                        <Badge 
+                          className={
+                            item.orderStatus === 'delivered' ? 'bg-green-600' :
+                            item.orderStatus === 'out_for_delivery' ? 'bg-blue-600' :
+                            item.orderStatus === 'preparing' ? 'bg-yellow-600' :
+                            'bg-gray-600'
+                          }
+                        >
+                          {item.orderStatus === 'delivered' ? 'تم التسليم' :
+                           item.orderStatus === 'out_for_delivery' ? 'في الطريق' :
+                           item.orderStatus === 'preparing' ? 'قيد التحضير' :
+                           'معلق'}
+                        </Badge>
+                      </div>
+                    )}
+                    
                     <img
                       src={item.productImage || 'https://via.placeholder.com/80'}
                       alt={item.productName}
@@ -168,6 +289,23 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           {item.variant.color && <span className="mr-2">اللون: {item.variant.color}</span>}
                         </div>
                       )}
+                      
+                      {/* Tracking Button for ordered items */}
+                      {item.orderId && (
+                        <Button
+                          size="sm"
+                          variant="link"
+                          className="text-xs text-primary p-0 h-auto mt-1"
+                          onClick={() => {
+                            setLocation(`/order-tracking/${item.orderId}`);
+                            onClose();
+                          }}
+                        >
+                          <Package className="w-3 h-3 ml-1" />
+                          تتبع الطلب
+                        </Button>
+                      )}
+                      
                       <div className="flex items-center justify-between mt-2">
                         <span className="font-bold text-green-600">
                           {item.price} ر.س
@@ -178,7 +316,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             variant="outline"
                             className="h-8 w-8 p-0"
                             onClick={() => handleQuantityChange(item.id, item.quantity, -1)}
-                            disabled={updateQuantityMutation.isPending}
+                            disabled={updateQuantityMutation.isPending || !!item.orderId}
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
@@ -188,7 +326,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             variant="outline"
                             className="h-8 w-8 p-0"
                             onClick={() => handleQuantityChange(item.id, item.quantity, 1)}
-                            disabled={updateQuantityMutation.isPending}
+                            disabled={updateQuantityMutation.isPending || !!item.orderId}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>
@@ -197,7 +335,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             variant="ghost"
                             className="h-8 w-8 p-0 text-red-500"
                             onClick={() => removeItemMutation.mutate(item.id)}
-                            disabled={removeItemMutation.isPending}
+                            disabled={removeItemMutation.isPending || !!item.orderId}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -320,12 +458,23 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         </div>
 
         {cartData?.items?.length > 0 && (
-          <SheetFooter className="mt-6 gap-2">
-            <Button variant="outline" onClick={handleContinueShopping} className="flex-1">
-              متابعة التسوق
-            </Button>
-            <Button onClick={handleCheckout} className="flex-1 bg-green-600 hover:bg-green-700">
-              تابع إلى الدفع
+          <SheetFooter className="mt-6 flex-col gap-2">
+            <div className="flex gap-2 w-full">
+              <Button variant="outline" onClick={handleContinueShopping} className="flex-1">
+                متابعة التسوق
+              </Button>
+              <Button onClick={handleCheckout} className="flex-1 bg-primary hover:bg-primary/90">
+                <ShoppingCart className="w-4 h-4 ml-2" />
+                إتمام الطلب
+              </Button>
+            </div>
+            {/* Quick Order Button - for fast cash on delivery */}
+            <Button 
+              onClick={handleQuickOrder} 
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              <Truck className="w-4 h-4 ml-2" />
+              طلب سريع (دفع عند الاستلام)
             </Button>
           </SheetFooter>
         )}

@@ -17,6 +17,7 @@ export interface IStorage {
   getAllOrders(): Promise<Order[]>;
   createOrder(order: any): Promise<Order>;
   updateOrderStatus(id: string, status: string): Promise<Order>;
+  getActiveOrders(): Promise<Order[]>;
   
   // Print Job operations
   getAllPrintJobs(): Promise<PrintJob[]>;
@@ -106,6 +107,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(orders.id, id))
       .returning();
     return order;
+  }
+
+  async getActiveOrders(): Promise<Order[]> {
+    // Get orders that are not delivered or cancelled
+    const activeOrders = await db
+      .select()
+      .from(orders)
+      .where(sql`${orders.status} NOT IN ('delivered', 'cancelled')`)
+      .orderBy(desc(orders.createdAt));
+    return activeOrders;
   }
 
   async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> {
