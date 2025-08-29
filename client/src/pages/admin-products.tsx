@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { ProductForm } from '@/components/ProductForm';
 import { apiRequest } from '@/lib/queryClient';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, DollarSign, Tag } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, DollarSign, Tag, Search } from 'lucide-react';
 import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
 import type { products } from '@shared/schema';
 
@@ -15,22 +17,8 @@ type Product = typeof products.$inferSelect;
 export default function AdminProductsPage() {
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    description: '',
-    category: '',
-    price: '',
-    stock: '',
-    imageUrl: '',
-    grade: '',
-    subject: '',
-    publisher: '',
-    curriculum: '',
-    featured: false,
-    teacherOnly: false,
-    vip: false
-  });
-
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const queryClient = useQueryClient();
 
   // Fetch products
@@ -51,13 +39,11 @@ export default function AdminProductsPage() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
       setShowProductForm(false);
-      resetForm();
     },
     onError: (error: any) => {
-      console.error('Product creation error:', error);
       toast({
         title: 'خطأ في إضافة المنتج',
-        description: 'حدث خطأ أثناء إضافة المنتج. حاول مرة أخرى.',
+        description: error.message || 'حدث خطأ أثناء إضافة المنتج',
         variant: 'destructive',
       });
     },
@@ -65,24 +51,23 @@ export default function AdminProductsPage() {
 
   // Update product mutation
   const updateProductMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const response = await apiRequest('PUT', `/api/admin/products/${id}`, data);
+    mutationFn: async ({ id, productData }: { id: string; productData: any }) => {
+      const response = await apiRequest('PUT', `/api/admin/products/${id}`, productData);
       return response.json();
     },
     onSuccess: () => {
       toast({
         title: 'تم تحديث المنتج بنجاح',
-        description: 'تم حفظ التغييرات على المنتج',
+        description: 'تم حفظ التغييرات بنجاح',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      setShowProductForm(false);
       setEditingProduct(null);
-      resetForm();
     },
     onError: (error: any) => {
-      console.error('Product update error:', error);
       toast({
         title: 'خطأ في تحديث المنتج',
-        description: 'حدث خطأ أثناء تحديث المنتج. حاول مرة أخرى.',
+        description: error.message || 'حدث خطأ أثناء تحديث المنتج',
         variant: 'destructive',
       });
     },
@@ -90,8 +75,8 @@ export default function AdminProductsPage() {
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiRequest('DELETE', `/api/admin/products/${id}`);
+    mutationFn: async (productId: string) => {
+      const response = await apiRequest('DELETE', `/api/admin/products/${productId}`);
       return response.json();
     },
     onSuccess: () => {
@@ -102,88 +87,89 @@ export default function AdminProductsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
     },
     onError: (error: any) => {
-      console.error('Product deletion error:', error);
       toast({
         title: 'خطأ في حذف المنتج',
-        description: 'حدث خطأ أثناء حذف المنتج. حاول مرة أخرى.',
+        description: error.message || 'حدث خطأ أثناء حذف المنتج',
         variant: 'destructive',
       });
     },
   });
 
-  const resetForm = () => {
-    setNewProduct({
-      name: '',
-      description: '',
-      category: '',
-      price: '',
-      stock: '',
-      imageUrl: '',
-      grade: '',
-      subject: '',
-      publisher: '',
-      curriculum: '',
-      featured: false,
-      teacherOnly: false,
-      vip: false
-    });
-  };
-
-  const addProduct = async () => {
-    if (!newProduct.name || !newProduct.description || !newProduct.category || !newProduct.price) {
-      toast({
-        title: 'بيانات غير مكتملة',
-        description: 'يرجى ملء جميع الحقول المطلوبة',
-        variant: 'destructive',
-      });
-      return;
+  const handleSaveProduct = (productData: any) => {
+    if (editingProduct) {
+      updateProductMutation.mutate({ id: editingProduct.id, productData });
+    } else {
+      createProductMutation.mutate(productData);
     }
-
-    const productData = {
-      ...newProduct,
-      price: newProduct.price,
-      stock: parseInt(newProduct.stock) || 0,
-    };
-
-    createProductMutation.mutate(productData);
   };
 
-  const updateProduct = async () => {
-    if (!editingProduct) return;
-
-    const productData = {
-      ...newProduct,
-      price: newProduct.price,
-      stock: parseInt(newProduct.stock) || 0,
-    };
-
-    updateProductMutation.mutate({ id: editingProduct.id, data: productData });
-  };
-
-  const startEditing = (product: Product) => {
+  const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
-    setNewProduct({
-      name: product.name || '',
-      description: product.description || '',
-      category: product.category || '',
-      price: product.price || '',
-      stock: product.stock?.toString() || '',
-      imageUrl: product.imageUrl || '',
-      grade: product.grade || '',
-      subject: product.subject || '',
-      publisher: product.publisher || '',
-      curriculum: product.curriculum || '',
-      featured: product.featured || false,
-      teacherOnly: product.teacherOnly || false,
-      vip: product.vip || false
-    });
     setShowProductForm(true);
   };
 
-  const cancelEditing = () => {
+  const handleDeleteProduct = (productId: string) => {
+    if (window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+      deleteProductMutation.mutate(productId);
+    }
+  };
+
+  const handleAddNewProduct = () => {
     setEditingProduct(null);
-    setShowProductForm(false);
-    resetForm();
+    setShowProductForm(true);
+  };
+
+  // Filter products based on search
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return `${num.toFixed(2)} جنيه`;
+  };
+
+  const getCurriculumLabel = (type: string) => {
+    const curriculumMap: { [key: string]: string } = {
+      'egyptian_arabic': 'المنهج المصري - عربي',
+      'egyptian_languages': 'المنهج المصري - لغات',
+      'azhar': 'منهج الأزهر الشريف',
+      'igcse': 'IGCSE البريطاني',
+      'american': 'الدبلومة الأمريكية',
+      'ib': 'البكالوريا الدولية IB',
+      'stem': 'مدارس STEM'
+    };
+    return curriculumMap[type] || type;
+  };
+
+  const getSubjectLabel = (subject: string) => {
+    const subjectMap: { [key: string]: string } = {
+      'arabic': 'اللغة العربية',
+      'english': 'اللغة الإنجليزية',
+      'math': 'الرياضيات',
+      'science': 'العلوم',
+      'chemistry': 'الكيمياء',
+      'physics': 'الفيزياء',
+      'biology': 'الأحياء'
+    };
+    return subjectMap[subject] || subject;
+  };
+
+  const getGradeLevelLabel = (grade: string) => {
+    const gradeMap: { [key: string]: string } = {
+      'primary_1': 'الأول الابتدائي',
+      'primary_2': 'الثاني الابتدائي',
+      'primary_3': 'الثالث الابتدائي',
+      'prep_1': 'الأول الإعدادي',
+      'prep_2': 'الثاني الإعدادي',
+      'prep_3': 'الثالث الإعدادي',
+      'secondary_1': 'الأول الثانوي',
+      'secondary_2': 'الثاني الثانوي',
+      'secondary_3': 'الثالث الثانوي'
+    };
+    return gradeMap[grade] || grade;
   };
 
   if (isLoading) {
@@ -202,319 +188,235 @@ export default function AdminProductsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4" dir="rtl">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">إدارة المنتجات</h1>
-              <p className="text-gray-600">إضافة وتحرير وإدارة منتجات المتجر</p>
+              <p className="text-gray-600">إضافة وتحرير وإدارة منتجات المتجر التعليمي</p>
             </div>
             <Button
-              onClick={() => setShowProductForm(true)}
+              onClick={handleAddNewProduct}
               className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg"
               data-testid="button-add-new-product"
             >
               <Plus className="w-5 h-5 ml-2" />
-              اضافة منتج جديد
-            </Button>
-          </div>
-        </div>
-
-        {/* Add/Edit Product Form */}
-        {showProductForm && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="text-xl">
-                {editingProduct ? 'تحرير المنتج' : 'إضافة منتج جديد'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    اسم المنتج *
-                  </label>
-                  <Input
-                    placeholder="أدخل اسم المنتج"
-                    value={newProduct.name}
-                    onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                    data-testid="input-product-name"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    السعر (جنيه) *
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={newProduct.price}
-                    onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
-                    data-testid="input-product-price"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    الفئة *
-                  </label>
-                  <Input
-                    placeholder="مثل: كتب، أدوات مكتبية، إلخ"
-                    value={newProduct.category}
-                    onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
-                    data-testid="input-product-category"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    المخزون
-                  </label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={newProduct.stock}
-                    onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
-                    data-testid="input-product-stock"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    الصف الدراسي
-                  </label>
-                  <Input
-                    placeholder="مثل: الأول الابتدائي، الثالث الثانوي"
-                    value={newProduct.grade}
-                    onChange={(e) => setNewProduct({...newProduct, grade: e.target.value})}
-                    data-testid="input-product-grade"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    المادة
-                  </label>
-                  <Input
-                    placeholder="مثل: رياضيات، علوم، لغة عربية"
-                    value={newProduct.subject}
-                    onChange={(e) => setNewProduct({...newProduct, subject: e.target.value})}
-                    data-testid="input-product-subject"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    الناشر
-                  </label>
-                  <Input
-                    placeholder="اسم الناشر أو دار النشر"
-                    value={newProduct.publisher}
-                    onChange={(e) => setNewProduct({...newProduct, publisher: e.target.value})}
-                    data-testid="input-product-publisher"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    المنهج
-                  </label>
-                  <Input
-                    placeholder="مثل: سعودي، مصري، أمريكي"
-                    value={newProduct.curriculum}
-                    onChange={(e) => setNewProduct({...newProduct, curriculum: e.target.value})}
-                    data-testid="input-product-curriculum"
-                  />
-                </div>
-              </div>
-              
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  وصف المنتج *
-                </label>
-                <textarea
-                  className="w-full p-3 border border-gray-300 rounded-md"
-                  rows={3}
-                  placeholder="أدخل وصف تفصيلي للمنتج"
-                  value={newProduct.description}
-                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-                  data-testid="input-product-description"
-                />
-              </div>
-
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  رابط الصورة
-                </label>
-                <Input
-                  placeholder="https://example.com/image.jpg"
-                  value={newProduct.imageUrl}
-                  onChange={(e) => setNewProduct({...newProduct, imageUrl: e.target.value})}
-                  data-testid="input-product-image"
-                />
-              </div>
-
-              {/* Product Options */}
-              <div className="mt-6 space-y-3">
-                <div className="flex items-center space-x-3 space-x-reverse">
-                  <input
-                    type="checkbox"
-                    checked={newProduct.featured}
-                    onChange={(e) => setNewProduct({...newProduct, featured: e.target.checked})}
-                    className="rounded border-gray-300"
-                    data-testid="checkbox-featured"
-                  />
-                  <label className="text-sm font-medium text-gray-700">منتج مميز</label>
-                </div>
-
-                <div className="flex items-center space-x-3 space-x-reverse">
-                  <input
-                    type="checkbox"
-                    checked={newProduct.teacherOnly}
-                    onChange={(e) => setNewProduct({...newProduct, teacherOnly: e.target.checked})}
-                    className="rounded border-gray-300"
-                    data-testid="checkbox-teacher-only"
-                  />
-                  <label className="text-sm font-medium text-gray-700">للمعلمين فقط</label>
-                </div>
-
-                <div className="flex items-center space-x-3 space-x-reverse">
-                  <input
-                    type="checkbox"
-                    checked={newProduct.vip}
-                    onChange={(e) => setNewProduct({...newProduct, vip: e.target.checked})}
-                    className="rounded border-gray-300"
-                    data-testid="checkbox-vip"
-                  />
-                  <label className="text-sm font-medium text-gray-700">منتج VIP</label>
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2 space-x-reverse mt-6">
-                <Button 
-                  variant="outline"
-                  onClick={cancelEditing}
-                  data-testid="button-cancel"
-                >
-                  إلغاء
-                </Button>
-                <Button 
-                  onClick={editingProduct ? updateProduct : addProduct}
-                  disabled={createProductMutation.isPending || updateProductMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700"
-                  data-testid="button-save-product"
-                >
-                  {(createProductMutation.isPending || updateProductMutation.isPending) ? (
-                    <div className="flex items-center">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      {editingProduct ? 'جاري التحديث...' : 'جاري الإضافة...'}
-                    </div>
-                  ) : (
-                    <>
-                      <Package className="w-4 h-4 ml-2" />
-                      {editingProduct ? 'تحديث المنتج' : 'إضافة المنتج'}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product: Product) => (
-            <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg text-gray-900 mb-2" data-testid={`text-product-name-${product.id}`}>
-                      {product.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm line-clamp-2 mb-3">
-                      {product.description}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    {product.imageUrl && (
-                      <img 
-                        src={product.imageUrl} 
-                        alt={product.name} 
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                    )}
-                    <AdminActionsMenu
-                      itemId={product.id}
-                      itemType="product"
-                      onEdit={() => startEditing(product)}
-                      onDelete={() => deleteProductMutation.mutate(product.id)}
-                      showView={false}
-                      showDuplicate={false}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">السعر:</span>
-                    <span className="font-semibold text-green-600" data-testid={`text-product-price-${product.id}`}>
-                      {product.price} جنيه
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">المخزون:</span>
-                    <span className={`font-semibold ${(product.stock || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {product.stock || 0}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">الفئة:</span>
-                    <Badge variant="secondary">{product.category}</Badge>
-                  </div>
-                </div>
-
-                {/* Product Tags */}
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {product.featured && (
-                    <Badge className="bg-yellow-100 text-yellow-800 text-xs">مميز</Badge>
-                  )}
-                  {product.teacherOnly && (
-                    <Badge className="bg-blue-100 text-blue-800 text-xs">للمعلمين</Badge>
-                  )}
-                  {product.vip && (
-                    <Badge className="bg-purple-100 text-purple-800 text-xs">VIP</Badge>
-                  )}
-                  {product.grade && (
-                    <Badge variant="outline" className="text-xs">{product.grade}</Badge>
-                  )}
-                  {product.subject && (
-                    <Badge variant="outline" className="text-xs">{product.subject}</Badge>
-                  )}
-                </div>
-
-
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {products.length === 0 && (
-          <div className="text-center py-12">
-            <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">لا توجد منتجات</h3>
-            <p className="text-gray-600 mb-4">ابدأ بإضافة أول منتج إلى المتجر</p>
-            <Button
-              onClick={() => setShowProductForm(true)}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Plus className="w-4 h-4 ml-2" />
               إضافة منتج جديد
             </Button>
           </div>
-        )}
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">إجمالي المنتجات</p>
+                  <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+                </div>
+                <Package className="w-8 h-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">المنتجات المميزة</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {products.filter(p => p.featured).length}
+                  </p>
+                </div>
+                <Tag className="w-8 h-8 text-yellow-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">منتجات VIP</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {products.filter(p => p.vip).length}
+                  </p>
+                </div>
+                <DollarSign className="w-8 h-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search and Filters */}
+        <Card className="mb-8">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4 space-x-reverse">
+              <div className="relative flex-1">
+                <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="البحث في المنتجات..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pr-10"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Products Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">قائمة المنتجات ({filteredProducts.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">لا توجد منتجات</h3>
+                <p className="text-gray-500 mb-6">ابدأ بإضافة منتجك الأول</p>
+                <Button onClick={handleAddNewProduct} className="bg-green-600 hover:bg-green-700">
+                  <Plus className="w-4 h-4 ml-2" />
+                  إضافة منتج جديد
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredProducts.map((product) => (
+                  <Card key={product.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-4 space-x-reverse flex-1">
+                        {/* Product Image */}
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Package className="w-8 h-8 text-gray-400" />
+                          )}
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-semibold text-lg text-gray-900">{product.name}</h3>
+                              {product.nameEn && (
+                                <p className="text-sm text-gray-500">{product.nameEn}</p>
+                              )}
+                            </div>
+                            <div className="text-left">
+                              <p className="font-bold text-xl text-green-600">
+                                {formatCurrency(product.price)}
+                              </p>
+                              {product.originalPrice && (
+                                <p className="text-sm text-gray-500 line-through">
+                                  {formatCurrency(product.originalPrice)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <p className="text-gray-600 text-sm line-clamp-2">{product.description}</p>
+
+                          {/* Educational Info */}
+                          <div className="flex flex-wrap gap-2">
+                            {product.curriculumType && (
+                              <Badge variant="outline" className="text-xs">
+                                {getCurriculumLabel(product.curriculumType)}
+                              </Badge>
+                            )}
+                            {product.subject && (
+                              <Badge variant="outline" className="text-xs">
+                                {getSubjectLabel(product.subject)}
+                              </Badge>
+                            )}
+                            {product.gradeLevel && (
+                              <Badge variant="outline" className="text-xs">
+                                {getGradeLevelLabel(product.gradeLevel)}
+                              </Badge>
+                            )}
+                            {product.authorPublisher && (
+                              <Badge variant="outline" className="text-xs">
+                                {product.authorPublisher}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Features */}
+                          <div className="flex flex-wrap gap-2">
+                            {product.featured && (
+                              <Badge className="bg-yellow-100 text-yellow-800 text-xs">مميز</Badge>
+                            )}
+                            {product.teacherOnly && (
+                              <Badge className="bg-blue-100 text-blue-800 text-xs">للمعلمين</Badge>
+                            )}
+                            {product.vip && (
+                              <Badge className="bg-purple-100 text-purple-800 text-xs">VIP</Badge>
+                            )}
+                            {product.isDigital && (
+                              <Badge className="bg-green-100 text-green-800 text-xs">رقمي</Badge>
+                            )}
+                          </div>
+
+                          {/* Stock Info */}
+                          <div className="flex items-center space-x-4 space-x-reverse text-sm text-gray-600">
+                            <span>المخزون: {product.availableCopies || 0}</span>
+                            <span>الفئة: {product.category}</span>
+                            {product.productTypes && product.productTypes.length > 0 && (
+                              <span>الأنواع: {product.productTypes.join(', ')}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditProduct(product)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Product Form Dialog */}
+        <Dialog open={showProductForm} onOpenChange={setShowProductForm}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <ProductForm
+              editingProduct={editingProduct}
+              onSave={handleSaveProduct}
+              onCancel={() => {
+                setShowProductForm(false);
+                setEditingProduct(null);
+              }}
+              isLoading={createProductMutation.isPending || updateProductMutation.isPending}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <AdminActionsMenu />
       </div>
     </div>
   );
