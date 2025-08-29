@@ -15,7 +15,8 @@ import {
   Menu,
   X,
   LogOut,
-  Store
+  Store,
+  BookOpen
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'المتجر', href: '/admin/store', icon: Store },
   { name: 'المنتجات', href: '/admin/products', icon: Package },
   { name: 'الطلبات', href: '/admin/orders', icon: ShoppingCart },
+  { name: 'ركن المعلم', href: '/admin/teachers-corner', icon: BookOpen },
   { name: 'الكوبونات', href: '/admin/vouchers', icon: Ticket },
   { name: 'المكافآت', href: '/admin/rewards', icon: Gift },
   { name: 'المواد التعليمية', href: '/admin/teacher-materials', icon: GraduationCap },
