@@ -159,11 +159,12 @@ export default function Signup() {
           </CardHeader>
           
           <CardContent className="space-y-6">
-            {/* Form Fields */}
-            <div className="space-y-4">
+            {/* Form Fields - Enhanced Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Full Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  الاسم الكامل
+                  الاسم الكامل *
                 </label>
                 <Input
                   type="text"
@@ -176,9 +177,10 @@ export default function Signup() {
                 />
               </div>
               
+              {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  البريد الإلكتروني
+                  البريد الإلكتروني *
                 </label>
                 <Input
                   type="email"
@@ -191,9 +193,10 @@ export default function Signup() {
                 />
               </div>
               
+              {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  كلمة المرور
+                  كلمة المرور *
                 </label>
                 <Input
                   type="password"
@@ -206,50 +209,10 @@ export default function Signup() {
                 />
               </div>
 
-              {/* Phone Number with Country Code */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  رقم الهاتف
-                </label>
-                <div className="flex gap-2">
-                  <Select value={countryCode} onValueChange={setCountryCode} disabled={loading}>
-                    <SelectTrigger className="w-24" data-testid="select-country-code">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="+20">🇪🇬 +20</SelectItem>
-                      <SelectItem value="+966">🇸🇦 +966</SelectItem>
-                      <SelectItem value="+971">🇦🇪 +971</SelectItem>
-                      <SelectItem value="+965">🇰🇼 +965</SelectItem>
-                      <SelectItem value="+973">🇧🇭 +973</SelectItem>
-                      <SelectItem value="+974">🇶🇦 +974</SelectItem>
-                      <SelectItem value="+968">🇴🇲 +968</SelectItem>
-                      <SelectItem value="+961">🇱🇧 +961</SelectItem>
-                      <SelectItem value="+962">🇯🇴 +962</SelectItem>
-                      <SelectItem value="+963">🇸🇾 +963</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="tel"
-                    placeholder="رقم الهاتف"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="flex-1 text-right"
-                    disabled={loading}
-                    data-testid="input-phone"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {countryCode === '+20' && 'مثال: 1012345678'}
-                  {countryCode === '+966' && 'مثال: 512345678'}
-                  {countryCode === '+971' && 'مثال: 512345678'}
-                </p>
-              </div>
-
               {/* Age */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  العمر
+                  العمر *
                 </label>
                 <Input
                   type="number"
@@ -264,14 +227,53 @@ export default function Signup() {
                 />
               </div>
 
-              {/* Grade Level */}
-              <div>
+              {/* Phone Number with Country Code */}
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  المرحلة التعليمية
+                  رقم الهاتف *
+                </label>
+                <div className="flex gap-2">
+                  <Select value={countryCode} onValueChange={setCountryCode} disabled={loading}>
+                    <SelectTrigger className="w-32" data-testid="select-country-code">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="+20">🇪🇬 مصر +20</SelectItem>
+                      <SelectItem value="+966">🇸🇦 السعودية +966</SelectItem>
+                      <SelectItem value="+971">🇦🇪 الإمارات +971</SelectItem>
+                      <SelectItem value="+965">🇰🇼 الكويت +965</SelectItem>
+                      <SelectItem value="+973">🇧🇭 البحرين +973</SelectItem>
+                      <SelectItem value="+974">🇶🇦 قطر +974</SelectItem>
+                      <SelectItem value="+968">🇴🇲 عمان +968</SelectItem>
+                      <SelectItem value="+961">🇱🇧 لبنان +961</SelectItem>
+                      <SelectItem value="+962">🇯🇴 الأردن +962</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="tel"
+                    placeholder="رقم الهاتف"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="flex-1 text-right"
+                    disabled={loading}
+                    data-testid="input-phone"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {countryCode === '+20' && 'مثال: 1012345678 (مصر)'}
+                  {countryCode === '+966' && 'مثال: 512345678 (السعودية)'}
+                  {countryCode === '+971' && 'مثال: 512345678 (الإمارات)'}
+                </p>
+              </div>
+
+              {/* Grade Level */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  المرحلة التعليمية / الصف الدراسي *
                 </label>
                 <Select value={gradeLevel} onValueChange={setGradeLevel} disabled={loading}>
                   <SelectTrigger data-testid="select-grade-level">
-                    <SelectValue placeholder="اختر المرحلة التعليمية" />
+                    <SelectValue placeholder="اختر المرحلة التعليمية أو الصف الدراسي" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="kg_1">روضة أولى (KG1)</SelectItem>
