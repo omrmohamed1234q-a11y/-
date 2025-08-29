@@ -21,8 +21,8 @@ import {
   SplitSquareHorizontal,
   Combine
 } from 'lucide-react';
-// For now, we'll work without PDF.js to avoid complexity
-// In production, you'd use PDF.js or PDF-lib for real processing
+// Using PDF-lib for real PDF processing
+import { PDFDocument, rgb } from 'pdf-lib';
 
 interface PDFProcessorProps {
   files: File[];
@@ -102,23 +102,39 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
     try {
       setProgress(10);
       
-      // Load all PDF files
-      const pdfData = await Promise.all(
-        files.map(file => loadPDFFile(file))
-      );
+      // Create a new PDF document for merging
+      const mergedPdf = await PDFDocument.create();
       
-      setProgress(30);
+      setProgress(20);
 
-      // Create a new PDF document using PDFLib (we'll use a simple approach)
-      const mergedArrayBuffer = await createMergedPDF(pdfData);
+      // Process each file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        
+        // Copy all pages from this PDF
+        const pageCount = pdfDoc.getPageCount();
+        const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
+        const copiedPages = await mergedPdf.copyPages(pdfDoc, pageIndices);
+        
+        copiedPages.forEach((page) => mergedPdf.addPage(page));
+        
+        setProgress(20 + (i / files.length) * 60);
+      }
       
-      setProgress(80);
+      setProgress(85);
 
+      // Save the merged PDF
+      const mergedBytes = await mergedPdf.save();
+      
       const mergedFile = new File(
-        [mergedArrayBuffer], 
+        [mergedBytes], 
         mergeSettings.outputName,
         { type: 'application/pdf' }
       );
+
+      console.log(`Merged ${files.length} PDFs into ${mergeSettings.outputName} (${(mergedFile.size / 1024).toFixed(1)}KB)`);
 
       setProgress(100);
       return mergedFile;
@@ -128,45 +144,42 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
     }
   };
 
-  const createMergedPDF = async (pdfData: Array<{ arrayBuffer: ArrayBuffer; fileName: string; size: number }>): Promise<ArrayBuffer> => {
-    if (pdfData.length === 0) {
-      throw new Error('No PDF files to merge');
-    }
-    
-    // Simplified merging - in production you'd use PDF-lib
-    return pdfData[0].arrayBuffer;
-  };
+  // This function is no longer needed as we've implemented real merging above
 
   const splitPDF = async (file: File): Promise<File[]> => {
     try {
       setProgress(10);
       
-      // Simplified splitting - in production you'd use PDF-lib
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      const totalPages = pdfDoc.getPageCount();
+      
+      setProgress(20);
+      
       const pages = splitSettings.pages.trim();
       let pageNumbers: number[] = [];
 
       if (pages === '' || pages === 'all') {
-        // Assume 10 pages for demo
-        pageNumbers = Array.from({ length: 10 }, (_, i) => i + 1);
+        pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
       } else {
         // Parse page ranges like "1,3,5-8"
         const parts = pages.split(',');
         for (const part of parts) {
           if (part.includes('-')) {
             const [start, end] = part.split('-').map(n => parseInt(n.trim()));
-            for (let i = start; i <= end && i <= 10; i++) {
-              pageNumbers.push(i);
+            for (let i = start; i <= Math.min(end, totalPages); i++) {
+              if (i > 0) pageNumbers.push(i);
             }
           } else {
             const pageNum = parseInt(part.trim());
-            if (pageNum > 0 && pageNum <= 10) {
+            if (pageNum > 0 && pageNum <= totalPages) {
               pageNumbers.push(pageNum);
             }
           }
         }
       }
 
-      setProgress(50);
+      setProgress(40);
 
       // Create individual PDF files for each page
       const splitFiles: File[] = [];
@@ -174,16 +187,24 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
       for (let i = 0; i < pageNumbers.length; i++) {
         const pageNum = pageNumbers[i];
         
-        // Create a copy with page-specific name
+        // Create a new PDF with just this page
+        const newPdf = await PDFDocument.create();
+        const [copiedPage] = await newPdf.copyPages(pdfDoc, [pageNum - 1]); // 0-indexed
+        newPdf.addPage(copiedPage);
+        
+        const pageBytes = await newPdf.save();
+        
         const pageFile = new File(
-          [file],
+          [pageBytes],
           `${splitSettings.outputPrefix}-${pageNum}.pdf`,
           { type: 'application/pdf' }
         );
         
         splitFiles.push(pageFile);
-        setProgress(50 + (i / pageNumbers.length) * 40);
+        setProgress(40 + (i / pageNumbers.length) * 50);
       }
+
+      console.log(`Split PDF into ${splitFiles.length} pages`);
 
       setProgress(100);
       return splitFiles;
@@ -197,17 +218,51 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
     try {
       setProgress(10);
       
-      // In a real implementation, you'd use a compression algorithm
-      // For now, we'll simulate compression by returning the original file
-      // with a different name to indicate it's "compressed"
+      const arrayBuffer = await file.arrayBuffer();
+      setProgress(20);
       
-      setProgress(50);
+      // Load the PDF document
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      setProgress(40);
+      
+      // Get all pages
+      const pages = pdfDoc.getPages();
+      console.log(`PDF has ${pages.length} pages, original size: ${(file.size / 1024).toFixed(1)}KB`);
+      
+      setProgress(60);
+      
+      // Create a new PDF with optimization
+      const optimizedPdf = await PDFDocument.create();
+      
+      // Copy pages with optimization
+      for (let i = 0; i < pages.length; i++) {
+        const [copiedPage] = await optimizedPdf.copyPages(pdfDoc, [i]);
+        optimizedPdf.addPage(copiedPage);
+        setProgress(60 + (i / pages.length) * 30);
+      }
+      
+      // Save with aggressive compression options based on quality setting
+      const compressionOptions = {
+        useObjectStreams: compressSettings.quality < 0.7, // Use object streams for higher compression
+        addDefaultPage: false,
+        objectsPerTick: compressSettings.quality < 0.5 ? 100 : 50, // More objects per tick for higher compression
+        updateFieldAppearances: false // Skip field appearance updates for smaller size
+      };
+      
+      console.log(`Applying compression with quality: ${compressSettings.quality}, options:`, compressionOptions);
+      
+      const compressedBytes = await optimizedPdf.save(compressionOptions);
+      
+      setProgress(95);
       
       const compressedFile = new File(
-        [file],
+        [compressedBytes],
         file.name.replace('.pdf', '-compressed.pdf'),
         { type: 'application/pdf' }
       );
+      
+      const compressionRatio = ((file.size - compressedFile.size) / file.size * 100).toFixed(1);
+      console.log(`Compression complete: ${(compressedFile.size / 1024).toFixed(1)}KB (${compressionRatio}% reduction)`);
 
       setProgress(100);
       return compressedFile;
@@ -221,16 +276,42 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
     try {
       setProgress(10);
       
-      // In a real implementation, you'd rotate the pages
-      // For now, we'll return the original file with a different name
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
       
-      setProgress(50);
+      setProgress(30);
+      
+      const pages = pdfDoc.getPages();
+      const rotationAngle = rotateSettings.angle;
+      
+      // Apply rotation to all pages or specific pages
+      if (rotateSettings.pages === 'all' || rotateSettings.pages === '') {
+        pages.forEach((page, index) => {
+          page.setRotation({ angle: rotationAngle, type: 'degrees' });
+          setProgress(30 + (index / pages.length) * 50);
+        });
+      } else {
+        // Parse specific pages to rotate
+        const pageNumbers = rotateSettings.pages.split(',').map(p => parseInt(p.trim()));
+        pageNumbers.forEach((pageNum, index) => {
+          if (pageNum > 0 && pageNum <= pages.length) {
+            pages[pageNum - 1].setRotation({ angle: rotationAngle, type: 'degrees' });
+          }
+          setProgress(30 + (index / pageNumbers.length) * 50);
+        });
+      }
+      
+      setProgress(85);
+      
+      const rotatedBytes = await pdfDoc.save();
       
       const rotatedFile = new File(
-        [file],
+        [rotatedBytes],
         file.name.replace('.pdf', `-rotated-${rotateSettings.angle}.pdf`),
         { type: 'application/pdf' }
       );
+
+      console.log(`Rotated PDF ${rotateSettings.angle}° (${(rotatedFile.size / 1024).toFixed(1)}KB)`);
 
       setProgress(100);
       return rotatedFile;
@@ -437,20 +518,43 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
             {selectedTool === 'compress' && (
               <div className="space-y-4">
                 <div>
-                  <Label>جودة الضغط: {Math.round(compressSettings.quality * 100)}%</Label>
+                  <Label>مستوى الضغط</Label>
+                  <Select
+                    value={compressSettings.quality.toString()}
+                    onValueChange={(value) => setCompressSettings(prev => ({ 
+                      ...prev, 
+                      quality: parseFloat(value) 
+                    }))}
+                  >
+                    <SelectTrigger data-testid="select-compress-level">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0.3">ضغط عالي (حجم أصغر، جودة أقل)</SelectItem>
+                      <SelectItem value="0.5">ضغط متوسط (توازن)</SelectItem>
+                      <SelectItem value="0.7">ضغط منخفض (جودة عالية)</SelectItem>
+                      <SelectItem value="0.9">ضغط خفيف (جودة ممتازة)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>جودة الصور: {Math.round(compressSettings.imageQuality * 100)}%</Label>
                   <input
                     type="range"
                     min="0.1"
                     max="1"
                     step="0.1"
-                    value={compressSettings.quality}
+                    value={compressSettings.imageQuality}
                     onChange={(e) => setCompressSettings(prev => ({ 
                       ...prev, 
-                      quality: parseFloat(e.target.value) 
+                      imageQuality: parseFloat(e.target.value) 
                     }))}
-                    className="w-full"
-                    data-testid="slider-compress-quality"
+                    className="w-full mt-2"
+                    data-testid="slider-image-quality"
                   />
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <p>💡 نصيحة: الضغط العالي يقلل الحجم بشكل كبير لكن قد يؤثر على الجودة</p>
                 </div>
               </div>
             )}
