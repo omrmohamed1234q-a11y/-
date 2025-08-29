@@ -357,9 +357,11 @@ class MemStorage implements IStorage {
   }
 
   async getAllProducts(): Promise<Product[]> {
-    return [...this.products].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return [...this.products].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
   }
 
   async createProduct(productData: any): Promise<Product> {
@@ -387,9 +389,11 @@ class MemStorage implements IStorage {
   }
 
   async getAllOrders(): Promise<Order[]> {
-    return [...this.orders].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return [...this.orders].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
   }
 
   async createOrder(orderData: any): Promise<Order> {
@@ -418,9 +422,11 @@ class MemStorage implements IStorage {
   }
 
   async getAllPrintJobs(): Promise<PrintJob[]> {
-    return [...this.printJobs].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return [...this.printJobs].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
   }
 
   async createPrintJob(printJobData: any): Promise<PrintJob> {

@@ -66,6 +66,7 @@ function Router() {
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/store" component={AdminStore} />
         <Route path="/admin/products" component={AdminProducts} />
+        <Route path="/admin-products" component={AdminProducts} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>
@@ -89,6 +90,7 @@ function Router() {
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/store" component={AdminStore} />
         <Route path="/admin/products" component={AdminProducts} />
+        <Route path="/admin-products" component={AdminProducts} />
         <Route component={NotFound} />
       </Switch>
       <ChatBot />
