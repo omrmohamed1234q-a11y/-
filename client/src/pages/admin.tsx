@@ -247,6 +247,12 @@ export default function AdminDashboard() {
               <div className="text-sm text-gray-600">
                 مرحباً، {user.fullName || user.username || 'مدير النظام'}
               </div>
+              <Link href="/">
+                <Button variant="outline" size="sm">
+                  <Home className="w-4 h-4 mr-2" />
+                  الرئيسية
+                </Button>
+              </Link>
               <Button 
                 variant="outline" 
                 size="sm"
@@ -262,6 +268,52 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Admin Navigation */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">التنقل السريع</h2>
+              <Badge className="bg-blue-100 text-blue-800">الإدارة</Badge>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg h-20 flex flex-col items-center justify-center space-y-2">
+                <Home className="w-6 h-6 text-blue-600" />
+                <span className="text-xs text-blue-800 font-medium">الرئيسية</span>
+              </div>
+              
+              <Link href="/admin-products">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-green-50">
+                  <Package className="w-6 h-6 text-green-600" />
+                  <span className="text-xs">المنتجات</span>
+                </Button>
+              </Link>
+              
+              <Link href="/admin/store">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-green-50">
+                  <Store className="w-6 h-6 text-green-600" />
+                  <span className="text-xs">المتجر</span>
+                </Button>
+              </Link>
+              
+              <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50">
+                <Users className="w-6 h-6 text-purple-600" />
+                <span className="text-xs">المستخدمين</span>
+              </Button>
+              
+              <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-orange-50">
+                <BarChart3 className="w-6 h-6 text-orange-600" />
+                <span className="text-xs">التقارير</span>
+              </Button>
+              
+              <Link href="/cloudinary-test">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-indigo-50">
+                  <FileText className="w-6 h-6 text-indigo-600" />
+                  <span className="text-xs">اختبار Cloudinary</span>
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-6 mb-8">
             <TabsTrigger value="dashboard" className="flex items-center space-x-2 space-x-reverse">

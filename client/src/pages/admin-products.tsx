@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { ProductForm } from '@/components/ProductForm';
 import { apiRequest } from '@/lib/queryClient';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, DollarSign, Tag, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, DollarSign, Tag, Search, Home, Store, Users, BarChart3, Settings, FileText } from 'lucide-react';
 import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
+import { Link } from 'wouter';
 import type { products } from '@shared/schema';
 
 type Product = typeof products.$inferSelect;
@@ -188,13 +189,66 @@ export default function AdminProductsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4" dir="rtl">
       <div className="max-w-7xl mx-auto">
+        {/* Admin Navigation */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">لوحة التحكم الإدارية</h2>
+              <Badge className="bg-blue-100 text-blue-800">المنتجات</Badge>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <Link href="/admin">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-blue-50">
+                  <Home className="w-6 h-6 text-blue-600" />
+                  <span className="text-xs">الرئيسية</span>
+                </Button>
+              </Link>
+              
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg h-20 flex flex-col items-center justify-center space-y-2">
+                <Package className="w-6 h-6 text-blue-600" />
+                <span className="text-xs text-blue-800 font-medium">المنتجات</span>
+              </div>
+              
+              <Link href="/admin/store">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-green-50">
+                  <Store className="w-6 h-6 text-green-600" />
+                  <span className="text-xs">المتجر</span>
+                </Button>
+              </Link>
+              
+              <Link href="/admin">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50">
+                  <Users className="w-6 h-6 text-purple-600" />
+                  <span className="text-xs">المستخدمين</span>
+                </Button>
+              </Link>
+              
+              <Link href="/admin">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-orange-50">
+                  <BarChart3 className="w-6 h-6 text-orange-600" />
+                  <span className="text-xs">التقارير</span>
+                </Button>
+              </Link>
+              
+              <Link href="/cloudinary-test">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-indigo-50">
+                  <FileText className="w-6 h-6 text-indigo-600" />
+                  <span className="text-xs">اختبار Cloudinary</span>
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">إدارة المنتجات</h1>
-              <p className="text-gray-600">إضافة وتحرير وإدارة منتجات المتجر التعليمي</p>
-            </div>
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/">
+              <Button variant="outline" className="flex items-center space-x-2 space-x-reverse">
+                <Home className="w-4 h-4" />
+                <span>العودة للرئيسية</span>
+              </Button>
+            </Link>
             <Button
               onClick={handleAddNewProduct}
               className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg"
@@ -203,6 +257,10 @@ export default function AdminProductsPage() {
               <Plus className="w-5 h-5 ml-2" />
               إضافة منتج جديد
             </Button>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">إدارة المنتجات</h1>
+            <p className="text-gray-600">إضافة وتحرير وإدارة منتجات المتجر التعليمي</p>
           </div>
         </div>
 
