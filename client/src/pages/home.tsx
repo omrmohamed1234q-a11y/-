@@ -71,6 +71,17 @@ export default function Home() {
       animation: 'slideIn'
     },
     {
+      id: 'teachers',
+      title: 'معلمي صفك',
+      description: 'اكتشف المعلمين والمواد المناسبة لصفك',
+      previewText: `معلمين متخصصين لصفك الدراسي`,
+      icon: GraduationCap,
+      link: '/student/teachers',
+      gradient: 'from-green-500 via-emerald-600 to-teal-700',
+      bgColor: 'bg-green-50',
+      animation: 'slideIn'
+    },
+    {
       id: 'rewards',
       title: 'المكافآت',
       description: 'استبدل نقاطك بجوائز',
@@ -180,7 +191,7 @@ export default function Home() {
             إجراءات سريعة
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {quickActions.map((action, index) => (
               <motion.div
                 key={action.id}
