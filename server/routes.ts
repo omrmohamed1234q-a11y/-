@@ -1130,64 +1130,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cart API endpoints
-  app.get('/api/cart', async (req, res) => {
+  app.get('/api/cart', async (req: any, res) => {
     try {
-      // Mock cart data with sample items for demonstration
-      const cartData = {
-        items: [
-          {
-            id: 'cart-item-1',
-            productId: 'prod-1',
-            productName: 'كتاب الرياضيات - الصف الثالث الثانوي',
-            productImage: 'https://via.placeholder.com/80',
-            price: 150,
-            quantity: 2,
-            orderId: 'test-order-001', // This item has an active order
-            orderStatus: 'preparing',
-            variant: {
-              size: 'A4'
-            }
-          },
-          {
-            id: 'cart-item-2',
-            productId: 'prod-2',
-            productName: 'دفتر ملاحظات فاخر',
-            productImage: 'https://via.placeholder.com/80',
-            price: 45,
-            quantity: 1,
-            variant: {
-              color: 'أزرق'
-            }
-          }
-        ],
-        discount: 0,
-        shipping: 15,
-        availablePoints: 250
-      };
-      res.json(cartData);
+      const userId = req.headers['x-user-id'] || '48c03e72-d53b-4a3f-a729-c38276268315';
+      const cart = await storage.getCart(userId);
+      res.json(cart);
     } catch (error) {
       console.error('Error fetching cart:', error);
-      res.status(500).json({ message: 'Failed to fetch cart' });
+      res.json({ items: [], subtotal: 0, discount: 0, total: 0, shipping: 0, availablePoints: 0 });
     }
   });
 
-  app.get('/api/cart/suggestions', async (req, res) => {
+  app.get('/api/cart/suggestions', async (req: any, res) => {
     try {
-      // Return suggested products
-      const suggestions = [
-        {
-          id: '1',
-          name: 'دفتر ملاحظات A4',
-          price: 25,
-          image: '/placeholder.jpg'
-        },
-        {
-          id: '2',
-          name: 'أقلام جل ملونة',
-          price: 45,
-          image: '/placeholder.jpg'
-        }
-      ];
+      // Return real product suggestions from the store
+      const products = await storage.getAllProducts();
+      const suggestions = products.slice(0, 3).map(product => ({
+        id: product.id,
+        name: product.name,
+        price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
+        image: product.imageUrl || '/placeholder.jpg'
+      }));
       res.json(suggestions);
     } catch (error) {
       console.error('Error fetching suggestions:', error);

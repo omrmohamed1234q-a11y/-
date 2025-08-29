@@ -446,6 +446,7 @@ class MemStorage implements IStorage {
   private orders: Order[] = [];
   private printJobs: PrintJob[] = [];
   private cartItems: CartItem[] = [];
+  private cartItems: CartItem[] = [];
   private notifications: any[] = [
     {
       id: 'notif-1',
@@ -652,6 +653,12 @@ class MemStorage implements IStorage {
   }
 
   async addToCart(cartData: { userId: string; productId: string; quantity: number }): Promise<CartItem> {
+    // Check if product exists
+    const product = this.products.find(p => p.id === cartData.productId);
+    if (!product) {
+      throw new Error('Product not found');
+    }
+    
     const cartItem: CartItem = {
       id: Math.random().toString(36).substr(2, 9),
       ...cartData,
@@ -659,6 +666,46 @@ class MemStorage implements IStorage {
     };
     this.cartItems.push(cartItem);
     return cartItem;
+  }
+
+  async getCart(userId: string): Promise<any> {
+    const userCartItems = this.cartItems.filter(item => item.userId === userId);
+    
+    // Filter out items with non-existent products
+    const validCartItems = userCartItems.filter(item => {
+      const product = this.products.find(p => p.id === item.productId);
+      return product !== undefined;
+    });
+    
+    // Remove invalid items from storage
+    this.cartItems = this.cartItems.filter(item => 
+      item.userId !== userId || this.products.find(p => p.id === item.productId)
+    );
+    
+    const items = validCartItems.map(item => {
+      const product = this.products.find(p => p.id === item.productId);
+      return {
+        ...item,
+        product
+      };
+    });
+    
+    const subtotal = items.reduce((sum, item) => {
+      const price = typeof item.product.price === 'string' ? 
+        parseFloat(item.product.price) : item.product.price;
+      return sum + (price * item.quantity);
+    }, 0);
+    
+    return {
+      items,
+      subtotal: Math.round(subtotal * 100) / 100,
+      discount: 0,
+      total: Math.round(subtotal * 100) / 100
+    };
+  }
+
+  async clearCart(userId: string): Promise<void> {
+    this.cartItems = this.cartItems.filter(item => item.userId !== userId);
   }
 
   async getAdminStats(): Promise<any> {
