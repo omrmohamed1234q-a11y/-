@@ -69,7 +69,7 @@ function Router() {
         <Route path="/auth/signup" component={Signup} />
         <Route path="/auth/admin-signup" component={AdminSignup} />
         <Route path="/auth/callback" component={AuthCallback} />
-        <Route path="/admin" component={AdminSignup} />
+        <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/store" component={AdminStore} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin-products" component={AdminProducts} />
@@ -103,7 +103,6 @@ function Router() {
         <Route path="/admin/teachers-corner" component={TeachersCorner} />
         <Route path="/student/teachers" component={StudentTeachers} />
         <Route path="/test-signup" component={TestSignup} />
-        <Route path="/auth/admin-signup" component={AdminSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route component={NotFound} />
       </Switch>
