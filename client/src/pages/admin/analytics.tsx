@@ -80,9 +80,37 @@ export default function AdminAnalytics() {
   const [compareWith, setCompareWith] = useState<string>('previous-period');
 
   // Fetch analytics data
-  const { data: analytics, isLoading } = useQuery<AnalyticsData>({
-    queryKey: ['/api/admin/analytics', dateRange, compareWith]
+  const { data: analytics, isLoading, error } = useQuery<AnalyticsData>({
+    queryKey: ['/api/admin/analytics'],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        from: dateRange.from.toISOString(),
+        to: dateRange.to.toISOString(),
+        compare: compareWith
+      });
+      
+      const response = await fetch(`/api/admin/analytics?${params.toString()}`, {
+        headers: {
+          'x-user-role': 'admin',
+          'x-user-id': 'admin-user'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch analytics data');
+      }
+      
+      return response.json();
+    },
+    retry: 1,
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: false
   });
+
+  // Log the analytics data for debugging
+  console.log('Analytics data:', analytics);
+  console.log('Loading state:', isLoading);
+  console.log('Error state:', error);
 
   const handleExportData = (format: 'csv' | 'excel' | 'pdf') => {
     // Create download link for analytics export
@@ -118,7 +146,21 @@ export default function AdminAnalytics() {
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">جاري تحميل بيانات التحليلات...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">خطأ في تحميل بيانات التحليلات</p>
+          <p className="text-muted-foreground text-sm">{error.message}</p>
+        </div>
       </div>
     );
   }
