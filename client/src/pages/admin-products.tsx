@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { ProductForm } from '@/components/ProductForm';
 import { apiRequest } from '@/lib/queryClient';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, DollarSign, Tag, Search, Home, Store, Users, BarChart3, Settings, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, DollarSign, Tag, Search, Home, Store, Users, BarChart3, Settings, FileText, BookOpen } from 'lucide-react';
 import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
 import { Link } from 'wouter';
 import type { products } from '@shared/schema';
@@ -213,6 +213,13 @@ export default function AdminProductsPage() {
                 <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-green-50">
                   <Store className="w-6 h-6 text-green-600" />
                   <span className="text-xs">المتجر</span>
+                </Button>
+              </Link>
+              
+              <Link href="/admin/teachers-corner">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-blue-50">
+                  <BookOpen className="w-6 h-6 text-blue-600" />
+                  <span className="text-xs">ركن المعلم</span>
                 </Button>
               </Link>
               

@@ -295,6 +295,13 @@ export default function AdminDashboard() {
                 </Button>
               </Link>
               
+              <Link href="/admin/teachers-corner">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-blue-50">
+                  <BookOpen className="w-6 h-6 text-blue-600" />
+                  <span className="text-xs">ركن المعلم</span>
+                </Button>
+              </Link>
+              
               <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50">
                 <Users className="w-6 h-6 text-purple-600" />
                 <span className="text-xs">المستخدمين</span>
