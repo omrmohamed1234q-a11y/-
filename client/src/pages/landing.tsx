@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from "@/hooks/use-toast"
 
 export default function Landing() {
@@ -10,8 +11,35 @@ export default function Landing() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [countryCode, setCountryCode] = useState('+20') // Default to Egypt
+  const [age, setAge] = useState('')
+  const [gradeLevel, setGradeLevel] = useState('')
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+
+  const validatePhone = (phone: string, countryCode: string) => {
+    // Remove all non-digits
+    const digits = phone.replace(/\D/g, '');
+    
+    // Egypt phone validation
+    if (countryCode === '+20') {
+      return digits.length === 10 && digits.startsWith('1');
+    }
+    
+    // Saudi Arabia phone validation
+    if (countryCode === '+966') {
+      return digits.length === 9 && digits.startsWith('5');
+    }
+    
+    // UAE phone validation
+    if (countryCode === '+971') {
+      return digits.length === 9 && digits.startsWith('5');
+    }
+    
+    // Default validation (at least 8 digits)
+    return digits.length >= 8;
+  };
 
   const handleAuth = async () => {
     if (!email || !password || (!isLogin && !fullName)) {
@@ -21,6 +49,37 @@ export default function Landing() {
         variant: "destructive",
       })
       return
+    }
+
+    // Additional validation for signup
+    if (!isLogin) {
+      if (!phone || !age || !gradeLevel) {
+        toast({
+          title: "خطأ",
+          description: "يرجى ملء جميع الحقول المطلوبة (العمر، الهاتف، الصف الدراسي)",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!validatePhone(phone, countryCode)) {
+        toast({
+          title: "خطأ في رقم الهاتف",
+          description: `يرجى إدخال رقم هاتف صحيح للدولة المختارة (${countryCode})`,
+          variant: "destructive",
+        })
+        return
+      }
+
+      const ageNum = parseInt(age)
+      if (ageNum < 5 || ageNum > 100) {
+        toast({
+          title: "خطأ في العمر",
+          description: "يرجى إدخال عمر صحيح (من 5 إلى 100 سنة)",
+          variant: "destructive",
+        })
+        return
+      }
     }
 
     setLoading(true)
@@ -52,6 +111,10 @@ export default function Landing() {
           options: {
             data: {
               full_name: fullName,
+              phone: `${countryCode}${phone}`,
+              age: parseInt(age),
+              grade_level: gradeLevel,
+              country_code: countryCode,
             }
           }
         })
@@ -176,6 +239,97 @@ export default function Landing() {
                   disabled={loading}
                 />
               </div>
+
+              {/* Additional fields for signup */}
+              {!isLogin && (
+                <>
+                  {/* Age Field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      العمر
+                    </label>
+                    <Input
+                      type="number"
+                      placeholder="أدخل عمرك"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      className="text-right"
+                      min="5"
+                      max="100"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  {/* Phone Number with Country Code */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      رقم الهاتف
+                    </label>
+                    <div className="flex gap-2">
+                      <Select value={countryCode} onValueChange={setCountryCode} disabled={loading}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="+20">🇪🇬 مصر +20</SelectItem>
+                          <SelectItem value="+966">🇸🇦 السعودية +966</SelectItem>
+                          <SelectItem value="+971">🇦🇪 الإمارات +971</SelectItem>
+                          <SelectItem value="+965">🇰🇼 الكويت +965</SelectItem>
+                          <SelectItem value="+973">🇧🇭 البحرين +973</SelectItem>
+                          <SelectItem value="+974">🇶🇦 قطر +974</SelectItem>
+                          <SelectItem value="+968">🇴🇲 عمان +968</SelectItem>
+                          <SelectItem value="+961">🇱🇧 لبنان +961</SelectItem>
+                          <SelectItem value="+962">🇯🇴 الأردن +962</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="tel"
+                        placeholder="رقم الهاتف"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="flex-1 text-right"
+                        disabled={loading}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {countryCode === '+20' && 'مثال: 1012345678 (مصر)'}
+                      {countryCode === '+966' && 'مثال: 512345678 (السعودية)'}
+                      {countryCode === '+971' && 'مثال: 512345678 (الإمارات)'}
+                    </p>
+                  </div>
+
+                  {/* Grade Level */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      المرحلة التعليمية / الصف الدراسي
+                    </label>
+                    <Select value={gradeLevel} onValueChange={setGradeLevel} disabled={loading}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر المرحلة التعليمية أو الصف الدراسي" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kg_1">روضة أولى (KG1)</SelectItem>
+                        <SelectItem value="kg_2">روضة ثانية (KG2)</SelectItem>
+                        <SelectItem value="primary_1">الصف الأول الابتدائي</SelectItem>
+                        <SelectItem value="primary_2">الصف الثاني الابتدائي</SelectItem>
+                        <SelectItem value="primary_3">الصف الثالث الابتدائي</SelectItem>
+                        <SelectItem value="primary_4">الصف الرابع الابتدائي</SelectItem>
+                        <SelectItem value="primary_5">الصف الخامس الابتدائي</SelectItem>
+                        <SelectItem value="primary_6">الصف السادس الابتدائي</SelectItem>
+                        <SelectItem value="preparatory_1">الصف الأول الإعدادي</SelectItem>
+                        <SelectItem value="preparatory_2">الصف الثاني الإعدادي</SelectItem>
+                        <SelectItem value="preparatory_3">الصف الثالث الإعدادي</SelectItem>
+                        <SelectItem value="secondary_1">الصف الأول الثانوي</SelectItem>
+                        <SelectItem value="secondary_2">الصف الثاني الثانوي</SelectItem>
+                        <SelectItem value="secondary_3">الصف الثالث الثانوي</SelectItem>
+                        <SelectItem value="university">طالب جامعي</SelectItem>
+                        <SelectItem value="teacher">معلم/مدرس</SelectItem>
+                        <SelectItem value="parent">ولي أمر</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Login Button */}
