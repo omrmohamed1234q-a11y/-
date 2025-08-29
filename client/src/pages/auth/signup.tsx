@@ -56,7 +56,7 @@ export default function Signup() {
     if (!validatePhone(phone, countryCode)) {
       toast({
         title: "خطأ في رقم الهاتف",
-        description: "يرجى إدخال رقم هاتف صحيح",
+        description: `يرجى إدخال رقم هاتف صحيح للدولة المختارة (${countryCode})`,
         variant: "destructive",
       });
       return;
