@@ -1417,6 +1417,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notifications endpoints
+  app.get('/api/notifications', async (req: any, res) => {
+    try {
+      const userId = req.headers['x-user-id'] || '48c03e72-d53b-4a3f-a729-c38276268315';
+      const notifications = await storage.getUserNotifications(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.json([]);
+    }
+  });
+
+  app.put('/api/notifications/:id/read', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.markNotificationAsRead(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ error: 'Failed to mark notification as read' });
+    }
+  });
+
+  app.post('/api/notifications', async (req: any, res) => {
+    try {
+      const notification = await storage.createNotification(req.body);
+      res.json(notification);
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      res.status(500).json({ error: 'Failed to create notification' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
@@ -1609,3 +1642,4 @@ function generateTeacherMaterialsData(products: any[]) {
     rating: 4.2 + Math.random() * 0.6
   }));
 }
+

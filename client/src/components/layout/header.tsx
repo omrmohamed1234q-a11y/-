@@ -4,12 +4,30 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import CartDrawer from '@/components/cart/CartDrawer';
 
 export default function Header() {
   const { user } = useAuth();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  // Fetch real cart data for cart count
+  const { data: cartData } = useQuery({
+    queryKey: ['/api/cart'],
+    retry: false,
+    enabled: !!user
+  });
+
+  // Fetch real notifications
+  const { data: notifications } = useQuery({
+    queryKey: ['/api/notifications'],
+    retry: false,
+    enabled: !!user
+  });
+
+  const cartItemsCount = (cartData as any)?.items?.length || 0;
+  const unreadNotifications = (notifications as any[])?.filter((n: any) => !n.read)?.length || 0;
 
   return (
     <>
@@ -39,12 +57,14 @@ export default function Header() {
                 data-testid="button-open-cart"
               >
                 <ShoppingCart className="w-5 h-5" />
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -left-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center p-0 arabic-nums"
-                >
-                  3
-                </Badge>
+                {cartItemsCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -left-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center p-0 arabic-nums"
+                  >
+                    {cartItemsCount}
+                  </Badge>
+                )}
               </Button>
               
               <Button 
@@ -55,12 +75,14 @@ export default function Header() {
                 data-testid="button-notifications"
               >
                 <Bell className="w-5 h-5" />
-                <Badge 
-                  variant="secondary" 
-                  className="absolute -top-1 -left-1 bg-warning text-white text-xs rounded-full w-5 h-5 flex items-center justify-center p-0 arabic-nums"
-                >
-                  2
-                </Badge>
+                {unreadNotifications > 0 && (
+                  <Badge 
+                    variant="secondary" 
+                    className="absolute -top-1 -left-1 bg-warning text-white text-xs rounded-full w-5 h-5 flex items-center justify-center p-0 arabic-nums"
+                  >
+                    {unreadNotifications}
+                  </Badge>
+                )}
               </Button>
             
               <Link href="/profile">
@@ -102,14 +124,37 @@ export default function Header() {
             </button>
           </div>
           <div className="space-y-3">
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800">تم قبول طلبك رقم #12345</p>
-              <p className="text-xs text-blue-600 mt-1">منذ 5 دقائق</p>
-            </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <p className="text-sm text-green-800">تم تسليم طلبك رقم #12344</p>
-              <p className="text-xs text-green-600 mt-1">منذ ساعة واحدة</p>
-            </div>
+            {(notifications as any[]) && (notifications as any[]).length > 0 ? (
+              (notifications as any[]).map((notification: any) => (
+                <div 
+                  key={notification.id} 
+                  className={`p-3 rounded-lg ${
+                    notification.type === 'order' ? 'bg-blue-50' : 
+                    notification.type === 'delivery' ? 'bg-green-50' : 
+                    notification.type === 'print' ? 'bg-orange-50' : 'bg-gray-50'
+                  }`}
+                >
+                  <p className={`text-sm ${
+                    notification.type === 'order' ? 'text-blue-800' : 
+                    notification.type === 'delivery' ? 'text-green-800' : 
+                    notification.type === 'print' ? 'text-orange-800' : 'text-gray-800'
+                  }`}>
+                    {notification.message}
+                  </p>
+                  <p className={`text-xs mt-1 ${
+                    notification.type === 'order' ? 'text-blue-600' : 
+                    notification.type === 'delivery' ? 'text-green-600' : 
+                    notification.type === 'print' ? 'text-orange-600' : 'text-gray-600'
+                  }`}>
+                    {notification.createdAt && new Date(notification.createdAt).toLocaleString('ar-EG')}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div className="p-3 text-center text-gray-500">
+                <p className="text-sm">لا توجد إشعارات جديدة</p>
+              </div>
+            )}
           </div>
         </div>
       )}

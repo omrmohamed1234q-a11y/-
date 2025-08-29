@@ -49,6 +49,11 @@ export interface IStorage {
   createTeacher(teacher: any): Promise<any>;
   updateTeacher(id: string, updates: any): Promise<any>;
   deleteTeacher(id: string): Promise<void>;
+  
+  // Notification operations
+  createNotification(data: any): any;
+  getUserNotifications(userId: string): any[];
+  markNotificationAsRead(notificationId: string): void;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -441,6 +446,35 @@ class MemStorage implements IStorage {
   private orders: Order[] = [];
   private printJobs: PrintJob[] = [];
   private cartItems: CartItem[] = [];
+  private notifications: any[] = [
+    {
+      id: 'notif-1',
+      userId: '48c03e72-d53b-4a3f-a729-c38276268315',
+      type: 'order',
+      message: 'تم قبول طلبك رقم #ORD-001 وجاري التحضير الآن',
+      read: false,
+      createdAt: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
+      metadata: { orderId: 'ORD-001' }
+    },
+    {
+      id: 'notif-2',
+      userId: '48c03e72-d53b-4a3f-a729-c38276268315',
+      type: 'delivery',
+      message: 'السائق في الطريق إليك! متوقع الوصول خلال 15 دقيقة',
+      read: false,
+      createdAt: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+      metadata: { orderId: 'ORD-001', driverId: 'driver-123' }
+    },
+    {
+      id: 'notif-3',
+      userId: '48c03e72-d53b-4a3f-a729-c38276268315',
+      type: 'print',
+      message: 'تم الانتهاء من طباعة ملفك "كتاب الرياضيات" بجودة عالية',
+      read: true,
+      createdAt: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
+      metadata: { fileId: 'file-456' }
+    }
+  ];
 
   async getUser(id: string): Promise<User | undefined> {
     return this.users.find(u => u.id === id);
@@ -734,6 +768,31 @@ class MemStorage implements IStorage {
 
   async deleteTeacher(id: string): Promise<void> {
     console.log(`Teacher ${id} deleted`);
+  }
+
+  // Notification operations
+  createNotification(data: any): any {
+    const notification = { 
+      id: Math.random().toString(36).substr(2, 9), 
+      ...data, 
+      read: false,
+      createdAt: new Date() 
+    };
+    this.notifications.push(notification);
+    return notification;
+  }
+
+  getUserNotifications(userId: string): any[] {
+    return this.notifications
+      .filter(n => n.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  markNotificationAsRead(notificationId: string): void {
+    const notification = this.notifications.find(n => n.id === notificationId);
+    if (notification) {
+      notification.read = true;
+    }
   }
 }
 

@@ -84,7 +84,22 @@ export default function Checkout() {
       const response = await apiRequest('POST', '/api/orders', data);
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Create notification for new order
+      try {
+        await apiRequest('POST', '/api/notifications', {
+          userId: data.userId || '48c03e72-d53b-4a3f-a729-c38276268315',
+          type: 'order',
+          message: `تم إنشاء طلبك الجديد رقم #${data.orderNumber || data.id} بنجاح. سيتم معالجته خلال دقائق.`,
+          metadata: {
+            orderId: data.id,
+            orderTotal: data.totalAmount
+          }
+        });
+      } catch (error) {
+        console.error('Error creating notification:', error);
+      }
+      
       toast({
         title: 'تم إنشاء الطلب بنجاح',
         description: `رقم الطلب: ${data.orderNumber}`,
