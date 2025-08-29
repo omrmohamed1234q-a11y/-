@@ -11,6 +11,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Login from "@/pages/auth/login";
 import Signup from "@/pages/auth/signup";
+import AdminSignup from "@/pages/auth/admin-signup";
 import AuthCallback from "@/pages/auth-callback";
 import Home from "@/pages/home";
 import Print from "@/pages/print";
@@ -66,8 +67,9 @@ function Router() {
       <Switch>
         <Route path="/auth/login" component={Login} />
         <Route path="/auth/signup" component={Signup} />
+        <Route path="/auth/admin-signup" component={AdminSignup} />
         <Route path="/auth/callback" component={AuthCallback} />
-        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin" component={AdminSignup} />
         <Route path="/admin/store" component={AdminStore} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin-products" component={AdminProducts} />
@@ -101,6 +103,7 @@ function Router() {
         <Route path="/admin/teachers-corner" component={TeachersCorner} />
         <Route path="/student/teachers" component={StudentTeachers} />
         <Route path="/test-signup" component={TestSignup} />
+        <Route path="/auth/admin-signup" component={AdminSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route component={NotFound} />
       </Switch>
