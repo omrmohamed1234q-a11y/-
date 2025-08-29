@@ -147,14 +147,32 @@ export default function AdminAnalytics() {
               <SelectItem value="no-comparison">بدون مقارنة</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            onClick={() => handleExportData('excel')}
-            data-testid="button-export-excel"
-          >
-            <FileSpreadsheet className="h-4 w-4 ml-2" />
-            تصدير Excel
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => handleExportData('csv')}
+              data-testid="button-export-csv"
+            >
+              <Download className="h-4 w-4 ml-2" />
+              CSV
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleExportData('excel')}
+              data-testid="button-export-excel"
+            >
+              <FileSpreadsheet className="h-4 w-4 ml-2" />
+              Excel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleExportData('pdf')}
+              data-testid="button-export-pdf"
+            >
+              <Download className="h-4 w-4 ml-2" />
+              PDF
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -170,7 +188,7 @@ export default function AdminAnalytics() {
                 <p className="text-2xl font-bold" data-testid="text-total-orders-value">
                   {analytics?.totalOrders?.toLocaleString() || '0'}
                 </p>
-                {analytics?.orderGrowth && (
+                {analytics?.orderGrowth !== undefined && (
                   <p className={`text-sm flex items-center gap-1 ${
                     analytics.orderGrowth > 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
