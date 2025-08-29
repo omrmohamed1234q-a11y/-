@@ -590,6 +590,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Teacher management endpoints
+  app.get('/api/admin/teachers', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const teachers = await storage.getAllTeachers();
+      res.json(teachers);
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+      res.status(500).json({ message: "Failed to fetch teachers" });
+    }
+  });
+
+  app.post('/api/admin/teachers', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const newTeacher = await storage.createTeacher(req.body);
+      res.json(newTeacher);
+    } catch (error) {
+      console.error("Error creating teacher:", error);
+      res.status(500).json({ message: "Failed to create teacher" });
+    }
+  });
+
+  app.put('/api/admin/teachers/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const updatedTeacher = await storage.updateTeacher(req.params.id, req.body);
+      res.json(updatedTeacher);
+    } catch (error) {
+      console.error("Error updating teacher:", error);
+      res.status(500).json({ message: "Failed to update teacher" });
+    }
+  });
+
+  app.delete('/api/admin/teachers/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteTeacher(req.params.id);
+      res.json({ message: "Teacher deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting teacher:", error);
+      res.status(500).json({ message: "Failed to delete teacher" });
+    }
+  });
+
   // File upload for camera/document capture
   app.post('/api/upload', isAdminAuthenticated, async (req: any, res) => {
     try {

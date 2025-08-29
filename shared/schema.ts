@@ -9,6 +9,9 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   fullName: text("full_name").notNull(),
   phone: text("phone"),
+  countryCode: text("country_code").default("+20"), // Default to Egypt
+  age: integer("age"),
+  gradeLevel: text("grade_level"), // "kg_1", "kg_2", "primary_1" to "primary_6", "preparatory_1" to "preparatory_3", "secondary_1" to "secondary_3", "university", "teacher", "parent"
   role: text("role").notNull().default("customer"), // admin, customer, VIP
   bountyPoints: integer("bounty_points").default(0),
   level: integer("level").default(1),
@@ -252,6 +255,35 @@ export const teacherSubscriptions = pgTable("teacher_subscriptions", {
   studentsCount: integer("students_count").default(0),
   materialsCount: integer("materials_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Teacher profiles with additional information
+export const teacherProfiles = pgTable("teacher_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  teacherCode: text("teacher_code").notNull().unique(), // Unique teacher identifier
+  specialization: text("specialization").notNull(), // Subject specialization
+  school: text("school"), // School name
+  educationLevel: text("education_level"), // "bachelor", "master", "phd"
+  university: text("university"), // University graduated from
+  graduationYear: integer("graduation_year"),
+  yearsOfExperience: integer("years_of_experience").default(0),
+  gradesTaught: text("grades_taught").array(), // Array of grade levels taught
+  subjectsSpecialty: text("subjects_specialty").array(), // Specialized subjects
+  certifications: text("certifications").array(), // Teaching certifications
+  bio: text("bio"), // Teacher biography
+  profileImageUrl: text("profile_image_url"),
+  isVerified: boolean("is_verified").default(false), // School verification
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
+  ratingCount: integer("rating_count").default(0),
+  studentsCount: integer("students_count").default(0),
+  materialsCount: integer("materials_count").default(0),
+  totalDownloads: integer("total_downloads").default(0),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  lastActiveAt: timestamp("last_active_at").defaultNow(),
+  status: text("status").default("active"), // "active", "inactive", "suspended"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Teacher materials

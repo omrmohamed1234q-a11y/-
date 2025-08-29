@@ -37,6 +37,12 @@ export interface IStorage {
   // Teacher plan operations  
   getAllTeacherPlans(): Promise<any[]>;
   getAllTeacherSubscriptions(): Promise<any[]>;
+  
+  // Teacher operations
+  getAllTeachers(): Promise<any[]>;
+  createTeacher(teacher: any): Promise<any>;
+  updateTeacher(id: string, updates: any): Promise<any>;
+  deleteTeacher(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -272,6 +278,102 @@ export class DatabaseStorage implements IStorage {
       }
     ];
   }
+
+  async getAllTeachers(): Promise<any[]> {
+    // Return sample teachers data for now
+    return [
+      {
+        id: "1",
+        fullName: "أحمد محمد علي",
+        email: "ahmed.ali@school.edu.eg", 
+        phone: "1012345678",
+        countryCode: "+20",
+        specialization: "math",
+        school: "مدرسة النصر الابتدائية",
+        educationLevel: "bachelor",
+        university: "جامعة القاهرة",
+        graduationYear: 2015,
+        yearsOfExperience: 8,
+        gradesTaught: ["primary_1", "primary_2", "primary_3"],
+        subjectsSpecialty: ["math", "science"],
+        bio: "معلم رياضيات متميز مع خبرة 8 سنوات في التدريس",
+        isVerified: true,
+        rating: 4.8,
+        ratingCount: 45,
+        studentsCount: 120,
+        materialsCount: 25,
+        status: "active"
+      },
+      {
+        id: "2", 
+        fullName: "فاطمة حسن محمود",
+        email: "fatma.hassan@school.edu.eg",
+        phone: "1098765432",
+        countryCode: "+20",
+        specialization: "arabic",
+        school: "مدرسة الأمل الإعدادية", 
+        educationLevel: "master",
+        university: "جامعة الأزهر",
+        graduationYear: 2012,
+        yearsOfExperience: 12,
+        gradesTaught: ["preparatory_1", "preparatory_2", "preparatory_3"],
+        subjectsSpecialty: ["arabic", "islamic"],
+        bio: "معلمة لغة عربية حاصلة على ماجستير في الأدب العربي",
+        isVerified: true,
+        rating: 4.9,
+        ratingCount: 67,
+        studentsCount: 180,
+        materialsCount: 42,
+        status: "active"
+      },
+      {
+        id: "3",
+        fullName: "محمد سمير إبراهيم", 
+        email: "mohamed.samir@school.edu.eg",
+        phone: "1123456789",
+        countryCode: "+20",
+        specialization: "english",
+        school: "مدرسة المستقبل الثانوية",
+        educationLevel: "bachelor",
+        university: "جامعة عين شمس",
+        graduationYear: 2018,
+        yearsOfExperience: 5,
+        gradesTaught: ["secondary_1", "secondary_2", "secondary_3"],
+        subjectsSpecialty: ["english"],
+        bio: "معلم لغة إنجليزية شاب ومتحمس للتعليم التفاعلي",
+        isVerified: false,
+        rating: 4.5,
+        ratingCount: 28,
+        studentsCount: 85,
+        materialsCount: 18,
+        status: "active"
+      }
+    ];
+  }
+
+  async createTeacher(teacherData: any): Promise<any> {
+    // Would normally insert into teacherProfiles table
+    const newTeacher = {
+      id: Date.now().toString(),
+      ...teacherData,
+      rating: 0,
+      ratingCount: 0,
+      studentsCount: 0,
+      materialsCount: 0,
+      createdAt: new Date()
+    };
+    return newTeacher;
+  }
+
+  async updateTeacher(id: string, updates: any): Promise<any> {
+    // Would normally update teacherProfiles table
+    return { id, ...updates };
+  }
+
+  async deleteTeacher(id: string): Promise<void> {
+    // Would normally delete from teacherProfiles table
+    console.log(`Teacher ${id} deleted`);
+  }
 }
 
 // In-memory storage to bypass database connection issues
@@ -495,6 +597,76 @@ class MemStorage implements IStorage {
         endDate: '2024-12-31'
       }
     ];
+  }
+
+  async getAllTeachers(): Promise<any[]> {
+    return [
+      {
+        id: "1",
+        fullName: "أحمد محمد علي",
+        email: "ahmed.ali@school.edu.eg", 
+        phone: "1012345678",
+        countryCode: "+20",
+        specialization: "math",
+        school: "مدرسة النصر الابتدائية",
+        educationLevel: "bachelor",
+        university: "جامعة القاهرة",
+        graduationYear: 2015,
+        yearsOfExperience: 8,
+        gradesTaught: ["primary_1", "primary_2", "primary_3"],
+        subjectsSpecialty: ["math", "science"],
+        bio: "معلم رياضيات متميز مع خبرة 8 سنوات في التدريس",
+        isVerified: true,
+        rating: 4.8,
+        ratingCount: 45,
+        studentsCount: 120,
+        materialsCount: 25,
+        status: "active"
+      },
+      {
+        id: "2", 
+        fullName: "فاطمة حسن محمود",
+        email: "fatma.hassan@school.edu.eg",
+        phone: "1098765432",
+        countryCode: "+20",
+        specialization: "arabic",
+        school: "مدرسة الأمل الإعدادية", 
+        educationLevel: "master",
+        university: "جامعة الأزهر",
+        graduationYear: 2012,
+        yearsOfExperience: 12,
+        gradesTaught: ["preparatory_1", "preparatory_2", "preparatory_3"],
+        subjectsSpecialty: ["arabic", "islamic"],
+        bio: "معلمة لغة عربية حاصلة على ماجستير في الأدب العربي",
+        isVerified: true,
+        rating: 4.9,
+        ratingCount: 67,
+        studentsCount: 180,
+        materialsCount: 42,
+        status: "active"
+      }
+    ];
+  }
+
+  async createTeacher(teacherData: any): Promise<any> {
+    const newTeacher = {
+      id: Date.now().toString(),
+      ...teacherData,
+      rating: 0,
+      ratingCount: 0,
+      studentsCount: 0,
+      materialsCount: 0,
+      createdAt: new Date()
+    };
+    return newTeacher;
+  }
+
+  async updateTeacher(id: string, updates: any): Promise<any> {
+    return { id, ...updates };
+  }
+
+  async deleteTeacher(id: string): Promise<void> {
+    console.log(`Teacher ${id} deleted`);
   }
 }
 
