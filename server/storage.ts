@@ -10,6 +10,8 @@ export interface IStorage {
   createUser(user: any): Promise<User>;
   updateUser(id: string, updates: any): Promise<User>;
   upsertUser(user: any): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  deleteUser(id: string): Promise<boolean>;
   
   // Product operations
   getAllProducts(): Promise<Product[]>;
@@ -19,8 +21,12 @@ export interface IStorage {
   
   // Order operations
   getAllOrders(): Promise<Order[]>;
+  getOrder(id: string): Promise<Order | undefined>;
   createOrder(order: any): Promise<Order>;
   updateOrderStatus(id: string, status: string): Promise<Order>;
+  updateOrderRating(id: string, rating: number, review?: string): Promise<Order>;
+  cancelOrder(id: string): Promise<Order>;
+  addDriverNote(id: string, note: string): Promise<Order>;
   getActiveOrders(): Promise<Order[]>;
   
   // Print Job operations
@@ -87,6 +93,23 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    try {
+      // First delete any related data like cart items, orders, etc.
+      await db.delete(cartItems).where(eq(cartItems.userId, id));
+      // Then delete the user
+      const result = await db.delete(users).where(eq(users.id, id));
+      return (result as any).rowCount > 0;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
   }
 
   // Product operations
@@ -450,6 +473,19 @@ class MemStorage implements IStorage {
     throw new Error('User not found');
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return [...this.users];
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const index = this.users.findIndex(u => u.id === id);
+    if (index === -1) {
+      return false;
+    }
+    this.users.splice(index, 1);
+    return true;
+  }
+
   async upsertUser(userData: any): Promise<User> {
     const existing = await this.getUserByEmail(userData.email);
     if (existing) {
@@ -508,10 +544,41 @@ class MemStorage implements IStorage {
     return order;
   }
 
+  async getOrder(id: string): Promise<Order | undefined> {
+    return this.orders.find(o => o.id === id);
+  }
+
   async updateOrderStatus(id: string, status: string): Promise<Order> {
     const index = this.orders.findIndex(o => o.id === id);
     if (index !== -1) {
       this.orders[index].status = status;
+      return this.orders[index];
+    }
+    throw new Error('Order not found');
+  }
+
+  async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> {
+    const index = this.orders.findIndex(o => o.id === id);
+    if (index !== -1) {
+      this.orders[index] = { ...this.orders[index], rating, review };
+      return this.orders[index];
+    }
+    throw new Error('Order not found');
+  }
+
+  async cancelOrder(id: string): Promise<Order> {
+    const index = this.orders.findIndex(o => o.id === id);
+    if (index !== -1) {
+      this.orders[index].status = 'cancelled';
+      return this.orders[index];
+    }
+    throw new Error('Order not found');
+  }
+
+  async addDriverNote(id: string, note: string): Promise<Order> {
+    const index = this.orders.findIndex(o => o.id === id);
+    if (index !== -1) {
+      this.orders[index] = { ...this.orders[index], driverNotes: note };
       return this.orders[index];
     }
     throw new Error('Order not found');

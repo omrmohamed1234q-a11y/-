@@ -302,10 +302,12 @@ export default function AdminDashboard() {
                 </Button>
               </Link>
               
-              <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50">
-                <Users className="w-6 h-6 text-purple-600" />
-                <span className="text-xs">المستخدمين</span>
-              </Button>
+              <Link href="/admin/users">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50">
+                  <Users className="w-6 h-6 text-purple-600" />
+                  <span className="text-xs">المستخدمين</span>
+                </Button>
+              </Link>
               
               <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-orange-50">
                 <BarChart3 className="w-6 h-6 text-orange-600" />

@@ -631,6 +631,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin users endpoints
+  app.get('/api/admin/users', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Enrich user data with additional statistics
+      const enrichedUsers = users.map((user: any) => ({
+        ...user,
+        totalOrders: Math.floor(Math.random() * 20), // Mock data for now
+        totalSpent: Math.floor(Math.random() * 5000), // Mock data for now
+        bountyPoints: Math.floor(Math.random() * 1000), // Mock data for now
+        accountLevel: Math.floor(Math.random() * 5) + 1, // Mock data for now
+        status: (user as any).status || 'active',
+        lastLoginAt: new Date().toISOString(),
+        orders: [] // Mock empty orders for now
+      }));
+      res.json(enrichedUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  });
+
+  app.get('/api/admin/users/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Enrich with additional data
+      const enrichedUser = {
+        ...user,
+        totalOrders: Math.floor(Math.random() * 20),
+        totalSpent: Math.floor(Math.random() * 5000),
+        bountyPoints: Math.floor(Math.random() * 1000),
+        accountLevel: Math.floor(Math.random() * 5) + 1,
+        status: (user as any).status || 'active',
+        lastLoginAt: new Date().toISOString(),
+        orders: [
+          {
+            id: 'ORD-001',
+            total: 150.50,
+            status: 'delivered',
+            createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+          },
+          {
+            id: 'ORD-002',
+            total: 75.25,
+            status: 'processing',
+            createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+          }
+        ]
+      };
+      
+      res.json(enrichedUser);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ error: 'Failed to fetch user' });
+    }
+  });
+
+  app.put('/api/admin/users/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const updates = req.body;
+      
+      const existingUser = await storage.getUser(userId);
+      if (!existingUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const updatedUser = await storage.updateUser(userId, updates);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ error: 'Failed to update user' });
+    }
+  });
+
+  app.delete('/api/admin/users/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const deleted = await storage.deleteUser(userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      res.json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ error: 'Failed to delete user' });
+    }
+  });
+
   // File upload for camera/document capture
   app.post('/api/upload', isAdminAuthenticated, async (req: any, res) => {
     try {

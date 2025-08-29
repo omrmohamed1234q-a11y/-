@@ -223,7 +223,7 @@ export default function AdminProductsPage() {
                 </Button>
               </Link>
               
-              <Link href="/admin">
+              <Link href="/admin/users">
                 <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50">
                   <Users className="w-6 h-6 text-purple-600" />
                   <span className="text-xs">المستخدمين</span>
