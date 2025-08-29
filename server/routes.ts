@@ -43,6 +43,7 @@ const isAdminAuthenticated = (req: any, res: any, next: any) => {
 };
 import { insertProductSchema, insertOrderSchema, insertPrintJobSchema } from "@shared/schema";
 import { z } from "zod";
+import ServerPDFCompression from "./pdf-compression-service";
 
 // Google Pay configuration
 const GOOGLE_PAY_MERCHANT_ID = process.env.GOOGLE_PAY_MERCHANT_ID || 'merchant.com.atbaalee';
