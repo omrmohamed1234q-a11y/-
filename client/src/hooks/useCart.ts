@@ -50,7 +50,7 @@ export function useCart() {
         quantity,
         variant,
       });
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -73,7 +73,7 @@ export function useCart() {
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ itemId, quantity }: { itemId: string; quantity: number }) => {
       const response = await apiRequest('PUT', `/api/cart/items/${itemId}`, { quantity });
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -92,7 +92,7 @@ export function useCart() {
   const removeItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
       const response = await apiRequest('DELETE', `/api/cart/items/${itemId}`);
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -115,7 +115,7 @@ export function useCart() {
   const clearCartMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('DELETE', '/api/cart/clear');
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -144,7 +144,7 @@ export function useCart() {
       usePoints?: boolean;
     }) => {
       const response = await apiRequest('POST', '/api/checkout', checkoutData);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });

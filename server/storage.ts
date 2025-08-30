@@ -1480,11 +1480,16 @@ class MemStorage implements IStorage {
   }
 
   async addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<any> {
+    console.log(`🛒 Adding to cart: userId=${userId}, productId=${productId}, quantity=${quantity}`);
+    
     // Check if product exists
     const product = this.products.find(p => p.id === productId);
     if (!product) {
+      console.error(`❌ Product not found: ${productId}`);
       throw new Error('Product not found');
     }
+
+    console.log(`✅ Found product: ${product.name}`);
 
     // Check if item already exists in cart
     const existingItemIndex = this.cartItems.findIndex(item => 
@@ -1494,6 +1499,7 @@ class MemStorage implements IStorage {
     if (existingItemIndex !== -1) {
       // Update existing item
       this.cartItems[existingItemIndex].quantity += quantity;
+      console.log(`📝 Updated existing cart item: ${this.cartItems[existingItemIndex].id}, new quantity: ${this.cartItems[existingItemIndex].quantity}`);
       return this.cartItems[existingItemIndex];
     } else {
       // Add new item
@@ -1508,13 +1514,16 @@ class MemStorage implements IStorage {
         updatedAt: new Date(),
       };
       this.cartItems.push(cartItem);
+      console.log(`➕ Added new cart item: ${cartItem.id}, total cart items: ${this.cartItems.length}`);
       return cartItem;
     }
   }
 
   async getCart(userId: string): Promise<any> {
     try {
+      console.log(`🛒 Getting cart for user: ${userId}`);
       const userCartItems = this.cartItems.filter(item => item.userId === userId);
+      console.log(`📦 Found ${userCartItems.length} cart items for user ${userId}`);
       
       const items = userCartItems.map(item => {
         const product = this.products.find(p => p.id === item.productId);
@@ -1536,12 +1545,15 @@ class MemStorage implements IStorage {
       const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
       const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
 
-      return {
+      const cart = {
         items,
         totalQuantity,
         subtotal,
         currency: 'جنيه',
       };
+      
+      console.log(`🛒 Cart response:`, cart);
+      return cart;
     } catch (error) {
       console.error('Error fetching cart:', error);
       return { items: [], totalQuantity: 0, subtotal: 0, currency: 'جنيه' };
