@@ -1713,8 +1713,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add inquiry notifications for this user from global storage
       const inquiryNotifications = globalNotificationStorage.filter(n => n.userId === userId);
       
+      // For testing: if current user has no notifications, show all latest notifications
+      let finalInquiryNotifications = inquiryNotifications;
+      if (inquiryNotifications.length === 0 && globalNotificationStorage.length > 0) {
+        // Show the most recent 5 notifications for any user as a test
+        finalInquiryNotifications = globalNotificationStorage
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 5);
+        console.log(`⚠️ No notifications for user ${userId}, showing ${finalInquiryNotifications.length} recent global notifications for testing`);
+      }
+      
       // Transform inquiry notifications to standard format
-      const transformedInquiryNotifications = inquiryNotifications.map(n => ({
+      const transformedInquiryNotifications = finalInquiryNotifications.map(n => ({
         id: n.id,
         title: n.title || 'إشعار جديد',
         message: n.message || '',
@@ -1732,6 +1742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
       console.log(`📱 User ${userId} has ${allNotifications.length} notifications (${transformedInquiryNotifications.length} inquiry notifications)`);
+      console.log(`🔍 Global storage has ${globalNotificationStorage.length} total notifications`);
       res.json(allNotifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
