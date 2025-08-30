@@ -19,6 +19,7 @@ import Store from "@/pages/store";
 import Rewards from "@/pages/rewards";
 import Profile from "@/pages/profile";
 import Payment from "@/pages/payment";
+import Scan from "@/pages/scan";
 import AdminDashboard from "@/pages/admin/dashboard-new";
 import AdminProducts from "@/pages/admin-products";
 import AdminStore from "@/pages/admin/store";
@@ -97,6 +98,7 @@ function Router() {
         <Route path="/home" component={Home} />
         <Route path="/auth/callback" component={AuthCallback} />
         <Route path="/print" component={Print} />
+        <Route path="/scan" component={Scan} />
         <Route path="/store" component={Store} />
         <Route path="/rewards" component={Rewards} />
         <Route path="/profile" component={Profile} />

@@ -69,6 +69,17 @@ export default function Home() {
       animation: 'pulse'
     },
     {
+      id: 'scan',
+      title: 'المسح الضوئي',
+      description: 'امسح مستنداتك بجودة عالية',
+      previewText: 'ملون، رمادي، أبيض وأسود - مثل CamScanner',
+      icon: Camera,
+      link: '/scan',
+      gradient: 'from-indigo-500 via-purple-600 to-pink-700',
+      bgColor: 'bg-indigo-50',
+      animation: 'bounce'
+    },
+    {
       id: 'store',
       title: 'المتجر الرقمي',
       description: 'تسوق المنتجات التعليمية',
