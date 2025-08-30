@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
-import { apiRequest } from '@/lib/queryClient';
+import { useCart } from '@/hooks/useCart';
 import Header from '@/components/layout/header';
 import BottomNav from '@/components/layout/bottom-nav';
+import ProductCard from '@/components/ProductCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -71,7 +72,7 @@ const categories = [
 export default function Store() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { addToCart, isAddingToCart } = useCart();
   
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -159,55 +160,8 @@ export default function Store() {
     return filtered;
   }, [allProducts, searchQuery, selectedCategory, priceRange, sortBy]);
 
-  // Add to cart mutation
-  const addToCartMutation = useMutation({
-    mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
-      // Use our Express API instead of Supabase direct access
-      const response = await apiRequest('POST', '/api/cart/add', {
-        productId,
-        quantity
-      });
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cart'] });
-      toast({
-        title: 'تمت الإضافة بنجاح',
-        description: 'تم إضافة المنتج إلى السلة',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'خطأ في الإضافة',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
   const handleCategoryFilter = (category: string) => {
     setSelectedCategory(selectedCategory === category ? '' : category);
-  };
-
-  const handleAddToCart = (productId: string) => {
-    addToCartMutation.mutate({ productId });
-  };
-
-  const renderStars = (rating: number) => {
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-    
-    return (
-      <div className="flex text-yellow-400 text-xs">
-        {[...Array(fullStars)].map((_, i) => (
-          <i key={i} className="fas fa-star"></i>
-        ))}
-        {hasHalfStar && <i className="fas fa-star-half-alt"></i>}
-        {[...Array(5 - Math.ceil(rating))].map((_, i) => (
-          <i key={i} className="far fa-star"></i>
-        ))}
-      </div>
-    );
   };
 
   const formatPrice = (price: string) => {
@@ -341,83 +295,24 @@ export default function Store() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map((product: Product) => (
-              <Card key={product.id} className="overflow-hidden hover-lift border">
-                <img
-                  src={product.imageUrl || 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250'}
-                  alt={product.name}
-                  className="w-full h-40 object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = `https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250`;
-                  }}
-                />
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2 space-x-reverse">
-                      {product.featured && (
-                        <Badge className="bg-accent text-white">مميز</Badge>
-                      )}
-                      {product.isDigital && (
-                        <Badge className="bg-purple-100 text-purple-600">رقمي</Badge>
-                      )}
-                      {(product.availableCopies || 0) === 0 && (
-                        <Badge variant="destructive">نفدت الكمية</Badge>
-                      )}
-                    </div>
-                    {product.rating && renderStars(parseFloat(product.rating))}
-                  </div>
-                  
-                  <h3 className="font-bold text-sm mb-1 line-clamp-2">{product.name}</h3>
-                  <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-                    {product.description}
-                  </p>
-                  
-                  {product.grade && (
-                    <div className="flex items-center text-xs text-muted-foreground mb-2">
-                      <i className="fas fa-graduation-cap ml-1"></i>
-                      <span>{product.grade}</span>
-                      {product.subject && <span> • {product.subject}</span>}
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 space-x-reverse">
-                      <span className="text-lg font-bold text-accent arabic-nums">
-                        {formatPrice(product.price)} جنيه
-                      </span>
-                      {product.originalPrice && (
-                        <span className="text-sm text-muted-foreground line-through arabic-nums">
-                          {formatPrice(product.originalPrice)} جنيه
-                        </span>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      className="bg-accent hover:bg-accent/90 text-white"
-                      onClick={() => handleAddToCart(product.id)}
-                      disabled={(product.availableCopies || 0) === 0 || addToCartMutation.isPending}
-                    >
-                      {product.isDigital ? (
-                        <>
-                          <i className="fas fa-download ml-1"></i>
-                          تحميل فوري
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-cart-plus ml-1"></i>
-                          أضف للسلة
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                    <span className="arabic-nums">{product.ratingCount || 0} تقييم</span>
-                    {!product.isDigital && (product.availableCopies || 0) > 0 && (
-                      <span className="text-green-600">متوفر</span>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <ProductCard
+                key={product.id}
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  description: product.description,
+                  price: product.price,
+                  originalPrice: product.originalPrice || undefined,
+                  imageUrl: product.imageUrl || undefined,
+                  category: product.category,
+                  rating: product.rating,
+                  ratingCount: product.ratingCount,
+                  featured: product.featured,
+                  gradeLevel: product.grade || undefined,
+                  subject: product.subject || undefined,
+                  stock: product.availableCopies,
+                }}
+              />
             ))}
           </div>
         )}
