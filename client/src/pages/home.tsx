@@ -16,7 +16,8 @@ import {
   TrendingUp, Clock, Star, Search, GraduationCap,
   Lock, Play, ShoppingBag, Coins, UserCircle,
   Package, Truck, CheckCircle, ArrowRight,
-  Users, PenTool, Monitor
+  Users, PenTool, Monitor, Settings, Download,
+  Upload, Sparkles, Layers, Target
 } from 'lucide-react';
 
 export default function Home() {
@@ -24,6 +25,7 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [currentFeature, setCurrentFeature] = useState(0);
+  const [printerAnimation, setPrinterAnimation] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -37,6 +39,13 @@ export default function Home() {
       setCurrentFeature((prev) => (prev + 1) % features.length);
     }, 4000);
     return () => clearTimeout(featureTimer);
+  }, []);
+
+  useEffect(() => {
+    const printerTimer = setInterval(() => {
+      setPrinterAnimation((prev) => (prev + 1) % 4);
+    }, 1000);
+    return () => clearInterval(printerTimer);
   }, []);
 
   const greeting = () => {

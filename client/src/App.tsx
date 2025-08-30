@@ -13,7 +13,7 @@ import Login from "@/pages/auth/login";
 import Signup from "@/pages/auth/signup";
 import AdminSignup from "@/pages/auth/admin-signup";
 import AuthCallback from "@/pages/auth-callback";
-import Home from "@/pages/home";
+import Home from "@/pages/home-new";
 import Print from "@/pages/print";
 import Store from "@/pages/store";
 import Rewards from "@/pages/rewards";
