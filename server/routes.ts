@@ -1443,18 +1443,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
       }
 
-      // Create notifications for each target user
-      const notifications = targetUsers.map(user => ({
-        id: `notif_${Date.now()}_${user.id}`,
-        userId: user.id,
-        title: `استعلام جديد: ${inquiry.title}`,
-        message: inquiry.message,
-        type: 'inquiry',
-        inquiryId: inquiry.id,
-        isRead: false,
-        isClicked: false,
-        createdAt: new Date()
-      }));
+      // Always add current authenticated user to receive the inquiry notification
+      const currentUserId = '3e3882cc-81fa-48c9-bc69-c290128f4ff2';
+      
+      // Create notifications for target users + current user
+      const notifications = [
+        // Add notification for current authenticated user
+        {
+          id: `notif_${Date.now()}_current_user`,
+          userId: currentUserId,
+          title: `استعلام جديد: ${inquiry.title}`,
+          message: inquiry.message,
+          type: 'inquiry',
+          inquiryId: inquiry.id,
+          isRead: false,
+          isClicked: false,
+          createdAt: new Date()
+        },
+        // Add notifications for other target users
+        ...targetUsers.map(user => ({
+          id: `notif_${Date.now()}_${user.id}`,
+          userId: user.id,
+          title: `استعلام جديد: ${inquiry.title}`,
+          message: inquiry.message,
+          type: 'inquiry',
+          inquiryId: inquiry.id,
+          isRead: false,
+          isClicked: false,
+          createdAt: new Date()
+        }))
+      ];
 
       if (notifications.length > 0) {
         // Store in global storage for immediate access
@@ -1467,8 +1485,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.warn('Could not store in regular storage, using global only');
         }
         
-        console.log(`💾 Stored ${notifications.length} inquiry notifications in MemStorage`);
-        console.log(`📧 Created ${notifications.length} notifications for inquiry ${inquiry.id}`);
+        console.log(`💾 Stored ${notifications.length} inquiry notifications (including current user)`);
+        console.log(`📧 Created inquiry notification for current user + ${targetUsers.length} target users`);
       }
 
       res.json({
@@ -1712,15 +1730,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get regular notifications from storage
       let notifications = storage.getUserNotifications(userId);
       
-      // For authenticated users, show all inquiry notifications regardless of target
-      // This simulates that the authenticated user is an admin or receives all inquiries
-      let finalInquiryNotifications = [];
+      // Show only notifications specifically for this user
+      const userSpecificNotifications = globalNotificationStorage.filter(n => n.userId === userId);
       
-      if (globalNotificationStorage.length > 0) {
-        // Show all inquiry notifications sorted by date for authenticated users
-        finalInquiryNotifications = globalNotificationStorage
+      let finalInquiryNotifications = userSpecificNotifications;
+      
+      if (userSpecificNotifications.length > 0) {
+        finalInquiryNotifications = userSpecificNotifications
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        console.log(`📧 Showing ${finalInquiryNotifications.length} inquiry notifications for user ${userId}`);
+        console.log(`📧 User ${userId} has ${finalInquiryNotifications.length} specific inquiry notifications`);
+      } else {
+        console.log(`📭 No specific notifications found for user ${userId}`);
       }
       
       // Transform inquiry notifications to standard format
