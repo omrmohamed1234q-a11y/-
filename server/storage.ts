@@ -799,9 +799,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async authenticateDriver(email: string, password: string): Promise<any> {
+  async authenticateDriver(identifier: string, password: string): Promise<any> {
     try {
-      const driver = await this.getDriverByEmail(email);
+      // Try to find driver by email first, then by username
+      let driver = await this.getDriverByEmail(identifier);
+      if (!driver) {
+        driver = await this.getDriverByUsername(identifier);
+      }
+      
       if (!driver) {
         return null;
       }
@@ -1956,8 +1961,11 @@ class MemStorage implements IStorage {
     throw new Error('Driver not found');
   }
 
-  async authenticateDriver(email: string, password: string): Promise<any> {
-    const driver = this.drivers.find(d => d.email === email && d.password === password);
+  async authenticateDriver(identifier: string, password: string): Promise<any> {
+    // Try to find driver by email or username
+    const driver = this.drivers.find(d => 
+      (d.email === identifier || d.username === identifier) && d.password === password
+    );
     if (driver) {
       // Update last active time
       await this.updateDriver(driver.id, { lastActiveAt: new Date() });

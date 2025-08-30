@@ -12,7 +12,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 
 const driverLoginSchema = z.object({
-  email: z.string().email('البريد الإلكتروني غير صحيح'),
+  username: z.string().min(3, 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل'),
   password: z.string().min(6, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
 });
 
@@ -26,7 +26,7 @@ export default function DriverLogin() {
   const form = useForm<DriverLoginForm>({
     resolver: zodResolver(driverLoginSchema),
     defaultValues: {
-      email: '',
+      username: '',
       password: '',
     },
   });
@@ -50,7 +50,7 @@ export default function DriverLogin() {
       } else {
         toast({
           title: 'خطأ في تسجيل الدخول',
-          description: result.message || 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
+          description: result.message || 'اسم المستخدم أو كلمة المرور غير صحيحة',
           variant: 'destructive',
         });
       }
@@ -85,19 +85,19 @@ export default function DriverLogin() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>البريد الإلكتروني</FormLabel>
+                    <FormLabel>اسم المستخدم</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <User className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <Input
                           {...field}
-                          type="email"
-                          placeholder="driver@example.com"
+                          type="text"
+                          placeholder="Ahmed12"
                           className="pr-10"
-                          data-testid="input-email"
+                          data-testid="input-username"
                         />
                       </div>
                     </FormControl>

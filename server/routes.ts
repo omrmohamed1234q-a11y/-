@@ -2322,23 +2322,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Driver login - Real implementation with Supabase
   app.post('/api/driver/login', async (req, res) => {
     try {
-      const { email, password } = req.body;
-      console.log(`🚚 Driver login attempt: ${email}`);
+      const { email, password, username } = req.body;
+      const loginIdentifier = username || email; // Support both username and email
+      console.log(`🚚 Driver login attempt: ${loginIdentifier}`);
 
-      if (!email || !password) {
+      if (!loginIdentifier || !password) {
         return res.status(400).json({
           success: false,
-          message: 'البريد الإلكتروني وكلمة المرور مطلوبان'
+          message: 'اسم المستخدم (أو البريد الإلكتروني) وكلمة المرور مطلوبان'
         });
       }
 
-      // Authenticate driver with real database
-      const driver = await storage.authenticateDriver(email, password);
+      // Authenticate driver with username or email
+      const driver = await storage.authenticateDriver(loginIdentifier, password);
       
       if (!driver) {
         return res.status(401).json({
           success: false,
-          message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+          message: 'اسم المستخدم أو كلمة المرور غير صحيحة'
         });
       }
 
