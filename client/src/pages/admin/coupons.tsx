@@ -1,6 +1,7 @@
 import React, { useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Eye, Copy, Calendar, Percent, Tag, Users, Target, Bell, GraduationCap, MapPin, BarChart3, Send } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, Copy, Calendar, Percent, Tag, Users, Target, Bell, GraduationCap, MapPin, BarChart3, Send, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -143,11 +144,19 @@ export default function AdminCoupons() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">🎫 إدارة القسائم</h1>
-          <p className="text-gray-600 mt-2">إدارة قسائم الخصم والأكواد الترويجية</p>
+        <div className="flex items-center gap-4">
+          <Link to="/admin">
+            <Button variant="outline" size="sm" className="flex items-center gap-2" data-testid="button-back-admin">
+              <ArrowLeft className="w-4 h-4" />
+              العودة للوحة التحكم
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">🎫 إدارة القسائم</h1>
+            <p className="text-gray-600 mt-2">إدارة قسائم الخصم والأكواد الترويجية</p>
+          </div>
         </div>
         <Button 
           onClick={() => setIsFormOpen(true)}

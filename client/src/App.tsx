@@ -30,6 +30,7 @@ import StudentTeachers from "@/pages/student/teachers";
 import AdminUsers from "@/pages/admin/users";
 import AdminCoupons from "@/pages/admin/coupons";
 import AdminInquiries from "@/pages/admin/inquiries";
+import AdminAnalytics from "@/pages/admin/analytics";
 import OrdersManagement from "@/pages/admin/orders-management";
 import TestSignup from "@/pages/test-signup";
 import Checkout from "@/pages/checkout";
@@ -130,6 +131,7 @@ function Router() {
         <Route path="/driver/login" component={DriverLogin} />
         <Route path="/driver/dashboard" component={DriverDashboard} />
         <Route path="/student/teachers" component={StudentTeachers} />
+        <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route path="/quick-access" component={QuickAccess} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />

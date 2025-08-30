@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Search, UserPlus, Edit, Trash2, Users, Crown, GraduationCap } from "lucide-react";
+import { Search, UserPlus, Edit, Trash2, Users, Crown, GraduationCap, ArrowLeft } from "lucide-react";
 
 interface User {
   id: string;
@@ -188,9 +189,17 @@ export default function UsersManagement() {
   return (
     <div className="p-6 space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">إدارة المستخدمين</h1>
-          <p className="text-gray-600 mt-2">إدارة وتحكم في جميع المستخدمين المسجلين</p>
+        <div className="flex items-center gap-4">
+          <Link to="/admin">
+            <Button variant="outline" size="sm" className="flex items-center gap-2" data-testid="button-back-admin">
+              <ArrowLeft className="w-4 h-4" />
+              العودة للوحة التحكم
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">إدارة المستخدمين</h1>
+            <p className="text-gray-600 mt-2">إدارة وتحكم في جميع المستخدمين المسجلين</p>
+          </div>
         </div>
         <Button onClick={handleCreateUser} className="flex items-center gap-2">
           <UserPlus className="w-4 h-4" />

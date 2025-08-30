@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,8 @@ import {
   Star,
   Printer,
   BookOpen,
-  GraduationCap
+  GraduationCap,
+  ArrowLeft
 } from 'lucide-react';
 
 interface AnalyticsData {
@@ -166,12 +168,20 @@ export default function AdminAnalytics() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6" dir="rtl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Activity className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">تحليلات الأداء</h1>
+        <div className="flex items-center gap-4">
+          <Link to="/admin">
+            <Button variant="outline" size="sm" className="flex items-center gap-2" data-testid="button-back-admin">
+              <ArrowLeft className="w-4 h-4" />
+              العودة للوحة التحكم
+            </Button>
+          </Link>
+          <div className="flex items-center gap-3">
+            <Activity className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold">تحليلات الأداء</h1>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <DatePickerWithRange
