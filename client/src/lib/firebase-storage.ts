@@ -19,11 +19,22 @@ console.log('Firebase config check:', {
   projectId: firebaseConfig.projectId
 });
 
-// Initialize Firebase (prevent duplicate initialization)
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+// Initialize Firebase only if config is complete
+let app: any = null;
+let storage: any = null;
+let auth: any = null;
 
-export const storage = getStorage(app);
-export const auth = getAuth(app);
+if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId) {
+  try {
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    storage = getStorage(app);
+    auth = getAuth(app);
+  } catch (error) {
+    console.warn('Firebase initialization failed:', error);
+  }
+}
+
+export { storage, auth };
 
 /**
  * Upload file to Firebase Storage with retry logic
@@ -35,6 +46,10 @@ export async function uploadToFirebaseStorage(
   onProgress?: (progress: number) => void,
   maxRetries: number = 3
 ): Promise<string> {
+  if (!storage) {
+    throw new Error('Firebase Storage not initialized. Please check Firebase configuration.');
+  }
+
   let lastError: any;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -160,6 +175,10 @@ export async function uploadMultipleToFirebase(
   files: FileList | File[], 
   folder: string = 'uploads'
 ): Promise<string[]> {
+  if (!storage) {
+    throw new Error('Firebase Storage not initialized. Please check Firebase configuration.');
+  }
+  
   const uploadPromises = Array.from(files).map(file => 
     uploadToFirebaseStorage(file, folder)
   );
@@ -176,6 +195,10 @@ export async function uploadMultipleToFirebase(
  * Delete file from Firebase Storage
  */
 export async function deleteFromFirebase(fileUrl: string): Promise<void> {
+  if (!storage) {
+    throw new Error('Firebase Storage not initialized. Please check Firebase configuration.');
+  }
+  
   try {
     const fileRef = ref(storage, fileUrl);
     await deleteObject(fileRef);
@@ -190,6 +213,10 @@ export async function deleteFromFirebase(fileUrl: string): Promise<void> {
  * Get file metadata from Firebase Storage
  */
 export async function getFileMetadata(fileUrl: string) {
+  if (!storage) {
+    throw new Error('Firebase Storage not initialized. Please check Firebase configuration.');
+  }
+  
   try {
     const fileRef = ref(storage, fileUrl);
     const metadata = await getMetadata(fileRef);
@@ -265,3 +292,55 @@ export function validateFile(
 
 // Export configuration for easy access
 export { firebaseConfig };
+
+// Debug and testing functions
+(window as any).testFirebaseConnection = async function() {
+  if (!firebaseConfig.projectId) {
+    console.log('❌ Firebase Project ID not set');
+    return false;
+  }
+  
+  try {
+    const response = await fetch(`https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.projectId}.appspot.com/o`, {
+      method: 'GET',
+      mode: 'cors'
+    });
+    console.log('✅ Firebase Storage connection successful!', response.status);
+    return response.ok;
+  } catch (error) {
+    console.error('❌ Firebase connection failed:', error);
+    return false;
+  }
+};
+
+(window as any).checkFirebaseConfig = function() {
+  console.log('Firebase Configuration Status:');
+  console.log('API Key:', firebaseConfig.apiKey ? '✅ Set' : '❌ Missing');
+  console.log('Project ID:', firebaseConfig.projectId ? `✅ ${firebaseConfig.projectId}` : '❌ Missing');
+  console.log('App ID:', firebaseConfig.appId ? '✅ Set' : '❌ Missing');
+  console.log('Storage:', storage ? '✅ Initialized' : '❌ Not initialized');
+  return {
+    hasApiKey: !!firebaseConfig.apiKey,
+    hasProjectId: !!firebaseConfig.projectId,
+    hasAppId: !!firebaseConfig.appId,
+    storageInitialized: !!storage
+  };
+};
+
+(window as any).runFirebaseHealthCheck = async function() {
+  console.log('🔥 Running Firebase Health Check...');
+  const config = (window as any).checkFirebaseConfig();
+  
+  if (!config.hasApiKey || !config.hasProjectId || !config.hasAppId) {
+    console.log('❌ Firebase configuration incomplete');
+    return false;
+  }
+  
+  return await (window as any).testFirebaseConnection();
+};
+
+console.log('🔥 Firebase debug tools loaded!');
+console.log('Available commands:');
+console.log('- testFirebaseConnection()');
+console.log('- checkFirebaseConfig()');
+console.log('- runFirebaseHealthCheck()');
