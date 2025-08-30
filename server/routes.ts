@@ -2234,13 +2234,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const driverData = req.body;
       
-      // Check if driver email already exists
-      const existingDriver = await storage.getDriverByEmail(driverData.email);
-      if (existingDriver) {
+      // Check if driver username already exists (required)
+      const existingDriverByUsername = await storage.getDriverByUsername(driverData.username);
+      if (existingDriverByUsername) {
         return res.status(400).json({ 
           success: false, 
-          message: 'البريد الإلكتروني مسجل بالفعل' 
+          message: 'اسم المستخدم مسجل بالفعل' 
         });
+      }
+
+      // Check if driver email already exists (only if email is provided)
+      if (driverData.email) {
+        const existingDriverByEmail = await storage.getDriverByEmail(driverData.email);
+        if (existingDriverByEmail) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'البريد الإلكتروني مسجل بالفعل' 
+          });
+        }
       }
 
       const newDriver = await storage.createDriver(driverData);

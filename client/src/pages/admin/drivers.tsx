@@ -32,7 +32,8 @@ import { Link } from 'wouter';
 interface Driver {
   id: string;
   name: string;
-  email: string;
+  username: string;
+  email?: string; // Made optional
   phone: string;
   vehicleType: 'motorcycle' | 'car' | 'truck';
   vehiclePlate: string;
@@ -53,7 +54,8 @@ interface Driver {
 
 interface NewDriverForm {
   name: string;
-  email: string;
+  username: string;
+  email: string; // Optional
   phone: string;
   vehicleType: 'motorcycle' | 'car' | 'truck';
   vehiclePlate: string;
@@ -67,6 +69,7 @@ export default function DriversManagement() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newDriver, setNewDriver] = useState<NewDriverForm>({
     name: '',
+    username: '',
     email: '',
     phone: '',
     vehicleType: 'motorcycle',
@@ -94,6 +97,7 @@ export default function DriversManagement() {
       setShowAddDialog(false);
       setNewDriver({
         name: '',
+        username: '',
         email: '',
         phone: '',
         vehicleType: 'motorcycle',
@@ -139,7 +143,8 @@ export default function DriversManagement() {
   // Filter drivers
   const filteredDrivers = drivers.filter(driver => {
     const matchesSearch = driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         driver.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         driver.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (driver.email && driver.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          driver.driverCode.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || driver.status === statusFilter;
@@ -148,10 +153,10 @@ export default function DriversManagement() {
   });
 
   const handleCreateDriver = () => {
-    if (!newDriver.name || !newDriver.email || !newDriver.phone) {
+    if (!newDriver.name || !newDriver.username || !newDriver.phone) {
       toast({
         title: "بيانات ناقصة",
-        description: "يرجى ملء جميع الحقول المطلوبة",
+        description: "يرجى ملء جميع الحقول المطلوبة (الاسم، اسم المستخدم، رقم الهاتف)",
         variant: "destructive",
       });
       return;
@@ -283,7 +288,7 @@ export default function DriversManagement() {
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="البحث بالاسم، الإيميل، أو رقم السائق..."
+                placeholder="البحث بالاسم، اسم المستخدم، الإيميل، أو رقم السائق..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -328,13 +333,24 @@ export default function DriversManagement() {
                 </div>
 
                 <div>
-                  <Label htmlFor="email">البريد الإلكتروني</Label>
+                  <Label htmlFor="username">اسم المستخدم</Label>
+                  <Input
+                    id="username"
+                    value={newDriver.username}
+                    onChange={(e) => setNewDriver(prev => ({ ...prev, username: e.target.value }))}
+                    placeholder="اسم المستخدم للسائق (للدخول للنظام)"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="email">البريد الإلكتروني (اختياري)</Label>
                   <Input
                     id="email"
                     type="email"
                     value={newDriver.email}
                     onChange={(e) => setNewDriver(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="example@email.com"
+                    placeholder="example@email.com (اختياري)"
                   />
                 </div>
 
@@ -448,9 +464,16 @@ export default function DriversManagement() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-600">{driver.email}</span>
+                    <span className="w-4 h-4 text-gray-400 text-center">@</span>
+                    <span className="text-gray-600">{driver.username}</span>
                   </div>
+                  
+                  {driver.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">{driver.email}</span>
+                    </div>
+                  )}
                   
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="w-4 h-4 text-gray-400" />

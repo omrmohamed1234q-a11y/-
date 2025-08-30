@@ -708,6 +708,16 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getDriverByUsername(username: string): Promise<any> {
+    try {
+      const [driver] = await db.select().from(drivers).where(eq(drivers.username, username));
+      return driver;
+    } catch (error) {
+      console.error('Error fetching driver by username:', error);
+      return null;
+    }
+  }
+
   async createDriver(driverData: any): Promise<any> {
     try {
       const [newDriver] = await db.insert(drivers).values({
@@ -728,7 +738,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       }).returning();
       
-      console.log(`🚚 New driver created: ${newDriver.name} (${newDriver.email})`);
+      console.log(`🚚 New driver created: ${newDriver.name} (@${newDriver.username})`);
       return newDriver;
     } catch (error) {
       console.error('Error creating driver:', error);
@@ -2003,6 +2013,10 @@ class MemStorage implements IStorage {
 
   async getDriverByEmail(email: string): Promise<any | undefined> {
     return this.drivers.find(driver => driver.email === email);
+  }
+
+  async getDriverByUsername(username: string): Promise<any | undefined> {
+    return this.drivers.find(driver => driver.username === username);
   }
 
   async createDriver(driverData: any): Promise<any> {

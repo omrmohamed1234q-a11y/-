@@ -154,8 +154,9 @@ export const orders = pgTable("orders", {
 export const drivers = pgTable("drivers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   driverCode: text("driver_code").notNull().unique(), // Unique driver identifier
+  username: text("username").notNull().unique(), // Username for login (simplified)
   name: text("name").notNull(),
-  email: text("email").notNull().unique(),
+  email: text("email").unique(), // Made optional
   phone: text("phone").notNull(),
   countryCode: text("country_code").default("+20"),
   
