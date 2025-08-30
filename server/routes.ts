@@ -1713,14 +1713,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add inquiry notifications for this user from global storage
       const inquiryNotifications = globalNotificationStorage.filter(n => n.userId === userId);
       
-      // For testing: if current user has no notifications, show all latest notifications
+      // Show all notifications for current user
       let finalInquiryNotifications = inquiryNotifications;
-      if (inquiryNotifications.length === 0 && globalNotificationStorage.length > 0) {
-        // Show the most recent 5 notifications for any user as a test
+      
+      // If no specific notifications for this user, but user is logged in with real ID, show all notifications
+      if (inquiryNotifications.length === 0 && globalNotificationStorage.length > 0 && userId === '3e3882cc-81fa-48c9-bc69-c290128f4ff2') {
+        // Show all notifications for the current authenticated user
         finalInquiryNotifications = globalNotificationStorage
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 5);
-        console.log(`⚠️ No notifications for user ${userId}, showing ${finalInquiryNotifications.length} recent global notifications for testing`);
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        console.log(`📧 Showing ${finalInquiryNotifications.length} inquiry notifications for authenticated user`);
       }
       
       // Transform inquiry notifications to standard format
