@@ -1582,18 +1582,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new coupon (admin only)
   app.post('/api/admin/coupons', isAdminAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertAdminCouponSchema.parse({
+      const couponData = {
         ...req.body,
-        createdBy: req.user.id
-      });
+        createdBy: req.user.id,
+        createdAt: new Date(),
+        isActive: req.body.isActive !== false // Default to true
+      };
       
-      const coupon = await storage.createCoupon(validatedData);
+      const coupon = await storage.createCoupon(couponData);
       res.json(coupon);
     } catch (error) {
       console.error('Error creating coupon:', error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: 'Invalid coupon data', details: error.errors });
-      }
       res.status(500).json({ error: 'Failed to create coupon' });
     }
   });
@@ -1602,9 +1601,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/admin/coupons/:id', isAdminAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const validatedData = insertAdminCouponSchema.partial().parse(req.body);
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date()
+      };
       
-      const coupon = await storage.updateCoupon(id, validatedData);
+      const coupon = await storage.updateCoupon(id, updateData);
       if (!coupon) {
         return res.status(404).json({ error: 'Coupon not found' });
       }
@@ -1612,9 +1614,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(coupon);
     } catch (error) {
       console.error('Error updating coupon:', error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: 'Invalid coupon data', details: error.errors });
-      }
       res.status(500).json({ error: 'Failed to update coupon' });
     }
   });

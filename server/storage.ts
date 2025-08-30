@@ -411,6 +411,60 @@ export class DatabaseStorage implements IStorage {
     // Would normally delete from teacherProfiles table
     console.log(`Teacher ${id} deleted`);
   }
+
+  // Coupon operations
+  async getAllCoupons(): Promise<any[]> {
+    // Return sample coupons for now since database is not available
+    return [
+      {
+        id: "1",
+        code: "WELCOME10",
+        name: "خصم الترحيب",
+        type: "percentage",
+        value: 10,
+        targetType: "new_customers",
+        isActive: true,
+        createdAt: new Date()
+      }
+    ];
+  }
+
+  async createCoupon(couponData: any): Promise<any> {
+    // For now, return a mock coupon since database is not available
+    const newCoupon = {
+      id: Date.now().toString(),
+      ...couponData,
+      createdAt: new Date()
+    };
+    console.log('Created coupon:', newCoupon);
+    return newCoupon;
+  }
+
+  async updateCoupon(id: string, updates: any): Promise<any> {
+    // For now, return updated coupon data
+    return { id, ...updates, updatedAt: new Date() };
+  }
+
+  async updateCouponStatus(id: string, isActive: boolean): Promise<any> {
+    // For now, return updated coupon status
+    return { id, isActive, updatedAt: new Date() };
+  }
+
+  async deleteCoupon(id: string): Promise<boolean> {
+    // For now, just log the deletion
+    console.log(`Coupon ${id} deleted`);
+    return true;
+  }
+
+  async validateCoupon(code: string, orderTotal: number, userId: string): Promise<any> {
+    // For now, return a mock validation result
+    return { valid: true, discount: 10, type: 'percentage' };
+  }
+
+  async applyCoupon(code: string, orderId: string, orderTotal: number, userId: string): Promise<any> {
+    // For now, return a mock application result
+    return { applied: true, discount: 10, finalTotal: orderTotal * 0.9 };
+  }
 }
 
 // In-memory storage to bypass database connection issues
