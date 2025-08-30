@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { LogoPresets } from '@/components/AnimatedLogo';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
+import { supabase } from '@/lib/supabase';
 import {
   Package,
   ShoppingCart,
@@ -30,7 +34,10 @@ import {
   Activity,
   Calendar,
   UserCheck,
-  Truck
+  Truck,
+  User,
+  LogOut,
+  ChevronDown
 } from 'lucide-react';
 
 interface AdminStats {
@@ -62,11 +69,30 @@ interface AdminStats {
 }
 
 export default function AdminDashboard() {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
   const { data: stats, isLoading } = useQuery<AdminStats>({
     queryKey: ['/api/admin/dashboard/stats']
   });
 
   const [currentTime] = useState(new Date());
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "تم تسجيل الخروج",
+        description: "تم تسجيل الخروج بنجاح",
+      });
+      navigate('/');
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تسجيل الخروج",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
@@ -210,10 +236,47 @@ export default function AdminDashboard() {
                 </Badge>
               )}
             </Button>
-            <Button size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700">
-              <Settings className="w-5 h-5" />
-              الإعدادات
-            </Button>
+            
+            {/* Admin Profile Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="lg" className="gap-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                      إ
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden md:inline">إدارة الحساب</span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56" dir="rtl">
+                <DropdownMenuItem 
+                  onClick={() => navigate('/admin/profile')}
+                  className="gap-2 cursor-pointer"
+                  data-testid="menu-admin-profile"
+                >
+                  <User className="w-4 h-4" />
+                  الملف الشخصي
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => navigate('/admin/settings')}
+                  className="gap-2 cursor-pointer"
+                >
+                  <Settings className="w-4 h-4" />
+                  الإعدادات
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
+                  data-testid="menu-logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                  تسجيل الخروج
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

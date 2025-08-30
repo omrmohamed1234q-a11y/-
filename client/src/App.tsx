@@ -21,6 +21,7 @@ import Profile from "@/pages/profile";
 import Payment from "@/pages/payment";
 import Scan from "@/pages/scan";
 import AdminDashboard from "@/pages/admin/dashboard-new";
+import AdminProfile from "@/pages/admin/admin-profile";
 import AdminProducts from "@/pages/admin-products";
 import AdminStore from "@/pages/admin/store";
 import TeachersCorner from "@/pages/admin/teachers-corner";
@@ -78,6 +79,7 @@ function Router() {
         <Route path="/auth/admin-signup" component={AdminSignup} />
         <Route path="/auth/callback" component={AuthCallback} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/profile" component={AdminProfile} />
         <Route path="/admin/store" component={AdminStore} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin-products" component={AdminProducts} />
@@ -113,6 +115,7 @@ function Router() {
         <Route path="/checkout" component={Checkout} />
         <Route path="/order-tracking/:id" component={OrderTracking} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/profile" component={AdminProfile} />
         <Route path="/admin/store" component={AdminStore} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin-products" component={AdminProducts} />
