@@ -149,7 +149,7 @@ export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
 // Preset configurations for common use cases
 export const LogoPresets = {
   Landing: () => <AnimatedLogo size="lg" variant="default" />,
-  Splash: () => <AnimatedLogo size="xl" variant="splash" />,
+  Splash: () => <AnimatedLogo size="2xl" variant="splash" />,
   Login: () => <AnimatedLogo size="2xl" variant="bounce" />,
   Navigation: () => <AnimatedLogo size="sm" variant="floating" />,
   Loading: () => <AnimatedLogo size="md" variant="pulse" />,
