@@ -19,7 +19,7 @@ import Store from "@/pages/store";
 import Rewards from "@/pages/rewards";
 import Profile from "@/pages/profile";
 import Payment from "@/pages/payment";
-import AdminDashboard from "@/pages/admin";
+import AdminDashboard from "@/pages/admin/dashboard-new";
 import AdminProducts from "@/pages/admin-products";
 import AdminStore from "@/pages/admin/store";
 import TeachersCorner from "@/pages/admin/teachers-corner";
