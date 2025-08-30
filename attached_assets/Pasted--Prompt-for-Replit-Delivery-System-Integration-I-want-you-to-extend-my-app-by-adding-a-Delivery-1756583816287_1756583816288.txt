@@ -1,0 +1,105 @@
+🚀 Prompt for Replit – Delivery System Integration
+
+I want you to extend my app by adding a Delivery Panel (Driver App) similar to delivery systems.
+
+Customer Panel (Already exists)
+
+Customers can add products to cart, checkout, and place orders.
+
+Orders should have a status flow:
+
+Pending → Accepted → Picked Up → Delivered.
+
+Customers must be able to track their order in real-time and see delivery updates instantly.
+
+Delivery Panel (Driver App)
+
+Create a new panel for delivery drivers (الكباتن) with the following features:
+
+Authentication for Drivers
+
+Drivers login separately (different role from normal users).
+
+Store driver accounts in Supabase/Firebase with metadata (Name, Phone, Vehicle Type, Status Online/Offline).
+
+Order Management
+
+Show a list of available orders in their assigned region.
+
+Driver can:
+
+Accept Order ✅
+
+Reject Order ❌
+
+Once accepted, order status updates to Accepted and becomes invisible to other drivers.
+
+Order Workflow Buttons
+
+Button: "استلام الطلب من المتجر" → changes order status to Picked Up.
+
+Button: "تم التوصيل" → changes order status to Delivered.
+
+Order Details View
+
+Customer Name, Address, Phone (click to call).
+
+Product details (what is being delivered).
+
+Delivery notes (if provided).
+
+Live Location Tracking
+
+Driver shares GPS location via Google Maps API.
+
+Customer can see driver’s movement live in their app.
+
+Notifications
+
+Push notification to customer when:
+
+Driver accepts order.
+
+Driver is on the way.
+
+Driver marks as delivered.
+
+Admin Panel Enhancements
+
+Add a Drivers Section:
+
+Create, Edit, Remove driver accounts.
+
+See drivers' status (Online/Offline).
+
+Assign orders manually to a specific driver (optional).
+
+Orders Dashboard
+
+Admin sees all orders with live status.
+
+Track which driver is delivering.
+
+Override statuses if needed.
+
+Tech Notes
+
+Backend: Supabase (Firestore alternative if needed).
+
+Realtime: Supabase Realtime or Firebase Realtime updates for live tracking.
+
+Location: Google Maps API for driver tracking.
+
+Notifications: Firebase Cloud Messaging (FCM).
+
+UI: Kotlin + Jetpack Compose (RTL Arabic support).
+
+⚡ Please implement this end-to-end:
+
+Extend DB schema with Drivers and Orders tables.
+
+Build Delivery Panel with login + order workflow.
+
+Connect with Customer panel for live updates.
+
+Enhance Admin Panel to manage drivers and track orders.

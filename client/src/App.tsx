@@ -33,6 +33,9 @@ import OrdersManagement from "@/pages/admin/orders-management";
 import TestSignup from "@/pages/test-signup";
 import Checkout from "@/pages/checkout";
 import OrderTracking from "@/pages/order-tracking";
+import DriverLogin from "@/pages/driver/driver-login";
+import DriverDashboard from "@/pages/driver/driver-dashboard";
+import DriversManagement from "@/pages/admin/drivers-management";
 
 
 function Router() {
@@ -83,6 +86,9 @@ function Router() {
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/inquiries" component={AdminInquiries} />
         <Route path="/admin/orders" component={OrdersManagement} />
+        <Route path="/admin/drivers" component={DriversManagement} />
+        <Route path="/driver/login" component={DriverLogin} />
+        <Route path="/driver/dashboard" component={DriverDashboard} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/" component={EnhancedLanding} />
@@ -115,6 +121,9 @@ function Router() {
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/inquiries" component={AdminInquiries} />
         <Route path="/admin/orders" component={OrdersManagement} />
+        <Route path="/admin/drivers" component={DriversManagement} />
+        <Route path="/driver/login" component={DriverLogin} />
+        <Route path="/driver/dashboard" component={DriverDashboard} />
         <Route path="/student/teachers" component={StudentTeachers} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />

@@ -51,6 +51,42 @@ const isAdminAuthenticated = (req: any, res: any, next: any) => {
     next();
   }
 };
+
+// Driver authentication middleware
+const requireDriverAuth = async (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      success: false, 
+      error: 'Driver authentication required' 
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    // In a real app, verify JWT token here
+    // For demo, we'll decode the driver ID from the token
+    const driverId = token; // Simplified for demo
+    const driver = await storage.getDriver(driverId);
+    
+    if (!driver) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Invalid driver token' 
+      });
+    }
+
+    req.driver = driver;
+    next();
+  } catch (error) {
+    return res.status(401).json({ 
+      success: false, 
+      error: 'Invalid token' 
+    });
+  }
+};
 import { insertProductSchema, insertOrderSchema, insertPrintJobSchema } from "@shared/schema";
 import { z } from "zod";
 import ServerPDFCompression from "./pdf-compression-service";
@@ -2131,6 +2167,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error bulk updating orders:', error);
       res.status(500).json({ message: 'Failed to bulk update orders' });
+    }
+  });
+
+  // ====== DRIVER API ROUTES ======
+
+  // Driver login
+  app.post('/api/driver/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      console.log(`🚚 Driver login attempt: ${email}`);
+
+      // Authenticate driver
+      const driver = await storage.authenticateDriver(email, password);
+      
+      if (!driver) {
+        return res.status(401).json({
+          success: false,
+          message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+        });
+      }
+
+      // Update last active
+      await storage.updateDriverLastActive(driver.id);
+
+      // Generate token (simplified for demo)
+      const token = driver.id;
+
+      res.json({
+        success: true,
+        token,
+        driver: {
+          id: driver.id,
+          name: driver.name,
+          email: driver.email,
+          phone: driver.phone,
+          vehicleType: driver.vehicleType,
+          rating: driver.rating,
+          totalDeliveries: driver.totalDeliveries,
+          status: driver.status,
+          earnings: driver.earnings
+        }
+      });
+    } catch (error) {
+      console.error('Driver login error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في الخادم'
+      });
+    }
+  });
+
+  // Get available orders for driver
+  app.get('/api/driver/orders', requireDriverAuth, async (req, res) => {
+    try {
+      const driverId = req.driver.id;
+      console.log(`📦 Fetching orders for driver: ${driverId}`);
+
+      const orders = await storage.getAvailableOrdersForDriver(driverId);
+      res.json(orders);
+    } catch (error) {
+      console.error('Error fetching driver orders:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch orders' });
+    }
+  });
+
+  // Update driver status (online/offline)
+  app.put('/api/driver/status', requireDriverAuth, async (req, res) => {
+    try {
+      const driverId = req.driver.id;
+      const { online } = req.body;
+      const status = online ? 'online' : 'offline';
+
+      console.log(`🚚 Updating driver ${driverId} status to: ${status}`);
+
+      await storage.updateDriverStatus(driverId, status);
+      res.json({ success: true, status });
+    } catch (error) {
+      console.error('Error updating driver status:', error);
+      res.status(500).json({ success: false, error: 'Failed to update status' });
+    }
+  });
+
+  // Accept order
+  app.put('/api/driver/orders/:orderId/accept', requireDriverAuth, async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driver.id;
+
+      console.log(`✅ Driver ${driverId} accepting order: ${orderId}`);
+
+      await storage.assignOrderToDriver(orderId, driverId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error accepting order:', error);
+      res.status(500).json({ success: false, error: 'Failed to accept order' });
+    }
+  });
+
+  // Reject order
+  app.put('/api/driver/orders/:orderId/reject', requireDriverAuth, async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driver.id;
+
+      console.log(`❌ Driver ${driverId} rejecting order: ${orderId}`);
+
+      // For now, just log the rejection - in real app you'd track this
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error rejecting order:', error);
+      res.status(500).json({ success: false, error: 'Failed to reject order' });
+    }
+  });
+
+  // Update order status (picked up, delivered)
+  app.put('/api/driver/orders/:orderId/status', requireDriverAuth, async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { status } = req.body;
+      const driverId = req.driver.id;
+
+      console.log(`📋 Driver ${driverId} updating order ${orderId} to: ${status}`);
+
+      await storage.updateOrderStatus(orderId, status, driverId);
+
+      // Send notification to customer
+      if (status === 'picked_up') {
+        // Notify customer that order is picked up
+        console.log(`📱 Notifying customer: Order picked up`);
+      } else if (status === 'delivered') {
+        // Notify customer that order is delivered
+        console.log(`📱 Notifying customer: Order delivered`);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      res.status(500).json({ success: false, error: 'Failed to update order status' });
+    }
+  });
+
+  // ====== ADMIN DRIVER MANAGEMENT ROUTES ======
+
+  // Get all drivers (admin)
+  app.get('/api/admin/drivers', isAdminAuthenticated, async (req, res) => {
+    try {
+      console.log('📋 Admin fetching all drivers');
+      const drivers = await storage.getAllDrivers();
+      res.json(drivers);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch drivers' });
+    }
+  });
+
+  // Create new driver (admin)
+  app.post('/api/admin/drivers', isAdminAuthenticated, async (req, res) => {
+    try {
+      const driverData = req.body;
+      console.log(`👤 Admin creating new driver: ${driverData.name}`);
+
+      // Generate unique driver code
+      const driverCode = `DRV${Date.now().toString().slice(-6)}`;
+      
+      const newDriver = await storage.createDriver({
+        ...driverData,
+        driverCode,
+        status: 'offline',
+        isAvailable: true,
+        totalDeliveries: 0,
+        completedDeliveries: 0,
+        cancelledDeliveries: 0,
+        earnings: '0.00',
+        rating: '0.00',
+        ratingCount: 0,
+        isVerified: false,
+        documentsVerified: false
+      });
+
+      res.json({ success: true, driver: newDriver });
+    } catch (error) {
+      console.error('Error creating driver:', error);
+      res.status(500).json({ success: false, error: 'Failed to create driver' });
+    }
+  });
+
+  // Update driver status (admin)
+  app.put('/api/admin/drivers/:driverId/status', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { driverId } = req.params;
+      const { status } = req.body;
+
+      console.log(`🔧 Admin updating driver ${driverId} status to: ${status}`);
+
+      await storage.updateDriverStatus(driverId, status);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating driver status:', error);
+      res.status(500).json({ success: false, error: 'Failed to update driver status' });
     }
   });
 

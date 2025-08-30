@@ -150,6 +150,70 @@ export const orders = pgTable("orders", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Delivery drivers table
+export const drivers = pgTable("drivers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  driverCode: text("driver_code").notNull().unique(), // Unique driver identifier
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  phone: text("phone").notNull(),
+  countryCode: text("country_code").default("+20"),
+  
+  // Vehicle information
+  vehicleType: text("vehicle_type"), // "motorcycle", "car", "bicycle", "walking"
+  vehiclePlate: text("vehicle_plate"),
+  vehicleModel: text("vehicle_model"),
+  vehicleColor: text("vehicle_color"),
+  
+  // Work information
+  status: text("status").default("offline"), // "online", "offline", "busy", "suspended"
+  isAvailable: boolean("is_available").default(true),
+  currentLocation: jsonb("current_location"), // {lat, lng, timestamp}
+  workingArea: text("working_area"), // Assigned delivery area
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
+  ratingCount: integer("rating_count").default(0),
+  
+  // Performance metrics
+  totalDeliveries: integer("total_deliveries").default(0),
+  completedDeliveries: integer("completed_deliveries").default(0),
+  cancelledDeliveries: integer("cancelled_deliveries").default(0),
+  averageDeliveryTime: integer("average_delivery_time"), // in minutes
+  earnings: decimal("earnings", { precision: 10, scale: 2 }).default("0.00"),
+  
+  // Account information
+  nationalId: text("national_id"),
+  dateOfBirth: timestamp("date_of_birth"),
+  address: text("address"),
+  emergencyContact: text("emergency_contact"),
+  emergencyPhone: text("emergency_phone"),
+  
+  // Authentication
+  password: text("password"), // Hashed password for driver login
+  isVerified: boolean("is_verified").default(false),
+  documentsVerified: boolean("documents_verified").default(false),
+  
+  // Activity tracking
+  lastActiveAt: timestamp("last_active_at").defaultNow(),
+  lastLocationUpdate: timestamp("last_location_update"),
+  shiftStartTime: timestamp("shift_start_time"),
+  shiftEndTime: timestamp("shift_end_time"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Driver location tracking
+export const driverLocations = pgTable("driver_locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  driverId: varchar("driver_id").notNull().references(() => drivers.id),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
+  accuracy: decimal("accuracy", { precision: 8, scale: 2 }), // GPS accuracy in meters
+  speed: decimal("speed", { precision: 8, scale: 2 }), // Speed in km/h
+  bearing: decimal("bearing", { precision: 6, scale: 2 }), // Direction in degrees
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
 export const rewards = pgTable("rewards", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -717,3 +781,20 @@ export const couponNotifications = pgTable("coupon_notifications", {
 
 export type CouponUsageTracking = typeof couponUsageTracking.$inferSelect;
 export type CouponNotification = typeof couponNotifications.$inferSelect;
+
+// Driver types and schemas
+export type Driver = typeof drivers.$inferSelect;
+export type InsertDriver = typeof drivers.$inferInsert;
+export type DriverLocation = typeof driverLocations.$inferSelect;
+export type InsertDriverLocation = typeof driverLocations.$inferInsert;
+
+export const insertDriverSchema = createInsertSchema(drivers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDriverLocationSchema = createInsertSchema(driverLocations).omit({
+  id: true,
+  timestamp: true,
+});

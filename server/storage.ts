@@ -74,6 +74,19 @@ export interface IStorage {
   getInquiryResponses(inquiryId: string): Promise<any[]>;
   createInquiryNotifications(notifications: any[]): Promise<void>;
 
+  // Driver operations
+  getAllDrivers(): Promise<any[]>;
+  getDriver(id: string): Promise<any | undefined>;
+  getDriverByEmail(email: string): Promise<any | undefined>;
+  createDriver(driver: any): Promise<any>;
+  updateDriver(id: string, updates: any): Promise<any>;
+  updateDriverStatus(id: string, status: string): Promise<any>;
+  updateDriverLastActive(id: string): Promise<void>;
+  authenticateDriver(email: string, password: string): Promise<any | null>;
+  getAvailableOrdersForDriver(driverId: string): Promise<any[]>;
+  assignOrderToDriver(orderId: string, driverId: string): Promise<void>;
+  updateOrderStatus(orderId: string, status: string, driverId?: string): Promise<void>;
+
   // Additional compatibility methods
   getCoupon(id: string): Promise<any>;
   createCouponNotifications(notifications: any[]): Promise<void>;
@@ -1595,6 +1608,186 @@ class MemStorage implements IStorage {
       });
     }
     console.log(`💾 Stored ${notifications.length} inquiry notifications in MemStorage`);
+  }
+
+  // Driver operations
+  private drivers: any[] = [
+    {
+      id: 'driver1',
+      name: 'أحمد محمد',
+      email: 'ahmed@driver.com',
+      phone: '01012345678',
+      password: 'password123',
+      vehicleType: 'motorcycle',
+      vehiclePlate: 'أ ب ج 123',
+      workingArea: 'مدينة نصر، القاهرة',
+      driverCode: 'DRV001',
+      status: 'offline',
+      isAvailable: true,
+      rating: '4.8',
+      ratingCount: 25,
+      totalDeliveries: 150,
+      completedDeliveries: 145,
+      cancelledDeliveries: 5,
+      earnings: '2500.00',
+      isVerified: true,
+      documentsVerified: true,
+      lastActiveAt: new Date(),
+      createdAt: new Date()
+    },
+    {
+      id: 'driver2',
+      name: 'محمد علي',
+      email: 'mohamed@driver.com',
+      phone: '01087654321',
+      password: 'password123',
+      vehicleType: 'car',
+      vehiclePlate: 'د هـ و 456',
+      workingArea: 'مصر الجديدة، القاهرة',
+      driverCode: 'DRV002',
+      status: 'online',
+      isAvailable: true,
+      rating: '4.6',
+      ratingCount: 18,
+      totalDeliveries: 89,
+      completedDeliveries: 85,
+      cancelledDeliveries: 4,
+      earnings: '1800.00',
+      isVerified: true,
+      documentsVerified: true,
+      lastActiveAt: new Date(),
+      createdAt: new Date()
+    }
+  ];
+
+  async getAllDrivers(): Promise<any[]> {
+    return this.drivers;
+  }
+
+  async getDriver(id: string): Promise<any | undefined> {
+    return this.drivers.find(driver => driver.id === id);
+  }
+
+  async getDriverByEmail(email: string): Promise<any | undefined> {
+    return this.drivers.find(driver => driver.email === email);
+  }
+
+  async createDriver(driverData: any): Promise<any> {
+    const newDriver = {
+      id: `driver_${Date.now()}`,
+      ...driverData,
+      createdAt: new Date(),
+      lastActiveAt: new Date()
+    };
+    this.drivers.push(newDriver);
+    return newDriver;
+  }
+
+  async updateDriver(id: string, updates: any): Promise<any> {
+    const driverIndex = this.drivers.findIndex(driver => driver.id === id);
+    if (driverIndex === -1) {
+      throw new Error('Driver not found');
+    }
+
+    this.drivers[driverIndex] = {
+      ...this.drivers[driverIndex],
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    return this.drivers[driverIndex];
+  }
+
+  async updateDriverStatus(id: string, status: string): Promise<any> {
+    return this.updateDriver(id, { 
+      status, 
+      lastActiveAt: new Date() 
+    });
+  }
+
+  async updateDriverLastActive(id: string): Promise<void> {
+    const driverIndex = this.drivers.findIndex(driver => driver.id === id);
+    if (driverIndex !== -1) {
+      this.drivers[driverIndex].lastActiveAt = new Date();
+    }
+  }
+
+  async authenticateDriver(email: string, password: string): Promise<any | null> {
+    const driver = this.drivers.find(d => d.email === email && d.password === password);
+    return driver || null;
+  }
+
+  async getAvailableOrdersForDriver(driverId: string): Promise<any[]> {
+    // Return orders that are pending or waiting for pickup
+    const availableOrders = this.orders
+      .filter(order => 
+        ['pending', 'confirmed', 'preparing'].includes(order.status) &&
+        !order.driverId
+      )
+      .map(order => ({
+        id: order.id,
+        orderNumber: order.orderNumber || `ORD${order.id}`,
+        customerName: order.customerName || 'عميل',
+        customerPhone: order.customerPhone || '01000000000',
+        deliveryAddress: order.deliveryAddress || order.shippingAddress || 'القاهرة',
+        items: order.items || [
+          { name: 'منتج', quantity: 1, price: order.total || '0' }
+        ],
+        totalAmount: order.total || '0.00',
+        status: order.status,
+        deliveryNotes: order.deliveryNotes,
+        estimatedDelivery: 30,
+        createdAt: order.createdAt || new Date().toISOString()
+      }));
+
+    return availableOrders;
+  }
+
+  async assignOrderToDriver(orderId: string, driverId: string): Promise<void> {
+    const orderIndex = this.orders.findIndex(order => order.id === orderId);
+    if (orderIndex !== -1) {
+      this.orders[orderIndex] = {
+        ...this.orders[orderIndex],
+        driverId,
+        status: 'accepted',
+        acceptedAt: new Date().toISOString()
+      };
+    }
+  }
+
+  async updateOrderStatus(orderId: string, status: string, driverId?: string): Promise<void> {
+    const orderIndex = this.orders.findIndex(order => order.id === orderId);
+    if (orderIndex !== -1) {
+      const updates: any = { status };
+      
+      if (status === 'picked_up') {
+        updates.pickedUpAt = new Date().toISOString();
+      } else if (status === 'delivered') {
+        updates.deliveredAt = new Date().toISOString();
+        
+        // Update driver earnings when order is delivered
+        if (driverId) {
+          const driverIndex = this.drivers.findIndex(d => d.id === driverId);
+          if (driverIndex !== -1) {
+            const order = this.orders[orderIndex];
+            const deliveryFee = parseFloat(order.total) * 0.1; // 10% commission
+            const currentEarnings = parseFloat(this.drivers[driverIndex].earnings || '0');
+            
+            this.drivers[driverIndex] = {
+              ...this.drivers[driverIndex],
+              earnings: (currentEarnings + deliveryFee).toFixed(2),
+              totalDeliveries: (this.drivers[driverIndex].totalDeliveries || 0) + 1,
+              completedDeliveries: (this.drivers[driverIndex].completedDeliveries || 0) + 1
+            };
+          }
+        }
+      }
+
+      this.orders[orderIndex] = {
+        ...this.orders[orderIndex],
+        ...updates
+      };
+    }
   }
 }
 

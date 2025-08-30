@@ -29,7 +29,8 @@ import {
   TrendingUp,
   Activity,
   Calendar,
-  UserCheck
+  UserCheck,
+  Truck
 } from 'lucide-react';
 
 interface AdminStats {
@@ -115,6 +116,14 @@ export default function AdminDashboard() {
       icon: MessageCircle,
       link: '/admin/inquiries',
       color: 'orange',
+      count: 0
+    },
+    {
+      title: 'إدارة الكباتن',
+      description: 'إدارة طاقم التوصيل وتتبع الأداء',
+      icon: Truck,
+      link: '/admin/drivers',
+      color: 'cyan',
       count: 0
     },
     {
