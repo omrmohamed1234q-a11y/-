@@ -568,7 +568,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/cart', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      console.log(`🔍 API: Getting cart for user ${userId}`);
       const cart = await storage.getCart(userId);
+      console.log(`📋 API: Returning cart with ${cart.items?.length || 0} items`);
+      
+      // Prevent caching to always get fresh data
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json(cart);
     } catch (error) {
       console.error("Error fetching cart:", error);
@@ -646,6 +654,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const count = await storage.getCartItemCount(userId);
+      console.log(`🔢 API: Cart count for user ${userId}: ${count}`);
+      
+      // Prevent caching to always get fresh data
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json({ count });
     } catch (error) {
       console.error("Error getting cart count:", error);
