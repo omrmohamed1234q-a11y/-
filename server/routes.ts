@@ -1,6 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
+
 // User authentication middleware - integrates with Supabase Auth
 const requireAuth = (req: any, res: any, next: any) => {
   const authHeader = req.headers.authorization;
@@ -632,21 +639,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Users endpoint for coupon targeting (using main storage)
+  // Users endpoint for coupon targeting (using Supabase Auth)
   app.get('/api/users', async (req: any, res) => {
     try {
-      const users = await storage.getAllUsers();
+      if (!supabase) {
+        return res.status(500).json({ error: 'Supabase not configured' });
+      }
+
+      // Get users from Supabase Auth
+      const { data: { users }, error } = await supabase.auth.admin.listUsers();
       
-      // Return basic user info for coupon targeting
+      if (error) {
+        console.error('Error fetching users from Supabase:', error);
+        return res.status(500).json({ error: 'Failed to fetch users from Supabase' });
+      }
+
+      // Transform to basic user info for coupon targeting
       const basicUsers = users.map((user: any) => ({
         id: user.id,
-        firstName: user.firstName || 'مستخدم',
-        lastName: user.lastName || '',
+        firstName: user.user_metadata?.firstName || user.user_metadata?.first_name || 'مستخدم',
+        lastName: user.user_metadata?.lastName || user.user_metadata?.last_name || '',
         email: user.email,
-        gradeLevel: user.gradeLevel,
-        location: user.location || '',
-        createdAt: user.createdAt
+        gradeLevel: user.user_metadata?.gradeLevel || 'غير محدد',
+        location: user.user_metadata?.location || '',
+        createdAt: user.created_at
       }));
+
+      console.log(`Found ${basicUsers.length} users in Supabase Auth`);
       res.json(basicUsers);
     } catch (error) {
       console.error('Error fetching users for coupons:', error);

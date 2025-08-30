@@ -519,23 +519,13 @@ class MemStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     try {
-      // Try to get users from database first
+      // Get all users from Supabase database
       const dbUsers = await db.select().from(users);
-      // Only return users with real email addresses (not test data)
-      const realUsers = dbUsers.filter(user => 
-        user.email && 
-        !user.email.includes('example.com') && // Exclude test emails
-        (user.email.includes('@gmail.com') || 
-         user.email.includes('@yahoo.com') || 
-         user.email.includes('@hotmail.com') ||
-         user.email.includes('@outlook.com') ||
-         user.email.includes('@icloud.com') ||
-         user.email.includes('@live.com'))
-      );
-      return realUsers;
+      console.log(`Found ${dbUsers.length} users in database`);
+      return dbUsers;
     } catch (error) {
-      console.log('Database not available, using memory storage');
-      // Return empty array if database not available - no fake users
+      console.error('Error fetching users from database:', error);
+      // Return empty array if database not available
       return [];
     }
   }
@@ -1090,5 +1080,5 @@ class MemStorage implements IStorage {
   }
 }
 
-// Use MemStorage instead of DatabaseStorage due to database connection issues
-export const storage = new MemStorage();
+// Use DatabaseStorage to connect to Supabase
+export const storage = new DatabaseStorage();
