@@ -764,37 +764,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/admin/users/:id', isAdminAuthenticated, async (req: any, res) => {
+  app.put('/api/admin/users/:id', async (req: any, res) => {
     try {
-      const userId = req.params.id;
-      const updates = req.body;
-      
-      const existingUser = await storage.getUser(userId);
-      if (!existingUser) {
-        return res.status(404).json({ error: 'User not found' });
+      if (!supabase) {
+        return res.status(500).json({ error: 'Supabase not available' });
       }
 
-      const updatedUser = await storage.updateUser(userId, updates);
-      res.json(updatedUser);
+      const { id } = req.params;
+      const { email, firstName, lastName, fullName, role, status, gradeLevel, age, phone } = req.body;
+
+      // Update user metadata in Supabase
+      const { data, error } = await supabase.auth.admin.updateUserById(id, {
+        user_metadata: {
+          firstName,
+          lastName,
+          fullName,
+          role,
+          status,
+          gradeLevel,
+          age,
+          phone
+        }
+      });
+
+      if (error) {
+        console.error('❌ Error updating user:', error);
+        return res.status(500).json({ error: 'Failed to update user' });
+      }
+
+      console.log(`✅ Updated user ${id} metadata`);
+      res.json({ success: true, user: data.user });
     } catch (error) {
       console.error('Error updating user:', error);
       res.status(500).json({ error: 'Failed to update user' });
     }
   });
 
-  app.delete('/api/admin/users/:id', isAdminAuthenticated, async (req: any, res) => {
+  app.delete('/api/admin/users/:id', async (req: any, res) => {
     try {
-      const userId = req.params.id;
-      const deleted = await storage.deleteUser(userId);
-      
-      if (!deleted) {
-        return res.status(404).json({ error: 'User not found' });
+      if (!supabase) {
+        return res.status(500).json({ error: 'Supabase not available' });
       }
-      
-      res.json({ success: true, message: 'User deleted successfully' });
+
+      const { id } = req.params;
+
+      // Delete user from Supabase Auth
+      const { error } = await supabase.auth.admin.deleteUser(id);
+
+      if (error) {
+        console.error('❌ Error deleting user:', error);
+        return res.status(500).json({ error: 'Failed to delete user' });
+      }
+
+      console.log(`✅ Deleted user ${id}`);
+      res.json({ success: true });
     } catch (error) {
       console.error('Error deleting user:', error);
       res.status(500).json({ error: 'Failed to delete user' });
+    }
+  });
+
+  // Create user endpoint
+  app.post('/api/admin/users', async (req: any, res) => {
+    try {
+      if (!supabase) {
+        return res.status(500).json({ error: 'Supabase not available' });
+      }
+
+      const { email, firstName, lastName, fullName, role, status, gradeLevel, age, phone } = req.body;
+
+      // Create user in Supabase Auth
+      const { data, error } = await supabase.auth.admin.createUser({
+        email,
+        password: 'TempPassword123!', // Temporary password - user should reset
+        email_confirm: false, // Require email confirmation
+        user_metadata: {
+          firstName,
+          lastName,
+          fullName,
+          role: role || 'student',
+          status: status || 'pending',
+          gradeLevel,
+          age,
+          phone
+        }
+      });
+
+      if (error) {
+        console.error('❌ Error creating user:', error);
+        return res.status(500).json({ error: 'Failed to create user' });
+      }
+
+      console.log(`✅ Created new user ${email} with ID ${data.user.id}`);
+      res.json({ success: true, user: data.user });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ error: 'Failed to create user' });
     }
   });
 
