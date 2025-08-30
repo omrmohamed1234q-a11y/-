@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { ProductForm } from '@/components/ProductForm';
 import { apiRequest } from '@/lib/queryClient';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, DollarSign, Tag, Search, Home, Store, Users, BarChart3, Settings, FileText, BookOpen } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, DollarSign, Tag, Search, Home, Store, Users, BarChart3, Settings, FileText, BookOpen, ArrowLeft, Grid, List, Filter } from 'lucide-react';
 import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
 import { Link } from 'wouter';
 import type { products } from '@shared/schema';
@@ -19,6 +19,8 @@ export default function AdminProductsPage() {
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   
   const queryClient = useQueryClient();
 
@@ -121,11 +123,12 @@ export default function AdminProductsPage() {
   };
 
   // Filter products based on search
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (product.nameEn && product.nameEn.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -186,91 +189,45 @@ export default function AdminProductsPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4" dir="rtl">
-      <div className="max-w-7xl mx-auto">
-        {/* Admin Navigation */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">لوحة التحكم الإدارية</h2>
-              <Badge className="bg-blue-100 text-blue-800">المنتجات</Badge>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              <Link href="/admin">
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-blue-50">
-                  <Home className="w-6 h-6 text-blue-600" />
-                  <span className="text-xs">الرئيسية</span>
-                </Button>
-              </Link>
-              
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg h-20 flex flex-col items-center justify-center space-y-2">
-                <Package className="w-6 h-6 text-blue-600" />
-                <span className="text-xs text-blue-800 font-medium">المنتجات</span>
-              </div>
-              
-              <Link href="/admin/store">
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-green-50">
-                  <Store className="w-6 h-6 text-green-600" />
-                  <span className="text-xs">المتجر</span>
-                </Button>
-              </Link>
-              
-              <Link href="/admin/teachers-corner">
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-blue-50">
-                  <BookOpen className="w-6 h-6 text-blue-600" />
-                  <span className="text-xs">ركن المعلم</span>
-                </Button>
-              </Link>
-              
-              <Link href="/admin/users">
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50">
-                  <Users className="w-6 h-6 text-purple-600" />
-                  <span className="text-xs">المستخدمين</span>
-                </Button>
-              </Link>
-              
-              <Link href="/admin">
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-orange-50">
-                  <BarChart3 className="w-6 h-6 text-orange-600" />
-                  <span className="text-xs">التقارير</span>
-                </Button>
-              </Link>
-              
-              <Link href="/cloudinary-test">
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-indigo-50">
-                  <FileText className="w-6 h-6 text-indigo-600" />
-                  <span className="text-xs">اختبار Cloudinary</span>
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+  const categories = [
+    { value: 'all', label: 'جميع الفئات' },
+    { value: 'books', label: 'الكتب' },
+    { value: 'worksheets', label: 'أوراق العمل' },
+    { value: 'exams', label: 'الامتحانات' },
+    { value: 'notes', label: 'الملاحظات' },
+  ];
 
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <Link href="/">
-              <Button variant="outline" className="flex items-center space-x-2 space-x-reverse">
-                <Home className="w-4 h-4" />
-                <span>العودة للرئيسية</span>
+  return (
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      {/* Top Header with Back Button */}
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/admin">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2 hover:bg-gray-100">
+                <ArrowLeft className="w-4 h-4" />
+                <span>العودة للوحة التحكم</span>
               </Button>
             </Link>
+            
+            <div className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-blue-500" />
+              <span className="font-semibold text-gray-800">إدارة المنتجات</span>
+            </div>
+            
             <Button
               onClick={handleAddNewProduct}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg"
+              className="bg-blue-500 hover:bg-blue-600 text-white gap-2"
               data-testid="button-add-new-product"
             >
-              <Plus className="w-5 h-5 ml-2" />
+              <Plus className="w-4 h-4" />
               إضافة منتج جديد
             </Button>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">إدارة المنتجات</h1>
-            <p className="text-gray-600">إضافة وتحرير وإدارة منتجات المتجر التعليمي</p>
-          </div>
         </div>
+      </div>
 
+      <div className="max-w-7xl mx-auto p-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="bg-white shadow-sm">
@@ -278,9 +235,11 @@ export default function AdminProductsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">إجمالي المنتجات</p>
-                  <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+                  <p className="text-3xl font-bold text-gray-900">{products.length}</p>
                 </div>
-                <Package className="w-8 h-8 text-blue-500" />
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <Package className="w-6 h-6 text-blue-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -290,11 +249,13 @@ export default function AdminProductsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">المنتجات المميزة</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-3xl font-bold text-amber-600">
                     {products.filter(p => p.featured).length}
                   </p>
                 </div>
-                <Tag className="w-8 h-8 text-yellow-500" />
+                <div className="p-3 bg-amber-50 rounded-lg">
+                  <Tag className="w-6 h-6 text-amber-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -304,53 +265,174 @@ export default function AdminProductsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">منتجات VIP</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-3xl font-bold text-green-600">
                     {products.filter(p => p.vip).length}
                   </p>
                 </div>
-                <DollarSign className="w-8 h-8 text-green-500" />
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <DollarSign className="w-6 h-6 text-green-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Search and Filters */}
-        <Card className="mb-8">
+        <Card className="mb-6">
           <CardContent className="p-6">
-            <div className="flex items-center space-x-4 space-x-reverse">
-              <div className="relative flex-1">
-                <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="البحث في المنتجات..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-10"
-                />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="البحث في المنتجات..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pr-10"
+                    data-testid="input-search-products"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  data-testid="select-category-filter"
+                >
+                  {categories.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  ))}
+                </select>
+                
+                <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className="px-3"
+                    data-testid="button-grid-view"
+                  >
+                    <Grid className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className="px-3"
+                    data-testid="button-list-view"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Products Table */}
+        {/* Products List */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">قائمة المنتجات ({filteredProducts.length})</CardTitle>
+            <CardTitle className="text-xl flex items-center justify-between">
+              <span>قائمة المنتجات ({filteredProducts.length})</span>
+              <Badge variant="secondary">{viewMode === 'grid' ? 'عرض شبكي' : 'عرض قائمة'}</Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {filteredProducts.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-16">
                 <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-600 mb-2">لا توجد منتجات</h3>
                 <p className="text-gray-500 mb-6">ابدأ بإضافة منتجك الأول</p>
-                <Button onClick={handleAddNewProduct} className="bg-green-600 hover:bg-green-700">
+                <Button onClick={handleAddNewProduct} className="bg-blue-500 hover:bg-blue-600">
                   <Plus className="w-4 h-4 ml-2" />
                   إضافة منتج جديد
                 </Button>
               </div>
+            ) : viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProducts.map((product) => (
+                  <Card key={product.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        {/* Product Image */}
+                        <div className="w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Package className="w-12 h-12 text-gray-400" />
+                          )}
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="space-y-2">
+                          <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
+                          {product.nameEn && (
+                            <p className="text-sm text-gray-500">{product.nameEn}</p>
+                          )}
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-bold text-xl text-green-600">
+                                {formatCurrency(product.price)}
+                              </p>
+                              {product.originalPrice && (
+                                <p className="text-sm text-gray-500 line-through">
+                                  {formatCurrency(product.originalPrice)}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-600">متوفر: {product.availableCopies}</p>
+                            </div>
+                          </div>
+
+                          {/* Badges */}
+                          <div className="flex gap-2 flex-wrap">
+                            {product.featured && (
+                              <Badge className="bg-yellow-100 text-yellow-800">مميز</Badge>
+                            )}
+                            {product.vip && (
+                              <Badge className="bg-purple-100 text-purple-800">VIP</Badge>
+                            )}
+                            {product.category && (
+                              <Badge variant="outline">{product.category}</Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex justify-between pt-4 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditProduct(product)}
+                            data-testid={`button-edit-${product.id}`}
+                          >
+                            <Edit className="w-4 h-4 ml-1" />
+                            تعديل
+                          </Button>
+                          <AdminActionsMenu
+                            productId={product.id}
+                            onEdit={() => handleEditProduct(product)}
+                            onDelete={() => handleDeleteProduct(product.id)}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : (
               <div className="space-y-4">
                 {filteredProducts.map((product) => (
-                  <Card key={product.id} className="p-4">
+                  <Card key={product.id} className="p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-4 space-x-reverse flex-1">
                         {/* Product Image */}
@@ -387,76 +469,38 @@ export default function AdminProductsPage() {
                             </div>
                           </div>
 
-                          <p className="text-gray-600 text-sm line-clamp-2">{product.description}</p>
-
-                          {/* Educational Info */}
-                          <div className="flex flex-wrap gap-2">
-                            {product.curriculumType && (
-                              <Badge variant="outline" className="text-xs">
-                                {getCurriculumLabel(product.curriculumType)}
-                              </Badge>
-                            )}
-                            {product.subject && (
-                              <Badge variant="outline" className="text-xs">
-                                {getSubjectLabel(product.subject)}
-                              </Badge>
-                            )}
-                            {product.gradeLevel && (
-                              <Badge variant="outline" className="text-xs">
-                                {getGradeLevelLabel(product.gradeLevel)}
-                              </Badge>
-                            )}
-                            {product.authorPublisher && (
-                              <Badge variant="outline" className="text-xs">
-                                {product.authorPublisher}
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Features */}
-                          <div className="flex flex-wrap gap-2">
-                            {product.featured && (
-                              <Badge className="bg-yellow-100 text-yellow-800 text-xs">مميز</Badge>
-                            )}
-                            {product.teacherOnly && (
-                              <Badge className="bg-blue-100 text-blue-800 text-xs">للمعلمين</Badge>
-                            )}
-                            {product.vip && (
-                              <Badge className="bg-purple-100 text-purple-800 text-xs">VIP</Badge>
-                            )}
-                            {product.isDigital && (
-                              <Badge className="bg-green-100 text-green-800 text-xs">رقمي</Badge>
-                            )}
-                          </div>
-
-                          {/* Stock Info */}
-                          <div className="flex items-center space-x-4 space-x-reverse text-sm text-gray-600">
-                            <span>المخزون: {product.availableCopies || 0}</span>
-                            <span>الفئة: {product.category}</span>
-                            {product.productTypes && product.productTypes.length > 0 && (
-                              <span>الأنواع: {product.productTypes.join(', ')}</span>
-                            )}
+                          <div className="flex items-center justify-between">
+                            <div className="flex gap-2 flex-wrap">
+                              {product.featured && (
+                                <Badge className="bg-yellow-100 text-yellow-800">مميز</Badge>
+                              )}
+                              {product.vip && (
+                                <Badge className="bg-purple-100 text-purple-800">VIP</Badge>
+                              )}
+                              {product.category && (
+                                <Badge variant="outline">{product.category}</Badge>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-600">متوفر: {product.availableCopies}</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditProduct(product)}
+                                data-testid={`button-edit-${product.id}`}
+                              >
+                                <Edit className="w-4 h-4 ml-1" />
+                                تعديل
+                              </Button>
+                              <AdminActionsMenu
+                                productId={product.id}
+                                onEdit={() => handleEditProduct(product)}
+                                onDelete={() => handleDeleteProduct(product.id)}
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditProduct(product)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDeleteProduct(product.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
                       </div>
                     </div>
                   </Card>
@@ -465,24 +509,22 @@ export default function AdminProductsPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Product Form Dialog */}
-        <Dialog open={showProductForm} onOpenChange={setShowProductForm}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <ProductForm
-              editingProduct={editingProduct}
-              onSave={handleSaveProduct}
-              onCancel={() => {
-                setShowProductForm(false);
-                setEditingProduct(null);
-              }}
-              isLoading={createProductMutation.isPending || updateProductMutation.isPending}
-            />
-          </DialogContent>
-        </Dialog>
-
-        <AdminActionsMenu />
       </div>
+
+      {/* Product Form Dialog */}
+      <Dialog open={showProductForm} onOpenChange={setShowProductForm}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <ProductForm
+            product={editingProduct}
+            onSubmit={editingProduct ? handleUpdateProduct : handleCreateProduct}
+            onCancel={() => {
+              setShowProductForm(false);
+              setEditingProduct(null);
+            }}
+            isLoading={editingProduct ? updateProductMutation.isPending : createProductMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
