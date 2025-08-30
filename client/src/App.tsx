@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { SplashScreen } from "@/components/SplashScreen";
 import ChatBot from "@/components/ChatBot";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
+import EnhancedLanding from "@/pages/enhanced-landing";
 import Login from "@/pages/auth/login";
 import Signup from "@/pages/auth/signup";
 import AdminSignup from "@/pages/auth/admin-signup";
@@ -83,8 +83,8 @@ function Router() {
         <Route path="/admin/inquiries" component={AdminInquiries} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
-        <Route path="/" component={Landing} />
-        <Route component={Landing} />
+        <Route path="/" component={EnhancedLanding} />
+        <Route component={NotFound} />
       </Switch>
     );
   }
