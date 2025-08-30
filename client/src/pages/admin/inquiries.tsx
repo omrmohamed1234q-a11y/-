@@ -221,6 +221,59 @@ export default function AdminInquiries() {
                   </Select>
                 </div>
               )}
+
+              {formData.targetType === 'specific_customers' && (
+                <div>
+                  <Label>العملاء المحددين</Label>
+                  <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
+                    {users.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">جاري تحميل قائمة العملاء...</p>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-medium">اختر العملاء المستهدفين:</span>
+                          <div className="text-xs text-gray-500">
+                            {formData.targetUserIds.length} من {users.length} محدد
+                          </div>
+                        </div>
+                        {users.map((user: any) => (
+                          <div key={user.id} className="flex items-center space-x-2 space-x-reverse">
+                            <input
+                              type="checkbox"
+                              id={`user-${user.id}`}
+                              checked={formData.targetUserIds.includes(user.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData({
+                                    ...formData,
+                                    targetUserIds: [...formData.targetUserIds, user.id]
+                                  });
+                                } else {
+                                  setFormData({
+                                    ...formData,
+                                    targetUserIds: formData.targetUserIds.filter(id => id !== user.id)
+                                  });
+                                }
+                              }}
+                              className="rounded"
+                              data-testid={`checkbox-user-${user.id}`}
+                            />
+                            <label 
+                              htmlFor={`user-${user.id}`} 
+                              className="text-sm cursor-pointer flex-1"
+                            >
+                              {user.fullName || user.firstName || user.email || 'مستخدم بدون اسم'}
+                              <span className="text-gray-400 text-xs mr-2">
+                                ({user.email})
+                              </span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               
               <div className="flex justify-end space-x-2 space-x-reverse">
                 <Button 

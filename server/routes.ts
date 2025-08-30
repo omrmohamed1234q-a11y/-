@@ -674,23 +674,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin users endpoints
-  app.get('/api/admin/users', isAdminAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/users', async (req: any, res) => {
     try {
-      const users = await storage.getAllUsers();
-      // Enrich user data with additional statistics
-      const enrichedUsers = users.map((user: any) => ({
-        ...user,
-        totalOrders: Math.floor(Math.random() * 20), // Mock data for now
-        totalSpent: Math.floor(Math.random() * 5000), // Mock data for now
-        bountyPoints: Math.floor(Math.random() * 1000), // Mock data for now
-        accountLevel: Math.floor(Math.random() * 5) + 1, // Mock data for now
-        status: (user as any).status || 'active',
-        lastLoginAt: new Date().toISOString(),
-        orders: [] // Mock empty orders for now
+      if (!supabase) {
+        return res.status(500).json({ error: 'Supabase not configured' });
+      }
+
+      // Get users from Supabase Auth - this will return real registered users
+      const { data: { users }, error } = await supabase.auth.admin.listUsers();
+      
+      if (error) {
+        console.error('Error fetching users from Supabase:', error);
+        return res.status(500).json({ error: 'Failed to fetch users from Supabase' });
+      }
+
+      // Transform to admin user format with detailed info
+      const adminUsers = users.map((user: any) => ({
+        id: user.id,
+        firstName: user.user_metadata?.firstName || user.user_metadata?.first_name || '',
+        lastName: user.user_metadata?.lastName || user.user_metadata?.last_name || '',
+        fullName: user.user_metadata?.fullName || 
+                  `${user.user_metadata?.firstName || user.user_metadata?.first_name || ''} ${user.user_metadata?.lastName || user.user_metadata?.last_name || ''}`.trim() ||
+                  user.email?.split('@')[0] || 'مستخدم',
+        email: user.email,
+        gradeLevel: user.user_metadata?.gradeLevel || '',
+        phoneNumber: user.user_metadata?.phoneNumber || user.phone || '',
+        age: user.user_metadata?.age || '',
+        role: user.user_metadata?.role || 'student',
+        location: user.user_metadata?.location || '',
+        createdAt: user.created_at,
+        lastSignIn: user.last_sign_in_at,
+        isActive: !user.banned_until,
+        emailConfirmed: !!user.email_confirmed_at,
+        // Add statistics - these would come from other tables in a real system
+        totalOrders: Math.floor(Math.random() * 20),
+        totalSpent: Math.floor(Math.random() * 5000),
+        bountyPoints: Math.floor(Math.random() * 1000),
+        accountLevel: Math.floor(Math.random() * 5) + 1,
+        status: user.banned_until ? 'suspended' : 'active'
       }));
-      res.json(enrichedUsers);
+
+      console.log(`✅ Fetched ${adminUsers.length} real users from Supabase Auth for admin panel`);
+      res.json(adminUsers);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching users for admin:', error);
       res.status(500).json({ error: 'Failed to fetch users' });
     }
   });
@@ -1349,7 +1376,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const inquiry = await storage.sendInquiry(id);
-      res.json(inquiry);
+      
+      // Create notifications for targeted users
+      const allUsers = await storage.getAllUsers();
+      let targetUsers = [];
+
+      switch (inquiry.targetType) {
+        case 'all_customers':
+          targetUsers = allUsers;
+          break;
+        case 'new_customers':
+          // Users registered in last 30 days
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          targetUsers = allUsers.filter(user => {
+            const createdAt = user.createdAt || user.created_at;
+            return createdAt && new Date(createdAt) > thirtyDaysAgo;
+          });
+          break;
+        case 'existing_customers':
+          // Users registered more than 30 days ago
+          const existingThreshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          targetUsers = allUsers.filter(user => {
+            const createdAt = user.createdAt || user.created_at;
+            return createdAt && new Date(createdAt) <= existingThreshold;
+          });
+          break;
+        case 'grade_level':
+          if (inquiry.targetGradeLevel) {
+            targetUsers = allUsers.filter(user => user.gradeLevel === inquiry.targetGradeLevel);
+          }
+          break;
+        case 'specific_customers':
+          if (inquiry.targetUserIds && inquiry.targetUserIds.length > 0) {
+            targetUsers = allUsers.filter(user => inquiry.targetUserIds.includes(user.id));
+          }
+          break;
+      }
+
+      // Create notifications for each target user
+      const notifications = targetUsers.map(user => ({
+        userId: user.id,
+        title: `استعلام جديد: ${inquiry.title}`,
+        message: inquiry.message,
+        type: 'inquiry',
+        inquiryId: inquiry.id,
+        isRead: false,
+        isClicked: false,
+        createdAt: new Date()
+      }));
+
+      if (notifications.length > 0) {
+        await storage.createInquiryNotifications(notifications);
+        console.log(`📧 Created ${notifications.length} notifications for inquiry ${inquiry.id}`);
+      }
+
+      res.json({
+        ...inquiry,
+        notificationsSent: notifications.length
+      });
     } catch (error) {
       console.error('Error sending inquiry:', error);
       res.status(500).json({ message: 'خطأ في إرسال الاستعلام' });

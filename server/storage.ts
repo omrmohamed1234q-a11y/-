@@ -69,6 +69,7 @@ export interface IStorage {
   createInquiry(inquiry: any): Promise<any>;
   sendInquiry(inquiryId: string): Promise<any>;
   getInquiryResponses(inquiryId: string): Promise<any[]>;
+  createInquiryNotifications(notifications: any[]): Promise<void>;
 
   // Additional compatibility methods
   getCoupon(id: string): Promise<any>;
@@ -601,6 +602,19 @@ export class DatabaseStorage implements IStorage {
   createNotification(data: any): any {
     // Mock implementation
     return { id: Date.now().toString(), ...data };
+  }
+
+  async createInquiryNotifications(notifications: any[]): Promise<void> {
+    // Store notifications for inquiry system
+    for (const notification of notifications) {
+      const notificationId = `inquiry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      globalNotificationStorage.push({
+        id: notificationId,
+        ...notification,
+        createdAt: new Date().toISOString()
+      });
+    }
+    console.log(`💾 Stored ${notifications.length} inquiry notifications`);
   }
 }
 
@@ -1344,6 +1358,20 @@ class MemStorage implements IStorage {
   createNotification(data: any): any {
     // Mock implementation
     return { id: Date.now().toString(), ...data };
+  }
+
+  async createInquiryNotifications(notifications: any[]): Promise<void> {
+    // Store notifications for inquiry system in MemStorage
+    for (const notification of notifications) {
+      const notificationId = `inquiry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      this.notifications.push({
+        id: notificationId,
+        ...notification,
+        read: false,
+        createdAt: new Date()
+      });
+    }
+    console.log(`💾 Stored ${notifications.length} inquiry notifications in MemStorage`);
   }
 }
 
