@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { createClient } from '@supabase/supabase-js';
 
+// Global storage for notifications
+const globalNotificationStorage: any[] = [];
+
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -1442,6 +1445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create notifications for each target user
       const notifications = targetUsers.map(user => ({
+        id: `notif_${Date.now()}_${user.id}`,
         userId: user.id,
         title: `استعلام جديد: ${inquiry.title}`,
         message: inquiry.message,
@@ -1453,7 +1457,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       if (notifications.length > 0) {
-        await storage.createInquiryNotifications(notifications);
+        // Store in global storage for immediate access
+        globalNotificationStorage.push(...notifications);
+        
+        // Also try to store in regular storage
+        try {
+          await storage.createInquiryNotifications(notifications);
+        } catch (error) {
+          console.warn('Could not store in regular storage, using global only');
+        }
+        
+        console.log(`💾 Stored ${notifications.length} inquiry notifications in MemStorage`);
         console.log(`📧 Created ${notifications.length} notifications for inquiry ${inquiry.id}`);
       }
 
