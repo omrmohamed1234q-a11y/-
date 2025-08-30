@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ import {
   Search,
   MoreHorizontal,
   ArrowRight,
+  ArrowLeft,
   Trash2
 } from 'lucide-react';
 
@@ -238,9 +240,31 @@ export default function OrdersManagement() {
   }
 
   return (
-    <div className="p-6 space-y-6" dir="rtl">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      {/* Top Header with Back Button */}
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/admin">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2 hover:bg-gray-100">
+                <ArrowLeft className="w-4 h-4" />
+                <span>العودة للوحة التحكم</span>
+              </Button>
+            </Link>
+            
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-blue-500" />
+              <span className="font-semibold text-gray-800">إدارة الطلبات</span>
+            </div>
+            
+            <div className="w-32"></div> {/* Spacer for centering */}
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">إدارة الطلبات الجديدة</h1>
           <p className="text-gray-600 mt-2">معالجة وتسعير الطلبات الواردة</p>
@@ -611,6 +635,7 @@ export default function OrdersManagement() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
