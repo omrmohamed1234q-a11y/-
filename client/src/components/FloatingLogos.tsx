@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import logoImage from "@assets/92b00e7f-0f7b-40d2-8c20-79751e073ab1_1756565286414.png"
+import logoImage from "@assets/image_1756565815702.png"
 
 interface FloatingLogosProps {
   count?: number

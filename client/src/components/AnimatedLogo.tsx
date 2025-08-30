@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import logoImage from "@assets/92b00e7f-0f7b-40d2-8c20-79751e073ab1_1756565286414.png"
+import logoImage from "@assets/image_1756565815702.png"
 
 interface AnimatedLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
@@ -127,25 +127,6 @@ export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
           src={logoImage}
           alt="اطبعلي"
           className={`${sizeClasses[size]} filter drop-shadow-lg`}
-        />
-        
-        {/* Animated red dot effect */}
-        <motion.div
-          className="absolute bottom-1 right-1/2 transform translate-x-1/2 w-2 h-2 bg-red-500 rounded-full"
-          animate={{
-            scale: [1, 1.5, 1],
-            opacity: [1, 0.6, 1],
-            boxShadow: [
-              '0 0 0 0 rgba(239, 68, 68, 0.4)',
-              '0 0 0 10px rgba(239, 68, 68, 0)',
-              '0 0 0 0 rgba(239, 68, 68, 0)'
-            ]
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
         />
       </motion.div>
       
