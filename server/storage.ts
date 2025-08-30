@@ -82,7 +82,7 @@ export interface IStorage {
   updateDriver(id: string, updates: any): Promise<any>;
   updateDriverStatus(id: string, status: string): Promise<any>;
   updateDriverLocation(id: string, location: any): Promise<any>;
-  authenticateDriver(email: string, password: string): Promise<any>;
+  authenticateDriver(identifier: string, password: string): Promise<any>;
   getAvailableDrivers(): Promise<any[]>;
   assignOrderToDriver(orderId: string, driverId: string): Promise<any>;
   getDriverOrders(driverId: string): Promise<any[]>;
@@ -800,24 +800,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async authenticateDriver(identifier: string, password: string): Promise<any> {
+    console.log(`🏢 DatabaseStorage: authenticateDriver called`);
     try {
+      console.log(`🔍 Looking for driver with identifier: ${identifier}`);
+      
       // Try to find driver by email first, then by username
       let driver = await this.getDriverByEmail(identifier);
       if (!driver) {
+        console.log(`📧 No driver found by email, trying username...`);
         driver = await this.getDriverByUsername(identifier);
       }
       
       if (!driver) {
+        console.log(`❌ No driver found with identifier: ${identifier}`);
         return null;
       }
 
+      console.log(`✅ Driver found: ${driver.name} (${driver.username})`);
+      console.log(`🔐 Comparing passwords: provided="${password}", stored="${driver.password}"`);
+
       // In production, you should hash and compare passwords
       if (driver.password === password) {
+        console.log(`✅ Password match! Authenticating driver ${driver.name}`);
         // Update last active time
         await this.updateDriver(driver.id, { lastActiveAt: new Date() });
         return driver;
       }
       
+      console.log(`❌ Password mismatch for driver ${driver.name}`);
       return null;
     } catch (error) {
       console.error('Error authenticating driver:', error);
@@ -1839,6 +1849,7 @@ class MemStorage implements IStorage {
     {
       id: 'driver1',
       name: 'أحمد السائق',
+      username: 'Ahmed12',
       email: 'ahmed@driver.com',
       phone: '01012345678',
       password: 'password123',
@@ -1860,6 +1871,7 @@ class MemStorage implements IStorage {
     {
       id: 'driver2',
       name: 'محمد التوصيل',
+      username: 'Mohammed99',
       email: 'mohamed@driver.com',
       phone: '01098765432',
       password: 'password123',
@@ -1892,6 +1904,10 @@ class MemStorage implements IStorage {
 
   async getDriverByEmail(email: string): Promise<any> {
     return this.drivers.find(d => d.email === email) || null;
+  }
+
+  async getDriverByUsername(username: string): Promise<any> {
+    return this.drivers.find(d => d.username === username) || null;
   }
 
   async createDriver(driverData: any): Promise<any> {
@@ -1962,15 +1978,23 @@ class MemStorage implements IStorage {
   }
 
   async authenticateDriver(identifier: string, password: string): Promise<any> {
+    console.log(`[MEMSTORAGE] authenticateDriver CALLED!!! identifier=${identifier}, password=${password}`);
+    console.log(`[MEMSTORAGE] drivers count: ${this.drivers.length}`);
+    console.log(`[MEMSTORAGE] drivers:`, this.drivers.map(d => `${d.name}(user:${d.username},pass:${d.password})`));
+    
     // Try to find driver by email or username
     const driver = this.drivers.find(d => 
       (d.email === identifier || d.username === identifier) && d.password === password
     );
+    
     if (driver) {
+      console.log(`✅ MemStorage: Driver found and authenticated: ${driver.name}`);
       // Update last active time
       await this.updateDriver(driver.id, { lastActiveAt: new Date() });
       return driver;
     }
+    
+    console.log(`❌ MemStorage: No matching driver found for: ${identifier}`);
     return null;
   }
 
@@ -2067,10 +2091,7 @@ class MemStorage implements IStorage {
     }
   }
 
-  async authenticateDriver(email: string, password: string): Promise<any | null> {
-    const driver = this.drivers.find(d => d.email === email && d.password === password);
-    return driver || null;
-  }
+
 
   async getAvailableOrdersForDriver(driverId: string): Promise<any[]> {
     // Return orders that are pending or waiting for pickup
@@ -2146,5 +2167,5 @@ class MemStorage implements IStorage {
   }
 }
 
-// Use MemStorage to bypass database connection issues
+// Use MemStorage temporarily due to database connection issues
 export const storage = new MemStorage();

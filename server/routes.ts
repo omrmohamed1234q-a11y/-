@@ -2325,6 +2325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password, username } = req.body;
       const loginIdentifier = username || email; // Support both username and email
       console.log(`🚚 Driver login attempt: ${loginIdentifier}`);
+      console.log(`🔍 Request body:`, req.body);
 
       if (!loginIdentifier || !password) {
         return res.status(400).json({
@@ -2333,8 +2334,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log(`🔄 About to call storage.authenticateDriver...`);
+      console.log(`🔄 Storage instance:`, Object.getPrototypeOf(storage).constructor.name);
+      console.log(`🔄 authenticateDriver typeof:`, typeof storage.authenticateDriver);
+      
       // Authenticate driver with username or email
       const driver = await storage.authenticateDriver(loginIdentifier, password);
+      console.log(`🔍 Authentication result:`, driver ? 'SUCCESS' : 'FAILED');
       
       if (!driver) {
         return res.status(401).json({
