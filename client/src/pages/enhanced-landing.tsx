@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from "@/hooks/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
@@ -692,38 +691,7 @@ export default function EnhancedLanding() {
                   )}
                 </div>
 
-                {/* Social Login - Only for login */}
-                {isLogin && (
-                  <>
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <Separator className="w-full" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-white px-3 text-gray-500 font-medium">أو استخدم</span>
-                      </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        variant="outline"
-                        className="h-12 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-xl font-medium text-gray-600 cursor-not-allowed"
-                        disabled={true}
-                      >
-                        <span className="text-lg mr-2 text-blue-600">G</span>
-                        Google
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="h-12 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-xl font-medium text-gray-600 cursor-not-allowed"
-                        disabled={true}
-                      >
-                        <span className="text-lg mr-2">📘</span>
-                        Facebook
-                      </Button>
-                    </div>
-                  </>
-                )}
 
                 {/* Toggle Auth Mode */}
                 <div className="text-center pt-4">
