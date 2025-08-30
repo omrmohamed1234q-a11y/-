@@ -1971,6 +1971,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Orders Management API Endpoints
+  
+  // Get all orders (admin only)
+  app.get('/api/admin/orders', isAdminAuthenticated, async (req, res) => {
+    try {
+      const orders = await storage.getAllOrders();
+      
+      // Transform orders to match the expected interface
+      const transformedOrders = orders.map(order => ({
+        id: order.id || order.orderNumber,
+        customerName: order.customerName || order.fullName || 'عميل غير محدد',
+        customerPhone: order.customerPhone || order.phone || '',
+        customerEmail: order.customerEmail || order.email || '',
+        items: order.items || [],
+        totalAmount: order.totalAmount || order.finalTotal || 0,
+        status: order.status || 'pending',
+        orderDate: order.createdAt || new Date().toISOString(),
+        deliveryAddress: order.deliveryAddress || order.address || '',
+        notes: order.notes || '',
+        adminNotes: order.adminNotes || '',
+        estimatedCost: order.estimatedCost || 0,
+        finalPrice: order.finalPrice || order.totalAmount || 0,
+        paymentMethod: order.paymentMethod || 'نقدي عند الاستلام',
+        priority: order.priority || 'medium'
+      }));
+      
+      res.json(transformedOrders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      res.status(500).json({ message: 'Failed to fetch orders' });
+    }
+  });
+
+  // Update order (admin only)
+  app.put('/api/admin/orders/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      // Add timestamp for status updates
+      if (updates.status) {
+        updates.updatedAt = new Date();
+        updates.statusUpdatedAt = new Date();
+      }
+      
+      const updatedOrder = await storage.updateOrder(id, updates);
+      
+      if (!updatedOrder) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error('Error updating order:', error);
+      res.status(500).json({ message: 'Failed to update order' });
+    }
+  });
+
+  // Get single order details (admin only)
+  app.get('/api/admin/orders/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const order = await storage.getOrder(id);
+      
+      if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      res.json(order);
+    } catch (error) {
+      console.error('Error fetching order:', error);
+      res.status(500).json({ message: 'Failed to fetch order' });
+    }
+  });
+
+  // Create new order (admin only)
+  app.post('/api/admin/orders', isAdminAuthenticated, async (req, res) => {
+    try {
+      const orderData = req.body;
+      
+      // Generate order ID and set defaults
+      const newOrder = {
+        ...orderData,
+        id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        createdAt: new Date(),
+        status: orderData.status || 'pending',
+        priority: orderData.priority || 'medium',
+        adminNotes: orderData.adminNotes || '',
+        estimatedCost: orderData.estimatedCost || 0,
+        finalPrice: orderData.finalPrice || 0
+      };
+      
+      const createdOrder = await storage.createOrder(newOrder);
+      res.json(createdOrder);
+    } catch (error) {
+      console.error('Error creating order:', error);
+      res.status(500).json({ message: 'Failed to create order' });
+    }
+  });
+
+  // Delete order (admin only)
+  app.delete('/api/admin/orders/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteOrder(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      res.json({ success: true, message: 'Order deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      res.status(500).json({ message: 'Failed to delete order' });
+    }
+  });
+
+  // Get orders by status (admin only)
+  app.get('/api/admin/orders/status/:status', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { status } = req.params;
+      const orders = await storage.getOrdersByStatus(status);
+      res.json(orders || []);
+    } catch (error) {
+      console.error('Error fetching orders by status:', error);
+      res.status(500).json({ message: 'Failed to fetch orders by status' });
+    }
+  });
+
+  // Bulk update orders (admin only)
+  app.patch('/api/admin/orders/bulk', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { orderIds, updates } = req.body;
+      
+      if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+        return res.status(400).json({ message: 'Order IDs are required' });
+      }
+      
+      const results = [];
+      for (const orderId of orderIds) {
+        try {
+          const updatedOrder = await storage.updateOrder(orderId, {
+            ...updates,
+            updatedAt: new Date()
+          });
+          results.push({ orderId, success: true, order: updatedOrder });
+        } catch (error) {
+          results.push({ orderId, success: false, error: error.message });
+        }
+      }
+      
+      res.json({
+        success: true,
+        results,
+        updated: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+    } catch (error) {
+      console.error('Error bulk updating orders:', error);
+      res.status(500).json({ message: 'Failed to bulk update orders' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

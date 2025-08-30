@@ -23,11 +23,14 @@ export interface IStorage {
   getAllOrders(): Promise<Order[]>;
   getOrder(id: string): Promise<Order | undefined>;
   createOrder(order: any): Promise<Order>;
+  updateOrder(id: string, updates: any): Promise<Order>;
   updateOrderStatus(id: string, status: string): Promise<Order>;
   updateOrderRating(id: string, rating: number, review?: string): Promise<Order>;
   cancelOrder(id: string): Promise<Order>;
   addDriverNote(id: string, note: string): Promise<Order>;
   getActiveOrders(): Promise<Order[]>;
+  getOrdersByStatus(status: string): Promise<Order[]>;
+  deleteOrder(id: string): Promise<boolean>;
   
   // Print Job operations
   getAllPrintJobs(): Promise<PrintJob[]>;
@@ -255,6 +258,36 @@ export class DatabaseStorage implements IStorage {
       .where(eq(orders.id, id))
       .returning();
     return order;
+  }
+
+  async updateOrder(id: string, updates: any): Promise<Order> {
+    const [order] = await db
+      .update(orders)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
+  }
+
+  async getOrdersByStatus(status: string): Promise<Order[]> {
+    return await db
+      .select()
+      .from(orders)
+      .where(eq(orders.status, status))
+      .orderBy(desc(orders.createdAt));
+  }
+
+  async deleteOrder(id: string): Promise<boolean> {
+    try {
+      await db.delete(orders).where(eq(orders.id, id));
+      return true;
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      return false;
+    }
   }
 
   // Print Job operations
@@ -657,9 +690,151 @@ class MemStorage implements IStorage {
       createdAt: new Date()
     }
   ];
-  private orders: Order[] = [];
+  private orders: Order[] = [
+    {
+      id: 'ORD-001',
+      userId: '48c03e72-d53b-4a3f-a729-c38276268315',
+      customerName: 'أحمد محمد علي',
+      customerPhone: '01012345678',
+      customerEmail: 'ahmed@email.com',
+      deliveryAddress: 'شارع المنصورة، حي المعادي، القاهرة',
+      notes: 'يرجى التأكد من جودة الطباعة والألوان',
+      adminNotes: '',
+      items: [
+        {
+          id: 'item-1',
+          type: 'document',
+          name: 'ملزمة الرياضيات للثانوية العامة',
+          description: 'ملزمة شاملة للمراجعة النهائية',
+          quantity: 3,
+          pages: 150,
+          color: true,
+          paperSize: 'A4',
+          binding: 'spiral',
+          estimatedPrice: 75,
+          finalPrice: 75,
+          fileUrl: 'https://example.com/math-booklet.pdf'
+        },
+        {
+          id: 'item-2', 
+          type: 'book',
+          name: 'كتاب الفيزياء للصف الثاني الثانوي',
+          description: 'كتاب وزارة التربية والتعليم',
+          quantity: 2,
+          pages: 200,
+          color: false,
+          paperSize: 'A4',
+          binding: 'hardcover',
+          estimatedPrice: 40,
+          finalPrice: 40
+        }
+      ],
+      totalAmount: 115,
+      estimatedCost: 110,
+      finalPrice: 115,
+      status: 'pending',
+      paymentMethod: 'نقدي عند الاستلام',
+      priority: 'high',
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
+    },
+    {
+      id: 'ORD-002',
+      userId: 'user-2',
+      customerName: 'فاطمة حسن إبراهيم',
+      customerPhone: '01098765432',
+      customerEmail: 'fatma@email.com',
+      deliveryAddress: 'شارع البترول، مدينة نصر، القاهرة',
+      notes: 'طلب عاجل - امتحان غداً',
+      adminNotes: 'تم التسعير والموافقة',
+      items: [
+        {
+          id: 'item-3',
+          type: 'document',
+          name: 'أسئلة مراجعة اللغة الإنجليزية',
+          description: 'مجموعة أسئلة للمراجعة النهائية',
+          quantity: 1,
+          pages: 25,
+          color: false,
+          paperSize: 'A4',
+          binding: 'none',
+          estimatedPrice: 15,
+          finalPrice: 15
+        }
+      ],
+      totalAmount: 15,
+      estimatedCost: 12,
+      finalPrice: 15,
+      status: 'confirmed',
+      paymentMethod: 'نقدي عند الاستلام',
+      priority: 'urgent',
+      createdAt: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago
+    },
+    {
+      id: 'ORD-003',
+      userId: 'user-3',
+      customerName: 'محمد سعد أحمد',
+      customerPhone: '01154321098',
+      customerEmail: 'mohamed@email.com',
+      deliveryAddress: 'شارع فيصل، الجيزة',
+      notes: 'يفضل التسليم بعد الساعة 4 عصراً',
+      adminNotes: 'جاري الطباعة',
+      items: [
+        {
+          id: 'item-4',
+          type: 'custom',
+          name: 'بروشور إعلاني',
+          description: 'تصميم بروشور ملون للشركة',
+          quantity: 100,
+          pages: 2,
+          color: true,
+          paperSize: 'A5',
+          binding: 'none',
+          estimatedPrice: 200,
+          finalPrice: 180
+        }
+      ],
+      totalAmount: 180,
+      estimatedCost: 200,
+      finalPrice: 180,
+      status: 'printing',
+      paymentMethod: 'تحويل بنكي',
+      priority: 'medium',
+      createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000) // 4 hours ago
+    },
+    {
+      id: 'ORD-004',
+      userId: 'user-4',
+      customerName: 'نورا عبد الرحمن',
+      customerPhone: '01276543210',
+      customerEmail: 'nora@email.com',
+      deliveryAddress: 'شارع الهرم، الجيزة',
+      notes: '',
+      adminNotes: 'تم التسليم بنجاح',
+      items: [
+        {
+          id: 'item-5',
+          type: 'document',
+          name: 'مذكرة التاريخ',
+          description: 'مذكرة شاملة لمنهج التاريخ',
+          quantity: 1,
+          pages: 80,
+          color: false,
+          paperSize: 'A4',
+          binding: 'spiral',
+          estimatedPrice: 35,
+          finalPrice: 35
+        }
+      ],
+      totalAmount: 35,
+      estimatedCost: 35,
+      finalPrice: 35,
+      status: 'delivered',
+      paymentMethod: 'نقدي عند الاستلام',
+      priority: 'low',
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day ago
+    }
+  ];
   private printJobs: PrintJob[] = [];
-  private cartItems: CartItem[] = [];
   private cartItems: CartItem[] = [];
   private notifications: any[] = [
     {
@@ -798,6 +973,54 @@ class MemStorage implements IStorage {
       ...orderData,
       createdAt: new Date()
     };
+    this.orders.push(order);
+    return order;
+  }
+
+  async getOrder(id: string): Promise<Order | undefined> {
+    return this.orders.find(o => o.id === id);
+  }
+
+  async updateOrder(id: string, updates: any): Promise<Order> {
+    const index = this.orders.findIndex(o => o.id === id);
+    if (index !== -1) {
+      this.orders[index] = { ...this.orders[index], ...updates, updatedAt: new Date() };
+      return this.orders[index];
+    }
+    throw new Error('Order not found');
+  }
+
+  async updateOrderStatus(id: string, status: string): Promise<Order> {
+    return this.updateOrder(id, { status });
+  }
+
+  async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> {
+    return this.updateOrder(id, { rating, review });
+  }
+
+  async cancelOrder(id: string): Promise<Order> {
+    return this.updateOrder(id, { status: 'cancelled' });
+  }
+
+  async addDriverNote(id: string, note: string): Promise<Order> {
+    const order = await this.getOrder(id);
+    const currentNotes = order?.driverNotes || '';
+    return this.updateOrder(id, { driverNotes: currentNotes + '\n' + note });
+  }
+
+  async getActiveOrders(): Promise<Order[]> {
+    return this.orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
+  }
+
+  async getOrdersByStatus(status: string): Promise<Order[]> {
+    return this.orders.filter(o => o.status === status);
+  }
+
+  async deleteOrder(id: string): Promise<boolean> {
+    const index = this.orders.findIndex(o => o.id === id);
+    if (index === -1) return false;
+    this.orders.splice(index, 1);
+    return true;
     this.orders.push(order);
     return order;
   }
