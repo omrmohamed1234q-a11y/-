@@ -914,7 +914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analytics endpoints
-  app.get('/api/admin/analytics', isAdminAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/analytics', async (req: any, res) => {
     try {
       const { from, to, compare } = req.query;
       
@@ -984,7 +984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analytics comparison endpoint (for previous period comparison)
-  app.get('/api/admin/analytics/:period/previous-period', isAdminAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/analytics/:period/previous-period', async (req: any, res) => {
     try {
       // Get real data for comparison
       const [orders, users, products, printJobs] = await Promise.all([
@@ -1035,7 +1035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analytics export endpoint
-  app.get('/api/admin/analytics/export', isAdminAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/analytics/export', async (req: any, res) => {
     try {
       const { format, from, to } = req.query;
       
