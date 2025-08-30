@@ -82,6 +82,7 @@ function Router() {
         <Route path="/admin/users" component={AdminUsers} />
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/inquiries" component={AdminInquiries} />
+        <Route path="/admin/orders" component={OrdersManagement} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/" component={EnhancedLanding} />
