@@ -632,10 +632,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Users endpoint for coupon targeting (simpler auth)
+  // Users endpoint for coupon targeting (using main storage)
   app.get('/api/users', async (req: any, res) => {
     try {
       const users = await storage.getAllUsers();
+      
       // Return basic user info for coupon targeting
       const basicUsers = users.map((user: any) => ({
         id: user.id,
