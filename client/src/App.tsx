@@ -90,7 +90,7 @@ function Router() {
         <Route path="/admin/users" component={AdminUsers} />
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/inquiries" component={AdminInquiries} />
-        <Route path="/admin/analytics" component={SimpleAnalytics} />
+        <Route path="/admin/reports" component={SimpleAnalytics} />
         <Route path="/admin/orders" component={OrdersManagement} />
         <Route path="/admin/drivers" component={DriversManagement} />
         <Route path="/driver/login" component={DriverLogin} />
@@ -132,7 +132,7 @@ function Router() {
         <Route path="/driver/login" component={DriverLogin} />
         <Route path="/driver/dashboard" component={DriverDashboard} />
         <Route path="/student/teachers" component={StudentTeachers} />
-        <Route path="/admin/analytics" component={SimpleAnalytics} />
+        <Route path="/admin/reports" component={SimpleAnalytics} />
         <Route path="/quick-access" component={QuickAccess} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />

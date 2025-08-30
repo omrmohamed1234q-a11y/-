@@ -33,7 +33,7 @@ const navigation = [
   { name: 'المكافآت', href: '/admin/rewards', icon: Gift },
   { name: 'المواد التعليمية', href: '/admin/teacher-materials', icon: GraduationCap },
   { name: 'المستخدمين', href: '/admin/users', icon: Users },
-  { name: 'التحليلات', href: '/admin/analytics', icon: BarChart3 },
+  { name: 'التحليلات', href: '/admin/reports', icon: BarChart3 },
   { name: 'الإعدادات', href: '/admin/settings', icon: Settings },
 ];
 
