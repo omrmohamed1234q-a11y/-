@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -74,6 +75,22 @@ interface OrderItem {
   finalPrice: number;
 }
 
+interface Driver {
+  id: string;
+  name: string;
+  username: string;
+  driverCode: string;
+  phone: string;
+  email: string;
+  vehicleType: string;
+  vehiclePlate: string;
+  status: 'online' | 'offline' | 'busy';
+  isAvailable: boolean;
+  currentOrders: number;
+  rating: number;
+  deliveryCount: number;
+}
+
 export default function OrdersManagement() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -93,7 +110,7 @@ export default function OrdersManagement() {
   });
 
   // Fetch available drivers
-  const { data: drivers = [] } = useQuery({
+  const { data: drivers = [] } = useQuery<Driver[]>({
     queryKey: ['/api/admin/drivers'],
     retry: false
   });
@@ -722,8 +739,8 @@ export default function OrdersManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   {drivers
-                    .filter((driver: any) => driver.isAvailable && driver.status === 'online')
-                    .map((driver: any) => (
+                    .filter((driver) => driver.isAvailable && driver.status === 'online')
+                    .map((driver) => (
                       <SelectItem key={driver.id} value={driver.id}>
                         <div className="flex items-center gap-2">
                           <Truck className="w-4 h-4" />
@@ -732,7 +749,7 @@ export default function OrdersManagement() {
                         </div>
                       </SelectItem>
                     ))}
-                  {drivers.filter((driver: any) => driver.isAvailable && driver.status === 'online').length === 0 && (
+                  {drivers.filter((driver) => driver.isAvailable && driver.status === 'online').length === 0 && (
                     <SelectItem value="" disabled>
                       لا توجد سائقين متاحين حالياً
                     </SelectItem>
