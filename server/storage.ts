@@ -1,6 +1,6 @@
 import { users, products, orders, printJobs, cartItems, drivers, type User, type Product, type Order, type PrintJob, type CartItem } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -38,7 +38,12 @@ export interface IStorage {
   updatePrintJobStatus(id: string, status: string): Promise<PrintJob>;
   
   // Cart operations
-  addToCart(cartData: { userId: string; productId: string; quantity: number }): Promise<CartItem>;
+  getCart(userId: string): Promise<any>;
+  addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<CartItem>;
+  updateCartItem(itemId: string, quantity: number): Promise<CartItem>;
+  removeCartItem(itemId: string): Promise<boolean>;
+  clearCart(userId: string): Promise<boolean>;
+  getCartItemCount(userId: string): Promise<number>;
   
   // Admin statistics
   getAdminStats(): Promise<any>;
@@ -886,11 +891,150 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+
+  // Cart operations
+  async getCart(userId: string): Promise<any> {
+    try {
+      const items = await db
+        .select({
+          id: cartItems.id,
+          productId: cartItems.productId,
+          quantity: cartItems.quantity,
+          price: cartItems.price,
+          variant: cartItems.variant,
+          notes: cartItems.notes,
+          productName: products.name,
+          productImage: products.imageUrl,
+          productStock: products.stock,
+          productPrice: products.price,
+          createdAt: cartItems.createdAt,
+        })
+        .from(cartItems)
+        .leftJoin(products, eq(cartItems.productId, products.id))
+        .where(eq(cartItems.userId, userId))
+        .orderBy(desc(cartItems.createdAt));
+
+      const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+      const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
+
+      return {
+        items,
+        totalQuantity,
+        subtotal,
+        currency: 'جنيه',
+      };
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      return { items: [], totalQuantity: 0, subtotal: 0, currency: 'جنيه' };
+    }
+  }
+
+  async addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<CartItem> {
+    try {
+      // Get product to check stock and price
+      const [product] = await db.select().from(products).where(eq(products.id, productId));
+      if (!product) {
+        throw new Error('Product not found');
+      }
+
+      // Check if item already exists in cart
+      const [existingItem] = await db
+        .select()
+        .from(cartItems)
+        .where(and(
+          eq(cartItems.userId, userId),
+          eq(cartItems.productId, productId)
+        ));
+
+      if (existingItem) {
+        // Update existing item
+        const newQuantity = existingItem.quantity + quantity;
+        const [updatedItem] = await db
+          .update(cartItems)
+          .set({ 
+            quantity: newQuantity,
+            updatedAt: new Date()
+          })
+          .where(eq(cartItems.id, existingItem.id))
+          .returning();
+        return updatedItem;
+      } else {
+        // Add new item
+        const [newItem] = await db
+          .insert(cartItems)
+          .values({
+            userId,
+            productId,
+            quantity,
+            price: product.price,
+            variant,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .returning();
+        return newItem;
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      throw error;
+    }
+  }
+
+  async updateCartItem(itemId: string, quantity: number): Promise<CartItem> {
+    try {
+      const [updatedItem] = await db
+        .update(cartItems)
+        .set({ 
+          quantity,
+          updatedAt: new Date()
+        })
+        .where(eq(cartItems.id, itemId))
+        .returning();
+      return updatedItem;
+    } catch (error) {
+      console.error('Error updating cart item:', error);
+      throw error;
+    }
+  }
+
+  async removeCartItem(itemId: string): Promise<boolean> {
+    try {
+      await db.delete(cartItems).where(eq(cartItems.id, itemId));
+      return true;
+    } catch (error) {
+      console.error('Error removing cart item:', error);
+      return false;
+    }
+  }
+
+  async clearCart(userId: string): Promise<boolean> {
+    try {
+      await db.delete(cartItems).where(eq(cartItems.userId, userId));
+      return true;
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+      return false;
+    }
+  }
+
+  async getCartItemCount(userId: string): Promise<number> {
+    try {
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(cartItems)
+        .where(eq(cartItems.userId, userId));
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('Error getting cart item count:', error);
+      return 0;
+    }
+  }
 }
 
 // In-memory storage to bypass database connection issues
 class MemStorage implements IStorage {
   private users: User[] = [];
+  private cartItems: any[] = [];
   private products: Product[] = [
     {
       id: '1',
@@ -1335,60 +1479,103 @@ class MemStorage implements IStorage {
     throw new Error('Print job not found');
   }
 
-  async addToCart(cartData: { userId: string; productId: string; quantity: number }): Promise<CartItem> {
+  async addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<any> {
     // Check if product exists
-    const product = this.products.find(p => p.id === cartData.productId);
+    const product = this.products.find(p => p.id === productId);
     if (!product) {
       throw new Error('Product not found');
     }
-    
-    const cartItem: CartItem = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...cartData,
-      createdAt: new Date()
-    };
-    this.cartItems.push(cartItem);
-    return cartItem;
+
+    // Check if item already exists in cart
+    const existingItemIndex = this.cartItems.findIndex(item => 
+      item.userId === userId && item.productId === productId
+    );
+
+    if (existingItemIndex !== -1) {
+      // Update existing item
+      this.cartItems[existingItemIndex].quantity += quantity;
+      return this.cartItems[existingItemIndex];
+    } else {
+      // Add new item
+      const cartItem = {
+        id: Math.random().toString(36).substr(2, 9),
+        userId,
+        productId,
+        quantity,
+        price: product.price,
+        variant,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.cartItems.push(cartItem);
+      return cartItem;
+    }
   }
 
   async getCart(userId: string): Promise<any> {
-    const userCartItems = this.cartItems.filter(item => item.userId === userId);
-    
-    // Filter out items with non-existent products
-    const validCartItems = userCartItems.filter(item => {
-      const product = this.products.find(p => p.id === item.productId);
-      return product !== undefined;
-    });
-    
-    // Remove invalid items from storage
-    this.cartItems = this.cartItems.filter(item => 
-      item.userId !== userId || this.products.find(p => p.id === item.productId)
-    );
-    
-    const items = validCartItems.map(item => {
-      const product = this.products.find(p => p.id === item.productId);
+    try {
+      const userCartItems = this.cartItems.filter(item => item.userId === userId);
+      
+      const items = userCartItems.map(item => {
+        const product = this.products.find(p => p.id === item.productId);
+        return {
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+          variant: item.variant,
+          notes: item.notes,
+          productName: product?.name || 'منتج غير موجود',
+          productImage: product?.imageUrl || '',
+          productStock: product?.stock || 0,
+          productPrice: product?.price || '0',
+          createdAt: item.createdAt,
+        };
+      });
+
+      const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+      const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
+
       return {
-        ...item,
-        product
+        items,
+        totalQuantity,
+        subtotal,
+        currency: 'جنيه',
       };
-    });
-    
-    const subtotal = items.reduce((sum, item) => {
-      const price = typeof item.product.price === 'string' ? 
-        parseFloat(item.product.price) : item.product.price;
-      return sum + (price * item.quantity);
-    }, 0);
-    
-    return {
-      items,
-      subtotal: Math.round(subtotal * 100) / 100,
-      discount: 0,
-      total: Math.round(subtotal * 100) / 100
-    };
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      return { items: [], totalQuantity: 0, subtotal: 0, currency: 'جنيه' };
+    }
   }
 
-  async clearCart(userId: string): Promise<void> {
+  async updateCartItem(itemId: string, quantity: number): Promise<any> {
+    const itemIndex = this.cartItems.findIndex(item => item.id === itemId);
+    if (itemIndex === -1) {
+      throw new Error('Cart item not found');
+    }
+    
+    this.cartItems[itemIndex].quantity = quantity;
+    this.cartItems[itemIndex].updatedAt = new Date();
+    return this.cartItems[itemIndex];
+  }
+
+  async removeCartItem(itemId: string): Promise<boolean> {
+    const itemIndex = this.cartItems.findIndex(item => item.id === itemId);
+    if (itemIndex === -1) {
+      return false;
+    }
+    
+    this.cartItems.splice(itemIndex, 1);
+    return true;
+  }
+
+  async clearCart(userId: string): Promise<boolean> {
     this.cartItems = this.cartItems.filter(item => item.userId !== userId);
+    return true;
+  }
+
+  async getCartItemCount(userId: string): Promise<number> {
+    return this.cartItems.filter(item => item.userId === userId).length;
   }
 
   async getAdminStats(): Promise<any> {

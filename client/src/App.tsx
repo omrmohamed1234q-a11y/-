@@ -26,6 +26,7 @@ import AdminProducts from "@/pages/admin-products";
 import AdminStore from "@/pages/admin/store";
 import TeachersCorner from "@/pages/admin/teachers-corner";
 import CloudinaryTest from "@/pages/cloudinary-test";
+import CheckoutPage from "@/pages/checkout";
 import StudentTeachers from "@/pages/student/teachers";
 import AdminUsers from "@/pages/admin/users";
 import AdminCoupons from "@/pages/admin/coupons";
@@ -113,6 +114,7 @@ function Router() {
         <Route path="/print" component={Print} />
         <Route path="/scan" component={Scan} />
         <Route path="/store" component={Store} />
+        <Route path="/checkout" component={CheckoutPage} />
         <Route path="/rewards" component={Rewards} />
         <Route path="/profile" component={Profile} />
         <Route path="/payment" component={Payment} />

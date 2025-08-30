@@ -486,6 +486,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get active orders for user  
+  app.get('/api/orders/active', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const activeOrders = await storage.getActiveOrders();
+      // Filter orders for current user
+      const userActiveOrders = activeOrders.filter((order: any) => order.userId === userId);
+      res.json(userActiveOrders);
+    } catch (error) {
+      console.error("Error fetching active orders:", error);
+      res.status(500).json({ message: "Failed to fetch active orders" });
+    }
+  });
+
+  // Get order by ID
+  app.get('/api/orders/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const order = await storage.getOrder(id);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      res.json(order);
+    } catch (error) {
+      console.error("Error fetching order:", error);
+      res.status(500).json({ message: "Failed to fetch order" });
+    }
+  });
+
+  // Update order status
+  app.put('/api/orders/:id/status', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+
+      const updatedOrder = await storage.updateOrderStatus(id, status);
+      res.json({ success: true, order: updatedOrder });
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
+  // Assign driver to order
+  app.put('/api/orders/:id/assign-driver', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { driverId } = req.body;
+
+      if (!driverId) {
+        return res.status(400).json({ message: "Driver ID is required" });
+      }
+
+      const updatedOrder = await storage.assignOrderToDriver(id, driverId);
+      res.json({ success: true, order: updatedOrder });
+    } catch (error) {
+      console.error("Error assigning driver:", error);
+      res.status(500).json({ message: "Failed to assign driver" });
+    }
+  });
+
   // Public product routes
   app.get('/api/products', async (req, res) => {
     try {
@@ -494,6 +561,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching products:", error);
       res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  // Cart routes
+  app.get('/api/cart', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const cart = await storage.getCart(userId);
+      res.json(cart);
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+      res.status(500).json({ message: "Failed to fetch cart" });
+    }
+  });
+
+  app.post('/api/cart/add', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { productId, quantity = 1, variant } = req.body;
+
+      if (!productId) {
+        return res.status(400).json({ message: "Product ID is required" });
+      }
+
+      const cartItem = await storage.addToCart(userId, productId, quantity, variant);
+      res.json({ success: true, item: cartItem });
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      res.status(500).json({ message: "Failed to add to cart" });
+    }
+  });
+
+  app.put('/api/cart/items/:itemId', requireAuth, async (req: any, res) => {
+    try {
+      const { itemId } = req.params;
+      const { quantity } = req.body;
+
+      if (!quantity || quantity < 1) {
+        return res.status(400).json({ message: "Valid quantity is required" });
+      }
+
+      const updatedItem = await storage.updateCartItem(itemId, quantity);
+      res.json({ success: true, item: updatedItem });
+    } catch (error) {
+      console.error("Error updating cart item:", error);
+      res.status(500).json({ message: "Failed to update cart item" });
+    }
+  });
+
+  app.delete('/api/cart/items/:itemId', requireAuth, async (req: any, res) => {
+    try {
+      const { itemId } = req.params;
+      const success = await storage.removeCartItem(itemId);
+      
+      if (success) {
+        res.json({ success: true, message: "Item removed from cart" });
+      } else {
+        res.status(404).json({ message: "Cart item not found" });
+      }
+    } catch (error) {
+      console.error("Error removing cart item:", error);
+      res.status(500).json({ message: "Failed to remove cart item" });
+    }
+  });
+
+  app.delete('/api/cart/clear', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const success = await storage.clearCart(userId);
+      
+      if (success) {
+        res.json({ success: true, message: "Cart cleared" });
+      } else {
+        res.status(500).json({ message: "Failed to clear cart" });
+      }
+    } catch (error) {
+      console.error("Error clearing cart:", error);
+      res.status(500).json({ message: "Failed to clear cart" });
+    }
+  });
+
+  app.get('/api/cart/count', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const count = await storage.getCartItemCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error getting cart count:", error);
+      res.status(500).json({ message: "Failed to get cart count" });
+    }
+  });
+
+  // Checkout route
+  app.post('/api/checkout', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { 
+        deliveryAddress,
+        deliveryMethod = 'delivery',
+        paymentMethod = 'cash',
+        notes,
+        usePoints = false 
+      } = req.body;
+
+      // Get cart items
+      const cart = await storage.getCart(userId);
+      
+      if (!cart.items || cart.items.length === 0) {
+        return res.status(400).json({ message: "Cart is empty" });
+      }
+
+      // Create order from cart
+      const orderData = {
+        userId,
+        orderNumber: `ORD-${Date.now()}`,
+        items: cart.items.map((item: any) => ({
+          productId: item.productId,
+          name: item.productName,
+          quantity: item.quantity,
+          price: parseFloat(item.price)
+        })),
+        subtotal: cart.subtotal.toString(),
+        totalAmount: cart.subtotal.toString(),
+        status: 'pending',
+        deliveryAddress,
+        deliveryMethod,
+        paymentMethod,
+        deliveryNotes: notes,
+        pointsUsed: usePoints ? Math.min(100, Math.floor(cart.subtotal * 0.1)) : 0,
+        pointsEarned: Math.floor(cart.subtotal * 0.05),
+      };
+
+      const order = await storage.createOrder(orderData);
+      
+      // Clear cart after successful order
+      await storage.clearCart(userId);
+
+      res.json({ 
+        success: true, 
+        order,
+        message: "Order placed successfully" 
+      });
+    } catch (error) {
+      console.error("Error processing checkout:", error);
+      res.status(500).json({ message: "Failed to process checkout" });
+    }
+  });
+
+  // Cart suggestions (related products)
+  app.get('/api/cart/suggestions', requireAuth, async (req: any, res) => {
+    try {
+      // For now, return a few sample products
+      // In a real implementation, this would analyze cart contents and suggest related items
+      const products = await storage.getAllProducts();
+      const suggestions = products.slice(0, 3);
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+      res.status(500).json({ message: "Failed to fetch suggestions" });
     }
   });
 
