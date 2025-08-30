@@ -1,4 +1,4 @@
-import { users, products, orders, printJobs, cartItems, type User, type Product, type Order, type PrintJob, type CartItem } from "@shared/schema";
+import { users, products, orders, printJobs, cartItems, drivers, type User, type Product, type Order, type PrintJob, type CartItem } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 
@@ -73,6 +73,20 @@ export interface IStorage {
   sendInquiry(inquiryId: string): Promise<any>;
   getInquiryResponses(inquiryId: string): Promise<any[]>;
   createInquiryNotifications(notifications: any[]): Promise<void>;
+
+  // Driver operations
+  getAllDrivers(): Promise<any[]>;
+  getDriver(id: string): Promise<any>;
+  getDriverByEmail(email: string): Promise<any>;
+  createDriver(driver: any): Promise<any>;
+  updateDriver(id: string, updates: any): Promise<any>;
+  updateDriverStatus(id: string, status: string): Promise<any>;
+  updateDriverLocation(id: string, location: any): Promise<any>;
+  authenticateDriver(email: string, password: string): Promise<any>;
+  getAvailableDrivers(): Promise<any[]>;
+  assignOrderToDriver(orderId: string, driverId: string): Promise<any>;
+  getDriverOrders(driverId: string): Promise<any[]>;
+  deleteDriver(id: string): Promise<boolean>;
 
   // Driver operations
   getAllDrivers(): Promise<any[]>;
@@ -661,6 +675,201 @@ export class DatabaseStorage implements IStorage {
       });
     }
     console.log(`💾 Stored ${notifications.length} inquiry notifications`);
+  }
+
+  // Driver operations - Real implementation with Supabase
+  async getAllDrivers(): Promise<any[]> {
+    try {
+      const result = await db.select().from(drivers).orderBy(desc(drivers.createdAt));
+      return result;
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      return [];
+    }
+  }
+
+  async getDriver(id: string): Promise<any> {
+    try {
+      const [driver] = await db.select().from(drivers).where(eq(drivers.id, id));
+      return driver;
+    } catch (error) {
+      console.error('Error fetching driver:', error);
+      return null;
+    }
+  }
+
+  async getDriverByEmail(email: string): Promise<any> {
+    try {
+      const [driver] = await db.select().from(drivers).where(eq(drivers.email, email));
+      return driver;
+    } catch (error) {
+      console.error('Error fetching driver by email:', error);
+      return null;
+    }
+  }
+
+  async createDriver(driverData: any): Promise<any> {
+    try {
+      const [newDriver] = await db.insert(drivers).values({
+        ...driverData,
+        id: sql`gen_random_uuid()`,
+        driverCode: `DRV${Date.now()}`,
+        status: 'offline',
+        isAvailable: true,
+        rating: '0.00',
+        ratingCount: 0,
+        totalDeliveries: 0,
+        completedDeliveries: 0,
+        cancelledDeliveries: 0,
+        earnings: '0.00',
+        isVerified: false,
+        documentsVerified: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      
+      console.log(`🚚 New driver created: ${newDriver.name} (${newDriver.email})`);
+      return newDriver;
+    } catch (error) {
+      console.error('Error creating driver:', error);
+      throw error;
+    }
+  }
+
+  async updateDriver(id: string, updates: any): Promise<any> {
+    try {
+      const [updatedDriver] = await db.update(drivers)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(drivers.id, id))
+        .returning();
+      
+      console.log(`🚚 Driver updated: ${id}`);
+      return updatedDriver;
+    } catch (error) {
+      console.error('Error updating driver:', error);
+      throw error;
+    }
+  }
+
+  async updateDriverStatus(id: string, status: string): Promise<any> {
+    try {
+      const [updatedDriver] = await db.update(drivers)
+        .set({ 
+          status, 
+          isAvailable: status === 'online',
+          lastActiveAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(drivers.id, id))
+        .returning();
+      
+      console.log(`🚚 Driver status updated: ${id} -> ${status}`);
+      return updatedDriver;
+    } catch (error) {
+      console.error('Error updating driver status:', error);
+      throw error;
+    }
+  }
+
+  async updateDriverLocation(id: string, location: any): Promise<any> {
+    try {
+      const [updatedDriver] = await db.update(drivers)
+        .set({
+          currentLocation: location,
+          lastLocationUpdate: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(drivers.id, id))
+        .returning();
+      
+      return updatedDriver;
+    } catch (error) {
+      console.error('Error updating driver location:', error);
+      throw error;
+    }
+  }
+
+  async authenticateDriver(email: string, password: string): Promise<any> {
+    try {
+      const driver = await this.getDriverByEmail(email);
+      if (!driver) {
+        return null;
+      }
+
+      // In production, you should hash and compare passwords
+      if (driver.password === password) {
+        // Update last active time
+        await this.updateDriver(driver.id, { lastActiveAt: new Date() });
+        return driver;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error authenticating driver:', error);
+      return null;
+    }
+  }
+
+  async getAvailableDrivers(): Promise<any[]> {
+    try {
+      const result = await db.select().from(drivers)
+        .where(eq(drivers.isAvailable, true))
+        .orderBy(drivers.rating);
+      return result;
+    } catch (error) {
+      console.error('Error fetching available drivers:', error);
+      return [];
+    }
+  }
+
+  async assignOrderToDriver(orderId: string, driverId: string): Promise<any> {
+    try {
+      const driver = await this.getDriver(driverId);
+      if (!driver) {
+        throw new Error('Driver not found');
+      }
+
+      const [updatedOrder] = await db.update(orders)
+        .set({
+          driverId: driverId,
+          driverName: driver.name,
+          driverPhone: driver.phone,
+          status: 'out_for_delivery',
+          outForDeliveryAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(orders.id, orderId))
+        .returning();
+
+      console.log(`🚚 Order ${orderId} assigned to driver ${driver.name}`);
+      return updatedOrder;
+    } catch (error) {
+      console.error('Error assigning order to driver:', error);
+      throw error;
+    }
+  }
+
+  async getDriverOrders(driverId: string): Promise<any[]> {
+    try {
+      const result = await db.select().from(orders)
+        .where(eq(orders.driverId, driverId))
+        .orderBy(desc(orders.createdAt));
+      return result;
+    } catch (error) {
+      console.error('Error fetching driver orders:', error);
+      return [];
+    }
+  }
+
+  async deleteDriver(id: string): Promise<boolean> {
+    try {
+      await db.delete(drivers).where(eq(drivers.id, id));
+      console.log(`🚚 Driver deleted: ${id}`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting driver:', error);
+      return false;
+    }
   }
 }
 
@@ -1610,58 +1819,182 @@ class MemStorage implements IStorage {
     console.log(`💾 Stored ${notifications.length} inquiry notifications in MemStorage`);
   }
 
-  // Driver operations
+  // Driver operations - Mock data for fallback
   private drivers: any[] = [
     {
       id: 'driver1',
-      name: 'أحمد محمد',
+      name: 'أحمد السائق',
       email: 'ahmed@driver.com',
       phone: '01012345678',
       password: 'password123',
       vehicleType: 'motorcycle',
-      vehiclePlate: 'أ ب ج 123',
-      workingArea: 'مدينة نصر، القاهرة',
-      driverCode: 'DRV001',
+      vehiclePlate: 'ABC123',
       status: 'offline',
       isAvailable: true,
-      rating: '4.8',
-      ratingCount: 25,
-      totalDeliveries: 150,
-      completedDeliveries: 145,
-      cancelledDeliveries: 5,
-      earnings: '2500.00',
+      rating: '4.5',
+      totalDeliveries: 25,
+      completedDeliveries: 23,
+      cancelledDeliveries: 2,
+      earnings: '1250.00',
+      workingArea: 'القاهرة الكبرى',
       isVerified: true,
       documentsVerified: true,
-      lastActiveAt: new Date(),
+      driverCode: 'DRV001',
       createdAt: new Date()
     },
     {
       id: 'driver2',
-      name: 'محمد علي',
+      name: 'محمد التوصيل',
       email: 'mohamed@driver.com',
-      phone: '01087654321',
+      phone: '01098765432',
       password: 'password123',
       vehicleType: 'car',
-      vehiclePlate: 'د هـ و 456',
-      workingArea: 'مصر الجديدة، القاهرة',
-      driverCode: 'DRV002',
+      vehiclePlate: 'XYZ789',
       status: 'online',
       isAvailable: true,
-      rating: '4.6',
-      ratingCount: 18,
-      totalDeliveries: 89,
-      completedDeliveries: 85,
-      cancelledDeliveries: 4,
-      earnings: '1800.00',
+      rating: '4.8',
+      totalDeliveries: 45,
+      completedDeliveries: 42,
+      cancelledDeliveries: 3,
+      earnings: '2100.00',
+      workingArea: 'الجيزة',
       isVerified: true,
       documentsVerified: true,
-      lastActiveAt: new Date(),
+      driverCode: 'DRV002',
       createdAt: new Date()
     }
   ];
 
   async getAllDrivers(): Promise<any[]> {
-    return this.drivers;
+    return [...this.drivers].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async getDriver(id: string): Promise<any> {
+    return this.drivers.find(d => d.id === id) || null;
+  }
+
+  async getDriverByEmail(email: string): Promise<any> {
+    return this.drivers.find(d => d.email === email) || null;
+  }
+
+  async createDriver(driverData: any): Promise<any> {
+    const newDriver = {
+      id: `driver_${Date.now()}`,
+      driverCode: `DRV${Date.now()}`,
+      status: 'offline',
+      isAvailable: true,
+      rating: '0.00',
+      ratingCount: 0,
+      totalDeliveries: 0,
+      completedDeliveries: 0,
+      cancelledDeliveries: 0,
+      earnings: '0.00',
+      isVerified: false,
+      documentsVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...driverData
+    };
+    this.drivers.push(newDriver);
+    console.log(`🚚 New driver created: ${newDriver.name} (${newDriver.email})`);
+    return newDriver;
+  }
+
+  async updateDriver(id: string, updates: any): Promise<any> {
+    const index = this.drivers.findIndex(d => d.id === id);
+    if (index !== -1) {
+      this.drivers[index] = { 
+        ...this.drivers[index], 
+        ...updates, 
+        updatedAt: new Date() 
+      };
+      console.log(`🚚 Driver updated: ${id}`);
+      return this.drivers[index];
+    }
+    throw new Error('Driver not found');
+  }
+
+  async updateDriverStatus(id: string, status: string): Promise<any> {
+    const index = this.drivers.findIndex(d => d.id === id);
+    if (index !== -1) {
+      this.drivers[index] = {
+        ...this.drivers[index],
+        status,
+        isAvailable: status === 'online',
+        lastActiveAt: new Date(),
+        updatedAt: new Date()
+      };
+      console.log(`🚚 Driver status updated: ${id} -> ${status}`);
+      return this.drivers[index];
+    }
+    throw new Error('Driver not found');
+  }
+
+  async updateDriverLocation(id: string, location: any): Promise<any> {
+    const index = this.drivers.findIndex(d => d.id === id);
+    if (index !== -1) {
+      this.drivers[index] = {
+        ...this.drivers[index],
+        currentLocation: location,
+        lastLocationUpdate: new Date(),
+        updatedAt: new Date()
+      };
+      return this.drivers[index];
+    }
+    throw new Error('Driver not found');
+  }
+
+  async authenticateDriver(email: string, password: string): Promise<any> {
+    const driver = this.drivers.find(d => d.email === email && d.password === password);
+    if (driver) {
+      // Update last active time
+      await this.updateDriver(driver.id, { lastActiveAt: new Date() });
+      return driver;
+    }
+    return null;
+  }
+
+  async getAvailableDrivers(): Promise<any[]> {
+    return this.drivers.filter(d => d.isAvailable && d.status === 'online');
+  }
+
+  async assignOrderToDriver(orderId: string, driverId: string): Promise<any> {
+    const driver = this.drivers.find(d => d.id === driverId);
+    if (!driver) {
+      throw new Error('Driver not found');
+    }
+
+    const orderIndex = this.orders.findIndex(o => o.id === orderId);
+    if (orderIndex !== -1) {
+      this.orders[orderIndex] = {
+        ...this.orders[orderIndex],
+        driverId: driverId,
+        driverName: driver.name,
+        driverPhone: driver.phone,
+        status: 'out_for_delivery',
+        outForDeliveryAt: new Date(),
+        updatedAt: new Date()
+      };
+      console.log(`🚚 Order ${orderId} assigned to driver ${driver.name}`);
+      return this.orders[orderIndex];
+    }
+    throw new Error('Order not found');
+  }
+
+  async getDriverOrders(driverId: string): Promise<any[]> {
+    return this.orders.filter(o => o.driverId === driverId);
+  }
+
+  async deleteDriver(id: string): Promise<boolean> {
+    const index = this.drivers.findIndex(d => d.id === id);
+    if (index !== -1) {
+      this.drivers.splice(index, 1);
+      console.log(`🚚 Driver deleted: ${id}`);
+      return true;
+    }
+    return false;
   }
 
   async getDriver(id: string): Promise<any | undefined> {

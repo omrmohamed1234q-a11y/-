@@ -36,7 +36,7 @@ import Checkout from "@/pages/checkout";
 import OrderTracking from "@/pages/order-tracking";
 import DriverLogin from "@/pages/driver/driver-login";
 import DriverDashboard from "@/pages/driver/driver-dashboard";
-import DriversManagement from "@/pages/admin/drivers-management";
+import DriversManagement from "@/pages/admin/drivers";
 import QuickAccess from "@/pages/quick-access";
 
 

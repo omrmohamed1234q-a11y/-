@@ -80,13 +80,22 @@ export default function OrdersManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPricingDialog, setShowPricingDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDriverDialog, setShowDriverDialog] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [orderToAssign, setOrderToAssign] = useState<Order | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [pricingData, setPricingData] = useState<any>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: orders = [], isLoading } = useQuery<Order[]>({
     queryKey: ['/api/admin/orders']
+  });
+
+  // Fetch available drivers
+  const { data: drivers = [] } = useQuery({
+    queryKey: ['/api/admin/drivers'],
+    retry: false
   });
 
   const updateOrderMutation = useMutation({
@@ -119,6 +128,32 @@ export default function OrdersManagement() {
       toast({
         title: "خطأ في الحذف",
         description: "حدث خطأ أثناء حذف الطلب",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Assign driver mutation
+  const assignDriverMutation = useMutation({
+    mutationFn: async (data: { orderId: string; driverId: string }) => {
+      return apiRequest('POST', `/api/admin/orders/${data.orderId}/assign-driver`, {
+        driverId: data.driverId
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      setShowDriverDialog(false);
+      setOrderToAssign(null);
+      setSelectedDriverId('');
+      toast({
+        title: "تم تعيين السائق",
+        description: "تم تعيين السائق للطلب بنجاح",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ في التعيين",
+        description: error.message || "حدث خطأ أثناء تعيين السائق",
         variant: "destructive",
       });
     }
@@ -197,6 +232,20 @@ export default function OrdersManagement() {
   const confirmDeleteOrder = () => {
     if (orderToDelete) {
       deleteOrderMutation.mutate(orderToDelete.id);
+    }
+  };
+
+  const handleAssignDriver = (order: Order) => {
+    setOrderToAssign(order);
+    setShowDriverDialog(true);
+  };
+
+  const confirmAssignDriver = () => {
+    if (orderToAssign && selectedDriverId) {
+      assignDriverMutation.mutate({
+        orderId: orderToAssign.id,
+        driverId: selectedDriverId
+      });
     }
   };
 
@@ -449,13 +498,22 @@ export default function OrdersManagement() {
                       )}
 
                       {order.status === 'ready' && (
-                        <Button
-                          onClick={() => handleStatusUpdate(order.id, 'delivered')}
-                          className="gap-2 bg-gray-600 hover:bg-gray-700"
-                        >
-                          <Truck className="w-4 h-4" />
-                          تم التسليم
-                        </Button>
+                        <>
+                          <Button
+                            onClick={() => handleAssignDriver(order)}
+                            className="gap-2 bg-cyan-600 hover:bg-cyan-700"
+                          >
+                            <Truck className="w-4 h-4" />
+                            تعيين سائق
+                          </Button>
+                          <Button
+                            onClick={() => handleStatusUpdate(order.id, 'delivered')}
+                            className="gap-2 bg-gray-600 hover:bg-gray-700"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            تم التسليم
+                          </Button>
+                        </>
                       )}
                     </div>
 
@@ -628,6 +686,76 @@ export default function OrdersManagement() {
                 onClick={() => setShowDeleteDialog(false)}
                 disabled={deleteOrderMutation.isPending}
                 data-testid="button-cancel-delete"
+              >
+                إلغاء
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Driver Dialog */}
+      <Dialog open={showDriverDialog} onOpenChange={setShowDriverDialog}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">تعيين سائق للطلب</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {orderToAssign && (
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="font-medium">تفاصيل الطلب:</div>
+                <div className="text-sm space-y-1">
+                  <div>رقم الطلب: <span className="font-semibold">{orderToAssign.id}</span></div>
+                  <div>العميل: <span className="font-semibold">{orderToAssign.customerName}</span></div>
+                  <div>العنوان: <span className="font-semibold">{orderToAssign.deliveryAddress}</span></div>
+                  <div>القيمة: <span className="font-semibold">{orderToAssign.totalAmount} جنيه</span></div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="driver-select">اختيار السائق</Label>
+              <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر سائق متاح" />
+                </SelectTrigger>
+                <SelectContent>
+                  {drivers
+                    .filter((driver: any) => driver.isAvailable && driver.status === 'online')
+                    .map((driver: any) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-4 h-4" />
+                          <span>{driver.name}</span>
+                          <span className="text-sm text-gray-500">({driver.driverCode})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  {drivers.filter((driver: any) => driver.isAvailable && driver.status === 'online').length === 0 && (
+                    <SelectItem value="" disabled>
+                      لا توجد سائقين متاحين حالياً
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button 
+                onClick={confirmAssignDriver}
+                disabled={!selectedDriverId || assignDriverMutation.isPending}
+                className="flex-1"
+              >
+                {assignDriverMutation.isPending ? 'جاري التعيين...' : 'تعيين السائق'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowDriverDialog(false);
+                  setSelectedDriverId('');
+                }}
+                disabled={assignDriverMutation.isPending}
               >
                 إلغاء
               </Button>

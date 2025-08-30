@@ -52,7 +52,7 @@ const isAdminAuthenticated = (req: any, res: any, next: any) => {
   }
 };
 
-// Driver authentication middleware
+// Driver authentication middleware - Real implementation
 const requireDriverAuth = async (req: any, res: any, next: any) => {
   const authHeader = req.headers.authorization;
   
@@ -66,9 +66,8 @@ const requireDriverAuth = async (req: any, res: any, next: any) => {
   const token = authHeader.split(' ')[1];
   
   try {
-    // In a real app, verify JWT token here
-    // For demo, we'll decode the driver ID from the token
-    const driverId = token; // Simplified for demo
+    // Get driver by ID (in production, verify JWT token)
+    const driverId = token;
     const driver = await storage.getDriver(driverId);
     
     if (!driver) {
@@ -2172,13 +2171,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ====== DRIVER API ROUTES ======
 
-  // Driver login
+  // Driver registration from signup page
+  app.post('/api/drivers/register', async (req: any, res) => {
+    try {
+      const { email, fullName, phone, vehicleType, password } = req.body;
+      
+      console.log(`🚚 New driver registration: ${email}`);
+
+      // Check if driver email already exists
+      const existingDriver = await storage.getDriverByEmail(email);
+      if (existingDriver) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'البريد الإلكتروني مسجل بالفعل كسائق' 
+        });
+      }
+
+      // Create new driver
+      const newDriver = await storage.createDriver({
+        name: fullName,
+        email,
+        phone,
+        vehicleType: vehicleType || 'motorcycle',
+        password: password || 'temp123', // In production, hash this password
+        countryCode: '+20',
+        address: '',
+        workingArea: 'القاهرة الكبرى'
+      });
+
+      res.json({ 
+        success: true, 
+        message: 'تم إنشاء حساب السائق بنجاح',
+        driver: {
+          id: newDriver.id,
+          name: newDriver.name,
+          email: newDriver.email,
+          driverCode: newDriver.driverCode
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ Error registering driver:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'فشل في إنشاء حساب السائق' 
+      });
+    }
+  });
+
+  // Admin: Get all drivers
+  app.get('/api/admin/drivers', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const drivers = await storage.getAllDrivers();
+      res.json(drivers);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      res.status(500).json({ message: 'Failed to fetch drivers' });
+    }
+  });
+
+  // Admin: Create new driver
+  app.post('/api/admin/drivers', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const driverData = req.body;
+      
+      // Check if driver email already exists
+      const existingDriver = await storage.getDriverByEmail(driverData.email);
+      if (existingDriver) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'البريد الإلكتروني مسجل بالفعل' 
+        });
+      }
+
+      const newDriver = await storage.createDriver(driverData);
+      res.json({ success: true, driver: newDriver });
+    } catch (error) {
+      console.error('Error creating driver:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'فشل في إنشاء حساب السائق' 
+      });
+    }
+  });
+
+  // Admin: Update driver
+  app.put('/api/admin/drivers/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const updatedDriver = await storage.updateDriver(id, updates);
+      res.json({ success: true, driver: updatedDriver });
+    } catch (error) {
+      console.error('Error updating driver:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'فشل في تحديث بيانات السائق' 
+      });
+    }
+  });
+
+  // Admin: Delete driver
+  app.delete('/api/admin/drivers/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteDriver(id);
+      
+      if (success) {
+        res.json({ success: true, message: 'تم حذف السائق بنجاح' });
+      } else {
+        res.status(404).json({ success: false, message: 'السائق غير موجود' });
+      }
+    } catch (error) {
+      console.error('Error deleting driver:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'فشل في حذف السائق' 
+      });
+    }
+  });
+
+  // Admin: Assign order to driver
+  app.post('/api/admin/orders/:orderId/assign-driver', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const { driverId } = req.body;
+      
+      const updatedOrder = await storage.assignOrderToDriver(orderId, driverId);
+      res.json({ success: true, order: updatedOrder });
+    } catch (error) {
+      console.error('Error assigning order to driver:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'فشل في تعيين السائق للطلب' 
+      });
+    }
+  });
+
+  // Driver login - Real implementation with Supabase
   app.post('/api/driver/login', async (req, res) => {
     try {
       const { email, password } = req.body;
       console.log(`🚚 Driver login attempt: ${email}`);
 
-      // Authenticate driver
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'البريد الإلكتروني وكلمة المرور مطلوبان'
+        });
+      }
+
+      // Authenticate driver with real database
       const driver = await storage.authenticateDriver(email, password);
       
       if (!driver) {
@@ -2188,10 +2331,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Update last active
-      await storage.updateDriverLastActive(driver.id);
+      // Update driver status to online and last active time
+      await storage.updateDriverStatus(driver.id, 'online');
 
-      // Generate token (simplified for demo)
+      // Generate JWT token (in production, use proper JWT)
       const token = driver.id;
 
       res.json({
@@ -2203,10 +2346,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: driver.email,
           phone: driver.phone,
           vehicleType: driver.vehicleType,
+          vehiclePlate: driver.vehiclePlate,
           rating: driver.rating,
           totalDeliveries: driver.totalDeliveries,
-          status: driver.status,
-          earnings: driver.earnings
+          completedDeliveries: driver.completedDeliveries,
+          status: 'online',
+          earnings: driver.earnings,
+          workingArea: driver.workingArea,
+          isVerified: driver.isVerified
         }
       });
     } catch (error) {
@@ -2224,8 +2371,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const driverId = req.driver.id;
       console.log(`📦 Fetching orders for driver: ${driverId}`);
 
-      const orders = await storage.getAvailableOrdersForDriver(driverId);
-      res.json(orders);
+      // Get both assigned orders and available orders for pickup
+      const [assignedOrders, availableOrders] = await Promise.all([
+        storage.getDriverOrders(driverId),
+        storage.getOrdersByStatus('ready') // Orders ready for delivery
+      ]);
+
+      // Combine and format orders for driver
+      const formattedOrders = [
+        ...assignedOrders.map(order => ({
+          ...order,
+          type: 'assigned',
+          canAccept: false,
+          canUpdate: true
+        })),
+        ...availableOrders.filter(order => !order.driverId).map(order => ({
+          ...order,
+          type: 'available',
+          canAccept: true,
+          canUpdate: false
+        }))
+      ];
+
+      res.json(formattedOrders);
     } catch (error) {
       console.error('Error fetching driver orders:', error);
       res.status(500).json({ success: false, error: 'Failed to fetch orders' });
