@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { LogoPresets } from '@/components/AnimatedLogo';
 import { Link } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -174,18 +175,21 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {getGreeting()}، مدير اطبعلي! 👋
-            </h1>
-            <p className="text-lg text-gray-600">
-              {currentTime.toLocaleDateString('ar-EG', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </p>
+          <div className="flex items-center gap-4">
+            <LogoPresets.Hero />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {getGreeting()}، مدير اطبعلي! 👋
+              </h1>
+              <p className="text-lg text-gray-600">
+                {currentTime.toLocaleDateString('ar-EG', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" size="lg" className="gap-2">

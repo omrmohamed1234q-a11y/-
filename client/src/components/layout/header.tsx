@@ -1,5 +1,6 @@
 import { useAuth } from '@/hooks/use-auth';
 import { Bell, ShoppingCart, User } from 'lucide-react';
+import { LogoPresets } from '@/components/AnimatedLogo';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,9 +38,7 @@ export default function Header() {
             {/* Logo and App Name */}
             <Link href="/">
               <div className="flex items-center space-x-3 space-x-reverse hover:opacity-80 transition-opacity">
-                <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
-                  <i className="fas fa-print text-white text-lg"></i>
-                </div>
+                <LogoPresets.Navigation />
                 <div>
                   <h1 className="text-xl font-bold text-primary">اطبعلي</h1>
                   <p className="text-xs text-muted-foreground">منصة الطباعة الذكية</p>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { LogoPresets } from './AnimatedLogo'
 
 interface SplashScreenProps {
   onComplete: () => void
@@ -47,16 +48,14 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
             scaleIn ? 'scale-100' : 'scale-50'
           }`}
         >
-          <div className="bg-white rounded-3xl p-6 shadow-2xl mb-6 mx-auto w-fit">
-            <div className="text-6xl mb-4">📄</div>
-            <div className="text-4xl font-bold text-gray-800">اطبعلي</div>
+          <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-2xl mb-6 mx-auto w-fit border border-gray-100">
+            <LogoPresets.Splash />
           </div>
         </div>
 
         {/* Text Content */}
         <div className={`transition-opacity duration-1000 delay-500 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">اطبعلي</h1>
-          <p className="text-lg text-gray-600 mb-8">منصة الطباعة الذكية</p>
+          <p className="text-xl text-gray-600 mb-8">منصة الطباعة الذكية</p>
           
           {/* Loading Animation */}
           <div className="flex items-center justify-center space-x-2 space-x-reverse mb-4">

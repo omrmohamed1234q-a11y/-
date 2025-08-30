@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { LogoPresets } from '@/components/AnimatedLogo'
+import { FloatingLogos, CornerLogo } from '@/components/FloatingLogos'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -522,6 +524,9 @@ export default function EnhancedLanding() {
       
       <AnimatedBackground />
       <FloatingPrintIcons />
+      <FloatingLogos count={6} />
+      <CornerLogo position="top-right" size="md" />
+      <CornerLogo position="bottom-left" size="sm" />
       
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <div className="w-full max-w-md">
@@ -541,29 +546,8 @@ export default function EnhancedLanding() {
               <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-pink-400 rounded-3xl blur-xl opacity-30 scale-110"></div>
               
               {/* Main logo container */}
-              <div className="relative bg-white rounded-3xl p-8 shadow-2xl border border-gray-100">
-                <motion.div
-                  animate={{ 
-                    rotate: [0, 10, -10, 0],
-                    scale: [1, 1.1, 1]
-                  }}
-                  transition={{ 
-                    duration: 2,
-                    repeat: Infinity,
-                    repeatType: "reverse",
-                    ease: "easeInOut"
-                  }}
-                >
-                  <PrinterIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                </motion.div>
-                <motion.h1 
-                  className="text-4xl font-bold bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5, duration: 0.5 }}
-                >
-                  اطبعلي
-                </motion.h1>
+              <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-gray-100">
+                <LogoPresets.Landing />
               </div>
             </motion.div>
             
