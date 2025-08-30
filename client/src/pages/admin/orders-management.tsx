@@ -35,7 +35,8 @@ import {
   Filter,
   Search,
   MoreHorizontal,
-  ArrowRight
+  ArrowRight,
+  Trash2
 } from 'lucide-react';
 
 interface Order {
@@ -76,6 +77,8 @@ export default function OrdersManagement() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showPricingDialog, setShowPricingDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [pricingData, setPricingData] = useState<any>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -93,6 +96,28 @@ export default function OrdersManagement() {
       toast({
         title: "تم التحديث بنجاح",
         description: "تم تحديث الطلب بنجاح",
+      });
+    }
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      return apiRequest('DELETE', `/api/admin/orders/${orderId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      setShowDeleteDialog(false);
+      setOrderToDelete(null);
+      toast({
+        title: "تم الحذف بنجاح",
+        description: "تم حذف الطلب بنجاح",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ في الحذف",
+        description: "حدث خطأ أثناء حذف الطلب",
+        variant: "destructive",
       });
     }
   });
@@ -160,6 +185,17 @@ export default function OrdersManagement() {
       notes: ''
     });
     setShowPricingDialog(true);
+  };
+
+  const handleDeleteOrder = (order: Order) => {
+    setOrderToDelete(order);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteOrder = () => {
+    if (orderToDelete) {
+      deleteOrderMutation.mutate(orderToDelete.id);
+    }
   };
 
   const calculateItemPrice = (item: OrderItem) => {
@@ -406,8 +442,14 @@ export default function OrdersManagement() {
                       <Button variant="outline" size="sm">
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDeleteOrder(order)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        data-testid={`button-delete-order-${order.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -510,6 +552,59 @@ export default function OrdersManagement() {
                 تأكيد التسعير وتحديث الطلب
               </Button>
               <Button variant="outline" onClick={() => setShowPricingDialog(false)}>
+                إلغاء
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-red-600">تأكيد حذف الطلب</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-red-600 mb-2">
+                <AlertCircle className="w-5 h-5" />
+                <span className="font-semibold">تحذير</span>
+              </div>
+              <p className="text-red-700 text-sm">
+                هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.
+              </p>
+            </div>
+
+            {orderToDelete && (
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="font-medium">تفاصيل الطلب:</div>
+                <div className="text-sm space-y-1">
+                  <div>رقم الطلب: <span className="font-semibold">{orderToDelete.id}</span></div>
+                  <div>العميل: <span className="font-semibold">{orderToDelete.customerName}</span></div>
+                  <div>القيمة: <span className="font-semibold">{orderToDelete.totalAmount} جنيه</span></div>
+                  <div>الحالة: <span className="font-semibold">{statusLabels[orderToDelete.status as keyof typeof statusLabels]}</span></div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button 
+                variant="destructive" 
+                onClick={confirmDeleteOrder}
+                disabled={deleteOrderMutation.isPending}
+                className="flex-1"
+                data-testid="button-confirm-delete"
+              >
+                {deleteOrderMutation.isPending ? 'جاري الحذف...' : 'حذف الطلب'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDeleteDialog(false)}
+                disabled={deleteOrderMutation.isPending}
+                data-testid="button-cancel-delete"
+              >
                 إلغاء
               </Button>
             </div>
