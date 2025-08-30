@@ -48,7 +48,9 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
             scaleIn ? 'scale-100' : 'scale-50'
           }`}
         >
-          <LogoPresets.Splash />
+          <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-2xl mb-6 mx-auto w-fit border border-gray-100">
+            <LogoPresets.Splash />
+          </div>
         </div>
 
         {/* Text Content */}

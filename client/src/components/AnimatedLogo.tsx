@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import logoImage from "@assets/image_1756579836914.png"
+import logoImage from "@assets/92b00e7f-0f7b-40d2-8c20-79751e073ab1_1756565286414.png"
 
 interface AnimatedLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
@@ -128,8 +128,7 @@ export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
         <motion.img
           src={logoImage}
           alt="اطبعلي"
-          className={`${sizeClasses[size]} filter drop-shadow-lg mix-blend-multiply bg-transparent`}
-          style={{ backgroundColor: 'transparent' }}
+          className={`${sizeClasses[size]} filter drop-shadow-lg`}
         />
       </motion.div>
       
