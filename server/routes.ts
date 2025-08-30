@@ -1691,9 +1691,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Notifications endpoints
   app.get('/api/notifications', async (req: any, res) => {
     try {
-      const userId = req.headers['x-user-id'] || '48c03e72-d53b-4a3f-a729-c38276268315';
-      const notifications = await storage.getUserNotifications(userId);
-      res.json(notifications);
+      const userId = req.user?.id || req.headers['x-user-id'] || '48c03e72-d53b-4a3f-a729-c38276268315';
+      
+      // Get regular notifications from storage
+      let notifications = storage.getUserNotifications(userId);
+      
+      // Add inquiry notifications for this user from global storage
+      const inquiryNotifications = globalNotificationStorage.filter(n => n.userId === userId);
+      
+      // Transform inquiry notifications to standard format
+      const transformedInquiryNotifications = inquiryNotifications.map(n => ({
+        id: n.id,
+        title: n.title || 'إشعار جديد',
+        message: n.message || '',
+        type: n.type || 'inquiry',
+        read: n.isRead || false,
+        isRead: n.isRead || false,
+        createdAt: n.createdAt,
+        inquiryId: n.inquiryId
+      }));
+      
+      // Combine and sort all notifications by creation date
+      const allNotifications = [
+        ...notifications,
+        ...transformedInquiryNotifications
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      console.log(`📱 User ${userId} has ${allNotifications.length} notifications (${transformedInquiryNotifications.length} inquiry notifications)`);
+      res.json(allNotifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       res.json([]);
