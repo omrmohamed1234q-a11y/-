@@ -1,14 +1,16 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { X, Save, Percent, Hash, Calendar, DollarSign, Users, Bell } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { X, Save, Percent, Hash, Calendar, DollarSign, Users, Bell, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { AdminCoupon, insertAdminCouponSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,6 +31,15 @@ interface CouponFormProps {
 export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
   const { toast } = useToast();
   const isEditing = !!coupon;
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>(
+    coupon?.targetUserIds ? JSON.parse(coupon.targetUserIds) : []
+  );
+
+  // Fetch all users for selection
+  const { data: users = [] } = useQuery({
+    queryKey: ["/api/admin/users"],
+    enabled: true,
+  });
 
   const {
     register,
@@ -63,6 +74,17 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
   });
 
   const discountType = watch("discountType");
+  const targetUserType = watch("targetUserType");
+
+  const handleUserToggle = (userId: string) => {
+    setSelectedUserIds(prev => {
+      if (prev.includes(userId)) {
+        return prev.filter(id => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -73,6 +95,9 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
         minimumOrderValue: parseFloat(data.minimumOrderValue.toString()),
         maximumDiscount: data.maximumDiscount 
           ? parseFloat(data.maximumDiscount.toString()) 
+          : null,
+        targetUserIds: data.targetUserType === "specific" 
+          ? JSON.stringify(selectedUserIds) 
           : null,
       };
 
@@ -354,6 +379,76 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
                     <SelectItem value="grade12">الصف الثاني عشر</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {watch("targetUserType") === "specific" && (
+              <div className="space-y-3">
+                <Label>اختيار العملاء المحددين ({selectedUserIds.length} محدد)</Label>
+                <Card className="max-h-60 overflow-y-auto">
+                  <CardContent className="p-4">
+                    {users.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">
+                        لا توجد مستخدمين متاحين
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {users.map((user: any) => (
+                          <div 
+                            key={user.id} 
+                            className="flex items-center space-x-2 rtl:space-x-reverse p-2 rounded border hover:bg-gray-50"
+                          >
+                            <Checkbox
+                              id={`user-${user.id}`}
+                              checked={selectedUserIds.includes(user.id)}
+                              onCheckedChange={() => handleUserToggle(user.id)}
+                              data-testid={`checkbox-user-${user.id}`}
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-sm">
+                                    {user.firstName} {user.lastName}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {user.email}
+                                  </p>
+                                </div>
+                                {user.gradeLevel && (
+                                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                    {user.gradeLevel}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedUserIds(users.map((u: any) => u.id))}
+                    disabled={users.length === 0}
+                  >
+                    <Check className="h-4 w-4 ml-1" />
+                    تحديد الكل
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedUserIds([])}
+                    disabled={selectedUserIds.length === 0}
+                  >
+                    <X className="h-4 w-4 ml-1" />
+                    إلغاء التحديد
+                  </Button>
+                </div>
               </div>
             )}
 

@@ -71,6 +71,16 @@
 - **Admin Navigation**: Comprehensive navigation system across all admin sections with quick access buttons
 - **Enhanced UI**: Professional admin interface with responsive design and Arabic-first layouts
 
+## Advanced Coupon Customer Targeting & Notifications (January 2025) ✅ COMPLETED
+- **Customer Targeting System**: Complete targeting capabilities including all customers, new customers, existing customers, grade-based targeting, and specific user selection
+- **Specific User Selection**: Interactive user picker with checkboxes, search functionality, and batch select/deselect options when "عملاء محددين" is selected
+- **Per-Customer Usage Limits**: Maximum usage tracking per individual customer for better control
+- **Smart Notification System**: Automated push notification system with custom messages for targeted users
+- **Notification Tracking**: Complete tracking of notification delivery, read rates, and click-through analytics
+- **Location-Based Targeting**: Geographic filtering for region-specific coupon campaigns
+- **Advanced Analytics**: Comprehensive coupon performance metrics including usage patterns, customer engagement, and conversion tracking
+- **Arabic Interface**: Full Arabic language support for all targeting and notification interfaces with real-time user list display
+
 ## Comprehensive Order Tracking System (January 2025)
 - **Complete Purchase Journey**: Full Talabat/Amazon-style cart, checkout, and delivery tracking
 - **Database Schema**: Enhanced orders table with 40+ fields for complete tracking lifecycle
