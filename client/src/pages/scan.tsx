@@ -172,18 +172,68 @@ export default function ScanPage() {
   // Start camera
   const startCamera = useCallback(async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } // Use back camera if available
-      })
-      setStream(mediaStream)
-      setIsUsingCamera(true)
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream
+      // Check if mediaDevices is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('المتصفح لا يدعم الكاميرا')
+      }
+
+      // Request camera permissions with fallback options
+      let constraints = { 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      }
+
+      try {
+        // Try with back camera first
+        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+        setStream(mediaStream)
+        setIsUsingCamera(true)
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream
+        }
+        
+        toast({
+          title: "تم تفعيل الكاميرا",
+          description: "يمكنك الآن التقاط الصور",
+        })
+      } catch (backCameraError) {
+        // Fallback to any available camera
+        constraints = { video: true }
+        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+        setStream(mediaStream)
+        setIsUsingCamera(true)
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream
+        }
+        
+        toast({
+          title: "تم تفعيل الكاميرا",
+          description: "استخدام الكاميرا الأمامية",
+        })
       }
     } catch (error) {
+      console.error('Camera error:', error)
+      
+      let errorMessage = "لا يمكن الوصول إلى الكاميرا"
+      
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage = "يرجى السماح بالوصول إلى الكاميرا من إعدادات المتصفح"
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = "لم يتم العثور على كاميرا على هذا الجهاز"
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage = "المتصفح لا يدعم استخدام الكاميرا"
+        } else if (error.name === 'SecurityError') {
+          errorMessage = "لا يمكن الوصول للكاميرا لأسباب أمنية"
+        }
+      }
+      
       toast({
         title: "خطأ في الكاميرا",
-        description: "لا يمكن الوصول إلى الكاميرا. يرجى المحاولة مرة أخرى.",
+        description: errorMessage,
         variant: "destructive",
       })
     }
@@ -405,30 +455,68 @@ export default function ScanPage() {
                     >
                       {/* Camera View */}
                       {isUsingCamera && (
-                        <div className="relative bg-black rounded-xl overflow-hidden mb-4">
-                          <video 
-                            ref={videoRef}
-                            autoPlay 
-                            playsInline 
-                            muted
-                            className="w-full h-64 object-cover"
-                          />
-                          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                        <div className="space-y-4">
+                          <div className="relative bg-black rounded-xl overflow-hidden">
+                            <video 
+                              ref={videoRef}
+                              autoPlay 
+                              playsInline 
+                              muted
+                              className="w-full h-64 object-cover"
+                            />
+                            
+                            {/* Camera overlay guide */}
+                            <div className="absolute inset-4 border-2 border-white/50 border-dashed rounded-lg flex items-center justify-center pointer-events-none">
+                              <div className="text-white/70 text-center text-sm">
+                                <ScanIcon className="w-8 h-8 mx-auto mb-2" />
+                                <p>ضع المستند داخل الإطار</p>
+                              </div>
+                            </div>
+                            
+                            {/* Capture button */}
+                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
+                              <Button
+                                onClick={capturePhoto}
+                                className="w-16 h-16 rounded-full bg-white hover:bg-gray-100 text-black shadow-xl border-4 border-white/20"
+                              >
+                                <CameraIcon className="w-6 h-6" />
+                              </Button>
+                            </div>
+                            
+                            {/* Close button */}
                             <Button
-                              onClick={capturePhoto}
-                              className="w-16 h-16 rounded-full bg-white hover:bg-gray-100 text-black shadow-lg"
+                              onClick={stopCamera}
+                              variant="outline"
+                              size="sm"
+                              className="absolute top-4 right-4 bg-white/90 hover:bg-white text-black border-0"
                             >
-                              <CameraIcon className="w-6 h-6" />
+                              <XIcon className="w-4 h-4" />
                             </Button>
+                            
+                            {/* Camera info */}
+                            <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-xs">
+                              🔴 Live
+                            </div>
                           </div>
-                          <Button
-                            onClick={stopCamera}
-                            variant="outline"
-                            size="sm"
-                            className="absolute top-4 right-4 bg-white/80 hover:bg-white"
-                          >
-                            <XIcon className="w-4 h-4" />
-                          </Button>
+                          
+                          <div className="text-center">
+                            <p className="text-gray-600 text-sm">
+                              تأكد من وضوح النص ووضع المستند بشكل مستقيم
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Camera Instructions */}
+                      {!isUsingCamera && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                          <h3 className="font-semibold text-blue-800 mb-2">إرشادات الاستخدام:</h3>
+                          <ul className="text-sm text-blue-700 space-y-1">
+                            <li>• تأكد من السماح بالوصول للكاميرا عند الطلب</li>
+                            <li>• استخدم إضاءة جيدة للحصول على أفضل النتائج</li>
+                            <li>• ضع المستند على سطح مستوٍ</li>
+                            <li>• اختر نوع المسح المناسب (ملون/رمادي/أبيض وأسود)</li>
+                          </ul>
                         </div>
                       )}
 
@@ -437,7 +525,7 @@ export default function ScanPage() {
                         <div className="grid grid-cols-2 gap-4">
                           <Button
                             onClick={startCamera}
-                            className="h-24 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl flex-col"
+                            className="h-24 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl flex-col transition-all duration-200"
                           >
                             <CameraIcon className="w-8 h-8 mb-2" />
                             <span>استخدام الكاميرا</span>
@@ -446,11 +534,24 @@ export default function ScanPage() {
                           <Button
                             onClick={() => fileInputRef.current?.click()}
                             variant="outline"
-                            className="h-24 border-2 border-gray-200 hover:border-gray-300 rounded-xl flex-col"
+                            className="h-24 border-2 border-gray-200 hover:border-gray-300 rounded-xl flex-col transition-all duration-200"
                           >
                             <FileImageIcon className="w-8 h-8 mb-2 text-gray-600" />
                             <span>اختيار من الجهاز</span>
                           </Button>
+                        </div>
+                      )}
+
+                      {/* Browser Compatibility Check */}
+                      {!navigator.mediaDevices && (
+                        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mt-4">
+                          <div className="flex items-center gap-2 text-orange-800">
+                            <span>⚠️</span>
+                            <span className="font-semibold">تنبيه</span>
+                          </div>
+                          <p className="text-orange-700 text-sm mt-1">
+                            المتصفح الحالي لا يدعم الكاميرا. يمكنك استخدام خيار "اختيار من الجهاز" بدلاً من ذلك.
+                          </p>
                         </div>
                       )}
 
