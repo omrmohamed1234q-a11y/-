@@ -65,6 +65,9 @@ export interface IStorage {
   applyCoupon(code: string, orderId: string, orderTotal: number, userId: string): Promise<any>;
 }
 
+// Global coupon storage to persist across application lifecycle
+const globalCouponStorage: any[] = [];
+
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -412,48 +415,49 @@ export class DatabaseStorage implements IStorage {
     console.log(`Teacher ${id} deleted`);
   }
 
-  // Coupon operations
+  // Coupon operations using global storage
   async getAllCoupons(): Promise<any[]> {
-    // Return sample coupons for now since database is not available
-    return [
-      {
-        id: "1",
-        code: "WELCOME10",
-        name: "خصم الترحيب",
-        type: "percentage",
-        value: 10,
-        targetType: "new_customers",
-        isActive: true,
-        createdAt: new Date()
-      }
-    ];
+    return [...globalCouponStorage];
   }
 
   async createCoupon(couponData: any): Promise<any> {
-    // For now, return a mock coupon since database is not available
     const newCoupon = {
       id: Date.now().toString(),
       ...couponData,
       createdAt: new Date()
     };
+    globalCouponStorage.push(newCoupon);
     console.log('Created coupon:', newCoupon);
     return newCoupon;
   }
 
   async updateCoupon(id: string, updates: any): Promise<any> {
-    // For now, return updated coupon data
-    return { id, ...updates, updatedAt: new Date() };
+    const index = globalCouponStorage.findIndex(c => c.id === id);
+    if (index !== -1) {
+      globalCouponStorage[index] = { ...globalCouponStorage[index], ...updates, updatedAt: new Date() };
+      return globalCouponStorage[index];
+    }
+    throw new Error('Coupon not found');
   }
 
   async updateCouponStatus(id: string, isActive: boolean): Promise<any> {
-    // For now, return updated coupon status
-    return { id, isActive, updatedAt: new Date() };
+    const index = globalCouponStorage.findIndex(c => c.id === id);
+    if (index !== -1) {
+      globalCouponStorage[index].isActive = isActive;
+      globalCouponStorage[index].updatedAt = new Date();
+      return globalCouponStorage[index];
+    }
+    throw new Error('Coupon not found');
   }
 
   async deleteCoupon(id: string): Promise<boolean> {
-    // For now, just log the deletion
-    console.log(`Coupon ${id} deleted`);
-    return true;
+    const index = globalCouponStorage.findIndex(c => c.id === id);
+    if (index !== -1) {
+      globalCouponStorage.splice(index, 1);
+      console.log(`Coupon ${id} deleted`);
+      return true;
+    }
+    return false;
   }
 
   async validateCoupon(code: string, orderTotal: number, userId: string): Promise<any> {
@@ -916,95 +920,54 @@ class MemStorage implements IStorage {
 
   // ==================== COUPON OPERATIONS ====================
   
-  private coupons: any[] = [
-    {
-      id: "1",
-      code: "WELCOME10",
-      name: "خصم الترحيب",
-      description: "خصم 10% للعملاء الجدد",
-      discountType: "percentage",
-      discountValue: "10.00",
-      minimumOrderValue: "50.00",
-      maximumDiscount: "100.00",
-      usageLimit: 100,
-      usageCount: 15,
-      isActive: true,
-      validFrom: new Date(),
-      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      applicableProducts: null,
-      createdBy: "48c03e72-d53b-4a3f-a729-c38276268315",
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: "2", 
-      code: "STUDENT25",
-      name: "خصم الطلاب",
-      description: "خصم 25% لطلاب المدارس والجامعات",
-      discountType: "percentage",
-      discountValue: "25.00", 
-      minimumOrderValue: "20.00",
-      maximumDiscount: "50.00",
-      usageLimit: null, // unlimited
-      usageCount: 45,
-      isActive: true,
-      validFrom: new Date(),
-      validUntil: null, // no expiry
-      applicableProducts: null,
-      createdBy: "48c03e72-d53b-4a3f-a729-c38276268315",
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  ];
-
   async getAllCoupons(): Promise<any[]> {
-    return [...this.coupons].sort((a, b) => 
+    return [...globalCouponStorage].sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
 
   async createCoupon(couponData: any): Promise<any> {
     const coupon = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Date.now().toString(),
       ...couponData,
       usageCount: 0,
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    this.coupons.push(coupon);
+    globalCouponStorage.push(coupon);
     return coupon;
   }
 
   async updateCoupon(id: string, updates: any): Promise<any> {
-    const index = this.coupons.findIndex(c => c.id === id);
+    const index = globalCouponStorage.findIndex(c => c.id === id);
     if (index !== -1) {
-      this.coupons[index] = { 
-        ...this.coupons[index], 
+      globalCouponStorage[index] = { 
+        ...globalCouponStorage[index], 
         ...updates, 
         updatedAt: new Date() 
       };
-      return this.coupons[index];
+      return globalCouponStorage[index];
     }
     return null;
   }
 
   async updateCouponStatus(id: string, isActive: boolean): Promise<any> {
-    const index = this.coupons.findIndex(c => c.id === id);
+    const index = globalCouponStorage.findIndex(c => c.id === id);
     if (index !== -1) {
-      this.coupons[index] = { 
-        ...this.coupons[index], 
+      globalCouponStorage[index] = { 
+        ...globalCouponStorage[index], 
         isActive, 
         updatedAt: new Date() 
       };
-      return this.coupons[index];
+      return globalCouponStorage[index];
     }
     return null;
   }
 
   async deleteCoupon(id: string): Promise<boolean> {
-    const index = this.coupons.findIndex(c => c.id === id);
+    const index = globalCouponStorage.findIndex(c => c.id === id);
     if (index !== -1) {
-      this.coupons.splice(index, 1);
+      globalCouponStorage.splice(index, 1);
       return true;
     }
     return false;
