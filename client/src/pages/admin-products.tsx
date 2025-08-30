@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Package, DollarSign, Tag, Search, Home, Store, Users, BarChart3, Settings, FileText, BookOpen, ArrowLeft, Grid, List, Filter } from 'lucide-react';
 import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
 import { Link } from 'wouter';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 import type { products } from '@shared/schema';
 
 type Product = typeof products.$inferSelect;
@@ -220,9 +221,12 @@ export default function AdminProductsPage() {
               </Button>
             </Link>
             
-            <div className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-blue-500" />
-              <span className="font-semibold text-gray-800">إدارة المنتجات</span>
+            <div className="flex items-center gap-4">
+              <AnimatedLogo size="md" variant="pulse" />
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-blue-500" />
+                <span className="font-semibold text-gray-800">إدارة المنتجات</span>
+              </div>
             </div>
             
             <Button
@@ -429,7 +433,7 @@ export default function AdminProductsPage() {
                             تعديل
                           </Button>
                           <AdminActionsMenu
-                            productId={product.id}
+                            itemId={product.id}
                             onEdit={() => handleEditProduct(product)}
                             onDelete={() => handleDeleteProduct(product.id)}
                           />
@@ -504,7 +508,7 @@ export default function AdminProductsPage() {
                                 تعديل
                               </Button>
                               <AdminActionsMenu
-                                productId={product.id}
+                                itemId={product.id}
                                 onEdit={() => handleEditProduct(product)}
                                 onDelete={() => handleDeleteProduct(product.id)}
                               />
@@ -525,8 +529,8 @@ export default function AdminProductsPage() {
       <Dialog open={showProductForm} onOpenChange={setShowProductForm}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <ProductForm
-            product={editingProduct}
-            onSubmit={editingProduct ? handleUpdateProduct : handleCreateProduct}
+            editingProduct={editingProduct}
+            onSave={editingProduct ? handleUpdateProduct : handleCreateProduct}
             onCancel={() => {
               setShowProductForm(false);
               setEditingProduct(null);
