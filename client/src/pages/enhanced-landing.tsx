@@ -691,29 +691,54 @@ export default function EnhancedLanding() {
                   </button>
                 </div>
 
-                {/* Admin Access */}
-                <motion.div 
-                  className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-2xl text-center"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                >
-                  <div className="flex items-center justify-center gap-2 mb-3">
-                    <motion.span 
-                      className="text-2xl"
-                      animate={{ rotate: [0, 10, -10, 0] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    >
-                      🔑
-                    </motion.span>
-                    <span className="font-bold text-lg">دخول لوحة الإدارة</span>
-                  </div>
-                  <Button 
-                    onClick={() => window.location.href = '/admin'}
-                    className="bg-white text-green-600 hover:bg-gray-100 font-semibold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                {/* Quick Access */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <motion.div 
+                    className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-2xl text-center"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   >
-                    دخول لوحة الإدارة
-                  </Button>
-                </motion.div>
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <motion.span 
+                        className="text-2xl"
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        🔑
+                      </motion.span>
+                      <span className="font-bold text-lg">لوحة الإدارة</span>
+                    </div>
+                    <Button 
+                      onClick={() => window.location.href = '/admin'}
+                      className="bg-white text-green-600 hover:bg-gray-100 font-semibold py-2 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      دخول الإدارة
+                    </Button>
+                  </motion.div>
+
+                  <motion.div 
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-2xl text-center"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                  >
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <motion.span 
+                        className="text-2xl"
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        🚀
+                      </motion.span>
+                      <span className="font-bold text-lg">دخول سريع</span>
+                    </div>
+                    <Button 
+                      onClick={() => window.location.href = '/quick-access'}
+                      className="bg-white text-blue-600 hover:bg-gray-100 font-semibold py-2 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      جميع اللوحات
+                    </Button>
+                  </motion.div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

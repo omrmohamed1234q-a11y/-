@@ -37,6 +37,7 @@ import OrderTracking from "@/pages/order-tracking";
 import DriverLogin from "@/pages/driver/driver-login";
 import DriverDashboard from "@/pages/driver/driver-dashboard";
 import DriversManagement from "@/pages/admin/drivers-management";
+import QuickAccess from "@/pages/quick-access";
 
 
 function Router() {
@@ -78,6 +79,7 @@ function Router() {
         <Route path="/auth/signup" component={Signup} />
         <Route path="/auth/admin-signup" component={AdminSignup} />
         <Route path="/auth/callback" component={AuthCallback} />
+        <Route path="/quick-access" component={QuickAccess} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/profile" component={AdminProfile} />
         <Route path="/admin/store" component={AdminStore} />
@@ -128,6 +130,7 @@ function Router() {
         <Route path="/driver/login" component={DriverLogin} />
         <Route path="/driver/dashboard" component={DriverDashboard} />
         <Route path="/student/teachers" component={StudentTeachers} />
+        <Route path="/quick-access" component={QuickAccess} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route component={NotFound} />

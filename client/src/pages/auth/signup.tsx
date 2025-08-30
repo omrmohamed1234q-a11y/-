@@ -85,7 +85,8 @@ export default function Signup() {
             country_code: countryCode,
             age: ageNum,
             grade_level: gradeLevel,
-            is_teacher: gradeLevel === 'teacher'
+            is_teacher: gradeLevel === 'teacher',
+            is_captain: gradeLevel === 'captain'
           }
         }
       });
@@ -293,6 +294,7 @@ export default function Signup() {
                     <SelectItem value="university">طالب جامعي</SelectItem>
                     <SelectItem value="teacher">معلم/مدرس</SelectItem>
                     <SelectItem value="parent">ولي أمر</SelectItem>
+                    <SelectItem value="captain">كابتن توصيل</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
