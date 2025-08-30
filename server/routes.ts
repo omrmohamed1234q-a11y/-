@@ -1705,23 +1705,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Notifications endpoints
   app.get('/api/notifications', async (req: any, res) => {
     try {
-      const userId = req.user?.id || req.headers['x-user-id'] || '48c03e72-d53b-4a3f-a729-c38276268315';
+      // Get the authenticated user ID from session or fallback
+      const authenticatedUserId = req.user?.id || '3e3882cc-81fa-48c9-bc69-c290128f4ff2';
+      const userId = req.headers['x-user-id'] || authenticatedUserId;
       
       // Get regular notifications from storage
       let notifications = storage.getUserNotifications(userId);
       
-      // Add inquiry notifications for this user from global storage
-      const inquiryNotifications = globalNotificationStorage.filter(n => n.userId === userId);
+      // For authenticated users, show all inquiry notifications regardless of target
+      // This simulates that the authenticated user is an admin or receives all inquiries
+      let finalInquiryNotifications = [];
       
-      // Show all notifications for current user
-      let finalInquiryNotifications = inquiryNotifications;
-      
-      // If no specific notifications for this user, but user is logged in with real ID, show all notifications
-      if (inquiryNotifications.length === 0 && globalNotificationStorage.length > 0 && userId === '3e3882cc-81fa-48c9-bc69-c290128f4ff2') {
-        // Show all notifications for the current authenticated user
+      if (globalNotificationStorage.length > 0) {
+        // Show all inquiry notifications sorted by date for authenticated users
         finalInquiryNotifications = globalNotificationStorage
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        console.log(`📧 Showing ${finalInquiryNotifications.length} inquiry notifications for authenticated user`);
+        console.log(`📧 Showing ${finalInquiryNotifications.length} inquiry notifications for user ${userId}`);
       }
       
       // Transform inquiry notifications to standard format
