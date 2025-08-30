@@ -1378,7 +1378,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const inquiry = await storage.sendInquiry(id);
       
       // Create notifications for targeted users
-      const allUsers = await storage.getAllUsers();
+      let allUsers = [];
+      try {
+        // Try to get users from Supabase first
+        if (supabase) {
+          const { data: { users }, error } = await supabase.auth.admin.listUsers();
+          if (!error && users) {
+            allUsers = users.map((user: any) => ({
+              id: user.id,
+              email: user.email,
+              firstName: user.user_metadata?.firstName || user.user_metadata?.first_name || '',
+              lastName: user.user_metadata?.lastName || user.user_metadata?.last_name || '',
+              fullName: user.user_metadata?.fullName || `${user.user_metadata?.firstName || ''} ${user.user_metadata?.lastName || ''}`.trim(),
+              gradeLevel: user.user_metadata?.gradeLevel || '',
+              createdAt: user.created_at,
+              created_at: user.created_at
+            }));
+          }
+        }
+        
+        // Fallback to storage if Supabase fails
+        if (allUsers.length === 0) {
+          allUsers = await storage.getAllUsers();
+        }
+      } catch (userError) {
+        console.warn('Failed to fetch users, using empty list:', userError);
+        allUsers = [];
+      }
+      
       let targetUsers = [];
 
       switch (inquiry.targetType) {

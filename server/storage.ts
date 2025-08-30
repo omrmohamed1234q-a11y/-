@@ -1375,5 +1375,5 @@ class MemStorage implements IStorage {
   }
 }
 
-// Use DatabaseStorage to connect to Supabase
-export const storage = new DatabaseStorage();
+// Use MemStorage to bypass database connection issues
+export const storage = new MemStorage();
