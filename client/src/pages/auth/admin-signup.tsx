@@ -4,14 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function AdminSignup() {
   const [, navigate] = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [userType, setUserType] = useState('admin');
+  const [phone, setPhone] = useState('');
+  const [vehicleType, setVehicleType] = useState('');
+  const [workingArea, setWorkingArea] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -25,37 +31,76 @@ export default function AdminSignup() {
       return;
     }
 
+    // Additional validation for driver fields
+    if (userType === 'driver' && (!phone || !vehicleType || !workingArea)) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع بيانات الكابتن المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            user_type: 'admin'
-          }
-        }
-      });
-
-      if (error) {
-        toast({
-          title: "خطأ في إنشاء الحساب",
-          description: error.message,
-          variant: "destructive",
+      if (userType === 'driver') {
+        // Create driver account using public registration API
+        const response = await apiRequest('POST', '/api/drivers/register', {
+          name: fullName,
+          email,
+          password,
+          phone,
+          vehicleType,
+          workingArea
         });
-        return;
+
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'فشل في إنشاء حساب الكابتن');
+        }
+
+        toast({
+          title: "تم إنشاء حساب الكابتن بنجاح",
+          description: "يمكنك الآن تسجيل الدخول ببريدك الإلكتروني وكلمة المرور",
+        });
+
+        setTimeout(() => {
+          navigate('/driver/login');
+        }, 1500);
+
+      } else {
+        // Create admin account using Supabase
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              user_type: 'admin'
+            }
+          }
+        });
+
+        if (error) {
+          toast({
+            title: "خطأ في إنشاء الحساب",
+            description: error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        toast({
+          title: "تم إنشاء الحساب",
+          description: "سيتم توجيهك للوحة الإدارة",
+        });
+
+        setTimeout(() => {
+          navigate('/admin');
+        }, 1000);
       }
-
-      toast({
-        title: "تم إنشاء الحساب",
-        description: "سيتم توجيهك للوحة الإدارة",
-      });
-
-      setTimeout(() => {
-        navigate('/admin');
-      }, 1000);
 
     } catch (error) {
       toast({
@@ -105,19 +150,34 @@ export default function AdminSignup() {
             <div className="text-5xl mb-3">📄</div>
             <div className="text-3xl font-bold text-gray-800">اطبعلي</div>
           </div>
-          <p className="text-gray-600 text-lg">منصة الطباعة الذكية - لوحة الإدارة</p>
+          <p className="text-gray-600 text-lg">منصة الطباعة الذكية - إنشاء حساب</p>
         </div>
 
-        {/* Admin Signup Card */}
+        {/* Signup Card */}
         <Card className="shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">إنشاء حساب إداري</CardTitle>
-            <CardDescription>حساب إداري بسيط للوحة التحكم</CardDescription>
+            <CardTitle className="text-2xl">إنشاء حساب جديد</CardTitle>
+            <CardDescription>أنشئ حساب إداري أو كابتن توصيل</CardDescription>
           </CardHeader>
           
           <CardContent className="space-y-6">
             {/* Form Fields */}
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  نوع الحساب
+                </label>
+                <Select value={userType} onValueChange={setUserType}>
+                  <SelectTrigger data-testid="select-user-type">
+                    <SelectValue placeholder="اختر نوع الحساب" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">مدير النظام</SelectItem>
+                    <SelectItem value="driver">كابتن توصيل</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   الاسم الكامل
@@ -162,6 +222,58 @@ export default function AdminSignup() {
                   data-testid="input-password"
                 />
               </div>
+
+              {/* Driver-specific fields */}
+              {userType === 'driver' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      رقم الهاتف
+                    </label>
+                    <Input
+                      type="tel"
+                      placeholder="01012345678"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="text-right"
+                      disabled={loading}
+                      data-testid="input-phone"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      نوع المركبة
+                    </label>
+                    <Select value={vehicleType} onValueChange={setVehicleType}>
+                      <SelectTrigger data-testid="select-vehicle-type">
+                        <SelectValue placeholder="اختر نوع المركبة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="motorcycle">دراجة نارية</SelectItem>
+                        <SelectItem value="car">سيارة</SelectItem>
+                        <SelectItem value="bicycle">دراجة</SelectItem>
+                        <SelectItem value="walking">سير على الأقدام</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      منطقة العمل
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="مدينة نصر، القاهرة"
+                      value={workingArea}
+                      onChange={(e) => setWorkingArea(e.target.value)}
+                      className="text-right"
+                      disabled={loading}
+                      data-testid="input-working-area"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Signup Button */}
@@ -171,7 +283,10 @@ export default function AdminSignup() {
               disabled={loading}
               data-testid="button-signup"
             >
-              {loading ? 'جاري إنشاء الحساب...' : 'إنشاء الحساب'}
+              {loading 
+                ? (userType === 'driver' ? 'جاري إنشاء حساب الكابتن...' : 'جاري إنشاء الحساب...') 
+                : (userType === 'driver' ? 'إنشاء حساب كابتن' : 'إنشاء حساب إداري')
+              }
             </Button>
 
             {/* Divider */}
