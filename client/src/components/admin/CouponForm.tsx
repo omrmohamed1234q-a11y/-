@@ -2,7 +2,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { X, Save, Percent, Hash, Calendar, DollarSign } from "lucide-react";
+import { X, Save, Percent, Hash, Calendar, DollarSign, Users, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +47,12 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
       minimumOrderValue: coupon?.minimumOrderValue || "0",
       maximumDiscount: coupon?.maximumDiscount || "",
       usageLimit: coupon?.usageLimit || undefined,
+      maxUsagePerUser: coupon?.maxUsagePerUser || 1,
+      targetUserType: coupon?.targetUserType || "all",
+      targetGradeLevel: coupon?.targetGradeLevel || "",
+      targetLocation: coupon?.targetLocation || "",
+      sendNotification: coupon?.sendNotification || false,
+      notificationMessage: coupon?.notificationMessage || "",
       isActive: coupon?.isActive ?? true,
       validUntil: coupon?.validUntil 
         ? new Date(coupon.validUntil).toISOString().split('T')[0] 
@@ -280,6 +286,122 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
                 تفعيل القسيمة فوراً
               </Label>
             </div>
+          </div>
+
+          {/* Customer Targeting */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              استهداف العملاء
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="maxUsagePerUser">الحد الأقصى للاستخدام لكل عميل</Label>
+                <Input
+                  id="maxUsagePerUser"
+                  type="number"
+                  {...register("maxUsagePerUser", { valueAsNumber: true })}
+                  defaultValue="1"
+                  data-testid="input-max-usage-per-user"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="targetUserType">نوع الاستهداف</Label>
+                <Select 
+                  value={watch("targetUserType") || "all"} 
+                  onValueChange={(value) => setValue("targetUserType", value)}
+                >
+                  <SelectTrigger data-testid="select-target-user-type">
+                    <SelectValue placeholder="اختر نوع الاستهداف" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع العملاء</SelectItem>
+                    <SelectItem value="new">عملاء جدد فقط</SelectItem>
+                    <SelectItem value="existing">عملاء حاليين فقط</SelectItem>
+                    <SelectItem value="grade">حسب الصف الدراسي</SelectItem>
+                    <SelectItem value="specific">عملاء محددين</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {watch("targetUserType") === "grade" && (
+              <div>
+                <Label htmlFor="targetGradeLevel">الصف الدراسي المستهدف</Label>
+                <Select 
+                  value={watch("targetGradeLevel") || ""} 
+                  onValueChange={(value) => setValue("targetGradeLevel", value)}
+                >
+                  <SelectTrigger data-testid="select-target-grade">
+                    <SelectValue placeholder="اختر الصف الدراسي" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kg1">KG1</SelectItem>
+                    <SelectItem value="kg2">KG2</SelectItem>
+                    <SelectItem value="grade1">الصف الأول</SelectItem>
+                    <SelectItem value="grade2">الصف الثاني</SelectItem>
+                    <SelectItem value="grade3">الصف الثالث</SelectItem>
+                    <SelectItem value="grade4">الصف الرابع</SelectItem>
+                    <SelectItem value="grade5">الصف الخامس</SelectItem>
+                    <SelectItem value="grade6">الصف السادس</SelectItem>
+                    <SelectItem value="grade7">الصف السابع</SelectItem>
+                    <SelectItem value="grade8">الصف الثامن</SelectItem>
+                    <SelectItem value="grade9">الصف التاسع</SelectItem>
+                    <SelectItem value="grade10">الصف العاشر</SelectItem>
+                    <SelectItem value="grade11">الصف الحادي عشر</SelectItem>
+                    <SelectItem value="grade12">الصف الثاني عشر</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="targetLocation">الموقع المستهدف (اختياري)</Label>
+              <Input
+                id="targetLocation"
+                {...register("targetLocation")}
+                placeholder="مثال: القاهرة، الجيزة، الإسكندرية"
+                data-testid="input-target-location"
+              />
+            </div>
+          </div>
+
+          {/* Notification Settings */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              إعدادات الإشعارات
+            </h3>
+            
+            <div className="flex items-center space-x-2 rtl:space-x-reverse">
+              <Switch
+                id="sendNotification"
+                checked={watch("sendNotification")}
+                onCheckedChange={(checked) => setValue("sendNotification", checked)}
+                data-testid="switch-send-notification"
+              />
+              <Label htmlFor="sendNotification" className="cursor-pointer">
+                إرسال إشعار للعملاء المستهدفين
+              </Label>
+            </div>
+
+            {watch("sendNotification") && (
+              <div>
+                <Label htmlFor="notificationMessage">رسالة الإشعار</Label>
+                <Textarea
+                  id="notificationMessage"
+                  {...register("notificationMessage")}
+                  placeholder="🎉 لديك قسيمة خصم جديدة! استخدم الكود SCHOOL2024 للحصول على خصم 15% على جميع مشترياتك."
+                  rows={3}
+                  data-testid="textarea-notification-message"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  سيتم إرسال هذه الرسالة كإشعار للعملاء المستهدفين
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

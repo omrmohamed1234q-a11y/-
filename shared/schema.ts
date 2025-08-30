@@ -658,6 +658,15 @@ export const adminCoupons = pgTable("admin_coupons", {
   maximumDiscount: decimal("maximum_discount", { precision: 10, scale: 2 }),
   usageLimit: integer("usage_limit"), // null = unlimited
   usageCount: integer("usage_count").default(0),
+  maxUsagePerUser: integer("max_usage_per_user").default(1), // max uses per user
+  targetUserType: varchar("target_user_type", { length: 20 }).default("all"), // 'all', 'new', 'existing', 'specific', 'grade'
+  targetUserIds: text("target_user_ids").array(), // array of specific user IDs
+  targetGradeLevel: varchar("target_grade_level", { length: 50 }), // specific grade targeting
+  targetLocation: varchar("target_location", { length: 100 }), // location-based targeting
+  sendNotification: boolean("send_notification").default(false),
+  notificationMessage: text("notification_message"),
+  notificationSent: boolean("notification_sent").default(false),
+  notificationSentAt: timestamp("notification_sent_at"),
   isActive: boolean("is_active").default(true),
   validFrom: timestamp("valid_from").defaultNow(),
   validUntil: timestamp("valid_until"),
@@ -682,8 +691,29 @@ export const couponUsageTracking = pgTable("coupon_usage_tracking", {
   couponId: varchar("coupon_id").references(() => adminCoupons.id, { onDelete: "cascade" }).notNull(),
   orderId: varchar("order_id").references(() => orders.id, { onDelete: "cascade" }),
   userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  userEmail: varchar("user_email", { length: 255 }),
+  userName: varchar("user_name", { length: 255 }),
+  userGradeLevel: varchar("user_grade_level", { length: 50 }),
   discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull(),
+  orderValue: decimal("order_value", { precision: 10, scale: 2 }),
+  usageNumber: integer("usage_number").default(1), // which usage number for this user
   usedAt: timestamp("used_at").defaultNow(),
 });
 
+// Coupon notifications system
+export const couponNotifications = pgTable("coupon_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  couponId: varchar("coupon_id").references(() => adminCoupons.id, { onDelete: "cascade" }).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  notificationType: varchar("notification_type", { length: 50 }).default("coupon"), // 'coupon', 'expiry_reminder', 'usage_limit'
+  isRead: boolean("is_read").default(false),
+  isClicked: boolean("is_clicked").default(false),
+  sentAt: timestamp("sent_at").defaultNow(),
+  readAt: timestamp("read_at"),
+  clickedAt: timestamp("clicked_at"),
+});
+
 export type CouponUsageTracking = typeof couponUsageTracking.$inferSelect;
+export type CouponNotification = typeof couponNotifications.$inferSelect;

@@ -1010,6 +1010,65 @@ class MemStorage implements IStorage {
       coupon: validation.coupon
     };
   }
+
+  async getCoupon(id: string): Promise<any> {
+    return this.coupons.find(c => c.id === id) || null;
+  }
+
+  // Notification storage for coupons
+  private couponNotifications: any[] = [];
+
+  async createCouponNotifications(notifications: any[]): Promise<void> {
+    this.couponNotifications.push(...notifications);
+  }
+
+  async getCouponUsageAnalytics(couponId: string): Promise<any> {
+    const coupon = this.coupons.find(c => c.id === couponId);
+    if (!coupon) return null;
+
+    const notifications = this.couponNotifications.filter(n => n.couponId === couponId);
+    const clickedNotifications = notifications.filter(n => n.isClicked);
+    const readNotifications = notifications.filter(n => n.isRead);
+
+    return {
+      couponId,
+      couponCode: coupon.code,
+      couponName: coupon.name,
+      totalUsage: coupon.usageCount || 0,
+      usageLimit: coupon.usageLimit,
+      notificationsSent: notifications.length,
+      notificationsRead: readNotifications.length,
+      notificationsClicked: clickedNotifications.length,
+      clickThroughRate: notifications.length > 0 ? (clickedNotifications.length / notifications.length * 100).toFixed(1) : '0.0',
+      openRate: notifications.length > 0 ? (readNotifications.length / notifications.length * 100).toFixed(1) : '0.0',
+      usageByDay: this.getCouponUsageByDay(couponId),
+      topUsers: this.getTopCouponUsers(couponId)
+    };
+  }
+
+  private getCouponUsageByDay(couponId: string): any[] {
+    // Mock daily usage data for the last 7 days
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      days.push({
+        date: date.toISOString().split('T')[0],
+        usage: Math.floor(Math.random() * 10),
+        revenue: Math.floor(Math.random() * 500)
+      });
+    }
+    return days;
+  }
+
+  private getTopCouponUsers(couponId: string): any[] {
+    // Mock top users data
+    return [
+      { userId: "user1", username: "أحمد محمد", usageCount: 3, totalSavings: 75 },
+      { userId: "user2", username: "فاطمة أحمد", usageCount: 2, totalSavings: 50 },
+      { userId: "user3", username: "محمد علي", usageCount: 2, totalSavings: 40 }
+    ];
+  }
 }
 
 // Use MemStorage instead of DatabaseStorage due to database connection issues

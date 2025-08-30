@@ -1024,6 +1024,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send coupon notifications to targeted users
+  app.post('/api/admin/coupons/:id/send-notifications', async (req, res) => {
+    try {
+      const couponId = req.params.id;
+      const coupon = await storage.getCoupon(couponId);
+      
+      if (!coupon) {
+        return res.status(404).json({ message: 'Coupon not found' });
+      }
+
+      if (!coupon.sendNotification) {
+        return res.status(400).json({ message: 'Notification sending is disabled for this coupon' });
+      }
+
+      if (coupon.notificationSent) {
+        return res.status(400).json({ message: 'Notifications have already been sent for this coupon' });
+      }
+
+      // Get targeted users based on coupon criteria
+      const allUsers = await storage.getAllUsers();
+      let targetUsers = [];
+
+      switch (coupon.targetUserType) {
+        case 'all':
+          targetUsers = allUsers;
+          break;
+        case 'new':
+          // Users registered in last 30 days
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          targetUsers = allUsers.filter(user => new Date(user.createdAt) > thirtyDaysAgo);
+          break;
+        case 'existing':
+          // Users registered more than 30 days ago
+          const existingThreshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          targetUsers = allUsers.filter(user => new Date(user.createdAt) <= existingThreshold);
+          break;
+        case 'grade':
+          if (coupon.targetGradeLevel) {
+            targetUsers = allUsers.filter(user => user.gradeLevel === coupon.targetGradeLevel);
+          }
+          break;
+        case 'specific':
+          if (coupon.targetUserIds && coupon.targetUserIds.length > 0) {
+            targetUsers = allUsers.filter(user => coupon.targetUserIds.includes(user.id));
+          }
+          break;
+      }
+
+      // Filter by location if specified
+      if (coupon.targetLocation) {
+        const locations = coupon.targetLocation.split(',').map(loc => loc.trim());
+        targetUsers = targetUsers.filter(user => 
+          user.location && locations.some(loc => 
+            user.location.toLowerCase().includes(loc.toLowerCase())
+          )
+        );
+      }
+
+      // Create notifications for target users
+      const notifications = [];
+      for (const user of targetUsers) {
+        const notification = {
+          id: Math.random().toString(36).substr(2, 9),
+          couponId: coupon.id,
+          userId: user.id,
+          title: `قسيمة خصم جديدة: ${coupon.name}`,
+          message: coupon.notificationMessage || `استخدم الكود ${coupon.code} للحصول على خصم`,
+          notificationType: 'coupon',
+          isRead: false,
+          isClicked: false,
+          sentAt: new Date(),
+          readAt: null,
+          clickedAt: null
+        };
+        notifications.push(notification);
+      }
+
+      // In a real app, you would send actual push notifications here
+      // For now, we just store the notifications and mark as sent
+      await storage.createCouponNotifications(notifications);
+      
+      // Update coupon notification status
+      await storage.updateCoupon(couponId, {
+        notificationSent: true,
+        notificationSentAt: new Date()
+      });
+
+      res.json({ 
+        success: true, 
+        message: `تم إرسال ${notifications.length} إشعار بنجاح`,
+        sentCount: notifications.length,
+        targetUsers: targetUsers.length
+      });
+    } catch (error) {
+      console.error('Error sending coupon notifications:', error);
+      res.status(500).json({ message: 'Failed to send notifications' });
+    }
+  });
+
+  // Get coupon usage analytics
+  app.get('/api/admin/coupons/:id/analytics', async (req, res) => {
+    try {
+      const couponId = req.params.id;
+      const usage = await storage.getCouponUsageAnalytics(couponId);
+      res.json(usage);
+    } catch (error) {
+      console.error('Error fetching coupon analytics:', error);
+      res.status(500).json({ message: 'Failed to fetch coupon analytics' });
+    }
+  });
+
   // Send message to driver
   app.post('/api/orders/:id/driver-message', async (req, res) => {
     try {

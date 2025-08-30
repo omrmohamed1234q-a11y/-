@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Eye, Copy, Calendar, Percent, Tag, Users } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, Copy, Calendar, Percent, Tag, Users, Target, Bell, GraduationCap, MapPin, BarChart3, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +52,32 @@ export default function AdminCoupons() {
     },
   });
 
+  const sendNotificationsMutation = useMutation({
+    mutationFn: async (couponId: string) => {
+      const response = await apiRequest("POST", `/api/admin/coupons/${couponId}/send-notifications`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/coupons"] });
+      toast({
+        title: "تم إرسال الإشعارات",
+        description: data.message,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ في الإرسال",
+        description: error.message || "فشل في إرسال الإشعارات",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const { data: analyticsData, refetch: refetchAnalytics } = useQuery({
+    queryKey: ["/api/admin/coupons/analytics"],
+    enabled: false, // Only fetch when explicitly requested
+  });
+
   const copyToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
     toast({
@@ -79,6 +105,16 @@ export default function AdminCoupons() {
     if (coupon.validUntil && new Date(coupon.validUntil) < new Date()) return "منتهي الصلاحية";
     if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) return "استُنفدت الاستخدامات";
     return "نشط";
+  };
+
+  const getTargetText = (targetType: string) => {
+    switch (targetType) {
+      case "new": return "عملاء جدد";
+      case "existing": return "عملاء حاليين";
+      case "grade": return "حسب الصف";
+      case "specific": return "عملاء محددين";
+      default: return "جميع العملاء";
+    }
   };
 
   const handleEdit = (coupon: AdminCoupon) => {
@@ -216,7 +252,7 @@ export default function AdminCoupons() {
                       <p className="text-gray-600 mb-3">{coupon.description}</p>
                     )}
                     
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                       <div>
                         <span className="text-gray-500">الخصم:</span>
                         <p className="font-semibold text-green-600">
@@ -249,9 +285,74 @@ export default function AdminCoupons() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Targeting and Usage Info */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {coupon.maxUsagePerUser && coupon.maxUsagePerUser > 1 && (
+                        <Badge variant="secondary" className="text-xs">
+                          <Users className="w-3 h-3 ml-1" />
+                          {coupon.maxUsagePerUser} استخدامات لكل عميل
+                        </Badge>
+                      )}
+                      
+                      {coupon.targetUserType && coupon.targetUserType !== "all" && (
+                        <Badge variant="secondary" className="text-xs">
+                          <Target className="w-3 h-3 ml-1" />
+                          {getTargetText(coupon.targetUserType)}
+                        </Badge>
+                      )}
+                      
+                      {coupon.targetGradeLevel && (
+                        <Badge variant="secondary" className="text-xs">
+                          <GraduationCap className="w-3 h-3 ml-1" />
+                          {coupon.targetGradeLevel}
+                        </Badge>
+                      )}
+                      
+                      {coupon.targetLocation && (
+                        <Badge variant="secondary" className="text-xs">
+                          <MapPin className="w-3 h-3 ml-1" />
+                          {coupon.targetLocation}
+                        </Badge>
+                      )}
+                      
+                      {coupon.sendNotification && (
+                        <Badge variant={coupon.notificationSent ? "default" : "outline"} className="text-xs">
+                          <Bell className="w-3 h-3 ml-1" />
+                          {coupon.notificationSent ? "تم الإرسال" : "سيتم الإرسال"}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {/* Targeting and Notification Actions */}
+                    {coupon.sendNotification && !coupon.notificationSent && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => sendNotificationsMutation.mutate(coupon.id)}
+                        disabled={sendNotificationsMutation.isPending}
+                        data-testid={`button-send-notifications-${coupon.code}`}
+                        className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                      >
+                        <Send className="h-4 w-4 ml-1" />
+                        إرسال إشعارات
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/admin/coupons/${coupon.id}/analytics`, '_blank')}
+                      data-testid={`button-analytics-${coupon.code}`}
+                      className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    >
+                      <BarChart3 className="h-4 w-4 ml-1" />
+                      تحليلات
+                    </Button>
+                    
+                    {/* Standard Actions */}
                     <Button
                       variant="outline"
                       size="sm"
