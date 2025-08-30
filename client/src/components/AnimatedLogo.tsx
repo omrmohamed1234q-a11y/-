@@ -72,11 +72,12 @@ export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
       case 'bounce':
         return {
           animate: {
-            y: [0, -20, 0],
-            scale: [1, 1.05, 1]
+            y: [0, -15, 0],
+            scale: [1, 1.1, 1],
+            rotate: [0, 2, -2, 0]
           },
           transition: {
-            duration: 1.5,
+            duration: 2.5,
             repeat: Infinity,
             ease: "easeOut"
           }
@@ -164,11 +165,11 @@ export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
 
 // Preset configurations for common use cases
 export const LogoPresets = {
-  Landing: () => <AnimatedLogo size="lg" variant="default" showText={true} />,
-  Splash: () => <AnimatedLogo size="xl" variant="splash" showText={true} />,
+  Landing: () => <AnimatedLogo size="lg" variant="default" />,
+  Splash: () => <AnimatedLogo size="xl" variant="splash" />,
   Navigation: () => <AnimatedLogo size="sm" variant="floating" />,
   Loading: () => <AnimatedLogo size="md" variant="pulse" />,
-  Hero: () => <AnimatedLogo size="xl" variant="bounce" showText={true} />
+  Hero: () => <AnimatedLogo size="lg" variant="bounce" />
 }
 
 export default AnimatedLogo

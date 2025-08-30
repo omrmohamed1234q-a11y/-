@@ -16,42 +16,42 @@ export const FloatingLogos: React.FC<FloatingLogosProps> = ({
       {Array.from({ length: count }).map((_, index) => (
         <motion.div
           key={index}
-          className="absolute opacity-5"
+          className="absolute opacity-10"
           initial={{
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-            scale: 0.3 + Math.random() * 0.4,
+            x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+            y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
+            scale: 0.2 + Math.random() * 0.3,
             rotate: Math.random() * 360
           }}
           animate={{
             x: [
-              Math.random() * window.innerWidth,
-              Math.random() * window.innerWidth,
-              Math.random() * window.innerWidth
+              Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+              Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+              Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000)
             ],
             y: [
-              Math.random() * window.innerHeight,
-              Math.random() * window.innerHeight,
-              Math.random() * window.innerHeight
+              Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
+              Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
+              Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800)
             ],
             rotate: [0, 360, 720],
             scale: [
-              0.3 + Math.random() * 0.4,
-              0.5 + Math.random() * 0.3,
-              0.3 + Math.random() * 0.4
+              0.2 + Math.random() * 0.3,
+              0.4 + Math.random() * 0.2,
+              0.2 + Math.random() * 0.3
             ]
           }}
           transition={{
-            duration: 20 + Math.random() * 10,
+            duration: 25 + Math.random() * 15,
             repeat: Infinity,
             ease: "linear",
-            delay: index * 2
+            delay: index * 1.5
           }}
         >
           <img
             src={logoImage}
             alt=""
-            className="w-16 h-16 opacity-30"
+            className="w-12 h-12 opacity-20 filter grayscale brightness-90"
           />
         </motion.div>
       ))}
@@ -81,9 +81,8 @@ export const CornerLogo: React.FC<{
     <motion.div
       className={`fixed ${positionClasses[position]} z-10 pointer-events-none`}
       initial={{ opacity: 0, scale: 0 }}
-      animate={{ opacity: 0.1, scale: 1 }}
-      transition={{ delay: 1, duration: 0.5 }}
-      whileHover={{ opacity: 0.3, scale: 1.1 }}
+      animate={{ opacity: 0.15, scale: 1 }}
+      transition={{ delay: 1, duration: 0.8 }}
     >
       <motion.img
         src={logoImage}
