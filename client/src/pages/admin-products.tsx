@@ -98,11 +98,21 @@ export default function AdminProductsPage() {
     },
   });
 
-  const handleSaveProduct = (productData: any) => {
+  const handleCreateProduct = (productData: any) => {
+    createProductMutation.mutate(productData);
+  };
+
+  const handleUpdateProduct = (productData: any) => {
     if (editingProduct) {
       updateProductMutation.mutate({ id: editingProduct.id, productData });
+    }
+  };
+
+  const handleSaveProduct = (productData: any) => {
+    if (editingProduct) {
+      handleUpdateProduct(productData);
     } else {
-      createProductMutation.mutate(productData);
+      handleCreateProduct(productData);
     }
   };
 
