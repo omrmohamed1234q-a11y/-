@@ -1,306 +1,431 @@
-import { useState } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useLocation } from 'wouter';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import Header from '@/components/layout/header';
-import BottomNav from '@/components/layout/bottom-nav';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import {
-  User, Star, Award, Printer, ShoppingBag, LogOut, Settings,
-  Phone, Mail, Calendar, MapPin, Edit, Save, X, Trophy,
-  Gift, Zap, Target, TrendingUp
-} from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { User, Settings, Phone, Mail, MapPin, Calendar, Star, Package, CreditCard, LogOut } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { supabase } from '@/lib/supabase';
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  birthDate?: string;
+  gradeLevel?: string;
+  age?: number;
+  profileImage?: string;
+  bountyPoints: number;
+  level: number;
+  totalOrders: number;
+  totalSpent: string;
+  memberSince: string;
+}
 
 export default function Profile() {
-  const { user, signOut } = useAuth();
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState({
-    fullName: user?.fullName || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
+  const [formData, setFormData] = useState<Partial<UserProfile>>({});
+
+  // Fetch user profile data
+  const { data: userProfile, isLoading } = useQuery<UserProfile>({
+    queryKey: ['/api/profile'],
+    retry: false,
   });
+
+  // Fetch user orders
+  const { data: userOrders = [] } = useQuery({
+    queryKey: ['/api/orders/user'],
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (userProfile) {
+      setFormData(userProfile);
+    }
+  }, [userProfile]);
+
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (updates: Partial<UserProfile>) => {
+      const response = await apiRequest('PUT', '/api/profile', updates);
+      if (!response.ok) {
+        throw new Error('فشل في تحديث الملف الشخصي');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم تحديث الملف الشخصي",
+        description: "تم حفظ التغييرات بنجاح",
+      });
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "خطأ في التحديث",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSave = () => {
+    updateProfileMutation.mutate(formData);
+  };
 
   const handleLogout = async () => {
     try {
-      await signOut();
+      await supabase.auth.signOut();
       toast({
-        title: "تم تسجيل الخروج بنجاح",
-        description: "شكراً لاستخدام منصة اطبعلي",
+        title: "تم تسجيل الخروج",
+        description: "تم تسجيل الخروج بنجاح",
       });
-      setLocation('/');
+      navigate('/');
     } catch (error) {
       toast({
-        title: "خطأ في تسجيل الخروج",
-        description: "حدث خطأ أثناء تسجيل الخروج، يرجى المحاولة مرة أخرى",
+        title: "خطأ",
+        description: "حدث خطأ أثناء تسجيل الخروج",
         variant: "destructive",
       });
     }
   };
 
-  const handleSaveProfile = () => {
-    // Here you would typically save to the backend
-    toast({
-      title: "تم حفظ البيانات",
-      description: "تم تحديث بياناتك الشخصية بنجاح",
-    });
-    setIsEditing(false);
-  };
-
-  const getInitials = (name: string) => {
-    if (!name || name.length === 0) return 'م';
-    return name.split(' ').map(n => n && n.length > 0 ? n.charAt(0) : '').join('').slice(0, 2).toUpperCase() || 'م';
-  };
-
-  const achievements = [
-    { title: 'مستخدم نشط', description: 'أكمل 10 طلبات طباعة', icon: Printer, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-    { title: 'عضو ذهبي', description: 'وصل للمستوى 5', icon: Trophy, color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
-    { title: 'صديق المنصة', description: 'دعا 3 أصدقاء', icon: User, color: 'text-green-600', bgColor: 'bg-green-50' },
-  ];
-
-  const stats = [
-    { label: 'نقاط البونص', value: user?.bountyPoints || 0, icon: Star, color: 'text-yellow-500' },
-    { label: 'المستوى', value: user?.level || 1, icon: Award, color: 'text-blue-500' },
-    { label: 'إجمالي الطباعة', value: user?.totalPrints || 0, icon: Printer, color: 'text-green-500' },
-    { label: 'المشتريات', value: user?.totalPurchases || 0, icon: ShoppingBag, color: 'text-purple-500' },
-  ];
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
+        <div className="animate-spin w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100" dir="rtl">
-      <Header />
-      
-      <div className="container mx-auto px-4 py-6 pb-20">
-        {/* Profile Header */}
-        <Card className="mb-6">
+    <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2"
+            >
+              ← العودة للرئيسية
+            </Button>
+            <h1 className="text-2xl font-bold text-gray-900">الملف الشخصي</h1>
+          </div>
+          <Button 
+            variant="destructive" 
+            onClick={handleLogout}
+            className="flex items-center gap-2"
+            data-testid="button-logout"
+          >
+            <LogOut className="w-4 h-4" />
+            تسجيل الخروج
+          </Button>
+        </div>
+
+        {/* Profile Overview Card */}
+        <Card>
           <CardContent className="p-6">
-            <div className="flex items-center space-x-4 space-x-reverse mb-6">
-              <Avatar className="w-20 h-20">
-                <AvatarImage src={user?.profileImageUrl} />
-                <AvatarFallback className="text-2xl bg-gradient-to-r from-red-500 to-red-600 text-white">
-                  {getInitials(user?.fullName || 'مستخدم')}
+            <div className="flex items-center gap-6">
+              <Avatar className="w-24 h-24">
+                <AvatarImage src={userProfile?.profileImage} />
+                <AvatarFallback className="text-2xl">
+                  {userProfile?.name?.charAt(0) || 'ع'}
                 </AvatarFallback>
               </Avatar>
+              
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-800 mb-1">
-                  {user?.fullName || 'مستخدم عزيز'}
-                </h1>
-                <p className="text-gray-600 mb-2">{user?.email}</p>
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Badge variant={user?.role === 'admin' ? 'default' : 'secondary'}>
-                    {user?.role === 'admin' ? 'مدير' : 'عضو'}
+                <h2 className="text-2xl font-bold text-gray-900">{userProfile?.name}</h2>
+                <p className="text-gray-600 flex items-center gap-2 mt-1">
+                  <Mail className="w-4 h-4" />
+                  {userProfile?.email}
+                </p>
+                {userProfile?.phone && (
+                  <p className="text-gray-600 flex items-center gap-2 mt-1">
+                    <Phone className="w-4 h-4" />
+                    {userProfile?.phone}
+                  </p>
+                )}
+                <div className="flex items-center gap-4 mt-3">
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <Star className="w-3 h-3" />
+                    المستوى {userProfile?.level || 1}
                   </Badge>
-                  {user?.isTeacher && (
-                    <Badge className="bg-green-100 text-green-800">معلم</Badge>
-                  )}
-                  {user?.teacherSubscription && (
-                    <Badge className="bg-yellow-100 text-yellow-800">اشتراك مميز</Badge>
-                  )}
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <CreditCard className="w-3 h-3" />
+                    {userProfile?.bountyPoints || 0} نقطة
+                  </Badge>
                 </div>
               </div>
-              <div className="flex flex-col space-y-2">
+
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{userProfile?.totalOrders || 0}</div>
+                <div className="text-sm text-gray-600">إجمالي الطلبات</div>
+                <div className="text-lg font-semibold text-green-600 mt-1">
+                  {userProfile?.totalSpent || '0.00'} جنيه
+                </div>
+                <div className="text-xs text-gray-500">إجمالي الإنفاق</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Profile Tabs */}
+        <Tabs defaultValue="info" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="info">المعلومات الشخصية</TabsTrigger>
+            <TabsTrigger value="orders">طلباتي</TabsTrigger>
+            <TabsTrigger value="settings">الإعدادات</TabsTrigger>
+          </TabsList>
+
+          {/* Personal Information Tab */}
+          <TabsContent value="info">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>المعلومات الشخصية</CardTitle>
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant={isEditing ? "outline" : "default"}
                   onClick={() => setIsEditing(!isEditing)}
                   data-testid="button-edit-profile"
                 >
-                  {isEditing ? <X className="w-4 h-4 ml-2" /> : <Edit className="w-4 h-4 ml-2" />}
+                  <User className="w-4 h-4 mr-2" />
                   {isEditing ? 'إلغاء' : 'تعديل'}
                 </Button>
-              </div>
-            </div>
-
-            {/* Logout Button */}
-            <div className="border-t pt-4">
-              <Button
-                variant="destructive"
-                onClick={handleLogout}
-                className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
-                data-testid="button-logout"
-              >
-                <LogOut className="w-4 h-4 ml-2" />
-                تسجيل الخروج
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Profile Information */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 space-x-reverse">
-              <User className="w-5 h-5" />
-              <span>المعلومات الشخصية</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isEditing ? (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="fullName">الاسم الكامل</Label>
-                  <Input
-                    id="fullName"
-                    value={editedProfile.fullName}
-                    onChange={(e) => setEditedProfile({...editedProfile, fullName: e.target.value})}
-                    data-testid="input-fullname"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">البريد الإلكتروني</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={editedProfile.email}
-                    onChange={(e) => setEditedProfile({...editedProfile, email: e.target.value})}
-                    data-testid="input-email"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">رقم الهاتف</Label>
-                  <Input
-                    id="phone"
-                    value={editedProfile.phone}
-                    onChange={(e) => setEditedProfile({...editedProfile, phone: e.target.value})}
-                    placeholder="مثال: +966501234567"
-                    data-testid="input-phone"
-                  />
-                </div>
-                <Button onClick={handleSaveProfile} className="w-full" data-testid="button-save-profile">
-                  <Save className="w-4 h-4 ml-2" />
-                  حفظ التغييرات
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3 space-x-reverse">
-                  <Mail className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-600">البريد الإلكتروني:</span>
-                  <span className="font-medium" data-testid="text-email">{user?.email}</span>
-                </div>
-                <div className="flex items-center space-x-3 space-x-reverse">
-                  <Phone className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-600">رقم الهاتف:</span>
-                  <span className="font-medium" data-testid="text-phone">
-                    {user?.phone || 'غير محدد'}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-3 space-x-reverse">
-                  <Calendar className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-600">تاريخ الانضمام:</span>
-                  <span className="font-medium" data-testid="text-join-date">
-                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('ar-SA') : 'غير محدد'}
-                  </span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {stats.map((stat, index) => (
-            <Card key={index} className="text-center">
-              <CardContent className="p-4">
-                <stat.icon className={`w-8 h-8 mx-auto mb-2 ${stat.color}`} />
-                <div className="text-2xl font-bold text-gray-800" data-testid={`stat-${stat.label.replace(/\s+/g, '-')}`}>
-                  {stat.value.toLocaleString()}
-                </div>
-                <div className="text-sm text-gray-600">{stat.label}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Achievements */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 space-x-reverse">
-              <Trophy className="w-5 h-5" />
-              <span>الإنجازات</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              {achievements.map((achievement, index) => (
-                <div key={index} className={`p-4 rounded-lg ${achievement.bgColor}`}>
-                  <div className="flex items-center space-x-3 space-x-reverse">
-                    <achievement.icon className={`w-8 h-8 ${achievement.color}`} />
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-800" data-testid={`achievement-${index}`}>
-                        {achievement.title}
-                      </h4>
-                      <p className="text-sm text-gray-600">{achievement.description}</p>
-                    </div>
-                    <Badge className="bg-white bg-opacity-80">✓</Badge>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      الاسم الكامل
+                    </label>
+                    <Input
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      disabled={!isEditing}
+                      data-testid="input-name"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      البريد الإلكتروني
+                    </label>
+                    <Input
+                      value={formData.email || ''}
+                      disabled={true}
+                      className="bg-gray-50"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      رقم الهاتف
+                    </label>
+                    <Input
+                      value={formData.phone || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      disabled={!isEditing}
+                      placeholder="01012345678"
+                      data-testid="input-phone"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      العمر
+                    </label>
+                    <Input
+                      type="number"
+                      value={formData.age || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, age: parseInt(e.target.value) }))}
+                      disabled={!isEditing}
+                      placeholder="25"
+                      data-testid="input-age"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      المرحلة الدراسية
+                    </label>
+                    <Input
+                      value={formData.gradeLevel || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, gradeLevel: e.target.value }))}
+                      disabled={!isEditing}
+                      placeholder="الثانوية العامة"
+                      data-testid="input-grade"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      تاريخ الميلاد
+                    </label>
+                    <Input
+                      type="date"
+                      value={formData.birthDate || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
+                      disabled={!isEditing}
+                      data-testid="input-birth-date"
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    العنوان
+                  </label>
+                  <Input
+                    value={formData.address || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                    disabled={!isEditing}
+                    placeholder="القاهرة، مصر"
+                    data-testid="input-address"
+                  />
+                </div>
 
-        {/* Quick Actions */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 space-x-reverse">
-              <Settings className="w-5 h-5" />
-              <span>الإعدادات السريعة</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Button variant="outline" className="w-full justify-start" data-testid="button-notifications">
-                <Gift className="w-4 h-4 ml-2" />
-                إعدادات الإشعارات
-              </Button>
-              <Button variant="outline" className="w-full justify-start" data-testid="button-privacy">
-                <Settings className="w-4 h-4 ml-2" />
-                إعدادات الخصوصية
-              </Button>
-              <Button variant="outline" className="w-full justify-start" data-testid="button-help">
-                <Target className="w-4 h-4 ml-2" />
-                الدعم والمساعدة
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                {isEditing && (
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      onClick={handleSave}
+                      disabled={updateProfileMutation.isPending}
+                      data-testid="button-save-profile"
+                    >
+                      {updateProfileMutation.isPending ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditing(false);
+                        setFormData(userProfile || {});
+                      }}
+                    >
+                      إلغاء
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Progress Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 space-x-reverse">
-              <TrendingUp className="w-5 h-5" />
-              <span>التقدم نحو المستوى التالي</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">المستوى {user?.level || 1}</span>
-                <span className="text-sm text-gray-600">المستوى {(user?.level || 1) + 1}</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-gradient-to-r from-red-500 to-red-600 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${((user?.bountyPoints || 0) % 100)}%` }}
-                ></div>
-              </div>
-              <p className="text-sm text-gray-600 text-center">
-                تحتاج إلى {100 - ((user?.bountyPoints || 0) % 100)} نقطة للوصول للمستوى التالي
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Orders Tab */}
+          <TabsContent value="orders">
+            <Card>
+              <CardHeader>
+                <CardTitle>طلباتي الأخيرة</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {userOrders.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">لا توجد طلبات حتى الآن</p>
+                    <Button 
+                      className="mt-4" 
+                      onClick={() => navigate('/store')}
+                    >
+                      تصفح المتجر
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {userOrders.slice(0, 5).map((order: any) => (
+                      <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">طلب رقم {order.orderNumber}</p>
+                          <p className="text-sm text-gray-600">{order.createdAt}</p>
+                        </div>
+                        <div className="text-left">
+                          <Badge 
+                            variant={order.status === 'delivered' ? 'default' : 'secondary'}
+                          >
+                            {order.status === 'delivered' ? 'مكتمل' : 'قيد التنفيذ'}
+                          </Badge>
+                          <p className="text-sm font-medium mt-1">{order.totalAmount} جنيه</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>إعدادات الحساب</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <h3 className="font-medium">إشعارات البريد الإلكتروني</h3>
+                      <p className="text-sm text-gray-600">استقبال إشعارات حول الطلبات والعروض</p>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      تمكين
+                    </Button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <h3 className="font-medium">إشعارات push</h3>
+                      <p className="text-sm text-gray-600">استقبال إشعارات فورية على الهاتف</p>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      تمكين
+                    </Button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <h3 className="font-medium">إشعارات تحديثات الطلبات</h3>
+                      <p className="text-sm text-gray-600">تلقي تحديثات حالة الطلبات</p>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      تمكين
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="font-medium text-red-600">منطقة الخطر</h3>
+                  <div className="p-4 border border-red-200 rounded-lg bg-red-50">
+                    <h4 className="font-medium text-red-800">حذف الحساب</h4>
+                    <p className="text-sm text-red-600 mt-1">
+                      سيتم حذف جميع بياناتك نهائياً ولا يمكن استردادها
+                    </p>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      className="mt-3"
+                      data-testid="button-delete-account"
+                    >
+                      حذف الحساب
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <BottomNav />
     </div>
   );
 }
