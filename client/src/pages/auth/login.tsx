@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { LogoPresets } from '@/components/AnimatedLogo';
 
 export default function Login() {
   const [, navigate] = useLocation();
@@ -121,9 +122,8 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo Header */}
         <div className="text-center mb-8">
-          <div className="bg-white rounded-3xl p-6 shadow-xl mb-6 mx-auto w-fit">
-            <div className="text-5xl mb-3">📄</div>
-            <div className="text-3xl font-bold text-gray-800">اطبعلي</div>
+          <div className="mb-6 mx-auto w-fit">
+            <LogoPresets.Splash />
           </div>
           <p className="text-gray-600 text-lg">منصة الطباعة الذكية</p>
         </div>
