@@ -63,10 +63,26 @@ export interface IStorage {
   deleteCoupon(id: string): Promise<boolean>;
   validateCoupon(code: string, orderTotal: number, userId: string): Promise<any>;
   applyCoupon(code: string, orderId: string, orderTotal: number, userId: string): Promise<any>;
+
+  // Inquiry operations
+  getAllInquiries(): Promise<any[]>;
+  createInquiry(inquiry: any): Promise<any>;
+  sendInquiry(inquiryId: string): Promise<any>;
+  getInquiryResponses(inquiryId: string): Promise<any[]>;
+
+  // Additional compatibility methods
+  getCoupon(id: string): Promise<any>;
+  createCouponNotifications(notifications: any[]): Promise<void>;
+  getCouponUsageAnalytics(couponId: string): Promise<any>;
+  getCart(userId: string): Promise<any>;
+  getUserNotifications(userId: string): any[];
+  markNotificationAsRead(notificationId: string): void;
+  createNotification(data: any): any;
 }
 
-// Global coupon storage to persist across application lifecycle
+// Global storage to persist across application lifecycle
 const globalCouponStorage: any[] = [];
+const globalInquiryStorage: any[] = [];
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
@@ -468,6 +484,123 @@ export class DatabaseStorage implements IStorage {
   async applyCoupon(code: string, orderId: string, orderTotal: number, userId: string): Promise<any> {
     // For now, return a mock application result
     return { applied: true, discount: 10, finalTotal: orderTotal * 0.9 };
+  }
+
+  // Inquiry operations using global storage
+  async getAllInquiries(): Promise<any[]> {
+    return [...globalInquiryStorage].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async createInquiry(inquiryData: any): Promise<any> {
+    const inquiry = {
+      id: Date.now().toString(),
+      ...inquiryData,
+      status: 'draft',
+      responseCount: 0,
+      totalRecipients: 0,
+      createdAt: new Date()
+    };
+    globalInquiryStorage.push(inquiry);
+    console.log('Created inquiry:', inquiry);
+    return inquiry;
+  }
+
+  async sendInquiry(inquiryId: string): Promise<any> {
+    const index = globalInquiryStorage.findIndex(i => i.id === inquiryId);
+    if (index !== -1) {
+      globalInquiryStorage[index] = {
+        ...globalInquiryStorage[index],
+        status: 'sent',
+        sentAt: new Date(),
+        totalRecipients: this.calculateRecipients(globalInquiryStorage[index])
+      };
+      return globalInquiryStorage[index];
+    }
+    throw new Error('Inquiry not found');
+  }
+
+  async getInquiryResponses(inquiryId: string): Promise<any[]> {
+    // Return mock responses for now
+    return [
+      {
+        id: '1',
+        inquiryId,
+        userId: 'user1',
+        userName: 'أحمد محمد',
+        message: 'هذا رد تجريبي على الاستعلام',
+        createdAt: new Date()
+      }
+    ];
+  }
+
+  private calculateRecipients(inquiry: any): number {
+    // Calculate number of recipients based on target type
+    switch (inquiry.targetType) {
+      case 'all_customers':
+        return 100; // Mock number
+      case 'specific_customers':
+        return inquiry.targetUserIds?.length || 0;
+      case 'grade_level':
+        return 25; // Mock number for grade level
+      case 'location':
+        return 50; // Mock number for location
+      default:
+        return 0;
+    }
+  }
+
+  // Additional methods needed for compatibility
+  async getCoupon(id: string): Promise<any> {
+    const coupon = globalCouponStorage.find(c => c.id === id);
+    return coupon || null;
+  }
+
+  async createCouponNotifications(notifications: any[]): Promise<void> {
+    // Implementation would store notifications for each coupon
+    console.log('Creating coupon notifications:', notifications);
+  }
+
+  async getCouponUsageAnalytics(couponId: string): Promise<any> {
+    const coupon = globalCouponStorage.find(c => c.id === couponId);
+    if (!coupon) return null;
+
+    return {
+      couponId,
+      couponCode: coupon.code,
+      couponName: coupon.name,
+      totalUsage: coupon.usageCount || 0,
+      usageLimit: coupon.usageLimit,
+      clickThroughRate: '5.2',
+      openRate: '12.5'
+    };
+  }
+
+  async getCart(userId: string): Promise<any> {
+    // Mock cart implementation
+    return {
+      items: [],
+      subtotal: 0,
+      discount: 0,
+      total: 0,
+      shipping: 0,
+      availablePoints: 0
+    };
+  }
+
+  getUserNotifications(userId: string): any[] {
+    // Mock notifications
+    return [];
+  }
+
+  markNotificationAsRead(notificationId: string): void {
+    // Mock implementation
+  }
+
+  createNotification(data: any): any {
+    // Mock implementation
+    return { id: Date.now().toString(), ...data };
   }
 }
 
@@ -1094,6 +1227,123 @@ class MemStorage implements IStorage {
       { userId: "user2", username: "فاطمة أحمد", usageCount: 2, totalSavings: 50 },
       { userId: "user3", username: "محمد علي", usageCount: 2, totalSavings: 40 }
     ];
+  }
+
+  // Inquiry operations using global storage
+  async getAllInquiries(): Promise<any[]> {
+    return [...globalInquiryStorage].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async createInquiry(inquiryData: any): Promise<any> {
+    const inquiry = {
+      id: Date.now().toString(),
+      ...inquiryData,
+      status: 'draft',
+      responseCount: 0,
+      totalRecipients: 0,
+      createdAt: new Date()
+    };
+    globalInquiryStorage.push(inquiry);
+    console.log('Created inquiry:', inquiry);
+    return inquiry;
+  }
+
+  async sendInquiry(inquiryId: string): Promise<any> {
+    const index = globalInquiryStorage.findIndex(i => i.id === inquiryId);
+    if (index !== -1) {
+      globalInquiryStorage[index] = {
+        ...globalInquiryStorage[index],
+        status: 'sent',
+        sentAt: new Date(),
+        totalRecipients: this.calculateRecipients(globalInquiryStorage[index])
+      };
+      return globalInquiryStorage[index];
+    }
+    throw new Error('Inquiry not found');
+  }
+
+  async getInquiryResponses(inquiryId: string): Promise<any[]> {
+    // Return mock responses for now
+    return [
+      {
+        id: '1',
+        inquiryId,
+        userId: 'user1',
+        userName: 'أحمد محمد',
+        message: 'هذا رد تجريبي على الاستعلام',
+        createdAt: new Date()
+      }
+    ];
+  }
+
+  private calculateRecipients(inquiry: any): number {
+    // Calculate number of recipients based on target type
+    switch (inquiry.targetType) {
+      case 'all_customers':
+        return 100; // Mock number
+      case 'specific_customers':
+        return inquiry.targetUserIds?.length || 0;
+      case 'grade_level':
+        return 25; // Mock number for grade level
+      case 'location':
+        return 50; // Mock number for location
+      default:
+        return 0;
+    }
+  }
+
+  // Additional methods needed for compatibility
+  async getCoupon(id: string): Promise<any> {
+    const coupon = globalCouponStorage.find(c => c.id === id);
+    return coupon || null;
+  }
+
+  async createCouponNotifications(notifications: any[]): Promise<void> {
+    // Implementation would store notifications for each coupon
+    console.log('Creating coupon notifications:', notifications);
+  }
+
+  async getCouponUsageAnalytics(couponId: string): Promise<any> {
+    const coupon = globalCouponStorage.find(c => c.id === couponId);
+    if (!coupon) return null;
+
+    return {
+      couponId,
+      couponCode: coupon.code,
+      couponName: coupon.name,
+      totalUsage: coupon.usageCount || 0,
+      usageLimit: coupon.usageLimit,
+      clickThroughRate: '5.2',
+      openRate: '12.5'
+    };
+  }
+
+  async getCart(userId: string): Promise<any> {
+    // Mock cart implementation
+    return {
+      items: [],
+      subtotal: 0,
+      discount: 0,
+      total: 0,
+      shipping: 0,
+      availablePoints: 0
+    };
+  }
+
+  getUserNotifications(userId: string): any[] {
+    // Mock notifications
+    return [];
+  }
+
+  markNotificationAsRead(notificationId: string): void {
+    // Mock implementation
+  }
+
+  createNotification(data: any): any {
+    // Mock implementation
+    return { id: Date.now().toString(), ...data };
   }
 }
 

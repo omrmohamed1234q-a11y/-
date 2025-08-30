@@ -27,6 +27,7 @@ import CloudinaryTest from "@/pages/cloudinary-test";
 import StudentTeachers from "@/pages/student/teachers";
 import AdminUsers from "@/pages/admin/users";
 import AdminCoupons from "@/pages/admin/coupons";
+import AdminInquiries from "@/pages/admin/inquiries";
 import TestSignup from "@/pages/test-signup";
 import Checkout from "@/pages/checkout";
 import OrderTracking from "@/pages/order-tracking";
@@ -78,6 +79,7 @@ function Router() {
         <Route path="/admin/teachers-corner" component={TeachersCorner} />
         <Route path="/admin/users" component={AdminUsers} />
         <Route path="/admin/coupons" component={AdminCoupons} />
+        <Route path="/admin/inquiries" component={AdminInquiries} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/" component={Landing} />
@@ -107,6 +109,7 @@ function Router() {
         <Route path="/admin/teachers-corner" component={TeachersCorner} />
         <Route path="/admin/users" component={AdminUsers} />
         <Route path="/admin/coupons" component={AdminCoupons} />
+        <Route path="/admin/inquiries" component={AdminInquiries} />
         <Route path="/student/teachers" component={StudentTeachers} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />

@@ -320,6 +320,13 @@ export default function AdminDashboard() {
                   <span className="text-xs">القسائم</span>
                 </Button>
               </Link>
+              
+              <Link href="/admin/inquiries">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-indigo-50">
+                  <FileText className="w-6 h-6 text-indigo-600" />
+                  <span className="text-xs">الاستعلامات</span>
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

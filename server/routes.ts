@@ -1323,6 +1323,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Inquiries endpoints
+  app.get('/api/admin/inquiries', async (req, res) => {
+    try {
+      const inquiries = await storage.getAllInquiries();
+      res.json(inquiries);
+    } catch (error) {
+      console.error('Error getting inquiries:', error);
+      res.status(500).json({ message: 'خطأ في جلب الاستعلامات' });
+    }
+  });
+
+  app.post('/api/admin/inquiries', async (req, res) => {
+    try {
+      console.log('Creating inquiry with data:', req.body);
+      const inquiry = await storage.createInquiry(req.body);
+      res.json(inquiry);
+    } catch (error) {
+      console.error('Error creating inquiry:', error);
+      res.status(500).json({ message: 'خطأ في إنشاء الاستعلام' });
+    }
+  });
+
+  app.post('/api/admin/inquiries/:id/send', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const inquiry = await storage.sendInquiry(id);
+      res.json(inquiry);
+    } catch (error) {
+      console.error('Error sending inquiry:', error);
+      res.status(500).json({ message: 'خطأ في إرسال الاستعلام' });
+    }
+  });
+
+  app.get('/api/admin/inquiries/:id/responses', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const responses = await storage.getInquiryResponses(id);
+      res.json(responses);
+    } catch (error) {
+      console.error('Error getting inquiry responses:', error);
+      res.status(500).json({ message: 'خطأ في جلب ردود الاستعلام' });
+    }
+  });
+
   app.delete('/api/cart/items/:itemId', async (req, res) => {
     try {
       const { itemId } = req.params;
