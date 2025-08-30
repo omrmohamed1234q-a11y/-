@@ -76,30 +76,20 @@ export interface IStorage {
 
   // Driver operations
   getAllDrivers(): Promise<any[]>;
-  getDriver(id: string): Promise<any>;
-  getDriverByEmail(email: string): Promise<any>;
+  getDriver(id: string): Promise<any | undefined>;
+  getDriverByEmail(email: string): Promise<any | undefined>;
+  getDriverByUsername(username: string): Promise<any | undefined>;
   createDriver(driver: any): Promise<any>;
   updateDriver(id: string, updates: any): Promise<any>;
   updateDriverStatus(id: string, status: string): Promise<any>;
   updateDriverLocation(id: string, location: any): Promise<any>;
+  updateDriverLastActive(id: string): Promise<void>;
   authenticateDriver(identifier: string, password: string): Promise<any>;
   getAvailableDrivers(): Promise<any[]>;
+  getAvailableOrdersForDriver(driverId: string): Promise<any[]>;
   assignOrderToDriver(orderId: string, driverId: string): Promise<any>;
   getDriverOrders(driverId: string): Promise<any[]>;
   deleteDriver(id: string): Promise<boolean>;
-
-  // Driver operations
-  getAllDrivers(): Promise<any[]>;
-  getDriver(id: string): Promise<any | undefined>;
-  getDriverByEmail(email: string): Promise<any | undefined>;
-  createDriver(driver: any): Promise<any>;
-  updateDriver(id: string, updates: any): Promise<any>;
-  updateDriverStatus(id: string, status: string): Promise<any>;
-  updateDriverLastActive(id: string): Promise<void>;
-  authenticateDriver(email: string, password: string): Promise<any | null>;
-  getAvailableOrdersForDriver(driverId: string): Promise<any[]>;
-  assignOrderToDriver(orderId: string, driverId: string): Promise<void>;
-  updateOrderStatus(orderId: string, status: string, driverId?: string): Promise<void>;
 
   // Additional compatibility methods
   getCoupon(id: string): Promise<any>;
@@ -1852,7 +1842,7 @@ class MemStorage implements IStorage {
       username: 'Ahmed12',
       email: 'ahmed@driver.com',
       phone: '01012345678',
-      password: 'password123',
+      password: 'S582038s123',
       vehicleType: 'motorcycle',
       vehiclePlate: 'ABC123',
       status: 'offline',
@@ -2168,4 +2158,5 @@ class MemStorage implements IStorage {
 }
 
 // Use MemStorage temporarily due to database connection issues
+// Will switch to DatabaseStorage when database is ready
 export const storage = new MemStorage();
