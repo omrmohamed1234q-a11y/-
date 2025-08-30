@@ -416,8 +416,8 @@ export default function ScanPage() {
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="mb-4 mx-auto w-fit">
-            <LogoPresets.Navigation />
+          <div className="mb-6 mx-auto w-fit">
+            <LogoPresets.Landing />
           </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">المسح الضوئي للمستندات</h1>
           <p className="text-gray-600">امسح مستنداتك بجودة عالية مثل CamScanner</p>
