@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from "@/hooks/use-toast"
+import { LogoPresets } from "@/components/AnimatedLogo"
 
 export default function Landing() {
   const [isLogin, setIsLogin] = useState(true)
@@ -175,9 +176,8 @@ export default function Landing() {
       <div className="w-full max-w-md">
         {/* Logo Header */}
         <div className="text-center mb-8">
-          <div className="bg-white rounded-3xl p-6 shadow-xl mb-6 mx-auto w-fit">
-            <div className="text-5xl mb-3">📄</div>
-            <div className="text-3xl font-bold text-gray-800">اطبعلي</div>
+          <div className="mb-6 mx-auto w-fit">
+            <LogoPresets.Login />
           </div>
           <p className="text-gray-600 text-lg">منصة الطباعة الذكية</p>
         </div>
