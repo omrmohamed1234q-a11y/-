@@ -415,7 +415,68 @@ export class DatabaseStorage implements IStorage {
 
 // In-memory storage to bypass database connection issues
 class MemStorage implements IStorage {
-  private users: User[] = [];
+  private users: User[] = [
+    {
+      id: "user-001",
+      email: "ahmed.mohamed@example.com",
+      firstName: "أحمد",
+      lastName: "محمد",
+      gradeLevel: "grade10",
+      location: "القاهرة",
+      phoneNumber: "+201012345678",
+      age: 16,
+      createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
+      updatedAt: new Date()
+    },
+    {
+      id: "user-002", 
+      email: "fatma.ahmed@example.com",
+      firstName: "فاطمة",
+      lastName: "أحمد",
+      gradeLevel: "grade11",
+      location: "الجيزة",
+      phoneNumber: "+201098765432",
+      age: 17,
+      createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
+      updatedAt: new Date()
+    },
+    {
+      id: "user-003",
+      email: "omar.hassan@example.com", 
+      firstName: "عمر",
+      lastName: "حسن",
+      gradeLevel: "grade9",
+      location: "الإسكندرية",
+      phoneNumber: "+201156789012",
+      age: 15,
+      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+      updatedAt: new Date()
+    },
+    {
+      id: "user-004",
+      email: "sara.ali@example.com",
+      firstName: "سارة", 
+      lastName: "علي",
+      gradeLevel: "grade12",
+      location: "القاهرة",
+      phoneNumber: "+201234567890",
+      age: 18,
+      createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago (existing user)
+      updatedAt: new Date()
+    },
+    {
+      id: "user-005",
+      email: "mahmoud.salem@example.com",
+      firstName: "محمود",
+      lastName: "سالم", 
+      gradeLevel: "grade8",
+      location: "طنطا",
+      phoneNumber: "+201045678901",
+      age: 14,
+      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago (new user)
+      updatedAt: new Date()
+    }
+  ];
   private products: Product[] = [
     {
       id: '1',

@@ -37,7 +37,7 @@ export function CouponForm({ coupon, onClose, onSuccess }: CouponFormProps) {
 
   // Fetch all users for selection
   const { data: users = [] } = useQuery({
-    queryKey: ["/api/admin/users"],
+    queryKey: ["/api/users"],
     enabled: true,
   });
 

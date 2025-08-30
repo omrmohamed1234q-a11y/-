@@ -632,6 +632,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Users endpoint for coupon targeting (simpler auth)
+  app.get('/api/users', async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Return basic user info for coupon targeting
+      const basicUsers = users.map((user: any) => ({
+        id: user.id,
+        firstName: user.firstName || 'مستخدم',
+        lastName: user.lastName || '',
+        email: user.email,
+        gradeLevel: user.gradeLevel,
+        location: user.location || '',
+        createdAt: user.createdAt
+      }));
+      res.json(basicUsers);
+    } catch (error) {
+      console.error('Error fetching users for coupons:', error);
+      res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  });
+
   // Admin users endpoints
   app.get('/api/admin/users', isAdminAuthenticated, async (req: any, res) => {
     try {
