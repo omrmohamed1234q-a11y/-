@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { 
   FileText, Plus, Send, MessageSquare, Users, Eye, 
-  Calendar, Clock, CheckCircle, XCircle 
+  Calendar, Clock, CheckCircle, XCircle, ArrowLeft, Home
 } from 'lucide-react';
 
 interface Inquiry {
@@ -133,9 +134,17 @@ export default function AdminInquiries() {
   return (
     <div className="p-8 space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">إدارة الاستعلامات</h1>
-          <p className="text-gray-600 mt-2">إنشاء وإدارة استعلامات العملاء وعروض الأسعار</p>
+        <div className="flex items-center gap-4">
+          <Link to="/admin">
+            <Button variant="outline" size="sm" className="flex items-center gap-2" data-testid="button-back-admin">
+              <ArrowLeft className="w-4 h-4" />
+              العودة للوحة التحكم
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">إدارة الاستعلامات</h1>
+            <p className="text-gray-600 mt-2">إنشاء وإدارة استعلامات العملاء وعروض الأسعار</p>
+          </div>
         </div>
         
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
