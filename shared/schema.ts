@@ -645,3 +645,45 @@ export type SystemAnalytics = typeof systemAnalytics.$inferSelect;
 export type InsertSystemAnalytics = z.infer<typeof insertSystemAnalyticsSchema>;
 export type Curriculum = typeof curriculum.$inferSelect;
 export type InsertCurriculum = z.infer<typeof insertCurriculumSchema>;
+
+// Enhanced Coupons and discount codes system
+export const adminCoupons = pgTable("admin_coupons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  discountType: varchar("discount_type", { length: 20 }).notNull(), // 'percentage' or 'fixed'
+  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
+  minimumOrderValue: decimal("minimum_order_value", { precision: 10, scale: 2 }).default('0'),
+  maximumDiscount: decimal("maximum_discount", { precision: 10, scale: 2 }),
+  usageLimit: integer("usage_limit"), // null = unlimited
+  usageCount: integer("usage_count").default(0),
+  isActive: boolean("is_active").default(true),
+  validFrom: timestamp("valid_from").defaultNow(),
+  validUntil: timestamp("valid_until"),
+  applicableProducts: jsonb("applicable_products"), // null = all products, or array of product IDs
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAdminCouponSchema = createInsertSchema(adminCoupons).omit({
+  id: true,
+  usageCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAdminCoupon = z.infer<typeof insertAdminCouponSchema>;
+export type AdminCoupon = typeof adminCoupons.$inferSelect;
+
+// Coupon usage tracking
+export const couponUsageTracking = pgTable("coupon_usage_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  couponId: varchar("coupon_id").references(() => adminCoupons.id, { onDelete: "cascade" }).notNull(),
+  orderId: varchar("order_id").references(() => orders.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull(),
+  usedAt: timestamp("used_at").defaultNow(),
+});
+
+export type CouponUsageTracking = typeof couponUsageTracking.$inferSelect;

@@ -54,6 +54,15 @@ export interface IStorage {
   createNotification(data: any): any;
   getUserNotifications(userId: string): any[];
   markNotificationAsRead(notificationId: string): void;
+  
+  // Coupon operations
+  getAllCoupons(): Promise<any[]>;
+  createCoupon(coupon: any): Promise<any>;
+  updateCoupon(id: string, updates: any): Promise<any>;
+  updateCouponStatus(id: string, isActive: boolean): Promise<any>;
+  deleteCoupon(id: string): Promise<boolean>;
+  validateCoupon(code: string, orderTotal: number, userId: string): Promise<any>;
+  applyCoupon(code: string, orderId: string, orderTotal: number, userId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -840,6 +849,166 @@ class MemStorage implements IStorage {
     if (notification) {
       notification.read = true;
     }
+  }
+
+  // ==================== COUPON OPERATIONS ====================
+  
+  private coupons: any[] = [
+    {
+      id: "1",
+      code: "WELCOME10",
+      name: "خصم الترحيب",
+      description: "خصم 10% للعملاء الجدد",
+      discountType: "percentage",
+      discountValue: "10.00",
+      minimumOrderValue: "50.00",
+      maximumDiscount: "100.00",
+      usageLimit: 100,
+      usageCount: 15,
+      isActive: true,
+      validFrom: new Date(),
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      applicableProducts: null,
+      createdBy: "48c03e72-d53b-4a3f-a729-c38276268315",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: "2", 
+      code: "STUDENT25",
+      name: "خصم الطلاب",
+      description: "خصم 25% لطلاب المدارس والجامعات",
+      discountType: "percentage",
+      discountValue: "25.00", 
+      minimumOrderValue: "20.00",
+      maximumDiscount: "50.00",
+      usageLimit: null, // unlimited
+      usageCount: 45,
+      isActive: true,
+      validFrom: new Date(),
+      validUntil: null, // no expiry
+      applicableProducts: null,
+      createdBy: "48c03e72-d53b-4a3f-a729-c38276268315",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ];
+
+  async getAllCoupons(): Promise<any[]> {
+    return [...this.coupons].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async createCoupon(couponData: any): Promise<any> {
+    const coupon = {
+      id: Math.random().toString(36).substr(2, 9),
+      ...couponData,
+      usageCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.coupons.push(coupon);
+    return coupon;
+  }
+
+  async updateCoupon(id: string, updates: any): Promise<any> {
+    const index = this.coupons.findIndex(c => c.id === id);
+    if (index !== -1) {
+      this.coupons[index] = { 
+        ...this.coupons[index], 
+        ...updates, 
+        updatedAt: new Date() 
+      };
+      return this.coupons[index];
+    }
+    return null;
+  }
+
+  async updateCouponStatus(id: string, isActive: boolean): Promise<any> {
+    const index = this.coupons.findIndex(c => c.id === id);
+    if (index !== -1) {
+      this.coupons[index] = { 
+        ...this.coupons[index], 
+        isActive, 
+        updatedAt: new Date() 
+      };
+      return this.coupons[index];
+    }
+    return null;
+  }
+
+  async deleteCoupon(id: string): Promise<boolean> {
+    const index = this.coupons.findIndex(c => c.id === id);
+    if (index !== -1) {
+      this.coupons.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  async validateCoupon(code: string, orderTotal: number, userId: string): Promise<any> {
+    const coupon = this.coupons.find(c => c.code.toUpperCase() === code.toUpperCase());
+
+    if (!coupon) {
+      return { valid: false, error: 'كود القسيمة غير صحيح' };
+    }
+
+    if (!coupon.isActive) {
+      return { valid: false, error: 'القسيمة غير نشطة' };
+    }
+
+    if (coupon.validUntil && new Date(coupon.validUntil) < new Date()) {
+      return { valid: false, error: 'انتهت صلاحية القسيمة' };
+    }
+
+    if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+      return { valid: false, error: 'تم استنفاد عدد مرات استخدام القسيمة' };
+    }
+
+    const minOrder = parseFloat(coupon.minimumOrderValue || '0');
+    if (orderTotal < minOrder) {
+      return { 
+        valid: false, 
+        error: `الحد الأدنى للطلب ${minOrder} جنيه` 
+      };
+    }
+
+    // Calculate discount
+    let discountAmount = 0;
+    if (coupon.discountType === 'percentage') {
+      discountAmount = (orderTotal * parseFloat(coupon.discountValue)) / 100;
+      if (coupon.maximumDiscount) {
+        discountAmount = Math.min(discountAmount, parseFloat(coupon.maximumDiscount));
+      }
+    } else {
+      discountAmount = parseFloat(coupon.discountValue);
+    }
+
+    return {
+      valid: true,
+      coupon,
+      discountAmount: Math.round(discountAmount * 100) / 100
+    };
+  }
+
+  async applyCoupon(code: string, orderId: string, orderTotal: number, userId: string): Promise<any> {
+    const validation = await this.validateCoupon(code, orderTotal, userId);
+    
+    if (!validation.valid) {
+      return validation;
+    }
+
+    // Update usage count
+    const coupon = validation.coupon;
+    coupon.usageCount = (coupon.usageCount || 0) + 1;
+    coupon.updatedAt = new Date();
+
+    return {
+      success: true,
+      discountAmount: validation.discountAmount,
+      coupon: validation.coupon
+    };
   }
 }
 

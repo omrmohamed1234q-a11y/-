@@ -10,7 +10,7 @@ import { apiRequest } from '@/lib/queryClient';
 import {
   BarChart3, Users, Package, Printer, ShoppingCart, TrendingUp,
   Plus, Edit, Trash2, FileText, Settings, Home, LogOut,
-  Eye, Download, Calendar, BookOpen, GraduationCap, Store, X
+  Eye, Download, Calendar, BookOpen, GraduationCap, Store, X, Tag
 } from 'lucide-react';
 import { Link } from 'wouter';
 import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
@@ -314,10 +314,10 @@ export default function AdminDashboard() {
                 <span className="text-xs">التقارير</span>
               </Button>
               
-              <Link href="/cloudinary-test">
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-indigo-50">
-                  <FileText className="w-6 h-6 text-indigo-600" />
-                  <span className="text-xs">اختبار Cloudinary</span>
+              <Link href="/admin/coupons">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-yellow-50">
+                  <Tag className="w-6 h-6 text-yellow-600" />
+                  <span className="text-xs">القسائم</span>
                 </Button>
               </Link>
             </div>

@@ -1414,6 +1414,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== ADMIN COUPONS MANAGEMENT ====================
+  
+  // Get all coupons (admin only)
+  app.get('/api/admin/coupons', isAdminAuthenticated, async (req, res) => {
+    try {
+      const coupons = await storage.getAllCoupons();
+      res.json(coupons);
+    } catch (error) {
+      console.error('Error fetching coupons:', error);
+      res.status(500).json({ error: 'Failed to fetch coupons' });
+    }
+  });
+
+  // Create new coupon (admin only)
+  app.post('/api/admin/coupons', isAdminAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertAdminCouponSchema.parse({
+        ...req.body,
+        createdBy: req.user.id
+      });
+      
+      const coupon = await storage.createCoupon(validatedData);
+      res.json(coupon);
+    } catch (error) {
+      console.error('Error creating coupon:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid coupon data', details: error.errors });
+      }
+      res.status(500).json({ error: 'Failed to create coupon' });
+    }
+  });
+
+  // Update coupon (admin only)
+  app.put('/api/admin/coupons/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertAdminCouponSchema.partial().parse(req.body);
+      
+      const coupon = await storage.updateCoupon(id, validatedData);
+      if (!coupon) {
+        return res.status(404).json({ error: 'Coupon not found' });
+      }
+      
+      res.json(coupon);
+    } catch (error) {
+      console.error('Error updating coupon:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid coupon data', details: error.errors });
+      }
+      res.status(500).json({ error: 'Failed to update coupon' });
+    }
+  });
+
+  // Update coupon status (admin only)
+  app.patch('/api/admin/coupons/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      const coupon = await storage.updateCouponStatus(id, isActive);
+      if (!coupon) {
+        return res.status(404).json({ error: 'Coupon not found' });
+      }
+      
+      res.json(coupon);
+    } catch (error) {
+      console.error('Error updating coupon status:', error);
+      res.status(500).json({ error: 'Failed to update coupon status' });
+    }
+  });
+
+  // Delete coupon (admin only)
+  app.delete('/api/admin/coupons/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteCoupon(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Coupon not found' });
+      }
+      
+      res.json({ success: true, message: 'Coupon deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting coupon:', error);
+      res.status(500).json({ error: 'Failed to delete coupon' });
+    }
+  });
+
+  // Validate coupon for customer use
+  app.post('/api/coupons/validate', requireAuth, async (req, res) => {
+    try {
+      const { code, orderTotal } = req.body;
+      const userId = req.user.id;
+      
+      const validation = await storage.validateCoupon(code, orderTotal, userId);
+      res.json(validation);
+    } catch (error) {
+      console.error('Error validating coupon:', error);
+      res.status(500).json({ error: 'Failed to validate coupon' });
+    }
+  });
+
+  // Apply coupon to order
+  app.post('/api/coupons/apply', requireAuth, async (req, res) => {
+    try {
+      const { code, orderId, orderTotal } = req.body;
+      const userId = req.user.id;
+      
+      const result = await storage.applyCoupon(code, orderId, orderTotal, userId);
+      res.json(result);
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      res.status(500).json({ error: 'Failed to apply coupon' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
