@@ -66,7 +66,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const authHeaders = await getAuthHeaders();
     
-    const res = await fetch(queryKey.join("") as string, {
+    const res = await fetch(queryKey.join("/") as string, {
       method: "GET",
       headers: {
         ...authHeaders,
