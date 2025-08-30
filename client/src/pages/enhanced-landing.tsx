@@ -546,8 +546,8 @@ export default function EnhancedLanding() {
               <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-pink-400 rounded-3xl blur-xl opacity-30 scale-110"></div>
               
               {/* Main logo container */}
-              <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-gray-100">
-                <LogoPresets.Landing />
+              <div className="relative">
+                <LogoPresets.Login />
               </div>
             </motion.div>
             
