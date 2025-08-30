@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react'
+import { Link } from 'wouter'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -15,7 +16,8 @@ import {
   RotateCcwIcon,
   DownloadIcon,
   ImageIcon,
-  PaletteIcon
+  PaletteIcon,
+  ArrowLeft
 } from 'lucide-react'
 import { LogoPresets } from '@/components/AnimatedLogo'
 
@@ -412,8 +414,29 @@ export default function ScanPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Top Header with Back Button */}
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2 hover:bg-gray-100">
+                <ArrowLeft className="w-4 h-4" />
+                <span>العودة</span>
+              </Button>
+            </Link>
+            
+            <div className="flex items-center gap-2">
+              <ScanIcon className="w-5 h-5 text-red-500" />
+              <span className="font-semibold text-gray-800">المسح الضوئي</span>
+            </div>
+            
+            <div className="w-20"></div> {/* Spacer for centering */}
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 max-w-4xl pt-8 pb-8">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="mb-6 mx-auto w-fit">
