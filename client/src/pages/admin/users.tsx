@@ -38,7 +38,7 @@ export default function UsersManagement() {
   // Fetch users from Supabase
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["/api/admin/users"],
-    queryFn: () => apiRequest("/api/admin/users").then(res => res.json()),
+    queryFn: () => apiRequest("GET", "/api/admin/users").then(res => res.json()),
   });
 
   // Update user mutation
