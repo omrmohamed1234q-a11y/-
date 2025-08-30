@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import logoImage from "@assets/92b00e7f-0f7b-40d2-8c20-79751e073ab1_1756565286414.png"
 
 interface AnimatedLogoProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   variant?: 'default' | 'floating' | 'pulse' | 'rotate' | 'bounce' | 'splash'
   className?: string
   showText?: boolean
@@ -13,14 +13,16 @@ const sizeClasses = {
   sm: 'w-8 h-8',
   md: 'w-12 h-12',
   lg: 'w-20 h-20',
-  xl: 'w-32 h-32'
+  xl: 'w-32 h-32',
+  '2xl': 'w-40 h-40'
 }
 
 const textSizeClasses = {
   sm: 'text-lg',
   md: 'text-xl',
   lg: 'text-3xl',
-  xl: 'text-4xl'
+  xl: 'text-4xl',
+  '2xl': 'text-5xl'
 }
 
 export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
@@ -148,6 +150,7 @@ export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
 export const LogoPresets = {
   Landing: () => <AnimatedLogo size="lg" variant="default" />,
   Splash: () => <AnimatedLogo size="xl" variant="splash" />,
+  Login: () => <AnimatedLogo size="2xl" variant="bounce" />,
   Navigation: () => <AnimatedLogo size="sm" variant="floating" />,
   Loading: () => <AnimatedLogo size="md" variant="pulse" />,
   Hero: () => <AnimatedLogo size="lg" variant="bounce" />

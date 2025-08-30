@@ -123,7 +123,7 @@ export default function Login() {
         {/* Logo Header */}
         <div className="text-center mb-8">
           <div className="mb-6 mx-auto w-fit">
-            <LogoPresets.Splash />
+            <LogoPresets.Login />
           </div>
           <p className="text-gray-600 text-lg">منصة الطباعة الذكية</p>
         </div>
