@@ -151,3 +151,25 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
 
   return { valid: true };
 }
+
+// Debug tools for browser console
+if (typeof window !== 'undefined') {
+  (window as any).checkUploadServiceStatus = checkUploadServiceStatus;
+  (window as any).testUploadService = async function() {
+    console.log('🔧 Testing Upload Service...');
+    
+    const status = await checkUploadServiceStatus();
+    console.log('Upload Service Status:', status);
+    
+    // Test file validation
+    const testFile = new File(['test'], 'test.txt', { type: 'text/plain' });
+    const validation = validateFile(testFile);
+    console.log('File validation test:', validation);
+    
+    return {
+      status,
+      validation,
+      recommendation: status.recommended
+    };
+  };
+}

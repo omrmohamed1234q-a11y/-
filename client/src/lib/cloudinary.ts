@@ -168,3 +168,24 @@ export async function testCloudinaryConnection(): Promise<{
     };
   }
 }
+
+// Debug tools for browser console testing
+if (typeof window !== 'undefined') {
+  (window as any).testCloudinaryConnection = testCloudinaryConnection;
+  (window as any).checkCloudinaryConfig = function() {
+    console.log('Cloudinary Configuration Status:');
+    console.log('Cloud Name:', CLOUD_NAME || '❌ MISSING');
+    console.log('Upload Preset:', UPLOAD_PRESET || '❌ MISSING');  
+    console.log('API Key:', API_KEY ? '✅ Set' : '❌ Missing');
+    
+    const isReady = !!(CLOUD_NAME && UPLOAD_PRESET);
+    console.log('Ready for uploads:', isReady ? '✅ YES' : '❌ NO');
+    
+    return {
+      cloudName: CLOUD_NAME,
+      uploadPreset: UPLOAD_PRESET,
+      hasApiKey: !!API_KEY,
+      ready: isReady
+    };
+  };
+}
