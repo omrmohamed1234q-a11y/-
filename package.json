@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@expo/cli": "^0.24.20",
     "@firebase/analytics": "^0.10.18",
     "@firebase/auth": "^1.11.0",
     "@firebase/firestore": "^4.9.0",
@@ -68,6 +69,7 @@
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
+    "expo-cli": "^6.3.12",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
     "firebase": "^12.1.0",
