@@ -13,6 +13,8 @@ import Login from "@/pages/auth/login";
 import Signup from "@/pages/auth/signup";
 import AdminSignup from "@/pages/auth/admin-signup";
 import AuthCallback from "@/pages/auth-callback";
+import SecureAdminLogin from "@/pages/auth/secure-admin-login";
+import SecureDriverLogin from "@/pages/auth/secure-driver-login";
 import Home from "@/pages/home-new";
 import Print from "@/pages/print";
 import Store from "@/pages/store";
@@ -41,6 +43,7 @@ import DriverLogin from "@/pages/driver/driver-login";
 import DriverDashboard from "@/pages/driver/driver-dashboard";
 import DriversManagement from "@/pages/admin/drivers";
 import AdminPartners from "@/pages/admin/partners";
+import SecurityManagement from "@/pages/admin/security-management";
 import QuickAccess from "@/pages/quick-access";
 import TestAnnouncements from "@/pages/test-announcements";
 import ArticlePage from "@/pages/article";
@@ -85,7 +88,10 @@ function Router() {
         <Route path="/auth/signup" component={Signup} />
         <Route path="/auth/admin-signup" component={AdminSignup} />
         <Route path="/auth/callback" component={AuthCallback} />
-        <Route path="/quick-access" component={QuickAccess} />
+        
+        {/* Hidden secure routes - direct access only */}
+        <Route path="/admin/secure-login" component={SecureAdminLogin} />
+        <Route path="/driver/secure-login" component={SecureDriverLogin} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/profile" component={AdminProfile} />
         <Route path="/admin/store" component={AdminStore} />
@@ -100,8 +106,11 @@ function Router() {
         <Route path="/admin/orders" component={OrdersManagement} />
         <Route path="/admin/drivers" component={DriversManagement} />
         <Route path="/admin/partners" component={AdminPartners} />
+        <Route path="/admin/security" component={SecurityManagement} />
         <Route path="/driver/login" component={DriverLogin} />
         <Route path="/driver/dashboard" component={DriverDashboard} />
+        <Route path="/quick-access" component={QuickAccess} />
+
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/article/:id" component={ArticlePage} />
@@ -128,24 +137,7 @@ function Router() {
         <Route path="/payment" component={Payment} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/order-tracking/:id" component={OrderTracking} />
-        <Route path="/admin" component={AdminDashboard} />
-        <Route path="/admin/profile" component={AdminProfile} />
-        <Route path="/admin/store" component={AdminStore} />
-        <Route path="/admin/products" component={AdminProducts} />
-        <Route path="/admin-products" component={AdminProducts} />
-        <Route path="/admin/teachers-corner" component={TeachersCorner} />
-        <Route path="/admin/users" component={AdminUsers} />
-        <Route path="/admin/coupons" component={AdminCoupons} />
-        <Route path="/admin/inquiries" component={AdminInquiries} />
-        <Route path="/admin/announcements" component={AdminAnnouncements} />
-        <Route path="/admin/partners" component={AdminPartners} />
-        <Route path="/admin/orders" component={OrdersManagement} />
-        <Route path="/admin/drivers" component={DriversManagement} />
-        <Route path="/driver/login" component={DriverLogin} />
-        <Route path="/driver/dashboard" component={DriverDashboard} />
         <Route path="/student/teachers" component={StudentTeachers} />
-        <Route path="/admin/reports" component={SimpleAnalytics} />
-        <Route path="/quick-access" component={QuickAccess} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/article/:id" component={ArticlePage} />

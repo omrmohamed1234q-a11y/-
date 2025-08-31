@@ -23,6 +23,91 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Secure Admin Accounts table
+export const secureAdmins = pgTable("secure_admins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(), // Hashed password
+  fullName: text("full_name").notNull(),
+  role: text("role").notNull().default("admin"), // admin, super_admin
+  permissions: text("permissions").array().default(["read", "write"]), // Array of permissions
+  
+  // Security Features
+  isActive: boolean("is_active").default(true),
+  lastLogin: timestamp("last_login"),
+  failedAttempts: integer("failed_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
+  mustChangePassword: boolean("must_change_password").default(false),
+  
+  // Audit Trail
+  createdBy: varchar("created_by"),
+  ipWhitelist: text("ip_whitelist").array(), // Array of allowed IPs
+  sessionTimeout: integer("session_timeout").default(900), // 15 minutes default
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Secure Driver Accounts table
+export const secureDrivers = pgTable("secure_drivers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(), // Hashed password
+  driverCode: text("driver_code").notNull().unique(), // Unique driver code
+  fullName: text("full_name").notNull(),
+  phone: text("phone").notNull(),
+  
+  // Driver Info
+  licenseNumber: text("license_number").notNull(),
+  vehicleType: text("vehicle_type").notNull(), // "motorcycle", "car", "truck"
+  vehiclePlate: text("vehicle_plate").notNull(),
+  
+  // Security Features
+  isActive: boolean("is_active").default(true),
+  status: text("status").notNull().default("offline"), // "online", "offline", "busy", "suspended"
+  lastLogin: timestamp("last_login"),
+  failedAttempts: integer("failed_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
+  
+  // Performance Metrics
+  totalDeliveries: integer("total_deliveries").default(0),
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("5.00"),
+  ratingCount: integer("rating_count").default(0),
+  
+  // Audit Trail
+  createdBy: varchar("created_by"),
+  sessionTimeout: integer("session_timeout").default(900), // 15 minutes default
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Security Logs table
+export const securityLogs = pgTable("security_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"), // Can be admin or driver ID
+  userType: text("user_type").notNull(), // "admin", "driver"
+  action: text("action").notNull(), // "login", "logout", "failed_login", "password_change", etc.
+  
+  // Security Context
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  location: text("location"), // Geolocation if available
+  
+  // Request Details
+  endpoint: text("endpoint"),
+  method: text("method"),
+  success: boolean("success").default(false),
+  errorMessage: text("error_message"),
+  
+  // Additional Data
+  metadata: jsonb("metadata"), // Additional context data
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Partners/Print Shops table
 export const partners = pgTable("partners", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -927,3 +1012,38 @@ export const insertPartnerSchema = createInsertSchema(partners).omit({
 });
 export type InsertPartner = z.infer<typeof insertPartnerSchema>;
 export type Partner = typeof partners.$inferSelect;
+
+// Security System Schemas
+export const insertSecureAdminSchema = createInsertSchema(secureAdmins).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLogin: true,
+  failedAttempts: true,
+  lockedUntil: true,
+});
+
+export const insertSecureDriverSchema = createInsertSchema(secureDrivers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLogin: true,
+  failedAttempts: true,
+  lockedUntil: true,
+  totalDeliveries: true,
+  rating: true,
+  ratingCount: true,
+});
+
+export const insertSecurityLogSchema = createInsertSchema(securityLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Security System Types
+export type SecureAdmin = typeof secureAdmins.$inferSelect;
+export type InsertSecureAdmin = z.infer<typeof insertSecureAdminSchema>;
+export type SecureDriver = typeof secureDrivers.$inferSelect;
+export type InsertSecureDriver = z.infer<typeof insertSecureDriverSchema>;
+export type SecurityLog = typeof securityLogs.$inferSelect;
+export type InsertSecurityLog = z.infer<typeof insertSecurityLogSchema>;

@@ -86,9 +86,10 @@ const requireDriverAuth = async (req: any, res: any, next: any) => {
     });
   }
 };
-import { insertProductSchema, insertOrderSchema, insertPrintJobSchema } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertPrintJobSchema, insertSecureAdminSchema, insertSecureDriverSchema, insertSecurityLogSchema } from "@shared/schema";
 import { z } from "zod";
 import ServerPDFCompression from "./pdf-compression-service";
+import crypto from 'crypto';
 
 // Google Pay configuration
 const GOOGLE_PAY_MERCHANT_ID = process.env.GOOGLE_PAY_MERCHANT_ID || 'merchant.com.atbaalee';
@@ -3107,6 +3108,700 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating driver status:', error);
       res.status(500).json({ success: false, error: 'Failed to update driver status' });
+    }
+  });
+
+  // ====== SECURE AUTHENTICATION SYSTEM ======
+  
+  // Utility functions for security
+  const hashPassword = (password: string): string => {
+    return crypto.createHash('sha256').update(password + 'atbaalee_salt').digest('hex');
+  };
+
+  const verifyPassword = (password: string, hashedPassword: string): boolean => {
+    return hashPassword(password) === hashedPassword;
+  };
+
+  const generateSecureToken = (): string => {
+    return crypto.randomBytes(32).toString('hex');
+  };
+
+  const logSecurityEvent = async (userId: string, userType: 'admin' | 'driver', action: string, success: boolean, req: any, errorMessage?: string) => {
+    try {
+      await storage.createSecurityLog({
+        userId,
+        userType,
+        action,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        endpoint: req.path,
+        method: req.method,
+        success,
+        errorMessage: errorMessage || null,
+        metadata: {
+          timestamp: Date.now(),
+          sessionId: req.sessionID || null
+        }
+      });
+    } catch (error) {
+      console.error('Error logging security event:', error);
+    }
+  };
+
+  // Secure Admin Login
+  app.post('/api/auth/admin/secure-login', async (req, res) => {
+    const { username, email, password, timestamp, userAgent } = req.body;
+    
+    try {
+      console.log(`🔐 Secure admin login attempt: ${username} / ${email}`);
+      
+      if (!username || !email || !password) {
+        await logSecurityEvent('unknown', 'admin', 'failed_login', false, req, 'Missing credentials');
+        return res.status(400).json({
+          success: false,
+          message: 'جميع الحقول مطلوبة'
+        });
+      }
+
+      // Get admin by username and email
+      const admin = await storage.getSecureAdminByCredentials(username, email);
+      
+      if (!admin) {
+        await logSecurityEvent('unknown', 'admin', 'failed_login', false, req, 'Admin not found');
+        return res.status(401).json({
+          success: false,
+          message: 'بيانات الدخول غير صحيحة'
+        });
+      }
+
+      // Check if admin is locked
+      if (admin.lockedUntil && new Date() < admin.lockedUntil) {
+        await logSecurityEvent(admin.id, 'admin', 'failed_login', false, req, 'Account locked');
+        return res.status(423).json({
+          success: false,
+          message: 'الحساب محظور مؤقتاً'
+        });
+      }
+
+      // Check if admin is active
+      if (!admin.isActive) {
+        await logSecurityEvent(admin.id, 'admin', 'failed_login', false, req, 'Account inactive');
+        return res.status(403).json({
+          success: false,
+          message: 'الحساب غير نشط'
+        });
+      }
+
+      // Verify password
+      if (!verifyPassword(password, admin.password)) {
+        // Increment failed attempts
+        const failedAttempts = (admin.failedAttempts || 0) + 1;
+        const lockUntil = failedAttempts >= 3 ? new Date(Date.now() + 15 * 60 * 1000) : null; // 15 minutes lock
+        
+        await storage.updateSecureAdmin(admin.id, {
+          failedAttempts,
+          lockedUntil: lockUntil
+        });
+
+        await logSecurityEvent(admin.id, 'admin', 'failed_login', false, req, `Wrong password (attempt ${failedAttempts})`);
+        
+        return res.status(401).json({
+          success: false,
+          message: 'بيانات الدخول غير صحيحة'
+        });
+      }
+
+      // Successful login - reset failed attempts and update last login
+      await storage.updateSecureAdmin(admin.id, {
+        failedAttempts: 0,
+        lockedUntil: null,
+        lastLogin: new Date()
+      });
+
+      // Generate secure token
+      const token = generateSecureToken();
+      
+      // Log successful login
+      await logSecurityEvent(admin.id, 'admin', 'successful_login', true, req);
+
+      res.json({
+        success: true,
+        token,
+        admin: {
+          id: admin.id,
+          username: admin.username,
+          email: admin.email,
+          fullName: admin.fullName,
+          role: admin.role,
+          permissions: admin.permissions
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Secure admin login error:', error);
+      await logSecurityEvent('unknown', 'admin', 'failed_login', false, req, 'Server error');
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في الخادم'
+      });
+    }
+  });
+
+  // Secure Driver Login
+  app.post('/api/auth/driver/secure-login', async (req, res) => {
+    const { username, email, password, driverCode, timestamp, userAgent } = req.body;
+    
+    try {
+      console.log(`🚚 Secure driver login attempt: ${username} / ${email} / Code: ${driverCode}`);
+      
+      if (!username || !email || !password || !driverCode) {
+        await logSecurityEvent('unknown', 'driver', 'failed_login', false, req, 'Missing credentials');
+        return res.status(400).json({
+          success: false,
+          message: 'جميع الحقول مطلوبة'
+        });
+      }
+
+      // Get driver by username, email, and driver code
+      const driver = await storage.getSecureDriverByCredentials(username, email, driverCode);
+      
+      if (!driver) {
+        await logSecurityEvent('unknown', 'driver', 'failed_login', false, req, 'Driver not found');
+        return res.status(401).json({
+          success: false,
+          message: 'بيانات الدخول غير صحيحة'
+        });
+      }
+
+      // Check if driver is locked
+      if (driver.lockedUntil && new Date() < driver.lockedUntil) {
+        await logSecurityEvent(driver.id, 'driver', 'failed_login', false, req, 'Account locked');
+        return res.status(423).json({
+          success: false,
+          message: 'الحساب محظور مؤقتاً'
+        });
+      }
+
+      // Check if driver is active
+      if (!driver.isActive) {
+        await logSecurityEvent(driver.id, 'driver', 'failed_login', false, req, 'Account inactive');
+        return res.status(403).json({
+          success: false,
+          message: 'الحساب غير نشط'
+        });
+      }
+
+      // Verify password
+      if (!verifyPassword(password, driver.password)) {
+        // Increment failed attempts
+        const failedAttempts = (driver.failedAttempts || 0) + 1;
+        const lockUntil = failedAttempts >= 3 ? new Date(Date.now() + 15 * 60 * 1000) : null; // 15 minutes lock
+        
+        await storage.updateSecureDriver(driver.id, {
+          failedAttempts,
+          lockedUntil: lockUntil
+        });
+
+        await logSecurityEvent(driver.id, 'driver', 'failed_login', false, req, `Wrong password (attempt ${failedAttempts})`);
+        
+        return res.status(401).json({
+          success: false,
+          message: 'بيانات الدخول غير صحيحة'
+        });
+      }
+
+      // Successful login - reset failed attempts and update last login
+      await storage.updateSecureDriver(driver.id, {
+        failedAttempts: 0,
+        lockedUntil: null,
+        lastLogin: new Date(),
+        status: 'online'
+      });
+
+      // Generate secure token
+      const token = generateSecureToken();
+      
+      // Log successful login
+      await logSecurityEvent(driver.id, 'driver', 'successful_login', true, req);
+
+      res.json({
+        success: true,
+        token,
+        driver: {
+          id: driver.id,
+          username: driver.username,
+          email: driver.email,
+          fullName: driver.fullName,
+          driverCode: driver.driverCode,
+          phone: driver.phone,
+          vehicleType: driver.vehicleType,
+          vehiclePlate: driver.vehiclePlate,
+          status: 'online',
+          rating: driver.rating,
+          totalDeliveries: driver.totalDeliveries
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Secure driver login error:', error);
+      await logSecurityEvent('unknown', 'driver', 'failed_login', false, req, 'Server error');
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في الخادم'
+      });
+    }
+  });
+
+  // Get Security Logs (Admin only)
+  app.get('/api/admin/security-logs', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { limit = 100, userType, action } = req.query;
+      const logs = await storage.getSecurityLogs({
+        limit: parseInt(limit as string),
+        userType: userType as string,
+        action: action as string
+      });
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching security logs:', error);
+      res.status(500).json({ error: 'Failed to fetch security logs' });
+    }
+  });
+
+  // Create Secure Admin Account (Super Admin only)
+  app.post('/api/admin/secure-admins', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { username, email, password, fullName, role, permissions } = req.body;
+      
+      if (!username || !email || !password || !fullName) {
+        return res.status(400).json({
+          success: false,
+          message: 'جميع الحقول مطلوبة'
+        });
+      }
+
+      // Check if username or email already exists
+      const existingAdmin = await storage.getSecureAdminByCredentials(username, email);
+      if (existingAdmin) {
+        return res.status(400).json({
+          success: false,
+          message: 'اسم المستخدم أو البريد الإلكتروني مستخدم بالفعل'
+        });
+      }
+
+      // Hash password
+      const hashedPassword = hashPassword(password);
+
+      const newAdmin = await storage.createSecureAdmin({
+        username,
+        email,
+        password: hashedPassword,
+        fullName,
+        role: role || 'admin',
+        permissions: permissions || ['read', 'write'],
+        createdBy: req.user.id
+      });
+
+      // Log admin creation
+      await logSecurityEvent(req.user.id, 'admin', 'create_admin', true, req);
+
+      res.json({
+        success: true,
+        admin: {
+          id: newAdmin.id,
+          username: newAdmin.username,
+          email: newAdmin.email,
+          fullName: newAdmin.fullName,
+          role: newAdmin.role,
+          permissions: newAdmin.permissions,
+          isActive: newAdmin.isActive
+        }
+      });
+
+    } catch (error) {
+      console.error('Error creating secure admin:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في إنشاء حساب الإدارة'
+      });
+    }
+  });
+
+  // Create Secure Driver Account (Admin only)
+  app.post('/api/admin/secure-drivers', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { username, email, password, driverCode, fullName, phone, licenseNumber, vehicleType, vehiclePlate } = req.body;
+      
+      if (!username || !email || !password || !driverCode || !fullName || !phone || !licenseNumber || !vehicleType || !vehiclePlate) {
+        return res.status(400).json({
+          success: false,
+          message: 'جميع الحقول مطلوبة'
+        });
+      }
+
+      // Check if username, email, or driver code already exists
+      const existingDriver = await storage.getSecureDriverByCredentials(username, email, driverCode);
+      if (existingDriver) {
+        return res.status(400).json({
+          success: false,
+          message: 'اسم المستخدم أو البريد الإلكتروني أو كود السائق مستخدم بالفعل'
+        });
+      }
+
+      // Hash password
+      const hashedPassword = hashPassword(password);
+
+      const newDriver = await storage.createSecureDriver({
+        username,
+        email,
+        password: hashedPassword,
+        driverCode,
+        fullName,
+        phone,
+        licenseNumber,
+        vehicleType,
+        vehiclePlate,
+        createdBy: req.user.id
+      });
+
+      // Log driver creation
+      await logSecurityEvent(req.user.id, 'admin', 'create_driver', true, req);
+
+      res.json({
+        success: true,
+        driver: {
+          id: newDriver.id,
+          username: newDriver.username,
+          email: newDriver.email,
+          fullName: newDriver.fullName,
+          driverCode: newDriver.driverCode,
+          phone: newDriver.phone,
+          vehicleType: newDriver.vehicleType,
+          vehiclePlate: newDriver.vehiclePlate,
+          isActive: newDriver.isActive,
+          status: newDriver.status
+        }
+      });
+
+    } catch (error) {
+      console.error('Error creating secure driver:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في إنشاء حساب السائق'
+      });
+    }
+  });
+
+  // Get Secure Admins (Super Admin only)
+  app.get('/api/admin/secure-admins', isAdminAuthenticated, async (req, res) => {
+    try {
+      const admins = await storage.getAllSecureAdmins();
+      res.json(admins.map(admin => ({
+        id: admin.id,
+        username: admin.username,
+        email: admin.email,
+        fullName: admin.fullName,
+        role: admin.role,
+        permissions: admin.permissions,
+        isActive: admin.isActive,
+        lastLogin: admin.lastLogin,
+        createdAt: admin.createdAt
+      })));
+    } catch (error) {
+      console.error('Error fetching secure admins:', error);
+      res.status(500).json({ error: 'Failed to fetch secure admins' });
+    }
+  });
+
+  // Get Secure Drivers (Admin only)
+  app.get('/api/admin/secure-drivers', isAdminAuthenticated, async (req, res) => {
+    try {
+      const drivers = await storage.getAllSecureDrivers();
+      res.json(drivers.map(driver => ({
+        id: driver.id,
+        username: driver.username,
+        email: driver.email,
+        fullName: driver.fullName,
+        driverCode: driver.driverCode,
+        phone: driver.phone,
+        vehicleType: driver.vehicleType,
+        vehiclePlate: driver.vehiclePlate,
+        isActive: driver.isActive,
+        status: driver.status,
+        lastLogin: driver.lastLogin,
+        rating: driver.rating,
+        totalDeliveries: driver.totalDeliveries,
+        createdAt: driver.createdAt
+      })));
+    } catch (error) {
+      console.error('Error fetching secure drivers:', error);
+      res.status(500).json({ error: 'Failed to fetch secure drivers' });
+    }
+  });
+
+  // Security Management APIs - Admin Authentication and Management
+  app.get('/api/admin/secure-admins', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const admins = await storage.getAllSecureAdmins();
+      res.json(admins);
+    } catch (error) {
+      console.error('Error fetching secure admins:', error);
+      res.status(500).json({ error: 'Failed to fetch secure admins' });
+    }
+  });
+
+  app.get('/api/admin/security-logs', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { userType, action, limit = 50 } = req.query;
+      const logs = await storage.getSecurityLogs({ userType, action, limit: parseInt(limit as string) });
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching security logs:', error);
+      res.status(500).json({ error: 'Failed to fetch security logs' });
+    }
+  });
+
+  app.post('/api/admin/secure-admins', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { username, email, password, fullName, role, permissions } = req.body;
+
+      if (!username || !email || !password || !fullName) {
+        return res.status(400).json({ success: false, message: 'All fields are required' });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+      }
+
+      const existingAdmin = await storage.getSecureAdminByCredentials(username, email);
+      if (existingAdmin) {
+        return res.status(400).json({ success: false, message: 'Admin with these credentials already exists' });
+      }
+
+      const hashedPassword = `hashed_${password}`;
+
+      const adminData = {
+        username,
+        email,
+        password: hashedPassword,
+        fullName,
+        role: role || 'admin',
+        permissions: permissions || ['read', 'write']
+      };
+
+      const newAdmin = await storage.createSecureAdmin(adminData);
+
+      await storage.createSecurityLog({
+        userId: newAdmin.id,
+        userType: 'admin',
+        action: 'create_admin',
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        success: true,
+        errorMessage: null
+      });
+
+      res.json({ success: true, admin: newAdmin });
+    } catch (error) {
+      console.error('Error creating secure admin:', error);
+      res.status(500).json({ success: false, message: 'Failed to create secure admin' });
+    }
+  });
+
+  app.post('/api/admin/secure-drivers', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { username, email, password, driverCode, fullName, phone, licenseNumber, vehicleType, vehiclePlate } = req.body;
+
+      if (!username || !email || !password || !driverCode || !fullName || !phone || !licenseNumber || !vehiclePlate) {
+        return res.status(400).json({ success: false, message: 'All fields are required' });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+      }
+
+      if (driverCode.length < 6) {
+        return res.status(400).json({ success: false, message: 'Driver code must be at least 6 characters' });
+      }
+
+      const existingDriver = await storage.getSecureDriverByCredentials(username, email, driverCode);
+      if (existingDriver) {
+        return res.status(400).json({ success: false, message: 'Driver with these credentials already exists' });
+      }
+
+      const hashedPassword = `hashed_${password}`;
+
+      const driverData = {
+        username,
+        email,
+        password: hashedPassword,
+        driverCode,
+        fullName,
+        phone,
+        licenseNumber,
+        vehicleType: vehicleType || 'motorcycle',
+        vehiclePlate
+      };
+
+      const newDriver = await storage.createSecureDriver(driverData);
+
+      await storage.createSecurityLog({
+        userId: newDriver.id,
+        userType: 'driver',
+        action: 'create_driver',
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        success: true,
+        errorMessage: null
+      });
+
+      res.json({ success: true, driver: newDriver });
+    } catch (error) {
+      console.error('Error creating secure driver:', error);
+      res.status(500).json({ success: false, message: 'Failed to create secure driver' });
+    }
+  });
+
+  // Secure authentication endpoints
+  app.post('/api/auth/admin-login', async (req: any, res) => {
+    try {
+      const { username, email, password } = req.body;
+
+      if (!username || !email || !password) {
+        return res.status(400).json({ success: false, message: 'Username, email and password are required' });
+      }
+
+      const admin = await storage.getSecureAdminByCredentials(username, email);
+      
+      if (!admin) {
+        await storage.createSecurityLog({
+          userId: username,
+          userType: 'admin',
+          action: 'failed_login',
+          ipAddress: req.ip || 'unknown',
+          userAgent: req.get('User-Agent') || 'unknown',
+          success: false,
+          errorMessage: 'Admin not found'
+        });
+        
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      }
+
+      if (admin.password !== `hashed_${password}`) {
+        await storage.createSecurityLog({
+          userId: admin.id,
+          userType: 'admin',
+          action: 'failed_login',
+          ipAddress: req.ip || 'unknown',
+          userAgent: req.get('User-Agent') || 'unknown',
+          success: false,
+          errorMessage: 'Invalid password'
+        });
+        
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      }
+
+      if (!admin.isActive) {
+        return res.status(401).json({ success: false, message: 'Account is deactivated' });
+      }
+
+      await storage.updateSecureAdmin(admin.id, { lastLogin: new Date() });
+
+      await storage.createSecurityLog({
+        userId: admin.id,
+        userType: 'admin',
+        action: 'successful_login',
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        success: true,
+        errorMessage: null
+      });
+
+      res.json({ 
+        success: true, 
+        user: { 
+          id: admin.id, 
+          username: admin.username, 
+          fullName: admin.fullName, 
+          role: admin.role 
+        } 
+      });
+    } catch (error) {
+      console.error('Error during admin login:', error);
+      res.status(500).json({ success: false, message: 'Login failed' });
+    }
+  });
+
+  app.post('/api/auth/driver-login', async (req: any, res) => {
+    try {
+      const { username, email, password, driverCode } = req.body;
+
+      if (!username || !email || !password) {
+        return res.status(400).json({ success: false, message: 'Username, email and password are required' });
+      }
+
+      const driver = await storage.getSecureDriverByCredentials(username, email, driverCode);
+      
+      if (!driver) {
+        await storage.createSecurityLog({
+          userId: username,
+          userType: 'driver',
+          action: 'failed_login',
+          ipAddress: req.ip || 'unknown',
+          userAgent: req.get('User-Agent') || 'unknown',
+          success: false,
+          errorMessage: 'Driver not found'
+        });
+        
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      }
+
+      if (driver.password !== `hashed_${password}`) {
+        await storage.createSecurityLog({
+          userId: driver.id,
+          userType: 'driver',
+          action: 'failed_login',
+          ipAddress: req.ip || 'unknown',
+          userAgent: req.get('User-Agent') || 'unknown',
+          success: false,
+          errorMessage: 'Invalid password'
+        });
+        
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      }
+
+      if (!driver.isActive) {
+        return res.status(401).json({ success: false, message: 'Account is deactivated' });
+      }
+
+      await storage.updateSecureDriver(driver.id, { 
+        lastLogin: new Date(),
+        status: 'online'
+      });
+
+      await storage.createSecurityLog({
+        userId: driver.id,
+        userType: 'driver',
+        action: 'successful_login',
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        success: true,
+        errorMessage: null
+      });
+
+      res.json({ 
+        success: true, 
+        user: { 
+          id: driver.id, 
+          username: driver.username, 
+          fullName: driver.fullName, 
+          driverCode: driver.driverCode,
+          vehicleType: driver.vehicleType
+        } 
+      });
+    } catch (error) {
+      console.error('Error during driver login:', error);
+      res.status(500).json({ success: false, message: 'Login failed' });
     }
   });
 

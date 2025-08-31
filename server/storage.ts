@@ -1,4 +1,4 @@
-import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, partnerProducts, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct } from "@shared/schema";
+import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, partnerProducts, secureAdmins, secureDrivers, securityLogs, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct, type SecureAdmin, type InsertSecureAdmin, type SecureDriver, type InsertSecureDriver, type SecurityLog, type InsertSecurityLog } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
 
@@ -129,6 +129,18 @@ export interface IStorage {
   updatePartnerProduct(id: string, updates: Partial<InsertPartnerProduct>): Promise<SelectPartnerProduct>;
   deletePartnerProduct(id: string): Promise<boolean>;
   getPartnerProductsByCategory(partnerId: string, category: string): Promise<SelectPartnerProduct[]>;
+  
+  // Security System operations
+  getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined>;
+  getSecureDriverByCredentials(username: string, email: string, driverCode?: string): Promise<any | undefined>;
+  createSecureAdmin(admin: any): Promise<any>;
+  createSecureDriver(driver: any): Promise<any>;
+  updateSecureAdmin(id: string, updates: any): Promise<any>;
+  updateSecureDriver(id: string, updates: any): Promise<any>;
+  getAllSecureAdmins(): Promise<any[]>;
+  getAllSecureDrivers(): Promise<any[]>;
+  createSecurityLog(log: any): Promise<any>;
+  getSecurityLogs(options: any): Promise<any[]>;
 }
 
 // Global storage to persist across application lifecycle
@@ -2653,6 +2665,137 @@ class MemStorage implements IStorage {
     return this.partnerProducts.filter(p => 
       p.partnerId === partnerId && p.category === category
     );
+  }
+
+  // Security System operations - In-memory implementation
+  private secureAdmins: any[] = [];
+  private secureDrivers: any[] = [];
+  private securityLogs: any[] = [];
+
+  async getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined> {
+    return this.secureAdmins.find(admin => 
+      admin.username === username && admin.email === email
+    );
+  }
+
+  async getSecureDriverByCredentials(username: string, email: string, driverCode?: string): Promise<any | undefined> {
+    return this.secureDrivers.find(driver => 
+      driver.username === username && 
+      driver.email === email && 
+      (!driverCode || driver.driverCode === driverCode)
+    );
+  }
+
+  async createSecureAdmin(adminData: any): Promise<any> {
+    const newAdmin = {
+      id: `admin-${Date.now()}`,
+      ...adminData,
+      isActive: true,
+      failedAttempts: 0,
+      lockedUntil: null,
+      lastLogin: null,
+      mustChangePassword: false,
+      sessionTimeout: 900, // 15 minutes
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.secureAdmins.push(newAdmin);
+    console.log(`🔐 New secure admin created: ${newAdmin.username}`);
+    return newAdmin;
+  }
+
+  async createSecureDriver(driverData: any): Promise<any> {
+    const newDriver = {
+      id: `driver-${Date.now()}`,
+      ...driverData,
+      isActive: true,
+      status: 'offline',
+      failedAttempts: 0,
+      lockedUntil: null,
+      lastLogin: null,
+      totalDeliveries: 0,
+      rating: 5.00,
+      ratingCount: 0,
+      sessionTimeout: 900, // 15 minutes
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.secureDrivers.push(newDriver);
+    console.log(`🚚 New secure driver created: ${newDriver.username}`);
+    return newDriver;
+  }
+
+  async updateSecureAdmin(id: string, updates: any): Promise<any> {
+    const index = this.secureAdmins.findIndex(admin => admin.id === id);
+    if (index !== -1) {
+      this.secureAdmins[index] = {
+        ...this.secureAdmins[index],
+        ...updates,
+        updatedAt: new Date()
+      };
+      console.log(`🔐 Secure admin updated: ${id}`);
+      return this.secureAdmins[index];
+    }
+    throw new Error('Secure admin not found');
+  }
+
+  async updateSecureDriver(id: string, updates: any): Promise<any> {
+    const index = this.secureDrivers.findIndex(driver => driver.id === id);
+    if (index !== -1) {
+      this.secureDrivers[index] = {
+        ...this.secureDrivers[index],
+        ...updates,
+        updatedAt: new Date()
+      };
+      console.log(`🚚 Secure driver updated: ${id}`);
+      return this.secureDrivers[index];
+    }
+    throw new Error('Secure driver not found');
+  }
+
+  async getAllSecureAdmins(): Promise<any[]> {
+    return [...this.secureAdmins];
+  }
+
+  async getAllSecureDrivers(): Promise<any[]> {
+    return [...this.secureDrivers];
+  }
+
+  async createSecurityLog(logData: any): Promise<any> {
+    const newLog = {
+      id: `log-${Date.now()}`,
+      ...logData,
+      createdAt: new Date()
+    };
+    this.securityLogs.push(newLog);
+    
+    // Keep only last 1000 logs to prevent memory overflow
+    if (this.securityLogs.length > 1000) {
+      this.securityLogs = this.securityLogs.slice(-1000);
+    }
+    
+    return newLog;
+  }
+
+  async getSecurityLogs(options: any): Promise<any[]> {
+    let logs = [...this.securityLogs];
+    
+    // Filter by user type if specified
+    if (options.userType) {
+      logs = logs.filter(log => log.userType === options.userType);
+    }
+    
+    // Filter by action if specified
+    if (options.action) {
+      logs = logs.filter(log => log.action === options.action);
+    }
+    
+    // Sort by date (newest first)
+    logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    // Limit results
+    const limit = options.limit || 100;
+    return logs.slice(0, limit);
   }
 }
 
