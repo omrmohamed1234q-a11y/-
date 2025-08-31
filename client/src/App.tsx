@@ -40,6 +40,7 @@ import OrderTracking from "@/pages/order-tracking";
 import DriverLogin from "@/pages/driver/driver-login";
 import DriverDashboard from "@/pages/driver/driver-dashboard";
 import DriversManagement from "@/pages/admin/drivers";
+import AdminPartners from "@/pages/admin/partners";
 import QuickAccess from "@/pages/quick-access";
 import TestAnnouncements from "@/pages/test-announcements";
 import ArticlePage from "@/pages/article";
@@ -98,6 +99,7 @@ function Router() {
         <Route path="/admin/reports" component={SimpleAnalytics} />
         <Route path="/admin/orders" component={OrdersManagement} />
         <Route path="/admin/drivers" component={DriversManagement} />
+        <Route path="/admin/partners" component={AdminPartners} />
         <Route path="/driver/login" component={DriverLogin} />
         <Route path="/driver/dashboard" component={DriverDashboard} />
         <Route path="/test-signup" component={TestSignup} />
@@ -136,6 +138,7 @@ function Router() {
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/inquiries" component={AdminInquiries} />
         <Route path="/admin/announcements" component={AdminAnnouncements} />
+        <Route path="/admin/partners" component={AdminPartners} />
         <Route path="/admin/orders" component={OrdersManagement} />
         <Route path="/admin/drivers" component={DriversManagement} />
         <Route path="/driver/login" component={DriverLogin} />

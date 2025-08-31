@@ -38,7 +38,8 @@ import {
   User,
   LogOut,
   ChevronDown,
-  Monitor
+  Monitor,
+  Building2
 } from 'lucide-react';
 
 interface AdminStats {
@@ -151,6 +152,14 @@ export default function AdminDashboard() {
       icon: Monitor,
       link: '/admin/announcements',
       color: 'indigo',
+      count: 0
+    },
+    {
+      title: 'إدارة الشركاء',
+      description: 'إدارة المطابع والمكتبات الشريكة',
+      icon: Building2,
+      link: '/admin/partners',
+      color: 'teal',
       count: 0
     },
     {
