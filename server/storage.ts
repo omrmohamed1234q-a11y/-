@@ -107,6 +107,7 @@ export interface IStorage {
 
   // Announcement operations
   getAllAnnouncements(): Promise<Announcement[]>;
+  getHomepageAnnouncements(): Promise<Announcement[]>;
   getActiveAnnouncements(): Promise<Announcement[]>;
   getAnnouncement(id: string): Promise<Announcement | undefined>;
   createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
@@ -1057,6 +1058,12 @@ class MemStorage implements IStorage {
       backgroundColor: '#2563eb',
       textColor: '#ffffff',
       category: 'service',
+      articleContent: null,
+      articleAuthor: null,
+      articleReadTime: null,
+      articleTags: null,
+      showOnHomepage: true,
+      homepagePriority: 1,
       createdAt: new Date(),
       updatedAt: new Date()
     },
@@ -1073,6 +1080,12 @@ class MemStorage implements IStorage {
       backgroundColor: '#059669',
       textColor: '#ffffff',
       category: 'service',
+      articleContent: null,
+      articleAuthor: null,
+      articleReadTime: null,
+      articleTags: null,
+      showOnHomepage: true,
+      homepagePriority: 2,
       createdAt: new Date(),
       updatedAt: new Date()
     },
@@ -1089,6 +1102,12 @@ class MemStorage implements IStorage {
       backgroundColor: '#dc2626',
       textColor: '#ffffff',
       category: 'service',
+      articleContent: null,
+      articleAuthor: null,
+      articleReadTime: null,
+      articleTags: null,
+      showOnHomepage: true,
+      homepagePriority: 3,
       createdAt: new Date(),
       updatedAt: new Date()
     },
@@ -1105,6 +1124,12 @@ class MemStorage implements IStorage {
       backgroundColor: '#ea580c',
       textColor: '#ffffff',
       category: 'promotion',
+      articleContent: null,
+      articleAuthor: null,
+      articleReadTime: null,
+      articleTags: null,
+      showOnHomepage: true,
+      homepagePriority: 1,
       createdAt: new Date(),
       updatedAt: new Date()
     },
@@ -1121,6 +1146,12 @@ class MemStorage implements IStorage {
       backgroundColor: '#7c3aed',
       textColor: '#ffffff',
       category: 'announcement',
+      articleContent: null,
+      articleAuthor: null,
+      articleReadTime: null,
+      articleTags: null,
+      showOnHomepage: true,
+      homepagePriority: 4,
       createdAt: new Date(),
       updatedAt: new Date()
     },
@@ -1137,6 +1168,34 @@ class MemStorage implements IStorage {
       backgroundColor: '#0891b2',
       textColor: '#ffffff',
       category: 'service',
+      articleContent: null,
+      articleAuthor: null,
+      articleReadTime: null,
+      articleTags: null,
+      showOnHomepage: false,
+      homepagePriority: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: 'ann-7',
+      title: 'كيفية استخدام تقنية OCR في التعليم',
+      description: 'دليل شامل لاستخدام تقنية التعرف على النصوص في المجال التعليمي',
+      buttonText: 'اقرأ المقال',
+      buttonAction: 'link',
+      buttonUrl: '/articles/ocr-education-guide',
+      imageUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+      position: 7,
+      isActive: true,
+      backgroundColor: '#1e40af',
+      textColor: '#ffffff',
+      category: 'article',
+      articleContent: 'تقنية التعرف الضوئي على الحروف (OCR) ثورة حقيقية في مجال التعليم الرقمي. تمكن هذه التقنية المعلمين والطلاب من تحويل النصوص المكتوبة يدوياً أو المطبوعة إلى نصوص رقمية قابلة للتحرير والبحث.\n\nفوائد استخدام OCR في التعليم:\n\n1. توفير الوقت: بدلاً من إعادة كتابة النصوص، يمكن تحويلها فوراً\n2. سهولة الأرشفة: حفظ المواد التعليمية رقمياً لسهولة الوصول\n3. إمكانية البحث: البحث داخل النصوص المحولة بسرعة\n4. التحرير السريع: تعديل المحتوى دون الحاجة لإعادة الكتابة\n\nتطبيقات عملية:\n- تحويل أوراق الامتحانات إلى نصوص رقمية\n- رقمنة الكتب والمراجع القديمة\n- إنشاء مكتبة رقمية للمواد التعليمية\n- تسهيل مشاركة المحتوى مع الطلاب\n\nنصائح للحصول على أفضل النتائج:\n1. استخدم إضاءة جيدة عند التصوير\n2. تأكد من وضوح النص في الصورة\n3. اختر خلفية بيضاء نظيفة\n4. راجع النص المحول للتأكد من دقته',
+      articleAuthor: 'فريق اطبعلي التقني',
+      articleReadTime: 5,
+      articleTags: ['تقنية', 'تعليم', 'OCR', 'رقمنة'],
+      showOnHomepage: false,
+      homepagePriority: 0,
       createdAt: new Date(),
       updatedAt: new Date()
     },
@@ -2480,6 +2539,13 @@ class MemStorage implements IStorage {
   // Announcement operations
   async getAllAnnouncements(): Promise<Announcement[]> {
     return [...this.announcements].sort((a, b) => a.position - b.position);
+  }
+
+  async getHomepageAnnouncements(): Promise<Announcement[]> {
+    return this.announcements
+      .filter(ann => ann.isActive && ann.showOnHomepage)
+      .sort((a, b) => a.homepagePriority - b.homepagePriority)
+      .slice(0, 4); // Limit to 4 announcements
   }
 
   async getActiveAnnouncements(): Promise<Announcement[]> {

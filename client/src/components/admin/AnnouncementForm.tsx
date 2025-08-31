@@ -23,7 +23,17 @@ const announcementSchema = z.object({
   isActive: z.boolean().default(true),
   backgroundColor: z.string().default("#ff6b35"),
   textColor: z.string().default("#ffffff"),
-  category: z.enum(["service", "promotion", "announcement"]).default("service"),
+  category: z.enum(["service", "promotion", "announcement", "article"]).default("service"),
+  
+  // Article fields
+  articleContent: z.string().optional(),
+  articleAuthor: z.string().optional(),
+  articleReadTime: z.number().optional(),
+  articleTags: z.array(z.string()).optional(),
+  
+  // Homepage display control
+  showOnHomepage: z.boolean().default(false),
+  homepagePriority: z.number().min(0).max(4).default(0),
 });
 
 type AnnouncementFormData = z.infer<typeof announcementSchema>;
@@ -57,6 +67,12 @@ export function AnnouncementForm({
       backgroundColor: announcement?.backgroundColor || "#ff6b35",
       textColor: announcement?.textColor || "#ffffff",
       category: announcement?.category || "service",
+      articleContent: announcement?.articleContent || "",
+      articleAuthor: announcement?.articleAuthor || "",
+      articleReadTime: announcement?.articleReadTime || 0,
+      articleTags: announcement?.articleTags || [],
+      showOnHomepage: announcement?.showOnHomepage ?? false,
+      homepagePriority: announcement?.homepagePriority || 0,
     },
   });
 
@@ -83,6 +99,7 @@ export function AnnouncementForm({
     { value: "service", label: "خدمة", color: "bg-blue-100 text-blue-800" },
     { value: "promotion", label: "عرض", color: "bg-green-100 text-green-800" },
     { value: "announcement", label: "إعلان", color: "bg-purple-100 text-purple-800" },
+    { value: "article", label: "مقال", color: "bg-orange-100 text-orange-800" },
   ];
 
   const buttonActionOptions = [
@@ -188,7 +205,7 @@ export function AnnouncementForm({
                 <Label htmlFor="category">فئة الإعلان</Label>
                 <Select 
                   value={form.watch("category")} 
-                  onValueChange={(value) => form.setValue("category", value as "service" | "promotion" | "announcement")}
+                  onValueChange={(value) => form.setValue("category", value as "service" | "promotion" | "announcement" | "article")}
                 >
                   <SelectTrigger data-testid="select-category">
                     <SelectValue placeholder="اختر الفئة" />
@@ -326,6 +343,130 @@ export function AnnouncementForm({
                 يمكنك استخدام روابط من Unsplash أو Cloudinary أو أي مصدر آخر
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Article Fields */}
+        {form.watch("category") === "article" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>إعدادات المقال</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="articleContent">محتوى المقال</Label>
+                <Textarea
+                  id="articleContent"
+                  {...form.register("articleContent")}
+                  placeholder="محتوى المقال التفصيلي..."
+                  rows={6}
+                  data-testid="textarea-article-content"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="articleAuthor">المؤلف</Label>
+                  <Input
+                    id="articleAuthor"
+                    {...form.register("articleAuthor")}
+                    placeholder="اسم الكاتب"
+                    data-testid="input-article-author"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="articleReadTime">وقت القراءة (بالدقائق)</Label>
+                  <Input
+                    id="articleReadTime"
+                    type="number"
+                    min="1"
+                    {...form.register("articleReadTime", { valueAsNumber: true })}
+                    placeholder="5"
+                    data-testid="input-article-read-time"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>علامات المقال</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {form.watch("articleTags")?.map((tag: string, index: number) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {tag}
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() => {
+                          const currentTags = form.getValues("articleTags") || [];
+                          const newTags = currentTags.filter((_, i) => i !== index);
+                          form.setValue("articleTags", newTags);
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="أضف علامة جديدة"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const input = e.target as HTMLInputElement;
+                        const value = input.value.trim();
+                        if (value) {
+                          const currentTags = form.getValues("articleTags") || [];
+                          if (!currentTags.includes(value)) {
+                            form.setValue("articleTags", [...currentTags, value]);
+                          }
+                          input.value = '';
+                        }
+                      }
+                    }}
+                    data-testid="input-add-tag"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Homepage Display Control */}
+        <Card>
+          <CardHeader>
+            <CardTitle>إعدادات العرض في الصفحة الرئيسية</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Switch
+                  checked={form.watch("showOnHomepage")}
+                  onCheckedChange={(checked) => form.setValue("showOnHomepage", checked)}
+                  data-testid="switch-show-homepage"
+                />
+                عرض في الصفحة الرئيسية
+              </Label>
+              <p className="text-sm text-gray-500">
+                سيتم عرض أول 4 إعلانات فقط في الصفحة الرئيسية حسب الأولوية
+              </p>
+            </div>
+
+            {form.watch("showOnHomepage") && (
+              <div className="space-y-2">
+                <Label htmlFor="homepagePriority">أولوية العرض (1-4)</Label>
+                <Input
+                  id="homepagePriority"
+                  type="number"
+                  min="0"
+                  max="4"
+                  {...form.register("homepagePriority", { valueAsNumber: true })}
+                  placeholder="1"
+                  data-testid="input-homepage-priority"
+                />
+                <p className="text-sm text-gray-500">
+                  الرقم الأقل = أولوية أعلى (1 = الأولوية القصوى)
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

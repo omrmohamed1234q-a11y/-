@@ -35,7 +35,18 @@ export const announcements = pgTable("announcements", {
   isActive: boolean("is_active").default(true),
   backgroundColor: text("background_color").default("#ff6b35"), // Orange like talabat
   textColor: text("text_color").default("#ffffff"),
-  category: text("category").default("service"), // "service" | "promotion" | "announcement"
+  category: text("category").default("service"), // "service" | "promotion" | "announcement" | "article"
+  
+  // Article content fields
+  articleContent: text("article_content"), // Rich text content for articles
+  articleAuthor: text("article_author"), // Author name for articles
+  articleReadTime: integer("article_read_time"), // Estimated read time in minutes
+  articleTags: text("article_tags").array(), // Tags for categorization
+  
+  // Homepage display control
+  showOnHomepage: boolean("show_on_homepage").default(false), // Whether to show on homepage
+  homepagePriority: integer("homepage_priority").default(0), // Priority for homepage display (1-4)
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -522,6 +533,12 @@ export const insertCartItemSchema = createInsertSchema(cartItems).omit({
   createdAt: true,
 });
 
+export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertTemplateSchema = createInsertSchema(templates).omit({
   id: true,
   createdAt: true,
@@ -815,12 +832,6 @@ export const insertDriverSchema = createInsertSchema(drivers).omit({
 export const insertDriverLocationSchema = createInsertSchema(driverLocations).omit({
   id: true,
   timestamp: true,
-});
-
-export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
 export type Announcement = typeof announcements.$inferSelect;

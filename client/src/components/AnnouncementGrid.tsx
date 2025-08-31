@@ -16,11 +16,17 @@ interface Announcement {
   backgroundColor?: string;
   textColor?: string;
   category: string;
+  articleContent?: string;
+  articleAuthor?: string;
+  articleReadTime?: number;
+  articleTags?: string[];
+  showOnHomepage?: boolean;
+  homepagePriority?: number;
 }
 
 export function AnnouncementGrid() {
   const { data: announcements = [], isLoading, error } = useQuery({
-    queryKey: ['/api/announcements'],
+    queryKey: ['/api/announcements/homepage'],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -137,16 +143,28 @@ export function AnnouncementGrid() {
                     )}
                   </Button>
                   
-                  {announcement.category && (
-                    <span 
-                      className="text-xs bg-white/20 px-2 py-1 rounded-full"
-                      data-testid={`announcement-category-${announcement.id}`}
-                    >
-                      {announcement.category === 'service' ? 'خدمة' : 
-                       announcement.category === 'promotion' ? 'عرض' : 
-                       announcement.category === 'announcement' ? 'إعلان' : announcement.category}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {announcement.category && (
+                      <span 
+                        className="text-xs bg-white/20 px-2 py-1 rounded-full"
+                        data-testid={`announcement-category-${announcement.id}`}
+                      >
+                        {announcement.category === 'service' ? 'خدمة' : 
+                         announcement.category === 'promotion' ? 'عرض' : 
+                         announcement.category === 'announcement' ? 'إعلان' : 
+                         announcement.category === 'article' ? 'مقال' : announcement.category}
+                      </span>
+                    )}
+                    
+                    {announcement.category === 'article' && announcement.articleReadTime && (
+                      <span 
+                        className="text-xs bg-white/20 px-2 py-1 rounded-full"
+                        data-testid={`announcement-read-time-${announcement.id}`}
+                      >
+                        {announcement.articleReadTime} دقائق
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>

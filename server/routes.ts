@@ -1721,6 +1721,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public announcements for homepage (limited to 4 with priority)
+  app.get('/api/announcements/homepage', async (req, res) => {
+    try {
+      const announcements = await storage.getHomepageAnnouncements();
+      res.json(announcements);
+    } catch (error) {
+      console.error("Error fetching homepage announcements:", error);
+      res.status(500).json({ message: "Failed to fetch homepage announcements" });
+    }
+  });
+
   // Admin announcements endpoints
   app.get('/api/admin/announcements', async (req, res) => {
     try {
