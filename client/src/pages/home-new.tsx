@@ -123,12 +123,14 @@ export default function Home() {
       <Header />
       
       {/* Hero Section with Advanced Printing Animation */}
-      <section className="relative pt-24 pb-16 px-4 overflow-hidden">
+      <section className="relative pt-20 pb-20 px-6 overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-10 w-32 h-32 bg-red-100 rounded-full opacity-20 animate-pulse"></div>
-          <div className="absolute top-1/3 right-16 w-24 h-24 bg-blue-100 rounded-full opacity-20 animate-bounce"></div>
-          <div className="absolute bottom-1/4 left-1/3 w-20 h-20 bg-green-100 rounded-full opacity-20"></div>
+          <div className="absolute top-1/4 left-10 w-40 h-40 bg-red-100 rounded-full opacity-20 animate-pulse"></div>
+          <div className="absolute top-1/3 right-16 w-32 h-32 bg-blue-100 rounded-full opacity-20 animate-bounce"></div>
+          <div className="absolute bottom-1/4 left-1/3 w-28 h-28 bg-green-100 rounded-full opacity-20"></div>
+          <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-purple-100 rounded-full opacity-15 animate-pulse" style={{animationDelay: '1s'}}></div>
+          <div className="absolute bottom-1/3 right-10 w-36 h-36 bg-yellow-100 rounded-full opacity-15"></div>
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto text-center">
@@ -138,7 +140,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="text-5xl md:text-7xl font-bold mb-6">
+            <h1 className="text-6xl md:text-8xl font-bold mb-8 leading-tight">
               <motion.span 
                 className="bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent"
                 style={{ backgroundSize: '200% 200%' }}
@@ -152,7 +154,7 @@ export default function Home() {
             </h1>
             
             <motion.p 
-              className="text-xl md:text-2xl text-gray-600 mb-4"
+              className="text-2xl md:text-3xl text-gray-600 mb-6 font-medium"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
@@ -161,7 +163,7 @@ export default function Home() {
             </motion.p>
             
             <motion.p 
-              className="text-lg text-gray-500 mb-12"
+              className="text-xl md:text-2xl text-gray-500 mb-16 max-w-3xl mx-auto leading-relaxed"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
@@ -172,7 +174,7 @@ export default function Home() {
 
           {/* Advanced Printer Animation */}
           <motion.div 
-            className="relative mx-auto mb-12 max-w-lg"
+            className="relative mx-auto mb-20 max-w-xl"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.7 }}
@@ -359,9 +361,9 @@ export default function Home() {
       </section>
 
       {/* Quick Actions */}
-      <section className="px-4 max-w-6xl mx-auto mb-16">
+      <section className="px-6 max-w-6xl mx-auto mb-24">
         <motion.h2 
-          className="text-3xl font-bold text-center text-gray-900 mb-8"
+          className="text-4xl md:text-5xl font-bold text-center text-gray-900 mb-12"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.4 }}
@@ -369,7 +371,7 @@ export default function Home() {
           إجراءات سريعة
         </motion.h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {quickActions.map((action, index) => (
             <motion.div
               key={action.id}
@@ -380,10 +382,10 @@ export default function Home() {
               whileTap={{ scale: 0.98 }}
             >
               <Link href={action.link}>
-                <Card className="h-40 border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden group">
+                <Card className="h-48 border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden group">
                   <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
                   
-                  <CardContent className="relative h-full p-6 flex flex-col justify-between">
+                  <CardContent className="relative h-full p-8 flex flex-col justify-between">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-lg font-bold text-gray-900 mb-2">

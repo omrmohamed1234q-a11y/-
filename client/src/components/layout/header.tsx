@@ -33,7 +33,7 @@ export default function Header() {
   return (
     <>
       <header className="bg-white shadow-paper sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="max-w-6xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             {/* Logo and App Name */}
             <Link href="/">
