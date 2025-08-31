@@ -91,11 +91,11 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-4 space-y-4">
       {/* Header - Partner Cover */}
       <div className="relative">
         <div 
-          className="h-48 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg relative overflow-hidden"
+          className="h-32 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg relative overflow-hidden"
           style={{
             backgroundImage: partner.coverImageUrl ? `url(${partner.coverImageUrl})` : undefined,
             backgroundSize: 'cover',
@@ -103,13 +103,13 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
           }}
         >
           <div className="absolute inset-0 bg-black bg-opacity-40" />
-          <div className="absolute bottom-4 left-4 text-white">
-            <h1 className="text-3xl font-bold">{partner.name}</h1>
-            <p className="text-lg opacity-90">{partner.shortDescription}</p>
+          <div className="absolute bottom-2 left-4 text-white">
+            <h1 className="text-xl font-bold">{partner.name}</h1>
+            <p className="text-sm opacity-90 line-clamp-1">{partner.shortDescription}</p>
           </div>
           <Button 
             variant="outline" 
-            className="absolute top-4 right-4 bg-white text-black"
+            className="absolute top-2 right-2 bg-white text-black h-8 px-3"
             onClick={onClose}
           >
             إغلاق
@@ -118,38 +118,38 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
       </div>
 
       {/* Partner Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
-          <CardContent className="p-4 text-center">
-            <Star className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
-            <div className="text-2xl font-bold">{partner.rating}</div>
-            <div className="text-sm text-gray-600">({partner.reviewCount} تقييم)</div>
+          <CardContent className="p-3 text-center">
+            <Star className="h-6 w-6 mx-auto mb-1 text-yellow-500" />
+            <div className="text-lg font-bold">{partner.rating}</div>
+            <div className="text-xs text-gray-600">({partner.reviewCount} تقييم)</div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4 text-center">
-            <Clock className="h-8 w-8 mx-auto mb-2 text-blue-500" />
-            <div className="text-lg font-bold">30-45 دقيقة</div>
-            <div className="text-sm text-gray-600">وقت التحضير</div>
+          <CardContent className="p-3 text-center">
+            <Clock className="h-6 w-6 mx-auto mb-1 text-blue-500" />
+            <div className="text-sm font-bold">30-45 دقيقة</div>
+            <div className="text-xs text-gray-600">وقت التحضير</div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4 text-center">
-            <Truck className="h-8 w-8 mx-auto mb-2 text-green-500" />
-            <div className="text-lg font-bold">
-              {partner.hasDelivery ? `${partner.deliveryFee} جنيه` : 'غير متوفر'}
+          <CardContent className="p-3 text-center">
+            <Truck className="h-6 w-6 mx-auto mb-1 text-green-500" />
+            <div className="text-sm font-bold">
+              {partner.hasDelivery ? `${partner.deliveryFee} ج` : 'غير متوفر'}
             </div>
-            <div className="text-sm text-gray-600">رسوم التوصيل</div>
+            <div className="text-xs text-gray-600">رسوم التوصيل</div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4 text-center">
-            <Package className="h-8 w-8 mx-auto mb-2 text-purple-500" />
-            <div className="text-lg font-bold">{partnerProducts.length}</div>
-            <div className="text-sm text-gray-600">منتج متاح</div>
+          <CardContent className="p-3 text-center">
+            <Package className="h-6 w-6 mx-auto mb-1 text-purple-500" />
+            <div className="text-sm font-bold">{partnerProducts.length}</div>
+            <div className="text-xs text-gray-600">منتج متاح</div>
           </CardContent>
         </Card>
       </div>
@@ -161,24 +161,24 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
           <TabsTrigger value="info">معلومات الشريك</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="products" className="space-y-4">
+        <TabsContent value="products" className="space-y-3">
           {/* Products Filter Bar */}
-          <div className="flex flex-col md:flex-row gap-4 p-4 bg-gray-50 rounded-lg">
+          <div className="flex flex-col md:flex-row gap-3 p-3 bg-gray-50 rounded-lg">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="ابحث في المنتجات..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 h-9"
                   data-testid="input-search-products"
                 />
               </div>
             </div>
             
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-48" data-testid="select-category">
+              <SelectTrigger className="w-40 h-9" data-testid="select-category">
                 <SelectValue placeholder="اختر الفئة" />
               </SelectTrigger>
               <SelectContent>
@@ -191,10 +191,11 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
               </SelectContent>
             </Select>
 
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="icon"
+                size="sm"
+                className="h-9 w-9 p-0"
                 onClick={() => setViewMode('grid')}
                 data-testid="button-grid-view"
               >
@@ -202,7 +203,8 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
               </Button>
               <Button
                 variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="icon"
+                size="sm"
+                className="h-9 w-9 p-0"
                 onClick={() => setViewMode('list')}
                 data-testid="button-list-view"
               >
@@ -220,14 +222,14 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
             </div>
           ) : (
             <div className={viewMode === 'grid' 
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              : "space-y-4"
+              ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
+              : "space-y-3"
             }>
               {filteredProducts.map((product) => (
-                <Card key={product.id} className={`group hover:shadow-lg transition-shadow ${
+                <Card key={product.id} className={`group hover:shadow-md transition-shadow ${
                   viewMode === 'list' ? 'flex flex-row' : ''
                 }`}>
-                  <div className={viewMode === 'list' ? 'w-32 h-32 flex-shrink-0' : 'aspect-square'}>
+                  <div className={viewMode === 'list' ? 'w-24 h-24 flex-shrink-0' : 'aspect-square'}>
                     <div 
                       className="w-full h-full bg-gray-200 rounded-t-lg bg-cover bg-center relative"
                       style={{
@@ -236,47 +238,54 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
                     >
                       {!product.imageUrl && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <Package className="h-12 w-12 text-gray-400" />
+                          <Package className="h-8 w-8 text-gray-400" />
                         </div>
                       )}
-                      <div className="absolute top-2 right-2">
+                      <div className="absolute top-1 right-1">
                         {getProductStatusBadge(product)}
                       </div>
                     </div>
                   </div>
                   
-                  <CardContent className={`p-4 ${viewMode === 'list' ? 'flex-1' : ''}`}>
+                  <CardContent className={`p-3 ${viewMode === 'list' ? 'flex-1' : ''}`}>
                     <div className="space-y-2">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-semibold text-lg">{product.name}</h3>
-                        <Badge variant="outline">
-                          {getCategoryLabel(product.category)}
-                        </Badge>
+                      <div className={viewMode === 'list' ? 'flex justify-between items-start' : ''}>
+                        <h3 className="font-semibold text-sm line-clamp-2">{product.name}</h3>
+                        {viewMode === 'list' && (
+                          <Badge variant="outline" className="text-xs ml-2">
+                            {getCategoryLabel(product.category)}
+                          </Badge>
+                        )}
                       </div>
                       
-                      <p className="text-gray-600 text-sm line-clamp-2">
+                      {viewMode === 'grid' && (
+                        <Badge variant="outline" className="text-xs">
+                          {getCategoryLabel(product.category)}
+                        </Badge>
+                      )}
+                      
+                      <p className="text-gray-600 text-xs line-clamp-2">
                         {product.description}
                       </p>
                       
-                      <div className="flex justify-between items-center">
+                      <div className={viewMode === 'list' ? 'flex justify-between items-center' : 'space-y-2'}>
                         <div>
-                          <span className="text-2xl font-bold text-primary">
-                            {product.price} جنيه
+                          <span className="text-lg font-bold text-primary">
+                            {product.price} ج
                           </span>
                           {product.stock && (
-                            <div className="text-sm text-gray-500">
-                              متوفر: {product.stock} قطعة
+                            <div className="text-xs text-gray-500">
+                              متوفر: {product.stock}
                             </div>
                           )}
                         </div>
                         
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" data-testid={`button-view-${product.id}`}>
-                            <Eye className="h-4 w-4" />
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline" className="h-8 px-2" data-testid={`button-view-${product.id}`}>
+                            <Eye className="h-3 w-3" />
                           </Button>
-                          <Button size="sm" data-testid={`button-add-cart-${product.id}`}>
-                            <ShoppingCart className="h-4 w-4" />
-                            إضافة
+                          <Button size="sm" className="h-8 px-2" data-testid={`button-add-cart-${product.id}`}>
+                            <ShoppingCart className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
