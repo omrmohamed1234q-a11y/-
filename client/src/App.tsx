@@ -41,6 +41,7 @@ import DriverLogin from "@/pages/driver/driver-login";
 import DriverDashboard from "@/pages/driver/driver-dashboard";
 import DriversManagement from "@/pages/admin/drivers";
 import QuickAccess from "@/pages/quick-access";
+import TestAnnouncements from "@/pages/test-announcements";
 
 
 function Router() {
@@ -112,6 +113,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/home" component={Home} />
+        <Route path="/test-announcements" component={TestAnnouncements} />
         <Route path="/auth/callback" component={AuthCallback} />
         <Route path="/print" component={Print} />
         <Route path="/scan" component={Scan} />
