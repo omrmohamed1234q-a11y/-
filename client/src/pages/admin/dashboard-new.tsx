@@ -37,7 +37,8 @@ import {
   Truck,
   User,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Monitor
 } from 'lucide-react';
 
 interface AdminStats {
