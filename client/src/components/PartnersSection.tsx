@@ -9,9 +9,12 @@ import {
   Truck, CreditCard, ChevronRight, Building2
 } from 'lucide-react';
 import type { Partner } from '@shared/schema';
+import { PartnerDetailsView } from './admin/PartnerDetailsView';
 
 export function PartnersSection() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
   const { data: partners, isLoading } = useQuery({
     queryKey: ['/api/partners/featured'],
@@ -29,6 +32,16 @@ export function PartnersSection() {
   const filteredPartners = (partners as Partner[] || []).filter((partner: Partner) => 
     selectedCategory === 'all' || partner.businessType === selectedCategory
   );
+
+  const handleViewPartner = (partner: Partner) => {
+    setSelectedPartner(partner);
+    setIsViewOpen(true);
+  };
+
+  const handleCloseView = () => {
+    setIsViewOpen(false);
+    setSelectedPartner(null);
+  };
 
   if (isLoading) {
     return (
@@ -234,6 +247,7 @@ export function PartnersSection() {
                   <Button 
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white group"
                     data-testid={`button-view-partner-${partner.id}`}
+                    onClick={() => handleViewPartner(partner)}
                   >
                     <span>عرض التفاصيل</span>
                     <ChevronRight className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform" />
@@ -269,6 +283,16 @@ export function PartnersSection() {
               عرض جميع الشركاء
               <ChevronRight className="w-5 h-5 mr-2" />
             </Button>
+          </div>
+        )}
+
+        {/* Partner Details View - Talabat Style */}
+        {isViewOpen && selectedPartner && (
+          <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+            <PartnerDetailsView 
+              partner={selectedPartner} 
+              onClose={handleCloseView}
+            />
           </div>
         )}
       </div>
