@@ -39,9 +39,9 @@ export function AnnouncementGrid() {
           <div className="h-8 bg-gray-200 rounded-lg w-64 mx-auto mb-2 animate-pulse"></div>
           <div className="h-4 bg-gray-100 rounded w-48 mx-auto animate-pulse"></div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="h-72 animate-pulse overflow-hidden">
+            <Card key={i} className="h-80 animate-pulse overflow-hidden">
               <CardContent className="p-0 h-full">
                 <div className="bg-gray-200 dark:bg-gray-700 h-full rounded-xl"></div>
               </CardContent>
@@ -94,33 +94,33 @@ export function AnnouncementGrid() {
 
   return (
     <div className="w-full" dir="rtl">
-      {/* Compact Creative Header */}
+      {/* Enhanced Creative Header */}
       <motion.div 
-        className="flex items-center justify-between mb-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-4"
+        className="flex items-center justify-between mb-12 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-3xl p-8"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-xl">
-            <Sparkles className="w-5 h-5 text-white" />
+        <div className="flex items-center gap-4">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-xl">
+            <Sparkles className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2">
               خدماتنا المميزة
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              اكتشف أحدث العروض
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              اكتشف أحدث العروض والخدمات المتميزة
             </p>
           </div>
         </div>
-        <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+        <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 px-4 py-2 text-lg">
           {announcements.length} خدمة
         </Badge>
       </motion.div>
       
-      {/* Compact Announcements Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Enhanced Announcements Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {announcements.slice(0, 4).map((announcement: Announcement, index: number) => (
           <motion.div
             key={announcement.id}
@@ -143,7 +143,7 @@ export function AnnouncementGrid() {
               className="group cursor-pointer transition-all duration-300 hover:shadow-xl overflow-hidden border border-gray-200/50 bg-white/90 backdrop-blur-sm hover:scale-[1.02]"
               data-testid={`announcement-card-${announcement.id}`}
             >
-              <CardContent className="p-0 h-56 relative">
+              <CardContent className="p-0 h-72 relative">
                 {/* Background Image with enhanced overlay */}
                 {announcement.imageUrl && (
                   <div 
@@ -164,8 +164,8 @@ export function AnnouncementGrid() {
                   }}
                 />
                 
-                {/* Compact Content Overlay */}
-                <div className="absolute inset-0 p-4 flex flex-col justify-between text-white">
+                {/* Enhanced Content Overlay */}
+                <div className="absolute inset-0 p-6 flex flex-col justify-between text-white">
                   {/* Top Section - Category Badge */}
                   <div className="flex justify-between items-start">
                     <Badge 
@@ -194,7 +194,7 @@ export function AnnouncementGrid() {
                   {/* Middle Section - Compact Title and Description */}
                   <div className="flex-1 flex flex-col justify-center space-y-2">
                     <h3 
-                      className="text-base font-bold leading-tight drop-shadow-lg line-clamp-2"
+                      className="text-lg md:text-xl font-bold leading-tight drop-shadow-lg line-clamp-2"
                       style={{ color: announcement.textColor || '#ffffff' }}
                       data-testid={`announcement-title-${announcement.id}`}
                     >
@@ -202,7 +202,7 @@ export function AnnouncementGrid() {
                     </h3>
                     {announcement.description && (
                       <p 
-                        className="text-xs opacity-90 line-clamp-2 drop-shadow-md"
+                        className="text-sm opacity-90 line-clamp-3 drop-shadow-md mt-2"
                         style={{ color: announcement.textColor || '#ffffff' }}
                         data-testid={`announcement-description-${announcement.id}`}
                       >
@@ -218,7 +218,7 @@ export function AnnouncementGrid() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleAnnouncementClick(announcement)}
-                        className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30 px-3 py-2 rounded-lg transition-all duration-200 text-xs font-medium backdrop-blur-sm group-hover:bg-white/40 group-hover:border-white/50"
+                        className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30 px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium backdrop-blur-sm group-hover:bg-white/40 group-hover:border-white/50"
                         data-testid={`announcement-button-${announcement.id}`}
                       >
                         <span className="flex items-center justify-center gap-1">
