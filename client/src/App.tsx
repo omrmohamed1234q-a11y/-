@@ -42,6 +42,7 @@ import DriverDashboard from "@/pages/driver/driver-dashboard";
 import DriversManagement from "@/pages/admin/drivers";
 import QuickAccess from "@/pages/quick-access";
 import TestAnnouncements from "@/pages/test-announcements";
+import ArticlePage from "@/pages/article";
 
 
 function Router() {
@@ -101,6 +102,7 @@ function Router() {
         <Route path="/driver/dashboard" component={DriverDashboard} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
+        <Route path="/article/:id" component={ArticlePage} />
         <Route path="/" component={EnhancedLanding} />
         <Route component={NotFound} />
       </Switch>
@@ -143,6 +145,7 @@ function Router() {
         <Route path="/quick-access" component={QuickAccess} />
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
+        <Route path="/article/:id" component={ArticlePage} />
         <Route component={NotFound} />
       </Switch>
       <ChatBot />

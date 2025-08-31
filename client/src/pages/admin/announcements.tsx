@@ -47,6 +47,7 @@ export default function AnnouncementsAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/announcements'] });
       queryClient.invalidateQueries({ queryKey: ['/api/announcements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/announcements/homepage'] });
       setIsCreateDialogOpen(false);
       toast({
         title: "تم بنجاح",
@@ -70,6 +71,7 @@ export default function AnnouncementsAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/announcements'] });
       queryClient.invalidateQueries({ queryKey: ['/api/announcements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/announcements/homepage'] });
       setEditingAnnouncement(null);
       toast({
         title: "تم بنجاح",
@@ -93,6 +95,7 @@ export default function AnnouncementsAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/announcements'] });
       queryClient.invalidateQueries({ queryKey: ['/api/announcements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/announcements/homepage'] });
       toast({
         title: "تم بنجاح",
         description: "تم حذف الإعلان بنجاح",

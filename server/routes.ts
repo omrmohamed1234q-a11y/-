@@ -1784,6 +1784,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/announcements/:id - Get single announcement/article by ID
+  app.get('/api/announcements/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      console.log(`📖 Fetching announcement/article: ${id}`);
+      const announcement = await storage.getAnnouncement(id);
+      
+      if (!announcement) {
+        return res.status(404).json({ message: "Announcement not found" });
+      }
+      
+      console.log(`✅ Found announcement: ${announcement.title}`);
+      res.json(announcement);
+    } catch (error) {
+      console.error("Error fetching announcement:", error);
+      res.status(500).json({ message: "Failed to fetch announcement" });
+    }
+  });
+
   // Inquiries endpoints
   app.get('/api/admin/inquiries', async (req, res) => {
     try {

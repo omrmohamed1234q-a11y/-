@@ -74,6 +74,13 @@ export function AnnouncementGrid() {
   }
 
   const handleAnnouncementClick = (announcement: Announcement) => {
+    // Check if it's an article
+    if (announcement.category === 'article') {
+      window.location.href = `/article/${announcement.id}`;
+      return;
+    }
+
+    // Handle other button actions
     if (announcement.buttonAction === 'link' && announcement.buttonUrl) {
       if (announcement.buttonUrl.startsWith('http')) {
         // External link
