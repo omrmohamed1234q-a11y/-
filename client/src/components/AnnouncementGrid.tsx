@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Sparkles, Calendar, Clock } from "lucide-react";
+import { ExternalLink, Sparkles, Calendar, Clock, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface Announcement {
@@ -87,27 +87,33 @@ export function AnnouncementGrid() {
 
   return (
     <div className="w-full" dir="rtl">
-      {/* Header Section with beautiful styling */}
+      {/* Compact Creative Header */}
       <motion.div 
-        className="text-center mb-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        className="flex items-center justify-between mb-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-4"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
       >
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <Sparkles className="w-8 h-8 text-blue-600" />
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            خدماتنا المميزة
-          </h2>
-          <Sparkles className="w-8 h-8 text-purple-600" />
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-xl">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+              خدماتنا المميزة
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              اكتشف أحدث العروض
+            </p>
+          </div>
         </div>
-        <p className="text-gray-600 dark:text-gray-300 text-lg">
-          اكتشف أحدث الخدمات والعروض الحصرية المصممة خصيصاً لك
-        </p>
+        <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+          {announcements.length} خدمة
+        </Badge>
       </motion.div>
       
-      {/* Announcements Grid - 4 columns for homepage */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Compact Announcements Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {announcements.slice(0, 4).map((announcement: Announcement, index: number) => (
           <motion.div
             key={announcement.id}
@@ -127,10 +133,10 @@ export function AnnouncementGrid() {
             whileTap={{ scale: 0.95 }}
           >
             <Card 
-              className="group cursor-pointer transition-all duration-300 hover:shadow-2xl overflow-hidden border-0 bg-white/80 backdrop-blur-sm"
+              className="group cursor-pointer transition-all duration-300 hover:shadow-xl overflow-hidden border border-gray-200/50 bg-white/90 backdrop-blur-sm hover:scale-[1.02]"
               data-testid={`announcement-card-${announcement.id}`}
             >
-              <CardContent className="p-0 h-72 relative">
+              <CardContent className="p-0 h-56 relative">
                 {/* Background Image with enhanced overlay */}
                 {announcement.imageUrl && (
                   <div 
@@ -151,13 +157,13 @@ export function AnnouncementGrid() {
                   }}
                 />
                 
-                {/* Content Overlay */}
-                <div className="absolute inset-0 p-5 flex flex-col justify-between text-white">
+                {/* Compact Content Overlay */}
+                <div className="absolute inset-0 p-4 flex flex-col justify-between text-white">
                   {/* Top Section - Category Badge */}
                   <div className="flex justify-between items-start">
                     <Badge 
                       variant="secondary" 
-                      className="bg-white/20 text-white border-white/30 hover:bg-white/30 backdrop-blur-sm"
+                      className="bg-white/20 text-white border-white/30 hover:bg-white/30 backdrop-blur-sm text-xs px-2 py-1"
                       data-testid={`announcement-category-${announcement.id}`}
                     >
                       {announcement.category === 'service' ? '🔧 خدمة' : 
@@ -178,17 +184,19 @@ export function AnnouncementGrid() {
                     )}
                   </div>
                   
-                  {/* Middle Section - Title and Description */}
-                  <div className="flex-1 flex flex-col justify-center">
+                  {/* Middle Section - Compact Title and Description */}
+                  <div className="flex-1 flex flex-col justify-center space-y-2">
                     <h3 
-                      className="text-xl font-bold mb-3 leading-tight drop-shadow-lg"
+                      className="text-base font-bold leading-tight drop-shadow-lg line-clamp-2"
+                      style={{ color: announcement.textColor || '#ffffff' }}
                       data-testid={`announcement-title-${announcement.id}`}
                     >
                       {announcement.title}
                     </h3>
                     {announcement.description && (
                       <p 
-                        className="text-sm opacity-95 line-clamp-2 drop-shadow-md"
+                        className="text-xs opacity-90 line-clamp-2 drop-shadow-md"
+                        style={{ color: announcement.textColor || '#ffffff' }}
                         data-testid={`announcement-description-${announcement.id}`}
                       >
                         {announcement.description}
@@ -196,20 +204,22 @@ export function AnnouncementGrid() {
                     )}
                   </div>
                   
-                  {/* Bottom Section - Action Button */}
-                  <div className="flex justify-center">
-                    <Button
-                      onClick={() => handleAnnouncementClick(announcement)}
-                      variant="secondary"
-                      size="sm"
-                      className="bg-white/90 hover:bg-white text-gray-900 border-0 hover:shadow-lg transition-all duration-300 font-semibold px-6 py-2"
-                      data-testid={`announcement-button-${announcement.id}`}
-                    >
-                      {announcement.buttonText}
-                      {announcement.buttonAction === 'link' && (
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                      )}
-                    </Button>
+                  {/* Bottom Section - Compact Action Button */}
+                  <div className="mt-auto">
+                    {announcement.buttonText && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleAnnouncementClick(announcement)}
+                        className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30 px-3 py-2 rounded-lg transition-all duration-200 text-xs font-medium backdrop-blur-sm group-hover:bg-white/40 group-hover:border-white/50"
+                        data-testid={`announcement-button-${announcement.id}`}
+                      >
+                        <span className="flex items-center justify-center gap-1">
+                          {announcement.buttonText}
+                          <ChevronRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+                        </span>
+                      </motion.button>
+                    )}
                   </div>
                 </div>
                 
@@ -222,20 +232,7 @@ export function AnnouncementGrid() {
         ))}
       </div>
       
-      {/* Bottom section with encouraging message */}
-      <motion.div 
-        className="text-center mt-8 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-      >
-        <p className="text-gray-700 text-lg font-medium">
-          🎉 المزيد من الخدمات والعروض في انتظارك!
-        </p>
-        <p className="text-gray-600 mt-2">
-          تصفح قائمة الخدمات الكاملة واستمتع بتجربة فريدة
-        </p>
-      </motion.div>
+
     </div>
   );
 }
