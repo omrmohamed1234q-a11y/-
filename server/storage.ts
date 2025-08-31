@@ -1129,7 +1129,7 @@ class MemStorage implements IStorage {
       articleReadTime: null,
       articleTags: null,
       showOnHomepage: true,
-      homepagePriority: 1,
+      homepagePriority: 4,
       createdAt: new Date(),
       updatedAt: new Date()
     },
@@ -1222,6 +1222,47 @@ class MemStorage implements IStorage {
       updatedAt: new Date()
     }
   ];
+
+  constructor() {
+    // Clean up any duplicate priorities on initialization
+    this.cleanupHomepagePriorities();
+  }
+
+  // Method to clean up duplicate priorities in existing data
+  private cleanupHomepagePriorities(): void {
+    console.log('🧹 Cleaning up homepage priority conflicts...');
+    
+    const homepageAnnouncements = this.announcements.filter(ann => ann.showOnHomepage);
+    const priorityMap: { [key: number]: Announcement[] } = {};
+    
+    // Group announcements by priority
+    homepageAnnouncements.forEach(ann => {
+      if (!priorityMap[ann.homepagePriority]) {
+        priorityMap[ann.homepagePriority] = [];
+      }
+      priorityMap[ann.homepagePriority].push(ann);
+    });
+    
+    // Fix conflicts
+    Object.keys(priorityMap).forEach(priorityStr => {
+      const priority = parseInt(priorityStr);
+      const anns = priorityMap[priority];
+      
+      if (anns.length > 1) {
+        console.log(`🚨 Found ${anns.length} announcements with priority ${priority}`);
+        
+        // Keep the first one, reassign others
+        for (let i = 1; i < anns.length; i++) {
+          const newPriority = this.getNextAvailablePriority(priority);
+          anns[i].homepagePriority = newPriority;
+          console.log(`📌 Reassigned "${anns[i].title}" from priority ${priority} to ${newPriority}`);
+        }
+      }
+    });
+    
+    console.log('✅ Homepage priority cleanup completed');
+  }
+
   private products: Product[] = [
     {
       id: '1',
@@ -2565,6 +2606,11 @@ class MemStorage implements IStorage {
   }
 
   async createAnnouncement(announcementData: InsertAnnouncement): Promise<Announcement> {
+    // Handle priority conflicts for homepage announcements
+    if (announcementData.showOnHomepage && announcementData.homepagePriority > 0) {
+      this.adjustHomepagePriorities(announcementData.homepagePriority);
+    }
+
     const announcement: Announcement = {
       id: Math.random().toString(36).substr(2, 9),
       ...announcementData,
@@ -2579,6 +2625,16 @@ class MemStorage implements IStorage {
     const index = this.announcements.findIndex(ann => ann.id === id);
     if (index === -1) {
       throw new Error('Announcement not found');
+    }
+    
+    const currentAnnouncement = this.announcements[index];
+    
+    // Handle priority conflicts for homepage announcements
+    if (updates.showOnHomepage && updates.homepagePriority && updates.homepagePriority > 0) {
+      // Only adjust if the priority is actually changing
+      if (currentAnnouncement.homepagePriority !== updates.homepagePriority) {
+        this.adjustHomepagePriorities(updates.homepagePriority, id);
+      }
     }
     
     this.announcements[index] = {
@@ -2598,6 +2654,60 @@ class MemStorage implements IStorage {
     
     this.announcements.splice(index, 1);
     return true;
+  }
+
+  // Helper method to adjust homepage priorities and avoid conflicts
+  private adjustHomepagePriorities(newPriority: number, excludeId?: string): void {
+    console.log(`🔄 Checking priority conflicts for priority ${newPriority}, excluding ${excludeId}`);
+    
+    // Find announcements with conflicting priority
+    const conflictingAnnouncements = this.announcements.filter(ann => 
+      ann.showOnHomepage && 
+      ann.homepagePriority === newPriority &&
+      ann.id !== excludeId
+    );
+
+    console.log(`🚨 Found ${conflictingAnnouncements.length} conflicting announcements`);
+
+    // Shift conflicting announcements to next available priority
+    conflictingAnnouncements.forEach(ann => {
+      const oldPriority = ann.homepagePriority;
+      const nextAvailablePriority = this.getNextAvailablePriority(newPriority, excludeId);
+      ann.homepagePriority = nextAvailablePriority;
+      ann.updatedAt = new Date();
+      
+      console.log(`📌 Moved announcement "${ann.title}" from priority ${oldPriority} to ${nextAvailablePriority}`);
+    });
+  }
+
+  private getNextAvailablePriority(startFrom: number, excludeId?: string): number {
+    for (let priority = startFrom + 1; priority <= 4; priority++) {
+      const exists = this.announcements.some(ann => 
+        ann.showOnHomepage && 
+        ann.homepagePriority === priority &&
+        ann.id !== excludeId
+      );
+      if (!exists) {
+        console.log(`✅ Next available priority found: ${priority}`);
+        return priority;
+      }
+    }
+    
+    // If all priorities 1-4 are taken, try to find any available slot from 1-4
+    for (let priority = 1; priority <= 4; priority++) {
+      const exists = this.announcements.some(ann => 
+        ann.showOnHomepage && 
+        ann.homepagePriority === priority &&
+        ann.id !== excludeId
+      );
+      if (!exists) {
+        console.log(`✅ Available priority slot found: ${priority}`);
+        return priority;
+      }
+    }
+    
+    console.warn(`⚠️ All priority slots 1-4 are taken, assigning priority 5 (will not display)`);
+    return 5;
   }
 }
 

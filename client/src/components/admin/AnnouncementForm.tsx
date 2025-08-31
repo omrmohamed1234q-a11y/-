@@ -465,6 +465,14 @@ export function AnnouncementForm({
                 <p className="text-sm text-gray-500">
                   الرقم الأقل = أولوية أعلى (1 = الأولوية القصوى)
                 </p>
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-600 text-sm">ℹ️</span>
+                    <div className="text-xs text-blue-700">
+                      <strong>ملاحظة مهمة:</strong> إذا كان هناك إعلان آخر بنفس الأولوية، سيتم تغيير أولوية ذلك الإعلان تلقائياً لتجنب التضارب والحفاظ على ترتيب فريد.
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
