@@ -23,6 +23,56 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Partners/Print Shops table
+export const partners = pgTable("partners", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  shortDescription: text("short_description"), // Brief description for cards
+  logoUrl: text("logo_url"),
+  coverImageUrl: text("cover_image_url"),
+  
+  // Contact & Location
+  phone: text("phone"),
+  email: text("email"),
+  address: text("address"),
+  city: text("city").notNull(),
+  governorate: text("governorate").notNull(),
+  coordinates: jsonb("coordinates"), // {lat: number, lng: number}
+  
+  // Business Info
+  businessType: text("business_type").notNull(), // "print_shop" | "bookstore" | "library" | "stationery"
+  establishedYear: integer("established_year"),
+  workingHours: jsonb("working_hours"), // {open: "09:00", close: "22:00", days: ["sunday", "monday"...]}
+  
+  // Services & Offerings
+  services: text("services").array(), // ["printing", "binding", "scanning", "design", "books", "stationery"]
+  specialties: text("specialties").array(), // ["textbooks", "exam_materials", "university_notes", "art_supplies"]
+  
+  // Media Gallery
+  galleryImages: text("gallery_images").array(), // Array of image URLs
+  videoUrl: text("video_url"), // Introduction video
+  
+  // Ratings & Reviews
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"), // Average rating
+  reviewCount: integer("review_count").default(0),
+  
+  // Operational Status
+  isActive: boolean("is_active").default(true),
+  isVerified: boolean("is_verified").default(false),
+  isFeatured: boolean("is_featured").default(false), // For homepage display
+  displayOrder: integer("display_order").default(0), // For sorting on homepage
+  
+  // Business Features
+  hasDelivery: boolean("has_delivery").default(false),
+  deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }),
+  minOrderForDelivery: decimal("min_order_for_delivery", { precision: 10, scale: 2 }),
+  acceptsOnlinePayment: boolean("accepts_online_payment").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const announcements = pgTable("announcements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
@@ -836,3 +886,12 @@ export const insertDriverLocationSchema = createInsertSchema(driverLocations).om
 
 export type Announcement = typeof announcements.$inferSelect;
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
+
+// Partners/Print Shops types
+export const insertPartnerSchema = createInsertSchema(partners).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPartner = z.infer<typeof insertPartnerSchema>;
+export type Partner = typeof partners.$inferSelect;

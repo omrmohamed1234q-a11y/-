@@ -1,4 +1,4 @@
-import { users, products, orders, printJobs, cartItems, drivers, announcements, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement } from "@shared/schema";
+import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
 
@@ -113,6 +113,14 @@ export interface IStorage {
   createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
   updateAnnouncement(id: string, updates: Partial<InsertAnnouncement>): Promise<Announcement>;
   deleteAnnouncement(id: string): Promise<boolean>;
+
+  // Partners operations
+  getFeaturedPartners(): Promise<Partner[]>;
+  getAllPartners(): Promise<Partner[]>;
+  getPartnerById(id: string): Promise<Partner | undefined>;
+  createPartner(partner: InsertPartner): Promise<Partner>;
+  updatePartner(id: string, updates: Partial<Partner>): Promise<Partner | undefined>;
+  deletePartner(id: string): Promise<boolean>;
 }
 
 // Global storage to persist across application lifecycle
@@ -1219,6 +1227,151 @@ class MemStorage implements IStorage {
       showOnHomepage: false,
       homepagePriority: 0,
       createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ];
+
+  private partners: Partner[] = [
+    {
+      id: 'partner-1',
+      name: 'مطبعة الألوان الحديثة',
+      description: 'مطبعة متخصصة في الطباعة عالية الجودة والتصميم الاحترافي. نخدم الطلاب والشركات منذ أكثر من 15 عاماً في قلب القاهرة.',
+      shortDescription: 'طباعة احترافية وتصميم في قلب القاهرة',
+      logoUrl: 'https://images.unsplash.com/photo-1611224923853-80b023f02d71?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
+      coverImageUrl: 'https://images.unsplash.com/photo-1586281010691-3aa4f8ffe2ee?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      phone: '02-25551234',
+      email: 'info@moderncolors.com',
+      address: 'شارع التحرير، وسط البلد',
+      city: 'القاهرة',
+      governorate: 'القاهرة',
+      coordinates: { lat: 30.0444, lng: 31.2357 },
+      businessType: 'print_shop',
+      establishedYear: 2008,
+      workingHours: { open: '08:00', close: '22:00', days: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'saturday'] },
+      services: ['printing', 'binding', 'design', 'scanning'],
+      specialties: ['textbooks', 'exam_materials', 'business_cards', 'posters'],
+      galleryImages: [
+        'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        'https://images.unsplash.com/photo-1586281010691-3aa4f8ffe2ee?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'
+      ],
+      videoUrl: null,
+      rating: '4.8',
+      reviewCount: 245,
+      isActive: true,
+      isVerified: true,
+      isFeatured: true,
+      displayOrder: 1,
+      hasDelivery: true,
+      deliveryFee: '15.00',
+      minOrderForDelivery: '50.00',
+      acceptsOnlinePayment: true,
+      createdAt: new Date('2023-01-15'),
+      updatedAt: new Date()
+    },
+    {
+      id: 'partner-2',
+      name: 'مكتبة النور للكتب التعليمية',
+      description: 'مكتبة شاملة تضم أحدث الكتب التعليمية والمراجع الدراسية لجميع المراحل التعليمية. نوفر كتب المناهج المصرية والدولية.',
+      shortDescription: 'كتب تعليمية ومراجع لجميع المراحل',
+      logoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
+      coverImageUrl: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      phone: '02-26661234',
+      email: 'contact@alnoor-books.com',
+      address: 'شارع الجامعة، المنيل',
+      city: 'القاهرة',
+      governorate: 'القاهرة',
+      coordinates: { lat: 30.0131, lng: 31.2289 },
+      businessType: 'bookstore',
+      establishedYear: 1995,
+      workingHours: { open: '09:00', close: '21:00', days: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] },
+      services: ['books', 'stationery', 'printing'],
+      specialties: ['textbooks', 'university_notes', 'reference_books', 'exam_materials'],
+      galleryImages: [
+        'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'
+      ],
+      videoUrl: null,
+      rating: '4.6',
+      reviewCount: 189,
+      isActive: true,
+      isVerified: true,
+      isFeatured: true,
+      displayOrder: 2,
+      hasDelivery: true,
+      deliveryFee: '20.00',
+      minOrderForDelivery: '100.00',
+      acceptsOnlinePayment: false,
+      createdAt: new Date('2023-01-20'),
+      updatedAt: new Date()
+    },
+    {
+      id: 'partner-3',
+      name: 'مطبعة الجامعة السريعة',
+      description: 'مطبعة متخصصة في خدمة الطلاب الجامعيين. طباعة سريعة للأبحاث والمشاريع وتجليد احترافي. متواجدون قريباً من الجامعات الرئيسية.',
+      shortDescription: 'طباعة سريعة للطلاب الجامعيين',
+      logoUrl: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
+      coverImageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      phone: '02-23331234',
+      email: 'info@university-print.com',
+      address: 'شارع قصر العيني، جامعة القاهرة',
+      city: 'الجيزة',
+      governorate: 'الجيزة',
+      coordinates: { lat: 30.0404, lng: 31.2080 },
+      businessType: 'print_shop',
+      establishedYear: 2012,
+      workingHours: { open: '07:00', close: '23:00', days: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'] },
+      services: ['printing', 'binding', 'scanning', 'photocopying'],
+      specialties: ['university_notes', 'research_papers', 'thesis_printing', 'presentations'],
+      galleryImages: [
+        'https://images.unsplash.com/photo-1541746972996-4e0b0f93e586?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'
+      ],
+      videoUrl: null,
+      rating: '4.4',
+      reviewCount: 156,
+      isActive: true,
+      isVerified: true,
+      isFeatured: true,
+      displayOrder: 3,
+      hasDelivery: false,
+      deliveryFee: '0.00',
+      minOrderForDelivery: '0.00',
+      acceptsOnlinePayment: true,
+      createdAt: new Date('2023-02-01'),
+      updatedAt: new Date()
+    },
+    {
+      id: 'partner-4',
+      name: 'مكتبة الأدوات المكتبية الشاملة',
+      description: 'أكبر متجر للأدوات المكتبية في المنطقة. نوفر جميع الأدوات المدرسية والجامعية من أقلام وأوراق وحقائب ومستلزمات الرسم.',
+      shortDescription: 'أدوات مكتبية ومدرسية شاملة',
+      logoUrl: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
+      coverImageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      phone: '02-24441234',
+      email: 'sales@office-supplies.com',
+      address: 'شارع فيصل، الهرم',
+      city: 'الجيزة',
+      governorate: 'الجيزة',
+      coordinates: { lat: 30.0131, lng: 31.1656 },
+      businessType: 'stationery',
+      establishedYear: 2000,
+      workingHours: { open: '08:30', close: '20:30', days: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] },
+      services: ['stationery', 'art_supplies', 'bags', 'calculators'],
+      specialties: ['school_supplies', 'art_supplies', 'bags', 'calculators'],
+      galleryImages: [
+        'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'
+      ],
+      videoUrl: null,
+      rating: '4.2',
+      reviewCount: 98,
+      isActive: true,
+      isVerified: false,
+      isFeatured: true,
+      displayOrder: 4,
+      hasDelivery: true,
+      deliveryFee: '25.00',
+      minOrderForDelivery: '150.00',
+      acceptsOnlinePayment: false,
+      createdAt: new Date('2023-02-15'),
       updatedAt: new Date()
     }
   ];
@@ -2708,6 +2861,58 @@ class MemStorage implements IStorage {
     
     console.warn(`⚠️ All priority slots 1-4 are taken, assigning priority 5 (will not display)`);
     return 5;
+  }
+
+  // ==================== PARTNERS OPERATIONS ====================
+
+  async getFeaturedPartners(): Promise<Partner[]> {
+    return this.partners.filter(partner => partner.isFeatured && partner.isActive)
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+  }
+
+  async getAllPartners(): Promise<Partner[]> {
+    return this.partners.filter(partner => partner.isActive)
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+  }
+
+  async getPartnerById(id: string): Promise<Partner | undefined> {
+    return this.partners.find(partner => partner.id === id);
+  }
+
+  async createPartner(partner: InsertPartner): Promise<Partner> {
+    const newPartner: Partner = {
+      id: `partner-${Date.now()}`,
+      ...partner,
+      rating: "0.00",
+      reviewCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.partners.push(newPartner);
+    console.log(`🤝 New partner created: ${newPartner.name}`);
+    return newPartner;
+  }
+
+  async updatePartner(id: string, updates: Partial<Partner>): Promise<Partner | undefined> {
+    const index = this.partners.findIndex(p => p.id === id);
+    if (index === -1) return undefined;
+    
+    this.partners[index] = {
+      ...this.partners[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    console.log(`🤝 Partner updated: ${id}`);
+    return this.partners[index];
+  }
+
+  async deletePartner(id: string): Promise<boolean> {
+    const index = this.partners.findIndex(p => p.id === id);
+    if (index === -1) return false;
+    
+    this.partners.splice(index, 1);
+    console.log(`🤝 Partner deleted: ${id}`);
+    return true;
   }
 }
 

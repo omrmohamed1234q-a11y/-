@@ -564,6 +564,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== PARTNERS ROUTES ====================
+
+  // Get featured partners for homepage
+  app.get('/api/partners/featured', async (req, res) => {
+    try {
+      const partners = await storage.getFeaturedPartners();
+      res.json(partners);
+    } catch (error) {
+      console.error('Error fetching featured partners:', error);
+      res.status(500).json({ error: 'Failed to fetch featured partners' });
+    }
+  });
+
+  // Get all partners
+  app.get('/api/partners', async (req, res) => {
+    try {
+      const partners = await storage.getAllPartners();
+      res.json(partners);
+    } catch (error) {
+      console.error('Error fetching partners:', error);
+      res.status(500).json({ error: 'Failed to fetch partners' });
+    }
+  });
+
+  // Get single partner by ID
+  app.get('/api/partners/:id', async (req, res) => {
+    try {
+      const partner = await storage.getPartnerById(req.params.id);
+      if (!partner) {
+        return res.status(404).json({ error: 'Partner not found' });
+      }
+      res.json(partner);
+    } catch (error) {
+      console.error('Error fetching partner:', error);
+      res.status(500).json({ error: 'Failed to fetch partner' });
+    }
+  });
+
+  // Admin routes for partners management
+  app.get('/api/admin/partners', isAdminAuthenticated, async (req, res) => {
+    try {
+      const partners = await storage.getAllPartners();
+      res.json(partners);
+    } catch (error) {
+      console.error('Error fetching partners for admin:', error);
+      res.status(500).json({ error: 'Failed to fetch partners' });
+    }
+  });
+
+  app.post('/api/admin/partners', isAdminAuthenticated, async (req, res) => {
+    try {
+      const partner = await storage.createPartner(req.body);
+      res.status(201).json(partner);
+    } catch (error) {
+      console.error('Error creating partner:', error);
+      res.status(500).json({ error: 'Failed to create partner' });
+    }
+  });
+
+  app.put('/api/admin/partners/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const partner = await storage.updatePartner(req.params.id, req.body);
+      if (!partner) {
+        return res.status(404).json({ error: 'Partner not found' });
+      }
+      res.json(partner);
+    } catch (error) {
+      console.error('Error updating partner:', error);
+      res.status(500).json({ error: 'Failed to update partner' });
+    }
+  });
+
+  app.delete('/api/admin/partners/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deletePartner(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Partner not found' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting partner:', error);
+      res.status(500).json({ error: 'Failed to delete partner' });
+    }
+  });
+
+  // ==================== ANNOUNCEMENT ROUTES ====================
+
   // Public announcements routes
   app.get('/api/announcements', async (req, res) => {
     try {

@@ -16,6 +16,7 @@ import {
   Download, Upload, Sparkles, Layers, Target,
   Settings, Package, Users, Zap
 } from 'lucide-react';
+import { PartnersSection } from '@/components/PartnersSection';
 import { AnnouncementGrid } from '@/components/AnnouncementGrid';
 
 export default function Home() {
@@ -418,58 +419,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Carousel */}
-      <section className="px-4 max-w-4xl mx-auto mb-16">
-        <motion.h2 
-          className="text-3xl font-bold text-center text-gray-900 mb-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2 }}
-        >
-          ميزات متقدمة
-        </motion.h2>
-        
-        <div className="relative h-32 rounded-2xl overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeFeature}
-              className={`absolute inset-0 bg-gradient-to-r from-${features[activeFeature].color}-500 to-${features[activeFeature].color}-700 flex items-center justify-center`}
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.8 }}
-            >
-              <div className="text-center text-white">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  {(() => {
-                    const IconComponent = features[activeFeature].icon;
-                    return <IconComponent className="w-12 h-12 mx-auto mb-3" />;
-                  })()}
-                </motion.div>
-                <h3 className="text-xl font-bold mb-2">{features[activeFeature].title}</h3>
-                <p className="text-sm opacity-90">{features[activeFeature].description}</p>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-          
-          {/* Feature Indicators */}
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 space-x-reverse">
-            {features.map((_, index) => (
-              <button
-                key={index}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  index === activeFeature ? 'bg-white' : 'bg-white/40'
-                }`}
-                onClick={() => setActiveFeature(index)}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Partners Section */}
+      <PartnersSection />
 
       {/* Announcements Section */}
       <section className="px-6 max-w-7xl mx-auto mb-20">
