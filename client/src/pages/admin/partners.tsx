@@ -12,6 +12,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { Plus, Edit, Trash2, Eye, Star, MapPin, Phone, Building2, Shield, Truck, ArrowLeft } from 'lucide-react';
 import type { Partner } from '@shared/schema';
 import { PartnerForm } from '@/components/admin/PartnerForm';
+import { PartnerDetailsView } from '@/components/admin/PartnerDetailsView';
 
 export default function AdminPartners() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,6 +60,11 @@ export default function AdminPartners() {
   const handleView = (partner: Partner) => {
     setSelectedPartner(partner);
     setIsViewOpen(true);
+  };
+
+  const handleCloseView = () => {
+    setIsViewOpen(false);
+    setSelectedPartner(null);
   };
 
   const handleDelete = (partner: Partner) => {
@@ -294,143 +300,15 @@ export default function AdminPartners() {
         </DialogContent>
       </Dialog>
 
-      {/* Partner View Dialog */}
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>تفاصيل الشريك</DialogTitle>
-          </DialogHeader>
-          {selectedPartner && (
-            <div className="space-y-6">
-              {/* Header Info */}
-              <div className="flex items-start gap-4">
-                {selectedPartner.logoUrl && (
-                  <img 
-                    src={selectedPartner.logoUrl} 
-                    alt={selectedPartner.name}
-                    className="w-20 h-20 rounded-lg object-cover"
-                  />
-                )}
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold">{selectedPartner.name}</h3>
-                  <p className="text-gray-600 mt-1">{selectedPartner.shortDescription}</p>
-                  <div className="flex items-center gap-4 mt-2">
-                    <Badge className={getStatusColor(selectedPartner.isActive, selectedPartner.isVerified)}>
-                      {getStatusText(selectedPartner.isActive, selectedPartner.isVerified)}
-                    </Badge>
-                    <Badge variant="outline">
-                      {getBusinessTypeLabel(selectedPartner.businessType)}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              {/* Cover Image */}
-              {selectedPartner.coverImageUrl && (
-                <div className="aspect-video w-full rounded-lg overflow-hidden">
-                  <img 
-                    src={selectedPartner.coverImageUrl} 
-                    alt={`${selectedPartner.name} Cover`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-
-              {/* Details Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h4 className="font-semibold">معلومات الاتصال</h4>
-                  <div className="space-y-2">
-                    {selectedPartner.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-gray-400" />
-                        <span>{selectedPartner.phone}</span>
-                      </div>
-                    )}
-                    {selectedPartner.email && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-400">@</span>
-                        <span>{selectedPartner.email}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      <span>{selectedPartner.address}, {selectedPartner.city}, {selectedPartner.governorate}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-semibold">تفاصيل العمل</h4>
-                  <div className="space-y-2">
-                    <div>تأسس عام: {selectedPartner.establishedYear}</div>
-                    {selectedPartner.rating && Number(selectedPartner.rating) > 0 && (
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span>{Number(selectedPartner.rating).toFixed(1)} ({selectedPartner.reviewCount} تقييم)</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <span>التوصيل:</span>
-                      {selectedPartner.hasDelivery ? (
-                        <Badge variant="outline" className="text-green-600">
-                          متوفر ({selectedPartner.deliveryFee} جنيه)
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-gray-500">غير متوفر</Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Description */}
-              {selectedPartner.description && (
-                <div>
-                  <h4 className="font-semibold mb-2">وصف الشريك</h4>
-                  <p className="text-gray-700 leading-relaxed">{selectedPartner.description}</p>
-                </div>
-              )}
-
-              {/* Services & Specialties */}
-              {(selectedPartner.services && selectedPartner.services.length > 0) && (
-                <div>
-                  <h4 className="font-semibold mb-2">الخدمات المقدمة</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedPartner.services.map((service, idx) => (
-                      <Badge key={idx} variant="outline">
-                        {service === 'printing' && 'طباعة'}
-                        {service === 'binding' && 'تجليد'}
-                        {service === 'scanning' && 'مسح ضوئي'}
-                        {service === 'design' && 'تصميم'}
-                        {service === 'books' && 'كتب'}
-                        {service === 'stationery' && 'أدوات مكتبية'}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Gallery */}
-              {selectedPartner.galleryImages && selectedPartner.galleryImages.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-2">معرض الصور</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {selectedPartner.galleryImages.map((image, idx) => (
-                      <img 
-                        key={idx}
-                        src={image} 
-                        alt={`${selectedPartner.name} Gallery ${idx + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Partner View - Talabat Style */}
+      {isViewOpen && selectedPartner && (
+        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+          <PartnerDetailsView 
+            partner={selectedPartner} 
+            onClose={handleCloseView}
+          />
+        </div>
+      )}
     </div>
   );
 }
