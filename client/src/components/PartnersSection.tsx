@@ -288,7 +288,7 @@ export function PartnersSection() {
 
         {/* Partner Details View - Talabat Style */}
         {isViewOpen && selectedPartner && (
-          <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-white z-[9999] overflow-y-auto">
             <PartnerDetailsView 
               partner={selectedPartner} 
               onClose={handleCloseView}
