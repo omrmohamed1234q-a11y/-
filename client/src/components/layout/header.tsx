@@ -33,25 +33,25 @@ export default function Header() {
   return (
     <>
       <header className="bg-white shadow-paper sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-5">
+        <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Logo and App Name */}
             <Link href="/">
-              <div className="flex items-center space-x-3 space-x-reverse hover:opacity-80 transition-opacity">
+              <div className="flex items-center space-x-2 space-x-reverse hover:opacity-80 transition-opacity">
                 <LogoPresets.Navigation />
                 <div>
-                  <h1 className="text-xl font-bold text-primary">اطبعلي</h1>
+                  <h1 className="text-lg font-bold text-primary">اطبعلي</h1>
                   <p className="text-xs text-muted-foreground">منصة الطباعة الذكية</p>
                 </div>
               </div>
             </Link>
             
             {/* Navigation Icons */}
-            <div className="flex items-center space-x-4 space-x-reverse">
+            <div className="flex items-center space-x-3 space-x-reverse">
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="relative p-2"
+                className="relative p-1.5"
                 onClick={() => setIsCartOpen(true)}
                 data-testid="button-open-cart"
               >
@@ -69,7 +69,7 @@ export default function Header() {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="relative p-2"
+                className="relative p-1.5"
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                 data-testid="button-notifications"
               >
