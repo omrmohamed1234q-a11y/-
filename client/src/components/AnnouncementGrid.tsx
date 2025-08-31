@@ -27,9 +27,20 @@ interface Announcement {
 }
 
 export function AnnouncementGrid() {
+  console.log('🎯 AnnouncementGrid component mounted');
+  
   const { data: announcements = [], isLoading, error } = useQuery<Announcement[]>({
     queryKey: ['/api/announcements/homepage'],
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Debug logging
+  console.log('📊 AnnouncementGrid State:', {
+    isLoading,
+    error: error ? error.toString() : null,
+    announcements: announcements,
+    announcementsLength: announcements?.length,
+    queryKey: ['/api/announcements/homepage']
   });
 
   if (isLoading) {
@@ -65,9 +76,12 @@ export function AnnouncementGrid() {
 
   if (!announcements || announcements.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-500 dark:text-gray-400">
-          لا توجد إعلانات حالياً
+      <div className="text-center py-8 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-600 font-semibold">
+          لا توجد إعلانات حالياً (تم تحميل {announcements?.length || 0} إعلانات)
+        </p>
+        <p className="text-red-500 text-sm mt-2">
+          Debug: isLoading={isLoading.toString()}, error={error ? 'yes' : 'no'}
         </p>
       </div>
     );
