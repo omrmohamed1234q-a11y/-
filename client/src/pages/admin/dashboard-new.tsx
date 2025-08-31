@@ -145,6 +145,14 @@ export default function AdminDashboard() {
       count: 0
     },
     {
+      title: 'إدارة الإعلانات',
+      description: 'إنشاء وتحرير إعلانات الصفحة الرئيسية',
+      icon: Monitor,
+      link: '/admin/announcements',
+      color: 'indigo',
+      count: 0
+    },
+    {
       title: 'إدارة الكباتن',
       description: 'إدارة طاقم التوصيل وتتبع الأداء',
       icon: Truck,

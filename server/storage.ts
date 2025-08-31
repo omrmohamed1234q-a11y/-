@@ -1,4 +1,4 @@
-import { users, products, orders, printJobs, cartItems, drivers, type User, type Product, type Order, type PrintJob, type CartItem } from "@shared/schema";
+import { users, products, orders, printJobs, cartItems, drivers, announcements, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
 
@@ -104,6 +104,14 @@ export interface IStorage {
   getUserNotifications(userId: string): any[];
   markNotificationAsRead(notificationId: string): void;
   createNotification(data: any): any;
+
+  // Announcement operations
+  getAllAnnouncements(): Promise<Announcement[]>;
+  getActiveAnnouncements(): Promise<Announcement[]>;
+  getAnnouncement(id: string): Promise<Announcement | undefined>;
+  createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
+  updateAnnouncement(id: string, updates: Partial<InsertAnnouncement>): Promise<Announcement>;
+  deleteAnnouncement(id: string): Promise<boolean>;
 }
 
 // Global storage to persist across application lifecycle
@@ -1035,6 +1043,120 @@ export class DatabaseStorage implements IStorage {
 class MemStorage implements IStorage {
   private users: User[] = [];
   private cartItems: any[] = [];
+  private announcements: Announcement[] = [
+    {
+      id: 'ann-1',
+      title: 'خدمة الطباعة السريعة',
+      description: 'اطبع مستنداتك بجودة عالية خلال 15 دقيقة',
+      buttonText: 'اطبع الآن',
+      buttonAction: 'link',
+      buttonUrl: '/print',
+      imageUrl: 'https://images.unsplash.com/photo-1586281010691-3aa4f8ffe2ee?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+      position: 1,
+      isActive: true,
+      backgroundColor: '#2563eb',
+      textColor: '#ffffff',
+      category: 'service',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: 'ann-2',
+      title: 'المسح الضوئي الذكي',
+      description: 'امسح مستنداتك بتقنية OCR وحولها لنصوص قابلة للتحرير',
+      buttonText: 'ابدأ المسح',
+      buttonAction: 'link',
+      buttonUrl: '/scan',
+      imageUrl: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+      position: 2,
+      isActive: true,
+      backgroundColor: '#059669',
+      textColor: '#ffffff',
+      category: 'service',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: 'ann-3',
+      title: 'متجر المواد التعليمية',
+      description: 'كتب وأوراق عمل ومواد تعليمية جاهزة للطباعة',
+      buttonText: 'تسوق الآن',
+      buttonAction: 'link',
+      buttonUrl: '/store',
+      imageUrl: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+      position: 3,
+      isActive: true,
+      backgroundColor: '#dc2626',
+      textColor: '#ffffff',
+      category: 'service',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: 'ann-4',
+      title: 'عرض خاص - خصم 30%',
+      description: 'خصم على جميع خدمات الطباعة للعملاء الجدد',
+      buttonText: 'احصل على الخصم',
+      buttonAction: 'link',
+      buttonUrl: '/print?promo=NEW30',
+      imageUrl: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+      position: 4,
+      isActive: true,
+      backgroundColor: '#ea580c',
+      textColor: '#ffffff',
+      category: 'promotion',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: 'ann-5',
+      title: 'برنامج نقاط المكافآت',
+      description: 'اجمع نقاط مع كل طباعة واحصل على خصومات وهدايا',
+      buttonText: 'انضم الآن',
+      buttonAction: 'link',
+      buttonUrl: '/rewards',
+      imageUrl: 'https://images.unsplash.com/photo-1527385352018-3c26dd6c3916?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+      position: 5,
+      isActive: true,
+      backgroundColor: '#7c3aed',
+      textColor: '#ffffff',
+      category: 'announcement',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: 'ann-6',
+      title: 'خدمة التوصيل السريع',
+      description: 'توصيل مطبوعاتك لباب المنزل خلال ساعة واحدة',
+      buttonText: 'اطلب التوصيل',
+      buttonAction: 'link',
+      buttonUrl: '/print?delivery=fast',
+      imageUrl: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+      position: 6,
+      isActive: true,
+      backgroundColor: '#0891b2',
+      textColor: '#ffffff',
+      category: 'service',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: 'ann-6',
+      title: 'اطلب الدواء',
+      description: 'نشترب بالضغطة كل الأدوية اللي تحتاجها تستطيعها بسرعة وبدون عناء',
+      buttonText: 'Shop now',
+      buttonAction: 'link',
+      buttonUrl: '/products?category=pharmacy',
+      imageUrl: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80',
+      position: 6,
+      isActive: true,
+      backgroundColor: '#ff6b35',
+      textColor: '#ffffff',
+      category: 'service',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ];
   private products: Product[] = [
     {
       id: '1',
@@ -2353,6 +2475,57 @@ class MemStorage implements IStorage {
         ...updates
       };
     }
+  }
+
+  // Announcement operations
+  async getAllAnnouncements(): Promise<Announcement[]> {
+    return [...this.announcements].sort((a, b) => a.position - b.position);
+  }
+
+  async getActiveAnnouncements(): Promise<Announcement[]> {
+    return this.announcements
+      .filter(ann => ann.isActive)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  async getAnnouncement(id: string): Promise<Announcement | undefined> {
+    return this.announcements.find(ann => ann.id === id);
+  }
+
+  async createAnnouncement(announcementData: InsertAnnouncement): Promise<Announcement> {
+    const announcement: Announcement = {
+      id: Math.random().toString(36).substr(2, 9),
+      ...announcementData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.announcements.push(announcement);
+    return announcement;
+  }
+
+  async updateAnnouncement(id: string, updates: Partial<InsertAnnouncement>): Promise<Announcement> {
+    const index = this.announcements.findIndex(ann => ann.id === id);
+    if (index === -1) {
+      throw new Error('Announcement not found');
+    }
+    
+    this.announcements[index] = {
+      ...this.announcements[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    
+    return this.announcements[index];
+  }
+
+  async deleteAnnouncement(id: string): Promise<boolean> {
+    const index = this.announcements.findIndex(ann => ann.id === id);
+    if (index === -1) {
+      return false;
+    }
+    
+    this.announcements.splice(index, 1);
+    return true;
   }
 }
 

@@ -31,6 +31,7 @@ import StudentTeachers from "@/pages/student/teachers";
 import AdminUsers from "@/pages/admin/users";
 import AdminCoupons from "@/pages/admin/coupons";
 import AdminInquiries from "@/pages/admin/inquiries";
+import AdminAnnouncements from "@/pages/admin/announcements";
 import SimpleAnalytics from "@/pages/admin/simple-analytics";
 import OrdersManagement from "@/pages/admin/orders-management";
 import TestSignup from "@/pages/test-signup";
@@ -91,6 +92,7 @@ function Router() {
         <Route path="/admin/users" component={AdminUsers} />
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/inquiries" component={AdminInquiries} />
+        <Route path="/admin/announcements" component={AdminAnnouncements} />
         <Route path="/admin/reports" component={SimpleAnalytics} />
         <Route path="/admin/orders" component={OrdersManagement} />
         <Route path="/admin/drivers" component={DriversManagement} />
@@ -129,6 +131,7 @@ function Router() {
         <Route path="/admin/users" component={AdminUsers} />
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/inquiries" component={AdminInquiries} />
+        <Route path="/admin/announcements" component={AdminAnnouncements} />
         <Route path="/admin/orders" component={OrdersManagement} />
         <Route path="/admin/drivers" component={DriversManagement} />
         <Route path="/driver/login" component={DriverLogin} />

@@ -19,6 +19,7 @@ import {
   Users, PenTool, Monitor, Settings, Download,
   Upload, Sparkles, Layers, Target
 } from 'lucide-react';
+import { AnnouncementGrid } from '@/components/AnnouncementGrid';
 
 export default function Home() {
   const { user } = useAuth();
@@ -456,12 +457,22 @@ export default function Home() {
           </div>
         </motion.section>
 
+        {/* Announcements and Services */}
+        <motion.section 
+          className="space-y-6"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <AnnouncementGrid />
+        </motion.section>
+
         {/* User Stats */}
         <motion.section 
           className="grid grid-cols-2 md:grid-cols-4 gap-4"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
         >
           {[
             { label: 'نقاط البونص', value: user?.bountyPoints || 0, icon: Star, color: 'text-yellow-600', bg: 'bg-yellow-50' },

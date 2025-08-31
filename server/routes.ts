@@ -564,6 +564,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public announcements routes
+  app.get('/api/announcements', async (req, res) => {
+    try {
+      const announcements = await storage.getActiveAnnouncements();
+      res.json(announcements);
+    } catch (error) {
+      console.error("Error fetching announcements:", error);
+      res.status(500).json({ message: "Failed to fetch announcements" });
+    }
+  });
+
+  app.get('/api/announcements/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const announcement = await storage.getAnnouncement(id);
+      
+      if (!announcement) {
+        return res.status(404).json({ message: "Announcement not found" });
+      }
+      
+      res.json(announcement);
+    } catch (error) {
+      console.error("Error fetching announcement:", error);
+      res.status(500).json({ message: "Failed to fetch announcement" });
+    }
+  });
+
   // Cart routes
   app.get('/api/cart', requireAuth, async (req: any, res) => {
     try {
@@ -1691,6 +1718,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating cart item:', error);
       res.status(500).json({ message: 'Failed to update cart item' });
+    }
+  });
+
+  // Admin announcements endpoints
+  app.get('/api/admin/announcements', async (req, res) => {
+    try {
+      const announcements = await storage.getAllAnnouncements();
+      res.json(announcements);
+    } catch (error) {
+      console.error("Error fetching admin announcements:", error);
+      res.status(500).json({ message: "Failed to fetch announcements" });
+    }
+  });
+
+  app.post('/api/admin/announcements', async (req, res) => {
+    try {
+      const announcement = await storage.createAnnouncement(req.body);
+      res.json(announcement);
+    } catch (error) {
+      console.error("Error creating announcement:", error);
+      res.status(500).json({ message: "Failed to create announcement" });
+    }
+  });
+
+  app.put('/api/admin/announcements/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const announcement = await storage.updateAnnouncement(id, req.body);
+      res.json(announcement);
+    } catch (error) {
+      console.error("Error updating announcement:", error);
+      res.status(500).json({ message: "Failed to update announcement" });
+    }
+  });
+
+  app.delete('/api/admin/announcements/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteAnnouncement(id);
+      
+      if (success) {
+        res.json({ success: true, message: "Announcement deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Announcement not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting announcement:", error);
+      res.status(500).json({ message: "Failed to delete announcement" });
     }
   });
 

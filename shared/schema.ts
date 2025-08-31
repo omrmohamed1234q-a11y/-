@@ -23,6 +23,23 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const announcements = pgTable("announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  buttonText: text("button_text").notNull(),
+  buttonAction: text("button_action"), // "link" | "modal" | "action"
+  buttonUrl: text("button_url"),
+  imageUrl: text("image_url").notNull(),
+  position: integer("position").default(0), // For ordering
+  isActive: boolean("is_active").default(true),
+  backgroundColor: text("background_color").default("#ff6b35"), // Orange like talabat
+  textColor: text("text_color").default("#ffffff"),
+  category: text("category").default("service"), // "service" | "promotion" | "announcement"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -799,3 +816,12 @@ export const insertDriverLocationSchema = createInsertSchema(driverLocations).om
   id: true,
   timestamp: true,
 });
+
+export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
