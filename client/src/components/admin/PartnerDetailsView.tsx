@@ -222,12 +222,12 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
             </div>
           ) : (
             <div className={viewMode === 'grid' 
-              ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
               : "space-y-3"
             }>
               {filteredProducts.map((product) => (
                 <Card key={product.id} className={`group hover:shadow-md transition-shadow ${
-                  viewMode === 'list' ? 'flex flex-row' : ''
+                  viewMode === 'list' ? 'flex flex-row' : 'flex flex-col h-full'
                 }`}>
                   <div className={viewMode === 'list' ? 'w-24 h-24 flex-shrink-0' : 'aspect-square'}>
                     <div 
@@ -247,7 +247,7 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
                     </div>
                   </div>
                   
-                  <CardContent className={`p-3 ${viewMode === 'list' ? 'flex-1' : ''}`}>
+                  <CardContent className={`p-3 ${viewMode === 'list' ? 'flex-1' : 'flex-1 flex flex-col justify-between'}`}>
                     <div className="space-y-2">
                       <div className={viewMode === 'list' ? 'flex justify-between items-start' : ''}>
                         <h3 className="font-semibold text-sm line-clamp-2">{product.name}</h3>
@@ -267,27 +267,29 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
                       <p className="text-gray-600 text-xs line-clamp-2">
                         {product.description}
                       </p>
+                    </div>
+                    
+                    <div className={`mt-3 ${viewMode === 'list' ? 'flex justify-between items-center' : 'space-y-2'}`}>
+                      <div>
+                        <span className="text-lg font-bold text-primary">
+                          {product.price} ج
+                        </span>
+                        {product.stock && (
+                          <div className="text-xs text-gray-500">
+                            متوفر: {product.stock}
+                          </div>
+                        )}
+                      </div>
                       
-                      <div className={viewMode === 'list' ? 'flex justify-between items-center' : 'space-y-2'}>
-                        <div>
-                          <span className="text-lg font-bold text-primary">
-                            {product.price} ج
-                          </span>
-                          {product.stock && (
-                            <div className="text-xs text-gray-500">
-                              متوفر: {product.stock}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="outline" className="h-8 px-2" data-testid={`button-view-${product.id}`}>
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" className="h-8 px-2" data-testid={`button-add-cart-${product.id}`}>
-                            <ShoppingCart className="h-3 w-3" />
-                          </Button>
-                        </div>
+                      <div className="flex gap-2 w-full">
+                        <Button size="sm" variant="outline" className="h-9 px-3 flex-1" data-testid={`button-view-${product.id}`}>
+                          <Eye className="h-4 w-4 ml-1" />
+                          عرض
+                        </Button>
+                        <Button size="sm" className="h-9 px-3 flex-1" data-testid={`button-add-cart-${product.id}`}>
+                          <ShoppingCart className="h-4 w-4 ml-1" />
+                          إضافة
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
