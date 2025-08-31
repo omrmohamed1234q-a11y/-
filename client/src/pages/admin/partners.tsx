@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Plus, Edit, Trash2, Eye, Star, MapPin, Phone, Building2, Shield, Truck } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Star, MapPin, Phone, Building2, Shield, Truck, ArrowLeft } from 'lucide-react';
 import type { Partner } from '@shared/schema';
 import { PartnerForm } from '@/components/admin/PartnerForm';
 
@@ -19,6 +20,7 @@ export default function AdminPartners() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
 
   const { data: partners, isLoading } = useQuery({
     queryKey: ['/api/admin/partners'],
@@ -105,9 +107,20 @@ export default function AdminPartners() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">إدارة الشركاء</h1>
-          <p className="text-gray-600">إدارة المطابع والمكتبات الشريكة</p>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/admin')}
+            data-testid="button-back-to-admin"
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            العودة لوحة التحكم
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">إدارة الشركاء</h1>
+            <p className="text-gray-600">إدارة المطابع والمكتبات الشريكة</p>
+          </div>
         </div>
         <Button onClick={handleAdd} data-testid="button-add-partner">
           <Plus className="w-4 h-4 ml-2" />
