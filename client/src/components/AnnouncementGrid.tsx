@@ -27,20 +27,9 @@ interface Announcement {
 }
 
 export function AnnouncementGrid() {
-  console.log('🎯 AnnouncementGrid component mounted');
-  
   const { data: announcements = [], isLoading, error } = useQuery<Announcement[]>({
     queryKey: ['/api/announcements/homepage'],
     staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Debug logging
-  console.log('📊 AnnouncementGrid State:', {
-    isLoading,
-    error: error ? error.toString() : null,
-    announcements: announcements,
-    announcementsLength: announcements?.length,
-    queryKey: ['/api/announcements/homepage']
   });
 
   if (isLoading) {
@@ -76,12 +65,9 @@ export function AnnouncementGrid() {
 
   if (!announcements || announcements.length === 0) {
     return (
-      <div className="text-center py-8 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-600 font-semibold">
-          لا توجد إعلانات حالياً (تم تحميل {announcements?.length || 0} إعلانات)
-        </p>
-        <p className="text-red-500 text-sm mt-2">
-          Debug: isLoading={isLoading.toString()}, error={error ? 'yes' : 'no'}
+      <div className="text-center py-8">
+        <p className="text-gray-500 dark:text-gray-400">
+          لا توجد إعلانات حالياً
         </p>
       </div>
     );
@@ -146,18 +132,22 @@ export function AnnouncementGrid() {
             >
               <CardContent className="p-0 h-72 relative">
                 {/* Background Image with enhanced overlay */}
-                <div 
-                  className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-110"
-                  style={{
-                    backgroundImage: `url(${announcement.imageUrl})`,
-                  }}
-                />
+                {announcement.imageUrl && (
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-110"
+                    style={{
+                      backgroundImage: `url(${announcement.imageUrl})`,
+                    }}
+                  />
+                )}
                 
                 {/* Gradient overlay for better text readability */}
                 <div 
                   className="absolute inset-0 transition-all duration-300"
                   style={{
-                    background: `linear-gradient(135deg, ${announcement.backgroundColor || '#2563eb'}dd, ${announcement.backgroundColor || '#2563eb'}aa, transparent 70%)`
+                    background: announcement.imageUrl 
+                      ? `linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.4), transparent 60%)`
+                      : `linear-gradient(135deg, ${announcement.backgroundColor || '#2563eb'}, ${announcement.backgroundColor || '#2563eb'}dd)`
                   }}
                 />
                 

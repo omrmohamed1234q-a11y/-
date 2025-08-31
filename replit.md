@@ -35,6 +35,7 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Automated token refresh.
 
 ## Key Feature Specifications & Implementations
+- **Announcements & Articles System**: Complete homepage announcement display with priority-based ordering, beautiful UI with image overlays, category badges, and responsive grid layout. Admin interface for creating/managing announcements with homepage visibility controls and priority settings.
 - **Inquiry/Quotation Management**: Admin interface for communication, customer targeting (all, new, existing, grade-based), real-time Supabase Auth integration, and API endpoints for creation and response tracking.
 - **Admin & Teacher Management**: Comprehensive profile systems with role-based access control, detailed educational background tracking for teachers, phone number validation, and CRUD operations.
 - **Driver Management**: Complete driver authentication system with username-based login, status tracking (online/offline/busy), order-to-driver assignment, and performance metrics. Currently using MemStorage with DatabaseStorage implementation ready for Supabase integration.

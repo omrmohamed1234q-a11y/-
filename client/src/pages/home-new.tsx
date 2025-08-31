@@ -16,6 +16,7 @@ import {
   Download, Upload, Sparkles, Layers, Target,
   Settings, Package, Users, Zap
 } from 'lucide-react';
+import { AnnouncementGrid } from '@/components/AnnouncementGrid';
 
 export default function Home() {
   const { user } = useAuth();
@@ -466,6 +467,17 @@ export default function Home() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* Announcements Section */}
+      <section className="px-4 max-w-6xl mx-auto mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 2.0 }}
+        >
+          <AnnouncementGrid />
+        </motion.div>
       </section>
 
       {/* User Stats */}
