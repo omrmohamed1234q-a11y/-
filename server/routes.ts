@@ -575,6 +575,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Homepage announcements (must come before dynamic :id route)
+  app.get('/api/announcements/homepage', async (req, res) => {
+    try {
+      console.log("🏠 Fetching homepage announcements...");
+      const announcements = await storage.getHomepageAnnouncements();
+      console.log(`📢 Found ${announcements.length} homepage announcements`);
+      res.json(announcements);
+    } catch (error) {
+      console.error("Error fetching homepage announcements:", error);
+      res.status(500).json({ message: "Failed to fetch homepage announcements" });
+    }
+  });
+
   app.get('/api/announcements/:id', async (req, res) => {
     try {
       const { id } = req.params;
@@ -1721,16 +1734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public announcements for homepage (limited to 4 with priority)
-  app.get('/api/announcements/homepage', async (req, res) => {
-    try {
-      const announcements = await storage.getHomepageAnnouncements();
-      res.json(announcements);
-    } catch (error) {
-      console.error("Error fetching homepage announcements:", error);
-      res.status(500).json({ message: "Failed to fetch homepage announcements" });
-    }
-  });
+
 
   // Admin announcements endpoints
   app.get('/api/admin/announcements', async (req, res) => {
