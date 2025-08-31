@@ -773,6 +773,38 @@ export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).omit
   createdAt: true,
 });
 
+// Partner Products table - marketplace model where each partner manages their inventory
+export const partnerProducts = pgTable("partner_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  category: varchar("category").notNull(), // كتب، أدوات مكتبية، مطبوعات، etc.
+  subcategory: varchar("subcategory"), // فئة فرعية
+  imageUrl: varchar("image_url"),
+  inStock: boolean("in_stock").default(true),
+  quantity: integer("quantity").default(0),
+  unit: varchar("unit").default("قطعة"), // وحدة القياس
+  tags: text("tags").array(), // العلامات للبحث
+  featured: boolean("featured").default(false),
+  gradeLevel: varchar("grade_level"), // للكتب المدرسية
+  subject: varchar("subject"), // للكتب المدرسية
+  isbn: varchar("isbn"), // للكتب
+  publisher: varchar("publisher"), // للكتب
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPartnerProductSchema = createInsertSchema(partnerProducts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SelectPartnerProduct = typeof partnerProducts.$inferSelect;
+export type InsertPartnerProduct = z.infer<typeof insertPartnerProductSchema>;
+
 export const insertSystemAnalyticsSchema = createInsertSchema(systemAnalytics).omit({
   id: true,
   createdAt: true,

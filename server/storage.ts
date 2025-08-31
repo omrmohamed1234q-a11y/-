@@ -1,4 +1,4 @@
-import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner } from "@shared/schema";
+import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, partnerProducts, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
 
@@ -121,6 +121,14 @@ export interface IStorage {
   createPartner(partner: InsertPartner): Promise<Partner>;
   updatePartner(id: string, updates: Partial<Partner>): Promise<Partner | undefined>;
   deletePartner(id: string): Promise<boolean>;
+  
+  // Partner Products operations
+  getPartnerProducts(partnerId: string): Promise<SelectPartnerProduct[]>;
+  getAllPartnerProducts(): Promise<SelectPartnerProduct[]>;
+  createPartnerProduct(product: InsertPartnerProduct): Promise<SelectPartnerProduct>;
+  updatePartnerProduct(id: string, updates: Partial<InsertPartnerProduct>): Promise<SelectPartnerProduct>;
+  deletePartnerProduct(id: string): Promise<boolean>;
+  getPartnerProductsByCategory(partnerId: string, category: string): Promise<SelectPartnerProduct[]>;
 }
 
 // Global storage to persist across application lifecycle
@@ -2913,6 +2921,123 @@ class MemStorage implements IStorage {
     this.partners.splice(index, 1);
     console.log(`🤝 Partner deleted: ${id}`);
     return true;
+  }
+
+  // Partner Products operations - In-memory implementation
+  private partnerProducts: SelectPartnerProduct[] = [
+    {
+      id: 'pp-1',
+      partnerId: 'partner-1',
+      name: 'كتاب الرياضيات للصف الثالث الثانوي',
+      description: 'كتاب شامل لمنهج الرياضيات مع الحلول والتمارين',
+      price: '45.00',
+      category: 'كتب مدرسية',
+      subcategory: 'رياضيات',
+      imageUrl: 'https://images.unsplash.com/photo-1509228627152-72ae9ae6848d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      inStock: true,
+      quantity: 25,
+      unit: 'نسخة',
+      tags: ['رياضيات', 'ثانوية عامة', 'مراجعة'],
+      featured: true,
+      gradeLevel: 'الصف الثالث الثانوي',
+      subject: 'رياضيات',
+      isbn: '978-123456789',
+      publisher: 'دار المعارف',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: 'pp-2',
+      partnerId: 'partner-1',
+      name: 'أقلام جل ملونة - طقم 12 قلم',
+      description: 'طقم أقلام جل عالية الجودة بألوان زاهية',
+      price: '25.00',
+      category: 'أدوات مكتبية',
+      subcategory: 'أقلام',
+      imageUrl: 'https://images.unsplash.com/photo-1586952518485-11b180e92764?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      inStock: true,
+      quantity: 50,
+      unit: 'طقم',
+      tags: ['أقلام', 'ملونة', 'رسم'],
+      featured: false,
+      gradeLevel: null,
+      subject: null,
+      isbn: null,
+      publisher: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: 'pp-3',
+      partnerId: 'partner-2',
+      name: 'كتاب الفيزياء للصف الثاني الثانوي',
+      description: 'منهج الفيزياء المطور مع التجارب العملية',
+      price: '38.00',
+      category: 'كتب مدرسية',
+      subcategory: 'علوم',
+      imageUrl: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      inStock: true,
+      quantity: 30,
+      unit: 'نسخة',
+      tags: ['فيزياء', 'علوم', 'ثانوي'],
+      featured: true,
+      gradeLevel: 'الصف الثاني الثانوي',
+      subject: 'فيزياء',
+      isbn: '978-987654321',
+      publisher: 'دار الشروق',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ];
+
+  async getPartnerProducts(partnerId: string): Promise<SelectPartnerProduct[]> {
+    return this.partnerProducts.filter(p => p.partnerId === partnerId);
+  }
+
+  async getAllPartnerProducts(): Promise<SelectPartnerProduct[]> {
+    return [...this.partnerProducts];
+  }
+
+  async createPartnerProduct(productData: InsertPartnerProduct): Promise<SelectPartnerProduct> {
+    const newProduct: SelectPartnerProduct = {
+      id: `pp-${Date.now()}`,
+      ...productData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.partnerProducts.push(newProduct);
+    console.log(`📦 New partner product created: ${newProduct.name} for partner ${newProduct.partnerId}`);
+    return newProduct;
+  }
+
+  async updatePartnerProduct(id: string, updates: Partial<InsertPartnerProduct>): Promise<SelectPartnerProduct> {
+    const index = this.partnerProducts.findIndex(p => p.id === id);
+    if (index !== -1) {
+      this.partnerProducts[index] = { 
+        ...this.partnerProducts[index], 
+        ...updates, 
+        updatedAt: new Date() 
+      };
+      console.log(`📦 Partner product updated: ${id}`);
+      return this.partnerProducts[index];
+    }
+    throw new Error('Partner product not found');
+  }
+
+  async deletePartnerProduct(id: string): Promise<boolean> {
+    const index = this.partnerProducts.findIndex(p => p.id === id);
+    if (index !== -1) {
+      this.partnerProducts.splice(index, 1);
+      console.log(`📦 Partner product deleted: ${id}`);
+      return true;
+    }
+    return false;
+  }
+
+  async getPartnerProductsByCategory(partnerId: string, category: string): Promise<SelectPartnerProduct[]> {
+    return this.partnerProducts.filter(p => 
+      p.partnerId === partnerId && p.category === category
+    );
   }
 }
 

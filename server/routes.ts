@@ -649,6 +649,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== PARTNER PRODUCTS ROUTES ====================
+
+  // Get products by partner ID
+  app.get('/api/partners/:partnerId/products', async (req, res) => {
+    try {
+      const { partnerId } = req.params;
+      const products = await storage.getPartnerProducts(partnerId);
+      res.json(products);
+    } catch (error) {
+      console.error('Error fetching partner products:', error);
+      res.status(500).json({ error: 'Failed to fetch partner products' });
+    }
+  });
+
+  // Get all partner products (admin)
+  app.get('/api/admin/partner-products', isAdminAuthenticated, async (req, res) => {
+    try {
+      const products = await storage.getAllPartnerProducts();
+      res.json(products);
+    } catch (error) {
+      console.error('Error fetching all partner products:', error);
+      res.status(500).json({ error: 'Failed to fetch partner products' });
+    }
+  });
+
+  // Create partner product
+  app.post('/api/admin/partner-products', isAdminAuthenticated, async (req, res) => {
+    try {
+      const product = await storage.createPartnerProduct(req.body);
+      res.json(product);
+    } catch (error) {
+      console.error('Error creating partner product:', error);
+      res.status(500).json({ error: 'Failed to create partner product' });
+    }
+  });
+
+  // Update partner product
+  app.put('/api/admin/partner-products/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const product = await storage.updatePartnerProduct(req.params.id, req.body);
+      res.json(product);
+    } catch (error) {
+      console.error('Error updating partner product:', error);
+      res.status(500).json({ error: 'Failed to update partner product' });
+    }
+  });
+
+  // Delete partner product
+  app.delete('/api/admin/partner-products/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deletePartnerProduct(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Partner product not found' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting partner product:', error);
+      res.status(500).json({ error: 'Failed to delete partner product' });
+    }
+  });
+
+  // Get partner products by category
+  app.get('/api/partners/:partnerId/products/category/:category', async (req, res) => {
+    try {
+      const { partnerId, category } = req.params;
+      const products = await storage.getPartnerProductsByCategory(partnerId, category);
+      res.json(products);
+    } catch (error) {
+      console.error('Error fetching partner products by category:', error);
+      res.status(500).json({ error: 'Failed to fetch partner products by category' });
+    }
+  });
+
   // ==================== ANNOUNCEMENT ROUTES ====================
 
   // Public announcements routes

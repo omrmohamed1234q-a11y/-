@@ -11,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Package } from 'lucide-react';
 import type { Partner } from '@shared/schema';
+import { PartnerProductsSection } from './PartnerProductsSection';
 
 const partnerFormSchema = z.object({
   name: z.string().min(1, 'اسم الشريك مطلوب'),
@@ -139,20 +141,20 @@ export function PartnerForm({ partner, onSuccess, onCancel }: PartnerFormProps) 
         city: partner.city,
         governorate: partner.governorate,
         businessType: partner.businessType as any,
-        establishedYear: partner.establishedYear,
+        establishedYear: partner.establishedYear ?? 2020,
         services: partner.services || [],
         specialties: partner.specialties || [],
         galleryImages: partner.galleryImages || [],
         rating: partner.rating || '0.00',
-        reviewCount: partner.reviewCount || 0,
-        isActive: partner.isActive,
-        isVerified: partner.isVerified,
-        isFeatured: partner.isFeatured,
-        displayOrder: partner.displayOrder,
-        hasDelivery: partner.hasDelivery,
+        reviewCount: partner.reviewCount ?? 0,
+        isActive: partner.isActive ?? true,
+        isVerified: partner.isVerified ?? false,
+        isFeatured: partner.isFeatured ?? false,
+        displayOrder: partner.displayOrder ?? 1,
+        hasDelivery: partner.hasDelivery ?? false,
         deliveryFee: partner.deliveryFee || '0.00',
         minOrderForDelivery: partner.minOrderForDelivery || '0.00',
-        acceptsOnlinePayment: partner.acceptsOnlinePayment,
+        acceptsOnlinePayment: partner.acceptsOnlinePayment ?? false,
       });
       setSelectedServices(partner.services || []);
       setSelectedSpecialties(partner.specialties || []);
@@ -250,13 +252,31 @@ export function PartnerForm({ partner, onSuccess, onCancel }: PartnerFormProps) 
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>المعلومات الأساسية</CardTitle>
-          </CardHeader>
+    <div className="space-y-6">
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="details" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            تفاصيل الشريك
+          </TabsTrigger>
+          <TabsTrigger 
+            value="products" 
+            className="flex items-center gap-2"
+            disabled={!partner}
+          >
+            <Package className="h-4 w-4" />
+            المنتجات ({partner ? '...' : '0'})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>المعلومات الأساسية</CardTitle>
+                </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -736,5 +756,22 @@ export function PartnerForm({ partner, onSuccess, onCancel }: PartnerFormProps) 
         </div>
       </form>
     </Form>
+        </TabsContent>
+
+        <TabsContent value="products">
+          {partner ? (
+            <PartnerProductsSection 
+              partnerId={partner.id} 
+              partnerName={partner.name}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>يجب حفظ الشريك أولاً لإدارة المنتجات</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
