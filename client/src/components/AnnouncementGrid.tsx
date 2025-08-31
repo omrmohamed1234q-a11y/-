@@ -27,7 +27,7 @@ interface Announcement {
 }
 
 export function AnnouncementGrid() {
-  const { data: announcements = [], isLoading, error } = useQuery({
+  const { data: announcements = [], isLoading, error } = useQuery<Announcement[]>({
     queryKey: ['/api/announcements/homepage'],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
