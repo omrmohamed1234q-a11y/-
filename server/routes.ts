@@ -3268,67 +3268,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get driver by username, email, and driver code
-      const driver = await storage.getSecureDriverByCredentials(username, email, driverCode);
+      // Get driver from Memory Storage
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const driver = await memorySecurityStorage.validateUserCredentials(username, email, password, driverCode);
       
-      if (!driver) {
-        await logSecurityEvent('unknown', 'driver', 'failed_login', false, req, 'Driver not found');
+      if (!driver || driver.role !== 'driver') {
+        // Log failed attempt to memory storage
+        await memorySecurityStorage.createSecurityLog({
+          user_id: 'unknown',
+          action: 'محاولة دخول سائق فاشلة',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          success: false,
+          timestamp: new Date(),
+          details: `Username: ${username}, Email: ${email}, DriverCode: ${driverCode}`
+        });
+        
         return res.status(401).json({
           success: false,
           message: 'بيانات الدخول غير صحيحة'
         });
       }
 
-      // Check if driver is locked
-      if (driver.lockedUntil && new Date() < driver.lockedUntil) {
-        await logSecurityEvent(driver.id, 'driver', 'failed_login', false, req, 'Account locked');
-        return res.status(423).json({
+      // Check if driver is active (from memory storage validation)
+      if (!driver.is_active) {
+        await memorySecurityStorage.createSecurityLog({
+          user_id: driver.id,
+          action: 'محاولة دخول لحساب غير نشط',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          message: 'الحساب محظور مؤقتاً'
+          timestamp: new Date()
         });
-      }
-
-      // Check if driver is active
-      if (!driver.isActive) {
-        await logSecurityEvent(driver.id, 'driver', 'failed_login', false, req, 'Account inactive');
+        
         return res.status(403).json({
           success: false,
           message: 'الحساب غير نشط'
         });
       }
 
-      // Verify password
-      if (!verifyPassword(password, driver.password)) {
-        // Increment failed attempts
-        const failedAttempts = (driver.failedAttempts || 0) + 1;
-        const lockUntil = failedAttempts >= 3 ? new Date(Date.now() + 15 * 60 * 1000) : null; // 15 minutes lock
-        
-        await storage.updateSecureDriver(driver.id, {
-          failedAttempts,
-          lockedUntil: lockUntil
-        });
-
-        await logSecurityEvent(driver.id, 'driver', 'failed_login', false, req, `Wrong password (attempt ${failedAttempts})`);
-        
-        return res.status(401).json({
-          success: false,
-          message: 'بيانات الدخول غير صحيحة'
-        });
-      }
-
-      // Successful login - reset failed attempts and update last login
-      await storage.updateSecureDriver(driver.id, {
-        failedAttempts: 0,
-        lockedUntil: null,
-        lastLogin: new Date(),
-        status: 'online'
-      });
+      // Password is already verified by validateUserCredentials
+      // Update driver last login in memory
+      await memorySecurityStorage.updateSecurityUserStatus(driver.id, true);
 
       // Generate secure token
       const token = generateSecureToken();
       
-      // Log successful login
-      await logSecurityEvent(driver.id, 'driver', 'successful_login', true, req);
+      // Log successful login to memory storage
+      await memorySecurityStorage.createSecurityLog({
+        user_id: driver.id,
+        action: 'تسجيل دخول سائق ناجح',
+        ip_address: req.ip || 'unknown',
+        user_agent: req.get('User-Agent') || 'unknown',
+        success: true,
+        timestamp: new Date(),
+        details: `Driver: ${driver.username} (${driver.driver_code})`
+      });
 
       res.json({
         success: true,
@@ -3337,14 +3332,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: driver.id,
           username: driver.username,
           email: driver.email,
-          fullName: driver.fullName,
-          driverCode: driver.driverCode,
-          phone: driver.phone,
-          vehicleType: driver.vehicleType,
-          vehiclePlate: driver.vehiclePlate,
-          status: 'online',
-          rating: driver.rating,
-          totalDeliveries: driver.totalDeliveries
+          fullName: driver.full_name,
+          driverCode: driver.driver_code,
+          vehicleType: driver.vehicle_type,
+          workingArea: driver.working_area,
+          status: 'online'
         }
       });
 
