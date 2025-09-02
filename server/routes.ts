@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { createClient } from '@supabase/supabase-js';
 import { supabaseSecurityStorage, checkSecurityTablesExist } from "./db-supabase";
+import { addSetupEndpoints } from "./setup-api";
 import bcrypt from 'bcrypt';
 
 // Global storage for notifications
@@ -97,6 +98,9 @@ import crypto from 'crypto';
 const GOOGLE_PAY_MERCHANT_ID = process.env.GOOGLE_PAY_MERCHANT_ID || 'merchant.com.atbaalee';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add setup and testing endpoints
+  addSetupEndpoints(app);
+  
   // User info endpoint - integrates with account API
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
