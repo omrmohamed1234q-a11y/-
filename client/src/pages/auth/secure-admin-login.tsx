@@ -9,16 +9,29 @@ import { Shield, Lock, Mail, User, AlertTriangle } from 'lucide-react';
 
 export default function SecureAdminLogin() {
   const [credentials, setCredentials] = useState({
-    username: '',
-    email: '',
+    username: 'testadmin',
+    email: 'admin@test.com',
     password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [attempts, setAttempts] = useState(0);
+  const [isBlocked, setIsBlocked] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isBlocked) {
+      setError('تم حظر المحاولات لمدة 5 دقائق بسبب المحاولات الكثيرة');
+      return;
+    }
+
+    if (!credentials.username || !credentials.email || !credentials.password) {
+      setError('جميع الحقول مطلوبة');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -28,31 +41,60 @@ export default function SecureAdminLogin() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(credentials),
+        body: JSON.stringify({
+          ...credentials,
+          clientInfo: {
+            userAgent: navigator.userAgent,
+            timestamp: new Date().toISOString(),
+            attempts: attempts + 1
+          }
+        }),
       });
 
       const result = await response.json();
 
       if (result.success) {
+        // Reset attempts on success
+        setAttempts(0);
+        
         toast({
-          title: "تم تسجيل الدخول بنجاح",
-          description: `مرحباً بك ${result.user.fullName}`
+          title: "✅ تم تسجيل الدخول بنجاح",
+          description: `مرحباً بك ${result.user.fullName} - الوصول الآمن مُفعَّل`
         });
         
-        // Store admin session
+        // Store admin session with security info
         localStorage.setItem('adminAuth', JSON.stringify({
           user: result.user,
-          loginTime: new Date().toISOString()
+          loginTime: new Date().toISOString(),
+          sessionToken: `admin_${Date.now()}`,
+          securityLevel: 'high'
         }));
         
+        // Clear credentials from memory
+        setCredentials({ username: '', email: '', password: '' });
+        
         // Redirect to admin dashboard
-        window.location.href = '/admin';
+        setTimeout(() => {
+          window.location.href = '/admin';
+        }, 1000);
       } else {
-        setError(result.message || 'بيانات الدخول غير صحيحة');
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        
+        if (newAttempts >= 3) {
+          setIsBlocked(true);
+          setError('🚫 تم حظر المحاولات لمدة 5 دقائق بسبب المحاولات الفاشلة المتكررة');
+          setTimeout(() => {
+            setIsBlocked(false);
+            setAttempts(0);
+          }, 300000); // 5 minutes
+        } else {
+          setError(`❌ ${result.message || 'بيانات الدخول غير صحيحة'} (المحاولة ${newAttempts}/3)`);
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.');
+      setError('🔴 خطأ في الاتصال بالخادم. حاول مرة أخرى.');
     } finally {
       setLoading(false);
     }

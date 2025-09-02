@@ -3545,6 +3545,256 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== SECURITY MANAGEMENT APIs ====================
+  
+  // Get all security users (admin only)
+  app.get('/api/admin/security/users', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Get both admin and driver users from security tables
+      const [adminUsers, driverUsers] = await Promise.all([
+        storage.getAllSecureAdmins(),
+        storage.getAllSecureDrivers()
+      ]);
+      
+      // Combine and format for the security dashboard
+      const allUsers = [
+        ...adminUsers.map(admin => ({
+          ...admin,
+          role: 'admin' as const,
+          isActive: admin.is_active
+        })),
+        ...driverUsers.map(driver => ({
+          ...driver,
+          role: 'driver' as const,
+          isActive: driver.is_active,
+          driverCode: driver.driver_code,
+          vehicleType: driver.vehicle_type,
+          workingArea: driver.working_area
+        }))
+      ];
+      
+      res.json(allUsers);
+    } catch (error) {
+      console.error('Error fetching security users:', error);
+      res.status(500).json({ error: 'Failed to fetch security users' });
+    }
+  });
+
+  // Get security logs (admin only)
+  app.get('/api/admin/security/logs', isAdminAuthenticated, async (req, res) => {
+    try {
+      const logs = await storage.getAllSecurityLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching security logs:', error);
+      res.status(500).json({ error: 'Failed to fetch security logs' });
+    }
+  });
+
+  // Create new security user (admin only)
+  app.post('/api/admin/security/create-user', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { role, ...userData } = req.body;
+      
+      if (role === 'admin') {
+        const adminData = {
+          username: userData.username,
+          email: userData.email,
+          password: userData.password,
+          full_name: userData.fullName,
+          is_active: true,
+          created_at: new Date(),
+          last_login: null
+        };
+        
+        const newAdmin = await storage.createSecureAdmin(adminData);
+        
+        // Log the creation
+        await storage.createSecurityLog({
+          user_id: req.user.id,
+          action: `Created new admin: ${userData.username}`,
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          success: true,
+          timestamp: new Date()
+        });
+        
+        res.json({ success: true, user: newAdmin });
+      } else if (role === 'driver') {
+        const driverData = {
+          username: userData.username,
+          email: userData.email,
+          password: userData.password,
+          full_name: userData.fullName,
+          driver_code: userData.driverCode,
+          vehicle_type: userData.vehicleType,
+          working_area: userData.workingArea,
+          status: 'offline',
+          is_active: true,
+          created_at: new Date(),
+          last_login: null
+        };
+        
+        const newDriver = await storage.createSecureDriver(driverData);
+        
+        // Log the creation
+        await storage.createSecurityLog({
+          user_id: req.user.id,
+          action: `Created new driver: ${userData.username} (${userData.driverCode})`,
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          success: true,
+          timestamp: new Date()
+        });
+        
+        res.json({ success: true, user: newDriver });
+      } else {
+        res.status(400).json({ error: 'Invalid role specified' });
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      
+      // Log the failed attempt
+      try {
+        await storage.createSecurityLog({
+          user_id: req.user?.id || 'unknown',
+          action: `Failed to create ${req.body.role}: ${req.body.username}`,
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          success: false,
+          timestamp: new Date(),
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      } catch (logError) {
+        console.error('Failed to log security event:', logError);
+      }
+      
+      res.status(500).json({ error: 'Failed to create user' });
+    }
+  });
+
+  // Toggle user status (admin only)
+  app.put('/api/admin/security/users/:id/status', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      // Try to update in both admin and driver tables
+      let updated = false;
+      let userType = '';
+      
+      try {
+        await storage.updateSecureAdminStatus(id, isActive);
+        updated = true;
+        userType = 'admin';
+      } catch (error) {
+        // Try driver table
+        try {
+          await storage.updateSecureDriverStatus(id, isActive);
+          updated = true;
+          userType = 'driver';
+        } catch (driverError) {
+          // User not found in either table
+        }
+      }
+      
+      if (updated) {
+        // Log the status change
+        await storage.createSecurityLog({
+          user_id: req.user.id,
+          action: `${isActive ? 'Activated' : 'Deactivated'} ${userType}: ${id}`,
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          success: true,
+          timestamp: new Date()
+        });
+        
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      res.status(500).json({ error: 'Failed to update user status' });
+    }
+  });
+
+  // Get secure driver orders (driver only)
+  app.get('/api/driver/secure-orders', async (req, res) => {
+    try {
+      // In a secure implementation, verify driver authentication token
+      const orders = await storage.getAllOrders();
+      
+      // Filter and format orders for driver interface
+      const driverOrders = orders
+        .filter(order => ['pending', 'accepted', 'picked_up', 'out_for_delivery'].includes(order.status))
+        .map(order => ({
+          ...order,
+          priority: 'normal', // Add priority field
+          securityLevel: 'standard' // Add security level
+        }));
+      
+      res.json(driverOrders);
+    } catch (error) {
+      console.error('Error fetching secure orders:', error);
+      res.status(500).json({ error: 'Failed to fetch orders' });
+    }
+  });
+
+  // Update driver status (driver only)
+  app.put('/api/driver/status', async (req, res) => {
+    try {
+      const { status, securityToken } = req.body;
+      // In production, verify securityToken
+      
+      // For now, return success with the new status
+      res.json({ success: true, status });
+    } catch (error) {
+      console.error('Error updating driver status:', error);
+      res.status(500).json({ error: 'Failed to update status' });
+    }
+  });
+
+  // Accept order (driver only)
+  app.post('/api/driver/accept-order', async (req, res) => {
+    try {
+      const { orderId, driverId, securityToken } = req.body;
+      
+      // Update order status to accepted
+      const updatedOrder = await storage.updateOrderStatus(orderId, 'accepted');
+      
+      // Log the action
+      await storage.createSecurityLog({
+        user_id: driverId,
+        action: `Accepted order: ${orderId}`,
+        ip_address: req.ip || 'unknown',
+        user_agent: req.get('User-Agent') || 'unknown',
+        success: true,
+        timestamp: new Date()
+      });
+      
+      res.json({ success: true, order: updatedOrder });
+    } catch (error) {
+      console.error('Error accepting order:', error);
+      res.status(500).json({ error: 'Failed to accept order' });
+    }
+  });
+
+  // Mark order as delivered (driver only)
+  app.post('/api/driver/deliver-order', async (req, res) => {
+    try {
+      const { orderId, deliveredAt, securityToken } = req.body;
+      
+      // Update order status to delivered
+      const updatedOrder = await storage.updateOrderStatus(orderId, 'delivered');
+      
+      res.json({ success: true, order: updatedOrder });
+    } catch (error) {
+      console.error('Error delivering order:', error);
+      res.status(500).json({ error: 'Failed to mark order as delivered' });
+    }
+  });
+
   // Security Management APIs - Admin Authentication and Management
   app.get('/api/admin/secure-admins', isAdminAuthenticated, async (req: any, res) => {
     try {

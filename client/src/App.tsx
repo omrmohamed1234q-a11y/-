@@ -114,6 +114,16 @@ function Router() {
         <Route path="/admin/drivers" component={DriversManagement} />
         <Route path="/admin/partners" component={AdminPartners} />
         <Route path="/admin/security" component={SecurityManagement} />
+        <Route path="/admin/security-dashboard" component={() => {
+          // Dynamic import for security dashboard
+          const SecurityDashboard = require('@/pages/admin/security-dashboard').default;
+          return SecurityDashboard;
+        }} />
+        <Route path="/driver/secure-dashboard" component={() => {
+          // Dynamic import for secure driver dashboard
+          const SecureDriverDashboard = require('@/pages/driver/secure-driver-dashboard').default;
+          return SecureDriverDashboard;
+        }} />
         <Route path="/driver/login" component={DriverLogin} />
         <Route path="/driver/dashboard" component={DriverDashboard} />
         <Route path="/quick-access" component={QuickAccess} />
