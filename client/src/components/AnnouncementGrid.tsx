@@ -27,55 +27,55 @@ interface Announcement {
 }
 
 export function AnnouncementGrid() {
-  // Show static announcements without API calls to avoid errors
-  const announcements = [
-    {
-      id: '1',
-      title: 'خدمة الطباعة السريعة',
-      description: 'اطبع مستنداتك بجودة عالية وسرعة فائقة',
-      buttonText: 'اطلب الآن',
-      imageUrl: '',
-      position: 1,
-      isActive: true,
-      category: 'service',
-      backgroundColor: 'from-blue-500 to-purple-600'
-    },
-    {
-      id: '2',
-      title: 'عروض خاصة',
-      description: 'اشترك في باقاتنا الشهرية واحصل على خصومات رائعة',
-      buttonText: 'اشترك الآن',
-      imageUrl: '',
-      position: 2,
-      isActive: true,
-      category: 'offer',
-      backgroundColor: 'from-green-500 to-teal-600'
-    },
-    {
-      id: '3',
-      title: 'خدمة 24/7',
-      description: 'نعمل على مدار الساعة لخدمتك في أي وقت',
-      buttonText: 'تواصل معنا',
-      imageUrl: '',
-      position: 3,
-      isActive: true,
-      category: 'service',
-      backgroundColor: 'from-orange-500 to-red-600'
-    },
-    {
-      id: '4',
-      title: 'تطبيق الجوال',
-      description: 'حمّل تطبيقنا واحصل على تجربة أفضل',
-      buttonText: 'قريباً',
-      imageUrl: '',
-      position: 4,
-      isActive: true,
-      category: 'app',
-      backgroundColor: 'from-purple-500 to-pink-600'
-    }
-  ];
+  const { data: announcements = [], isLoading, error } = useQuery<Announcement[]>({
+    queryKey: ['/api/announcements/homepage'],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false, // Disable retries to prevent errors
+    enabled: false, // Temporarily disable API calls
+  });
 
-  // Static announcements display - no loading or error states needed
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="w-full">
+        <div className="text-center mb-8">
+          <div className="h-8 bg-gray-200 rounded-lg w-64 mx-auto mb-2 animate-pulse"></div>
+          <div className="h-4 bg-gray-100 rounded w-48 mx-auto animate-pulse"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="h-80 animate-pulse overflow-hidden">
+              <CardContent className="p-0 h-full">
+                <div className="bg-gray-200 dark:bg-gray-700 h-full rounded-xl"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state without logging repeatedly
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500 dark:text-gray-400">
+          تعذر تحميل الإعلانات
+        </p>
+      </div>
+    );
+  }
+
+  // Show empty state when no announcements
+  if (!announcements || announcements.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500 dark:text-gray-400">
+          لا توجد إعلانات حالياً
+        </p>
+      </div>
+    );
+  }
 
   const handleAnnouncementClick = (announcement: Announcement) => {
     // Check if it's an article
