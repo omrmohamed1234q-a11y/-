@@ -9,10 +9,10 @@ import { Truck, Lock, Mail, User, AlertTriangle, Hash } from 'lucide-react';
 
 export default function SecureDriverLogin() {
   const [credentials, setCredentials] = useState({
-    username: 'testdriver',
-    email: 'driver@test.com',
+    username: '',
+    email: '',
     password: '',
-    driverCode: 'DR001'
+    driverCode: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +37,7 @@ export default function SecureDriverLogin() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/driver-login', {
+      const response = await fetch('/api/auth/driver/secure-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,9 +77,9 @@ export default function SecureDriverLogin() {
         // Clear credentials from memory
         setCredentials({ username: '', email: '', password: '', driverCode: '' });
         
-        // Redirect to driver dashboard
+        // Redirect to secure driver control dashboard
         setTimeout(() => {
-          window.location.href = '/driver/dashboard';
+          window.location.href = '/driver/secure-dashboard';
         }, 1000);
       } else {
         const newAttempts = attempts + 1;
@@ -112,6 +112,15 @@ export default function SecureDriverLogin() {
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
             هذه منطقة آمنة للسائقين. يتم تسجيل جميع محاولات الدخول ومراقبتها.
+          </AlertDescription>
+        </Alert>
+
+        {/* Example Credentials */}
+        <Alert className="mb-6 border-blue-200 bg-blue-50">
+          <AlertDescription className="text-blue-800 text-sm">
+            <strong>مثال للاختبار:</strong><br/>
+            المستخدم: omar_driver | الإيميل: omar@driver.com<br/>
+            كلمة المرور: 123456 | كود السائق: OM001
           </AlertDescription>
         </Alert>
 
