@@ -20,7 +20,10 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
       const adminAuth = localStorage.getItem('adminAuth');
       const adminToken = localStorage.getItem('adminToken');
       
+      console.log('Checking admin auth:', { hasAuth: !!adminAuth, hasToken: !!adminToken });
+      
       if (!adminAuth || !adminToken) {
+        console.log('Missing admin auth or token');
         redirectToLogin();
         return;
       }
@@ -28,10 +31,15 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
       // Parse admin data
       const adminData = JSON.parse(adminAuth);
       
+      console.log('Admin data parsed:', adminData);
+      
       if (!adminData.admin || !adminData.token) {
+        console.log('Invalid admin data structure');
         redirectToLogin();
         return;
       }
+
+      console.log('Verifying token with server...');
 
       // Verify token with server
       const response = await fetch('/api/admin/verify-token', {
@@ -42,9 +50,13 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
         }
       });
 
+      console.log('Token verification response:', response.status);
+
       if (response.ok) {
+        console.log('Admin authentication successful');
         setIsAuthenticated(true);
       } else {
+        console.log('Token verification failed');
         // Token expired or invalid
         localStorage.removeItem('adminAuth');
         localStorage.removeItem('adminToken');

@@ -4162,6 +4162,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ====== ADMIN TOKEN VERIFICATION ======
+  app.get('/api/admin/verify-token', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const adminToken = req.headers['x-admin-token'] as string;
+      
+      if (!authHeader && !adminToken) {
+        return res.status(401).json({ success: false, message: 'No token provided' });
+      }
+
+      const token = authHeader?.replace('Bearer ', '') || adminToken;
+      
+      if (!token) {
+        return res.status(401).json({ success: false, message: 'Invalid token format' });
+      }
+
+      // Check token with memory security storage
+      const user = await memorySecurityStorage.getSecurityUserByToken(token);
+      
+      if (!user || !user.is_active || user.role !== 'admin') {
+        return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+      }
+
+      res.json({
+        success: true,
+        valid: true,
+        admin: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          fullName: user.full_name,
+          role: user.role
+        }
+      });
+
+    } catch (error) {
+      console.error('Token verification error:', error);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  });
+
   // ====== ADDITIONAL SECURITY DASHBOARD CRUD OPERATIONS ======
   
   // Update user
