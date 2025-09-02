@@ -434,6 +434,9 @@ export const cartItems = pgTable("cart_items", {
   userId: varchar("user_id").notNull().references(() => users.id),
   productId: varchar("product_id").notNull().references(() => products.id),
   quantity: integer("quantity").default(1),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  variant: text("variant"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
