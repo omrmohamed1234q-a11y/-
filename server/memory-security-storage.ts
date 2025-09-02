@@ -476,6 +476,17 @@ export class MemorySecurityStorage {
     };
   }
 
+  // Update user token
+  async updateSecurityUserToken(id: string, token: string): Promise<void> {
+    const userIndex = this.users.findIndex(user => user.id === id);
+    if (userIndex !== -1) {
+      this.users[userIndex].currentToken = token;
+      this.users[userIndex].last_login = new Date().toISOString();
+      this.saveDataToLocalFile();
+      await this.syncUserToSupabase(this.users[userIndex]);
+    }
+  }
+
   // Additional CRUD operations
   async getUserById(id: string): Promise<SecurityUser | null> {
     try {

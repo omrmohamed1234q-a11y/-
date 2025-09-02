@@ -33,7 +33,11 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
       
       console.log('Admin data parsed:', adminData);
       
-      if (!adminData.admin || !adminData.token) {
+      // Check for different data structures
+      const token = adminData.token || adminToken;
+      const hasValidAdmin = adminData.admin || adminData.user;
+      
+      if (!hasValidAdmin || !token) {
         console.log('Invalid admin data structure');
         redirectToLogin();
         return;
@@ -45,8 +49,8 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
       const response = await fetch('/api/admin/verify-token', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${adminData.token}`,
-          'x-admin-token': adminData.token
+          'Authorization': `Bearer ${token}`,
+          'x-admin-token': token
         }
       });
 

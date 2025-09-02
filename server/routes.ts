@@ -5,6 +5,10 @@ import { createClient } from '@supabase/supabase-js';
 import { supabaseSecurityStorage, checkSecurityTablesExist } from "./db-supabase";
 import { addSetupEndpoints } from "./setup-api";
 import bcrypt from 'bcrypt';
+import { MemorySecurityStorage } from './memory-security-storage';
+
+// Initialize memory security storage
+const memorySecurityStorage = new MemorySecurityStorage();
 
 // Global storage for notifications
 const globalNotificationStorage: any[] = [];
@@ -3260,6 +3264,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       admin.currentToken = token;
       admin.last_login = new Date().toISOString();
       
+      // Update token in memory storage
+      await memorySecurityStorage.updateSecurityUserToken(admin.id, token);
+      
       // Log successful login
       await logSecurityEvent(admin.id, 'admin', 'successful_login', true, req);
 
@@ -4179,7 +4186,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check token with memory security storage
+      const { memorySecurityStorage } = await import('./memory-security-storage');
       const user = await memorySecurityStorage.getSecurityUserByToken(token);
+      
+      console.log('🔍 Token verification:', { 
+        token: token.substring(0, 10) + '...', 
+        foundUser: !!user,
+        userRole: user?.role,
+        userActive: user?.is_active
+      });
       
       if (!user || !user.is_active || user.role !== 'admin') {
         return res.status(401).json({ success: false, message: 'Invalid or expired token' });
@@ -4420,57 +4435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   })();
 
-  // Admin token verification endpoint
-  app.get('/api/admin/verify-token', async (req, res) => {
-    try {
-      const authHeader = req.headers.authorization;
-      const adminToken = req.headers['x-admin-token'];
-      
-      if (!authHeader && !adminToken) {
-        return res.status(401).json({
-          success: false,
-          message: 'No token provided'
-        });
-      }
-      
-      const token = adminToken || (authHeader && authHeader.split(' ')[1]);
-      
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid token format'
-        });
-      }
-      
-      // Get admin by token from Memory Storage
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const admin = await memorySecurityStorage.getSecurityUserByToken(token);
-      
-      if (!admin) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid token'
-        });
-      }
-      
-      res.json({
-        success: true,
-        admin: {
-          id: admin.id,
-          username: admin.username,
-          email: admin.email,
-          fullName: admin.fullName,
-          role: admin.role
-        }
-      });
-    } catch (error) {
-      console.error('Token verification error:', error);
-      res.status(401).json({
-        success: false,
-        message: 'Token verification failed'
-      });
-    }
-  });
+
 
   // Apply API protection to all routes except public endpoints
   app.use('/api', protectAPI);
