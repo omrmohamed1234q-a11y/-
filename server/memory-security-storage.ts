@@ -39,53 +39,8 @@ export class MemorySecurityStorage {
   private logs: SecurityLog[] = [];
 
   constructor() {
-    // Initialize with default test accounts and load from Supabase
-    this.initializeDefaultAccounts();
+    // Load data from Supabase only - no test accounts
     this.loadDataFromSupabase();
-  }
-
-  private async initializeDefaultAccounts() {
-    try {
-      // Create default admin
-      const adminPasswordHash = await bcrypt.hash('testpass123', 10);
-      const defaultAdmin: SecurityUser = {
-        id: uuidv4(),
-        username: 'testadmin',
-        email: 'admin@test.com',
-        password_hash: adminPasswordHash,
-        full_name: 'مدير النظام',
-        role: 'admin',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      // Create default driver
-      const driverPasswordHash = await bcrypt.hash('driverpass123', 10);
-      const defaultDriver: SecurityUser = {
-        id: uuidv4(),
-        username: 'testdriver',
-        email: 'driver@test.com',
-        password_hash: driverPasswordHash,
-        full_name: 'سائق تجريبي',
-        role: 'driver',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        driver_code: 'DR001',
-        vehicle_type: 'دراجة نارية',
-        working_area: 'القاهرة'
-      };
-
-      this.users.push(defaultAdmin, defaultDriver);
-      console.log('✅ Default security accounts initialized');
-      
-      // Save to Supabase
-      await this.syncUserToSupabase(defaultAdmin);
-      await this.syncUserToSupabase(defaultDriver);
-    } catch (error) {
-      console.error('Error initializing default accounts:', error);
-    }
   }
 
   // Supabase Synchronization
@@ -113,29 +68,45 @@ export class MemorySecurityStorage {
 
       // Merge data from Supabase into memory, avoiding duplicates
       const supabaseUsers = [...(users || []), ...(drivers || [])];
+      
+      // Create a map to track unique usernames and keep only the latest version
+      const uniqueUsers = new Map<string, any>();
+      
       for (const dbUser of supabaseUsers) {
-        const existingUser = this.users.find(u => u.username === dbUser.username);
-        if (!existingUser) {
-          const memoryUser: SecurityUser = {
-            id: dbUser.id,
-            username: dbUser.username,
-            email: dbUser.email,
-            password_hash: dbUser.password_hash,
-            full_name: dbUser.full_name,
-            role: dbUser.role,
-            is_active: dbUser.is_active,
-            created_at: dbUser.created_at,
-            updated_at: dbUser.updated_at,
-            driver_code: dbUser.driver_code,
-            vehicle_type: dbUser.vehicle_type,
-            working_area: dbUser.working_area,
-            last_login: dbUser.last_login
-          };
-          this.users.push(memoryUser);
+        // Skip test accounts
+        if (dbUser.username === 'testadmin' || dbUser.username === 'testdriver') {
+          console.log(`🗑️ Skipping test account: ${dbUser.username}`);
+          continue;
+        }
+        
+        // Keep only the latest version of each user (by created_at)
+        const existing = uniqueUsers.get(dbUser.username);
+        if (!existing || new Date(dbUser.created_at) > new Date(existing.created_at)) {
+          uniqueUsers.set(dbUser.username, dbUser);
         }
       }
+      
+      // Add unique users to memory
+      for (const dbUser of uniqueUsers.values()) {
+        const memoryUser: SecurityUser = {
+          id: dbUser.id,
+          username: dbUser.username,
+          email: dbUser.email,
+          password_hash: dbUser.password_hash,
+          full_name: dbUser.full_name,
+          role: dbUser.role,
+          is_active: dbUser.is_active,
+          created_at: dbUser.created_at,
+          updated_at: dbUser.updated_at,
+          driver_code: dbUser.driver_code,
+          vehicle_type: dbUser.vehicle_type,
+          working_area: dbUser.working_area,
+          last_login: dbUser.last_login
+        };
+        this.users.push(memoryUser);
+      }
 
-      console.log(`✅ Loaded ${supabaseUsers.length} users from Supabase`);
+      console.log(`✅ Loaded ${uniqueUsers.size} unique users from Supabase (filtered out test accounts and duplicates)`);
     } catch (error) {
       console.log('⚠️ Supabase sync failed (using memory-only mode):', error.message);
     }
