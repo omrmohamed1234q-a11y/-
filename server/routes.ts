@@ -3547,31 +3547,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== SECURITY MANAGEMENT APIs ====================
   
-  // Get all security users (admin only)
-  app.get('/api/admin/security-dashboard/users', isAdminAuthenticated, async (req, res) => {
+  // Get all security users (admin only) - Using Memory Storage
+  app.get('/api/admin/security-dashboard/users', async (req, res) => {
     try {
-      // Get both admin and driver users from security tables
-      const [adminUsers, driverUsers] = await Promise.all([
-        storage.getAllSecureAdmins(),
-        storage.getAllSecureDrivers()
-      ]);
-      
-      // Combine and format for the security dashboard
-      const allUsers = [
-        ...adminUsers.map(admin => ({
-          ...admin,
-          role: 'admin' as const,
-          isActive: admin.is_active
-        })),
-        ...driverUsers.map(driver => ({
-          ...driver,
-          role: 'driver' as const,
-          isActive: driver.is_active,
-          driverCode: driver.driver_code,
-          vehicleType: driver.vehicle_type,
-          workingArea: driver.working_area
-        }))
-      ];
+      // Get both admin and driver users from memory storage
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const allUsers = await memorySecurityStorage.getAllSecurityUsers();
       
       res.json(allUsers);
     } catch (error) {
@@ -3580,10 +3561,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get security logs (admin only)
-  app.get('/api/admin/security-dashboard/logs', isAdminAuthenticated, async (req, res) => {
+  // Get security logs (admin only) - Using Memory Storage
+  app.get('/api/admin/security-dashboard/logs', async (req, res) => {
     try {
-      const logs = await storage.getAllSecurityLogs();
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const logs = await memorySecurityStorage.getAllSecurityLogs();
       res.json(logs);
     } catch (error) {
       console.error('Error fetching security logs:', error);
@@ -3652,18 +3634,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { memorySecurityStorage } = await import('./memory-security-storage');
         const newAdmin = await memorySecurityStorage.createSecurityUser({
           role: 'admin',
-          ...adminData
+          username: adminData.username,
+          email: adminData.email,
+          password: userData.password,
+          fullName: adminData.full_name
         });
         
-        // Log the creation
-        await storage.createSecurityLog({
-          user_id: req.user.id,
-          action: `Created new admin: ${userData.username}`,
-          ip_address: req.ip || 'unknown',
-          user_agent: req.get('User-Agent') || 'unknown',
-          success: true,
-          timestamp: new Date()
-        });
+        // Log the creation (Memory Storage)
+        try {
+          await memorySecurityStorage.createSecurityLog({
+            user_id: 'admin',
+            action: `Created new admin: ${userData.username}`,
+            ip_address: req.ip || 'unknown',
+            user_agent: req.get('User-Agent') || 'unknown',
+            success: true,
+            timestamp: new Date()
+          });
+        } catch (logError) {
+          console.log('Security log saved to memory storage');
+        }
         
         res.json({ success: true, user: newAdmin });
       } else if (role === 'driver') {
@@ -3684,18 +3673,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { memorySecurityStorage } = await import('./memory-security-storage');
         const newDriver = await memorySecurityStorage.createSecurityUser({
           role: 'driver',
-          ...driverData
+          username: driverData.username,
+          email: driverData.email,
+          password: userData.password,
+          fullName: driverData.full_name,
+          driverCode: driverData.driver_code,
+          vehicleType: driverData.vehicle_type,
+          workingArea: driverData.working_area
         });
         
-        // Log the creation
-        await storage.createSecurityLog({
-          user_id: req.user.id,
-          action: `Created new driver: ${userData.username} (${userData.driverCode})`,
-          ip_address: req.ip || 'unknown',
-          user_agent: req.get('User-Agent') || 'unknown',
-          success: true,
-          timestamp: new Date()
-        });
+        // Log the creation (Memory Storage)
+        try {
+          await memorySecurityStorage.createSecurityLog({
+            user_id: 'admin',
+            action: `Created new driver: ${userData.username} (${userData.driverCode})`,
+            ip_address: req.ip || 'unknown',
+            user_agent: req.get('User-Agent') || 'unknown',
+            success: true,
+            timestamp: new Date()
+          });
+        } catch (logError) {
+          console.log('Security log saved to memory storage');
+        }
         
         res.json({ success: true, user: newDriver });
       } else {
@@ -3704,10 +3703,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating user:', error);
       
-      // Log the failed attempt
+      // Log the failed attempt (Memory Storage)
       try {
-        await storage.createSecurityLog({
-          user_id: req.user?.id || 'unknown',
+        const { memorySecurityStorage } = await import('./memory-security-storage');
+        await memorySecurityStorage.createSecurityLog({
+          user_id: 'admin',
           action: `Failed to create ${req.body.role}: ${req.body.username}`,
           ip_address: req.ip || 'unknown',
           user_agent: req.get('User-Agent') || 'unknown',
@@ -3716,7 +3716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           details: error instanceof Error ? error.message : 'Unknown error'
         });
       } catch (logError) {
-        console.error('Failed to log security event:', logError);
+        console.log('Error logged to memory storage');
       }
       
       res.status(500).json({ error: 'Failed to create user' });

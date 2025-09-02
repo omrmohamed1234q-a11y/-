@@ -87,7 +87,7 @@ export class MemorySecurityStorage {
         username: userData.username,
         email: userData.email,
         password_hash: passwordHash,
-        full_name: userData.fullName,
+        full_name: userData.fullName || userData.full_name,
         role: userData.role,
         is_active: userData.isActive !== undefined ? userData.isActive : true,
         created_at: new Date().toISOString(),
@@ -119,8 +119,20 @@ export class MemorySecurityStorage {
     }
   }
 
-  async getAllSecurityUsers(): Promise<SecurityUser[]> {
-    return this.users;
+  async getAllSecurityUsers(): Promise<any[]> {
+    return this.users.map(user => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.full_name,
+      role: user.role,
+      isActive: user.is_active,
+      createdAt: user.created_at,
+      lastLogin: user.last_login,
+      driverCode: user.driver_code,
+      vehicleType: user.vehicle_type,
+      workingArea: user.working_area
+    }));
   }
 
   async getSecurityUsersByRole(role: 'admin' | 'driver'): Promise<SecurityUser[]> {
