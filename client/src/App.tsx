@@ -14,6 +14,7 @@ import Signup from "@/pages/auth/signup";
 import AdminSignup from "@/pages/auth/admin-signup";
 import AuthCallback from "@/pages/auth-callback";
 import SecureAdminLogin from "@/pages/auth/secure-admin-login";
+import SecureAdminLoginV2 from "@/pages/auth/secure-admin-login-v2";
 import SecureDriverLogin from "@/pages/auth/secure-driver-login";
 import Home from "@/pages/home-new";
 import Print from "@/pages/print";
@@ -123,8 +124,8 @@ function Router() {
         <Route path="/auth/callback" component={AuthCallback} />
         
         {/* Hidden secure routes - direct access only */}
-        <Route path="/admin/secure-login" component={SecureAdminLogin} />
-        <Route path="/secure-admin-login" component={SecureAdminLogin} />
+        <Route path="/admin/secure-login" component={SecureAdminLoginV2} />
+        <Route path="/secure-admin-login" component={SecureAdminLoginV2} />
         <Route path="/driver/secure-login" component={SecureDriverLogin} />
         <Route path="/secure-driver-login" component={SecureDriverLogin} />
         
