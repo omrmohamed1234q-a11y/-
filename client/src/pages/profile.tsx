@@ -30,67 +30,39 @@ interface UserProfile {
   memberSince: string;
 }
 
-// Mock data for demo
-const mockUserProfile: UserProfile = {
-  id: "user_123",
-  name: "أحمد محمد علي",
-  email: "ahmed.mohamed@example.com",
-  phone: "+20 1234567890",
-  address: "شارع النصر، المعادي، القاهرة",
-  birthDate: "1995-03-15",
-  gradeLevel: "جامعي",
-  age: 28,
-  profileImage: "/placeholder-avatar.jpg",
-  bountyPoints: 1250,
-  level: 5,
-  totalOrders: 23,
-  totalSpent: "3,450.00",
-  memberSince: "يناير 2023"
-};
-
-const mockOrders = [
-  {
-    id: "order_001",
-    orderNumber: "ORD-2024-001",
-    date: "2024-01-15",
-    status: "مكتمل",
-    total: "150.00",
-    items: ["طباعة ملفات PDF", "تصوير مستندات"]
-  },
-  {
-    id: "order_002", 
-    orderNumber: "ORD-2024-002",
-    date: "2024-01-10",
-    status: "قيد التجهيز",
-    total: "85.50",
-    items: ["مسح ضوئي", "طباعة ملونة"]
-  }
-];
-
 export default function Profile() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<Partial<UserProfile>>(mockUserProfile);
+  const [formData, setFormData] = useState<Partial<UserProfile>>({});
 
-  // Simulate loading state
-  const [isLoading, setIsLoading] = useState(true);
-  
+  // Fetch user profile data
+  const { data: userProfile, isLoading } = useQuery<UserProfile>({
+    queryKey: ['/api/profile'],
+    retry: false,
+  });
+
+  // Fetch user orders
+  const { data: userOrders = [] } = useQuery({
+    queryKey: ['/api/orders/user'],
+    retry: false,
+  });
+
   useEffect(() => {
-    // Simulate API call delay
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (userProfile) {
+      setFormData(userProfile);
+    }
+  }, [userProfile]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (updates: Partial<UserProfile>) => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return updates;
+      const response = await apiRequest('PUT', '/api/profile', updates);
+      if (!response.ok) {
+        throw new Error('فشل في تحديث الملف الشخصي');
+      }
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -98,6 +70,7 @@ export default function Profile() {
         description: "تم حفظ التغييرات بنجاح",
       });
       setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
     },
     onError: (error: Error) => {
       toast({
@@ -168,9 +141,9 @@ export default function Profile() {
           <CardContent className="p-6">
             <div className="flex items-center gap-6">
               <Avatar className="w-24 h-24">
-                <AvatarImage src={formData?.profileImage} />
+                <AvatarImage src={userProfile?.profileImage} />
                 <AvatarFallback className="text-2xl">
-                  {formData?.name?.charAt(0) || 'ع'}
+                  {userProfile?.name?.charAt(0) || 'ع'}
                 </AvatarFallback>
               </Avatar>
               

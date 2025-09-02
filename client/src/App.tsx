@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,8 +14,6 @@ import Signup from "@/pages/auth/signup";
 import AdminSignup from "@/pages/auth/admin-signup";
 import AuthCallback from "@/pages/auth-callback";
 import SecureAdminLogin from "@/pages/auth/secure-admin-login";
-import SecureAdminLoginV2 from "@/pages/auth/secure-admin-login-v2";
-import SimpleAdminLogin from "@/pages/auth/simple-admin-login";
 import SecureDriverLogin from "@/pages/auth/secure-driver-login";
 import Home from "@/pages/home-new";
 import Print from "@/pages/print";
@@ -59,29 +57,6 @@ import SecurityAccess from '@/pages/admin/security-access';
 import SecureDriverControl from '@/pages/driver/secure-driver-control';
 import MainAdmin from '@/pages/admin/main-admin';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
-
-// Admin redirect component for unauthorized access
-function AdminRedirect() {
-  const [, setLocation] = useLocation();
-  
-  useEffect(() => {
-    console.log('AdminRedirect: redirecting to /admin/secure-login');
-    // Add a small delay to ensure proper navigation
-    const timer = setTimeout(() => {
-      setLocation('/admin/secure-login');
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [setLocation]);
-  
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50">
-      <div className="text-center">
-        <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600">جاري التوجيه للصفحة الآمنة...</p>
-      </div>
-    </div>
-  );
-}
 
 
 function Router() {
@@ -129,104 +104,22 @@ function Router() {
         <Route path="/secure-admin-login" component={SecureAdminLogin} />
         <Route path="/driver/secure-login" component={SecureDriverLogin} />
         <Route path="/secure-driver-login" component={SecureDriverLogin} />
-        
-        {/* Admin routes - all redirect to secure login if not authenticated */}
-        <Route path="/admin">
-          {() => {
-            window.location.href = '/admin/secure-login';
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/profile">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/store">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/products">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin-products">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/teachers-corner">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/users">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/coupons">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/inquiries">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/announcements">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/reports">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/orders">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/partners">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/security">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/security-access">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
-        <Route path="/admin/security-dashboard">
-          {() => {
-            window.location.replace('/admin/secure-login');
-            return null;
-          }}
-        </Route>
+        <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+        <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
+        <Route path="/admin/store" component={() => <AdminProtectedRoute><AdminStore /></AdminProtectedRoute>} />
+        <Route path="/admin/products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
+        <Route path="/admin-products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
+        <Route path="/admin/teachers-corner" component={() => <AdminProtectedRoute><TeachersCorner /></AdminProtectedRoute>} />
+        <Route path="/admin/users" component={() => <AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
+        <Route path="/admin/coupons" component={() => <AdminProtectedRoute><AdminCoupons /></AdminProtectedRoute>} />
+        <Route path="/admin/inquiries" component={() => <AdminProtectedRoute><AdminInquiries /></AdminProtectedRoute>} />
+        <Route path="/admin/announcements" component={() => <AdminProtectedRoute><AdminAnnouncements /></AdminProtectedRoute>} />
+        <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
+        <Route path="/admin/orders" component={() => <AdminProtectedRoute><OrdersManagement /></AdminProtectedRoute>} />
+        <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
+        <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
+        <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
+        <Route path="/admin/security-dashboard" component={() => <AdminProtectedRoute><SecureSecurityDashboard /></AdminProtectedRoute>} />
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
 
         <Route path="/driver/dashboard" component={SecureDriverControl} />

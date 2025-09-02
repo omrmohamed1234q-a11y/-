@@ -10,8 +10,8 @@
       "is_active": true,
       "created_at": "2025-09-02T15:10:13.157Z",
       "updated_at": "2025-09-02T15:10:13.157Z",
-      "currentToken": "5624775817a330bd5712661a181173b850922b99c4cf81607c2f62c71ae2a3d9",
-      "last_login": "2025-09-02T16:37:55.139Z"
+      "currentToken": "73b37cee00fb7202f4c2c539c7d0b4f7f0504cea0c61f854a01d7eb2c628017d",
+      "last_login": "2025-09-02T15:39:05.610Z"
     },
     {
       "id": "1f625a42-ad3f-4b93-9e8d-218c6ae22866",
@@ -221,5 +221,5 @@
       "details": "Driver: ahmedd (OM001)"
     }
   ],
-  "lastSaved": "2025-09-02T16:37:55.139Z"
+  "lastSaved": "2025-09-02T15:43:02.191Z"
 }
