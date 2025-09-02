@@ -142,11 +142,31 @@ const ApiConnectionTest = () => {
                 
                 <Button 
                   variant="outline" 
-                  onClick={() => testEndpoint('test-setup')}
+                  onClick={() => testEndpoint('supabase-info')}
                   disabled={loading !== null}
                   size="sm"
                 >
-                  اختبار إعداد النظام
+                  فحص معلومات Supabase
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={() => testEndpoint('auto-create-tables-direct', 'POST')}
+                  disabled={loading !== null}
+                  size="sm"
+                  className="bg-green-50 text-green-700 border-green-200"
+                >
+                  🚀 إنشاء الجداول مباشرة
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={() => testEndpoint('auto-create-tables', 'POST')}
+                  disabled={loading !== null}
+                  size="sm"
+                  className="bg-blue-50 text-blue-700 border-blue-200"
+                >
+                  إنشاء الجداول (بديل)
                 </Button>
                 
                 <Button 
@@ -174,7 +194,9 @@ const ApiConnectionTest = () => {
         <div>
           <h3 className="text-xl font-semibold mb-4">نتائج الاختبارات</h3>
           <TestResult endpoint="test-connection" />
-          <TestResult endpoint="test-setup" />
+          <TestResult endpoint="supabase-info" />
+          <TestResult endpoint="auto-create-tables-direct" />
+          <TestResult endpoint="auto-create-tables" />
           <TestResult endpoint="create-test-accounts" />
         </div>
       </div>
@@ -186,13 +208,31 @@ const ApiConnectionTest = () => {
         <CardContent>
           <div className="space-y-4">
             <div>
-              <h4 className="font-semibold mb-2">1. إنشاء جداول Supabase:</h4>
-              <ul className="list-disc list-inside text-sm space-y-1 mr-4">
-                <li>اذهب إلى Supabase Dashboard</li>
-                <li>انتقل إلى SQL Editor</li>
-                <li>انسخ والصق محتوى ملف <code>supabase-schema.sql</code></li>
-                <li>اضغط "Run" لتنفيذ الكود</li>
-              </ul>
+              <h4 className="font-semibold mb-2">1. إنشاء جداول Supabase (طريقتان):</h4>
+              <div className="bg-green-50 p-3 rounded mb-2 border border-green-200">
+                <p className="font-medium text-green-800">🚀 الطريقة الأفضل (مولد SQL):</p>
+                <p className="text-sm text-green-700 mb-2">استخدم مولد الكود الجاهز</p>
+                <Button 
+                  size="sm" 
+                  onClick={() => window.open('/sql-generator', '_blank')}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  فتح مولد SQL
+                </Button>
+              </div>
+              <div className="bg-blue-50 p-3 rounded mb-2">
+                <p className="font-medium text-blue-800">⚡ تجربة التنفيذ التلقائي:</p>
+                <p className="text-sm text-blue-700">اضغط "إنشاء الجداول مباشرة" أعلاه (قد لا يعمل مع جميع إعدادات Supabase)</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded">
+                <p className="font-medium text-gray-800">📝 الطريقة اليدوية:</p>
+                <ul className="list-disc list-inside text-sm space-y-1 mr-4 text-gray-700">
+                  <li>اذهب إلى Supabase Dashboard</li>
+                  <li>انتقل إلى SQL Editor</li>
+                  <li>انسخ والصق محتوى ملف <code>supabase-schema.sql</code></li>
+                  <li>اضغط "Run" لتنفيذ الكود</li>
+                </ul>
+              </div>
             </div>
             
             <div>
@@ -210,6 +250,48 @@ const ApiConnectionTest = () => {
                 <li>سائق: <code>/secure-driver-login</code> (testdriver / driverpass123 / DR001)</li>
               </ul>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>أدوات مساعدة</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button 
+              variant="outline"
+              onClick={() => window.open('/sql-generator', '_blank')}
+              className="flex items-center gap-2 justify-start h-auto p-4"
+            >
+              <div className="text-left">
+                <div className="font-medium">مولد SQL</div>
+                <div className="text-sm text-gray-600">احصل على كود SQL جاهز</div>
+              </div>
+            </Button>
+            
+            <Button 
+              variant="outline"
+              onClick={() => window.open('/connectivity', '_blank')}
+              className="flex items-center gap-2 justify-start h-auto p-4"
+            >
+              <div className="text-left">
+                <div className="font-medium">لوحة المراقبة</div>
+                <div className="text-sm text-gray-600">راقب حالة الاتصالات</div>
+              </div>
+            </Button>
+            
+            <Button 
+              variant="outline"
+              onClick={() => window.open('https://supabase.com/dashboard', '_blank')}
+              className="flex items-center gap-2 justify-start h-auto p-4"
+            >
+              <div className="text-left">
+                <div className="font-medium">Supabase Dashboard</div>
+                <div className="text-sm text-gray-600">إدارة قاعدة البيانات</div>
+              </div>
+            </Button>
           </div>
         </CardContent>
       </Card>

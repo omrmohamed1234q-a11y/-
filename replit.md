@@ -49,6 +49,7 @@ Preferred communication style: Simple, everyday language.
 - **Product Management**: Comprehensive ProductForm with educational metadata fields (categories, subjects, grade levels, product types) and Cloudinary integration for product images.
 - **Coupon & Notification System**: Customer targeting (specific users, segments), per-customer usage limits, automated push notifications, and location-based targeting.
 - **Currency Standardization**: All currency references converted to Egyptian Pounds ("جنيه") across the platform, including payment forms, carts, checkout, and admin interfaces.
+- **Advanced API Integration & Testing Tools (Latest)**: Complete API connectivity testing infrastructure with automated Supabase table creation, SQL code generation, and comprehensive diagnostic tools. Features include real-time endpoint testing (/api-test), connectivity monitoring dashboard (/connectivity), and intelligent SQL generator (/sql-generator) with multiple creation methods (automated, direct API, and manual). Enhanced with troubleshooting guides, automated test account creation, and seamless integration testing workflows.
 
 # External Dependencies
 

@@ -51,6 +51,7 @@ import SecurityTest from "@/pages/security-test";
 import SetupComplete from "@/pages/setup-complete";
 import ApiConnectionTest from "@/pages/api-connection-test";
 import ConnectivityDashboard from "@/pages/connectivity-dashboard";
+import SQLGenerator from "@/pages/sql-generator";
 
 
 function Router() {
@@ -123,6 +124,7 @@ function Router() {
         <Route path="/setup-complete" component={SetupComplete} />
         <Route path="/api-test" component={ApiConnectionTest} />
         <Route path="/connectivity" component={ConnectivityDashboard} />
+        <Route path="/sql-generator" component={SQLGenerator} />
         <Route path="/article/:id" component={ArticlePage} />
         <Route path="/" component={EnhancedLanding} />
         <Route component={NotFound} />

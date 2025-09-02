@@ -1,5 +1,8 @@
 import type { Express } from "express";
 import { supabaseSecurityStorage, checkSecurityTablesExist } from "./db-supabase";
+import { supabaseSetup } from './supabase-auto-setup';
+import { supabaseDirectSetup } from './supabase-direct-setup';
+import { ManualSQLGenerator } from './manual-sql-generator';
 import bcrypt from 'bcrypt';
 
 export function addSetupEndpoints(app: Express) {
@@ -36,6 +39,134 @@ export function addSetupEndpoints(app: Express) {
     }
   });
   
+  // Auto-create tables via API (Direct Method)
+  app.post('/api/auto-create-tables-direct', async (req, res) => {
+    try {
+      console.log('🔧 Starting direct table creation...');
+      
+      const result = await supabaseDirectSetup.createSecurityTables();
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+          details: result.details
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message,
+          details: result.details
+        });
+      }
+    } catch (error) {
+      console.error('Error in auto-create-tables-direct:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إنشاء الجداول مباشرة',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Auto-create tables via API (Original Method)
+  app.post('/api/auto-create-tables', async (req, res) => {
+    try {
+      console.log('🔧 Starting automatic table creation...');
+      
+      const result = await supabaseSetup.createSecurityTables();
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+          details: result.details
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message,
+          details: result.details
+        });
+      }
+    } catch (error) {
+      console.error('Error in auto-create-tables:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إنشاء الجداول تلقائياً',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Check Supabase connection info
+  app.get('/api/supabase-info', async (req, res) => {
+    try {
+      const info = await supabaseSetup.getSupabaseInfo();
+      const tablesStatus = await supabaseSetup.checkTablesExist();
+      
+      res.json({
+        success: true,
+        connection: info,
+        tables: tablesStatus
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في فحص معلومات Supabase',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get SQL scripts for manual execution
+  app.get('/api/get-setup-sql', async (req, res) => {
+    try {
+      const { type = 'full' } = req.query;
+      
+      let sql = '';
+      let description = '';
+      
+      switch (type) {
+        case 'full':
+          sql = ManualSQLGenerator.getFullSetupSQL();
+          description = 'كود SQL كامل لإنشاء الجداول والحسابات التجريبية';
+          break;
+        case 'tables':
+          sql = ManualSQLGenerator.getTablesOnlySQL();
+          description = 'كود SQL لإنشاء الجداول فقط';
+          break;
+        case 'accounts':
+          sql = ManualSQLGenerator.getTestAccountsSQL();
+          description = 'كود SQL لإنشاء الحسابات التجريبية فقط';
+          break;
+        default:
+          sql = ManualSQLGenerator.getFullSetupSQL();
+          description = 'كود SQL كامل';
+      }
+      
+      res.json({
+        success: true,
+        type,
+        description,
+        sql,
+        instructions: [
+          'انسخ الكود SQL أدناه',
+          'اذهب إلى Supabase Dashboard',
+          'انتقل إلى SQL Editor',
+          'الصق الكود واضغط Run',
+          'تأكد من ظهور رسالة النجاح'
+        ]
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إنتاج كود SQL',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Create test accounts
   app.post('/api/create-test-accounts', async (req, res) => {
     try {
