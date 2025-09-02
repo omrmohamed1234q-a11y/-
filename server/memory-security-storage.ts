@@ -112,6 +112,7 @@ export class MemorySecurityStorage {
       });
 
       console.log(`✅ Created new ${userData.role}:`, newUser.username);
+      console.log(`🔑 Password for ${newUser.username}: ${userData.password}`);
       return newUser;
     } catch (error) {
       console.error('Error creating security user:', error);
@@ -221,6 +222,25 @@ export class MemorySecurityStorage {
     } catch (error) {
       console.error('Error validating credentials:', error);
       return null;
+    }
+  }
+
+  // Password Management
+  async resetUserPassword(username: string, newPassword: string): Promise<boolean> {
+    try {
+      const userIndex = this.users.findIndex(u => u.username === username);
+      if (userIndex === -1) return false;
+      
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      this.users[userIndex].password_hash = passwordHash;
+      this.users[userIndex].updated_at = new Date().toISOString();
+      
+      console.log(`🔑 Password reset for ${username}: ${newPassword}`);
+      
+      return true;
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      return false;
     }
   }
 

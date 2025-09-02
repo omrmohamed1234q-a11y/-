@@ -3537,6 +3537,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reset user password endpoint (admin only)
+  app.post('/api/admin/security-dashboard/reset-password', async (req, res) => {
+    try {
+      const { username, newPassword } = req.body;
+      
+      if (!username || !newPassword) {
+        return res.status(400).json({ error: 'Username and new password are required' });
+      }
+      
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const success = await memorySecurityStorage.resetUserPassword(username, newPassword);
+      
+      if (success) {
+        res.json({ success: true, message: 'Password reset successfully' });
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      res.status(500).json({ error: 'Failed to reset password' });
+    }
+  });
+
   // ==================== SECURITY MANAGEMENT APIs ====================
   
   // Get all security users (admin only) - Using Memory Storage
