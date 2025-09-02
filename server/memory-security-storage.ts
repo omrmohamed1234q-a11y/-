@@ -21,6 +21,7 @@ interface SecurityUser {
   vehicle_type?: string;
   working_area?: string;
   last_login?: string;
+  currentToken?: string;
 }
 
 interface SecurityLog {
@@ -237,6 +238,10 @@ export class MemorySecurityStorage {
     return this.users.find(user => 
       user.username === username && user.email === email
     );
+  }
+
+  async getSecurityUserByToken(token: string): Promise<SecurityUser | undefined> {
+    return this.users.find(user => user.currentToken === token);
   }
 
   async getSecurityUserById(id: string): Promise<SecurityUser | undefined> {

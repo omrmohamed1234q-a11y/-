@@ -3256,6 +3256,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate secure token
       const token = generateSecureToken();
       
+      // Save token to admin record for verification
+      admin.currentToken = token;
+      admin.last_login = new Date().toISOString();
+      
       // Log successful login
       await logSecurityEvent(admin.id, 'admin', 'successful_login', true, req);
 
@@ -4179,6 +4183,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Failed to initialize security system:', error);
     }
   })();
+
+  // Admin token verification endpoint
+  app.get('/api/admin/verify-token', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const adminToken = req.headers['x-admin-token'];
+      
+      if (!authHeader && !adminToken) {
+        return res.status(401).json({
+          success: false,
+          message: 'No token provided'
+        });
+      }
+      
+      const token = adminToken || (authHeader && authHeader.split(' ')[1]);
+      
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token format'
+        });
+      }
+      
+      // Get admin by token from Memory Storage
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const admin = await memorySecurityStorage.getSecurityUserByToken(token);
+      
+      if (!admin) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+      
+      res.json({
+        success: true,
+        admin: {
+          id: admin.id,
+          username: admin.username,
+          email: admin.email,
+          fullName: admin.fullName,
+          role: admin.role
+        }
+      });
+    } catch (error) {
+      console.error('Token verification error:', error);
+      res.status(401).json({
+        success: false,
+        message: 'Token verification failed'
+      });
+    }
+  });
 
   // Apply API protection to all routes except public endpoints
   app.use('/api', protectAPI);
