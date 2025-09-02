@@ -58,6 +58,24 @@ import SecureDriverControl from '@/pages/driver/secure-driver-control';
 import MainAdmin from '@/pages/admin/main-admin';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 
+// Admin redirect component for unauthorized access
+function AdminRedirect() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    setLocation('/admin/secure-login');
+  }, [setLocation]);
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50">
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">جاري التوجيه للصفحة الآمنة...</p>
+      </div>
+    </div>
+  );
+}
+
 
 function Router() {
   const { user, loading } = useAuth();
@@ -106,22 +124,22 @@ function Router() {
         <Route path="/secure-driver-login" component={SecureDriverLogin} />
         
         {/* Admin routes - all redirect to secure login if not authenticated */}
-        <Route path="/admin" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/profile" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/store" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/products" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin-products" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/teachers-corner" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/users" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/coupons" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/inquiries" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/announcements" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/reports" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/orders" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/partners" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/security" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/security-access" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
-        <Route path="/admin/security-dashboard" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin" component={AdminRedirect} />
+        <Route path="/admin/profile" component={AdminRedirect} />
+        <Route path="/admin/store" component={AdminRedirect} />
+        <Route path="/admin/products" component={AdminRedirect} />
+        <Route path="/admin-products" component={AdminRedirect} />
+        <Route path="/admin/teachers-corner" component={AdminRedirect} />
+        <Route path="/admin/users" component={AdminRedirect} />
+        <Route path="/admin/coupons" component={AdminRedirect} />
+        <Route path="/admin/inquiries" component={AdminRedirect} />
+        <Route path="/admin/announcements" component={AdminRedirect} />
+        <Route path="/admin/reports" component={AdminRedirect} />
+        <Route path="/admin/orders" component={AdminRedirect} />
+        <Route path="/admin/partners" component={AdminRedirect} />
+        <Route path="/admin/security" component={AdminRedirect} />
+        <Route path="/admin/security-access" component={AdminRedirect} />
+        <Route path="/admin/security-dashboard" component={AdminRedirect} />
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
 
         <Route path="/driver/dashboard" component={SecureDriverControl} />
