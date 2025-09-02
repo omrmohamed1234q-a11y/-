@@ -64,7 +64,11 @@ function AdminRedirect() {
   
   useEffect(() => {
     console.log('AdminRedirect: redirecting to /admin/secure-login');
-    setLocation('/admin/secure-login');
+    // Add a small delay to ensure proper navigation
+    const timer = setTimeout(() => {
+      setLocation('/admin/secure-login');
+    }, 100);
+    return () => clearTimeout(timer);
   }, [setLocation]);
   
   return (

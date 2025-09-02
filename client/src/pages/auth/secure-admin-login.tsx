@@ -9,6 +9,8 @@ import { Shield, Lock, Mail, User, AlertTriangle } from 'lucide-react';
 import { LocationTracker } from '@/components/LocationTracker';
 
 export default function SecureAdminLogin() {
+  console.log('SecureAdminLogin component loaded');
+  
   const [credentials, setCredentials] = useState({
     username: '',
     email: '',
