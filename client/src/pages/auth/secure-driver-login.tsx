@@ -52,7 +52,14 @@ export default function SecureDriverLogin() {
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('HTTP Error:', response.status, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
       const result = await response.json();
+      console.log('Login response:', result);
 
       if (result.success) {
         // Reset attempts on success
@@ -60,19 +67,21 @@ export default function SecureDriverLogin() {
         
         toast({
           title: "🚛 تم تسجيل الدخول بنجاح",
-          description: `مرحباً بك ${result.user.fullName} - كود السائق: ${result.user.driverCode}`
+          description: `مرحباً بك ${result.driver.fullName} - كود السائق: ${result.driver.driverCode}`
         });
         
         // Store driver session with security info
         localStorage.setItem('driverAuth', JSON.stringify({
-          user: result.user,
+          user: result.driver,
+          token: result.token,
           loginTime: new Date().toISOString(),
           sessionToken: `driver_${Date.now()}`,
           securityLevel: 'high'
         }));
         
         // Also store in driverData for compatibility
-        localStorage.setItem('driverData', JSON.stringify(result.user));
+        localStorage.setItem('driverData', JSON.stringify(result.driver));
+        localStorage.setItem('driverToken', result.token);
         
         // Clear credentials from memory
         setCredentials({ username: '', email: '', password: '', driverCode: '' });
@@ -98,7 +107,21 @@ export default function SecureDriverLogin() {
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError('🔴 خطأ في الاتصال بالخادم. حاول مرة أخرى.');
+      const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+      setError(`🔴 خطأ في الاتصال: ${errorMessage}`);
+      
+      // Count this as a failed attempt
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      
+      if (newAttempts >= 3) {
+        setIsBlocked(true);
+        setError('🚫 تم حظر المحاولات لمدة 5 دقائق بسبب الأخطاء المتكررة');
+        setTimeout(() => {
+          setIsBlocked(false);
+          setAttempts(0);
+        }, 300000); // 5 minutes
+      }
     } finally {
       setLoading(false);
     }
@@ -119,8 +142,8 @@ export default function SecureDriverLogin() {
         <Alert className="mb-6 border-blue-200 bg-blue-50">
           <AlertDescription className="text-blue-800 text-sm">
             <strong>مثال للاختبار:</strong><br/>
-            المستخدم: omar_driver | الإيميل: omar@driver.com<br/>
-            كلمة المرور: 123456 | كود السائق: OM001
+            المستخدم: ahmedd | الإيميل: omarr3loush@gmail.com<br/>
+            كلمة المرور: 123456 | كود السائق: 123456
           </AlertDescription>
         </Alert>
 
