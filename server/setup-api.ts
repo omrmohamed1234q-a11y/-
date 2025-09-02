@@ -6,6 +6,49 @@ import { ManualSQLGenerator } from './manual-sql-generator';
 import bcrypt from 'bcrypt';
 
 export function addSetupEndpoints(app: Express) {
+  // Basic connection test endpoint
+  app.get('/api/test-connection', async (req, res) => {
+    try {
+      res.json({
+        success: true,
+        message: 'خادم Express يعمل بشكل صحيح',
+        timestamp: new Date().toISOString(),
+        server: 'Express + TypeScript',
+        environment: process.env.NODE_ENV || 'development'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في اتصال الخادم',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test overall setup
+  app.get('/api/test-setup', async (req, res) => {
+    try {
+      const tablesExist = await checkSecurityTablesExist();
+      
+      res.json({
+        success: true,
+        message: 'تم فحص الإعداد بنجاح',
+        setup: {
+          securityTables: tablesExist,
+          supabaseUrl: !!process.env.SUPABASE_URL,
+          supabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+          nodeEnv: process.env.NODE_ENV || 'development'
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في فحص الإعداد',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Test if security tables exist
   app.get('/api/test-security-tables', async (req, res) => {
     try {
