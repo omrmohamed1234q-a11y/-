@@ -258,12 +258,13 @@ export default function SecureSecurityDashboard() {
               <p className="text-gray-600 mt-2">إدارة المديرين والسائقين ومراقبة النشاط الأمني</p>
               
               {/* معلومات Supabase */}
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="text-sm font-semibold text-blue-800 mb-2">معلومات حساب Supabase المربوط:</h3>
-                <div className="text-sm text-blue-700 space-y-1">
-                  <p><strong>معرف المشروع:</strong> rsvqqchuxajvqtpkxjtm</p>
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <h3 className="text-sm font-semibold text-green-800 mb-2">🔄 نظام التخزين المزدوج:</h3>
+                <div className="text-sm text-green-700 space-y-1">
+                  <p><strong>✓ تخزين محلي:</strong> سريع وموثوق (للأداء)</p>
+                  <p><strong>✓ تخزين Supabase:</strong> دائم ومتزامن (للأمان)</p>
+                  <p><strong>المشروع:</strong> rsvqqchuxajvqtpkxjtm</p>
                   <p><strong>الخادم:</strong> aws-0-us-east-1.pooler.supabase.com</p>
-                  <p><strong>الحالة:</strong> متصل ومتزامن مع التخزين المحلي</p>
                 </div>
               </div>
             </div>

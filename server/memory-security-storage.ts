@@ -1,5 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface SecurityUser {
   id: string;
@@ -33,8 +39,9 @@ export class MemorySecurityStorage {
   private logs: SecurityLog[] = [];
 
   constructor() {
-    // Initialize with default test accounts
+    // Initialize with default test accounts and load from Supabase
     this.initializeDefaultAccounts();
+    this.loadDataFromSupabase();
   }
 
   private async initializeDefaultAccounts() {
@@ -72,8 +79,120 @@ export class MemorySecurityStorage {
 
       this.users.push(defaultAdmin, defaultDriver);
       console.log('✅ Default security accounts initialized');
+      
+      // Save to Supabase
+      await this.syncUserToSupabase(defaultAdmin);
+      await this.syncUserToSupabase(defaultDriver);
     } catch (error) {
       console.error('Error initializing default accounts:', error);
+    }
+  }
+
+  // Supabase Synchronization
+  private async loadDataFromSupabase() {
+    try {
+      // Load users from Supabase
+      const { data: users, error: usersError } = await supabase
+        .from('secure_admins')
+        .select('*');
+      
+      if (usersError) {
+        console.log('⚠️ Could not load users from Supabase (this is normal on first run)');
+        return;
+      }
+
+      // Load drivers from Supabase
+      const { data: drivers, error: driversError } = await supabase
+        .from('secure_drivers')
+        .select('*');
+      
+      if (driversError) {
+        console.log('⚠️ Could not load drivers from Supabase (this is normal on first run)');
+        return;
+      }
+
+      // Merge data from Supabase into memory, avoiding duplicates
+      const supabaseUsers = [...(users || []), ...(drivers || [])];
+      for (const dbUser of supabaseUsers) {
+        const existingUser = this.users.find(u => u.username === dbUser.username);
+        if (!existingUser) {
+          const memoryUser: SecurityUser = {
+            id: dbUser.id,
+            username: dbUser.username,
+            email: dbUser.email,
+            password_hash: dbUser.password_hash,
+            full_name: dbUser.full_name,
+            role: dbUser.role,
+            is_active: dbUser.is_active,
+            created_at: dbUser.created_at,
+            updated_at: dbUser.updated_at,
+            driver_code: dbUser.driver_code,
+            vehicle_type: dbUser.vehicle_type,
+            working_area: dbUser.working_area,
+            last_login: dbUser.last_login
+          };
+          this.users.push(memoryUser);
+        }
+      }
+
+      console.log(`✅ Loaded ${supabaseUsers.length} users from Supabase`);
+    } catch (error) {
+      console.log('⚠️ Supabase sync failed (using memory-only mode):', error.message);
+    }
+  }
+
+  private async syncUserToSupabase(user: SecurityUser) {
+    try {
+      const tableName = user.role === 'admin' ? 'secure_admins' : 'secure_drivers';
+      
+      const { error } = await supabase
+        .from(tableName)
+        .upsert({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          password_hash: user.password_hash,
+          full_name: user.full_name,
+          role: user.role,
+          is_active: user.is_active,
+          created_at: user.created_at,
+          updated_at: user.updated_at,
+          driver_code: user.driver_code,
+          vehicle_type: user.vehicle_type,
+          working_area: user.working_area,
+          last_login: user.last_login
+        });
+
+      if (error) {
+        console.log(`⚠️ Failed to sync ${user.username} to Supabase:`, error.message);
+      } else {
+        console.log(`✅ Synced ${user.username} to Supabase`);
+      }
+    } catch (error) {
+      console.log(`⚠️ Supabase sync error for ${user.username}:`, error.message);
+    }
+  }
+
+  private async syncLogToSupabase(log: SecurityLog) {
+    try {
+      const { error } = await supabase
+        .from('security_logs')
+        .insert({
+          id: log.id,
+          user_id: log.user_id,
+          action: log.action,
+          ip_address: log.ip_address,
+          user_agent: log.user_agent,
+          success: log.success,
+          timestamp: log.timestamp,
+          details: log.details
+        });
+
+      if (error) {
+        console.log('⚠️ Failed to sync log to Supabase:', error.message);
+      }
+    } catch (error) {
+      console.log('⚠️ Supabase log sync error:', error.message);
     }
   }
 
@@ -100,6 +219,9 @@ export class MemorySecurityStorage {
       };
 
       this.users.push(newUser);
+      
+      // Sync to Supabase
+      await this.syncUserToSupabase(newUser);
       
       // Log the creation
       await this.createSecurityLog({
@@ -235,11 +357,32 @@ export class MemorySecurityStorage {
       this.users[userIndex].password_hash = passwordHash;
       this.users[userIndex].updated_at = new Date().toISOString();
       
+      // Sync to Supabase
+      await this.syncUserToSupabase(this.users[userIndex]);
+      
       console.log(`🔑 Password reset for ${username}: ${newPassword}`);
       
       return true;
     } catch (error) {
       console.error('Error resetting password:', error);
+      return false;
+    }
+  }
+
+  async updateUserStatus(userId: string, isActive: boolean): Promise<boolean> {
+    try {
+      const userIndex = this.users.findIndex(u => u.id === userId);
+      if (userIndex === -1) return false;
+      
+      this.users[userIndex].is_active = isActive;
+      this.users[userIndex].updated_at = new Date().toISOString();
+      
+      // Sync to Supabase
+      await this.syncUserToSupabase(this.users[userIndex]);
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating user status:', error);
       return false;
     }
   }
@@ -258,6 +401,9 @@ export class MemorySecurityStorage {
     };
 
     this.logs.push(log);
+    
+    // Sync to Supabase
+    await this.syncLogToSupabase(log);
 
     // Keep only last 1000 logs to prevent memory overflow
     if (this.logs.length > 1000) {
