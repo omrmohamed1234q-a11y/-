@@ -15,6 +15,7 @@ import AdminSignup from "@/pages/auth/admin-signup";
 import AuthCallback from "@/pages/auth-callback";
 import SecureAdminLogin from "@/pages/auth/secure-admin-login";
 import SecureAdminLoginV2 from "@/pages/auth/secure-admin-login-v2";
+import SimpleAdminLogin from "@/pages/auth/simple-admin-login";
 import SecureDriverLogin from "@/pages/auth/secure-driver-login";
 import Home from "@/pages/home-new";
 import Print from "@/pages/print";
@@ -124,13 +125,27 @@ function Router() {
         <Route path="/auth/callback" component={AuthCallback} />
         
         {/* Hidden secure routes - direct access only */}
-        <Route path="/admin/secure-login" component={SecureAdminLoginV2} />
-        <Route path="/secure-admin-login" component={SecureAdminLoginV2} />
-        <Route path="/driver/secure-login" component={SecureDriverLogin} />
-        <Route path="/secure-driver-login" component={SecureDriverLogin} />
+        <Route path="/admin/secure-login">
+          <SimpleAdminLogin />
+        </Route>
+        <Route path="/secure-admin-login">
+          <SimpleAdminLogin />
+        </Route>
+        <Route path="/driver/secure-login">
+          <SecureDriverLogin />
+        </Route>
+        <Route path="/secure-driver-login">
+          <SecureDriverLogin />
+        </Route>
         
         {/* Admin routes - all redirect to secure login if not authenticated */}
-        <Route path="/admin" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin">
+          {() => {
+            console.log('Redirecting /admin to /admin/secure-login');
+            window.location.href = '/admin/secure-login';
+            return <div>جاري التحويل...</div>;
+          }}
+        </Route>
         <Route path="/admin/profile">
           {() => {
             window.location.replace('/admin/secure-login');

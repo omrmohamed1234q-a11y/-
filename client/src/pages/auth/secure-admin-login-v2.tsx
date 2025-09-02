@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Shield, Lock, Mail, User, AlertTriangle } from 'lucide-react';
 
 export default function SecureAdminLoginV2() {
-  console.log('SecureAdminLoginV2 component loaded');
+  console.log('SecureAdminLoginV2 component loaded - RENDERED SUCCESSFULLY');
   
   const [credentials, setCredentials] = useState({
     username: '',
