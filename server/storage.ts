@@ -1066,6 +1066,264 @@ export class DatabaseStorage implements IStorage {
       return 0;
     }
   }
+
+  // Security System operations - Database implementation
+  async getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined> {
+    try {
+      const [admin] = await db
+        .select()
+        .from(secureAdmins)
+        .where(and(eq(secureAdmins.username, username), eq(secureAdmins.email, email)))
+        .limit(1);
+      return admin;
+    } catch (error) {
+      console.error('Error getting secure admin by credentials:', error);
+      return undefined;
+    }
+  }
+
+  async getSecureDriverByCredentials(username: string, email: string, driverCode?: string): Promise<any | undefined> {
+    try {
+      let query = db
+        .select()
+        .from(secureDrivers)
+        .where(and(eq(secureDrivers.username, username), eq(secureDrivers.email, email)));
+      
+      if (driverCode) {
+        query = query.where(eq(secureDrivers.driverCode, driverCode));
+      }
+      
+      const [driver] = await query.limit(1);
+      return driver;
+    } catch (error) {
+      console.error('Error getting secure driver by credentials:', error);
+      return undefined;
+    }
+  }
+
+  async createSecureAdmin(adminData: any): Promise<any> {
+    try {
+      const [newAdmin] = await db
+        .insert(secureAdmins)
+        .values({
+          ...adminData,
+          isActive: true,
+          failedAttempts: 0,
+          mustChangePassword: false,
+          sessionTimeout: 900,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      console.log(`🔐 New secure admin created: ${newAdmin.username}`);
+      return newAdmin;
+    } catch (error) {
+      console.error('Error creating secure admin:', error);
+      throw new Error('Failed to create secure admin');
+    }
+  }
+
+  async createSecureDriver(driverData: any): Promise<any> {
+    try {
+      const [newDriver] = await db
+        .insert(secureDrivers)
+        .values({
+          ...driverData,
+          isActive: true,
+          status: 'offline',
+          failedAttempts: 0,
+          totalDeliveries: 0,
+          rating: 5.0,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      console.log(`🚚 New secure driver created: ${newDriver.username}`);
+      return newDriver;
+    } catch (error) {
+      console.error('Error creating secure driver:', error);
+      throw new Error('Failed to create secure driver');
+    }
+  }
+
+  async updateSecureAdmin(id: string, updates: any): Promise<any> {
+    try {
+      const [updatedAdmin] = await db
+        .update(secureAdmins)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(secureAdmins.id, id))
+        .returning();
+      
+      if (!updatedAdmin) {
+        throw new Error('Secure admin not found');
+      }
+      
+      console.log(`🔐 Secure admin updated: ${id}`);
+      return updatedAdmin;
+    } catch (error) {
+      console.error('Error updating secure admin:', error);
+      throw new Error('Failed to update secure admin');
+    }
+  }
+
+  async updateSecureDriver(id: string, updates: any): Promise<any> {
+    try {
+      const [updatedDriver] = await db
+        .update(secureDrivers)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(secureDrivers.id, id))
+        .returning();
+      
+      if (!updatedDriver) {
+        throw new Error('Secure driver not found');
+      }
+      
+      console.log(`🚚 Secure driver updated: ${id}`);
+      return updatedDriver;
+    } catch (error) {
+      console.error('Error updating secure driver:', error);
+      throw new Error('Failed to update secure driver');
+    }
+  }
+
+  async getAllSecureAdmins(): Promise<any[]> {
+    try {
+      const admins = await db
+        .select({
+          id: secureAdmins.id,
+          username: secureAdmins.username,
+          email: secureAdmins.email,
+          fullName: secureAdmins.fullName,
+          role: secureAdmins.role,
+          permissions: secureAdmins.permissions,
+          isActive: secureAdmins.isActive,
+          lastLogin: secureAdmins.lastLogin,
+          createdAt: secureAdmins.createdAt
+        })
+        .from(secureAdmins)
+        .orderBy(desc(secureAdmins.createdAt));
+      
+      return admins;
+    } catch (error) {
+      console.error('Error getting all secure admins:', error);
+      return [];
+    }
+  }
+
+  async getAllSecureDrivers(): Promise<any[]> {
+    try {
+      const drivers = await db
+        .select({
+          id: secureDrivers.id,
+          username: secureDrivers.username,
+          email: secureDrivers.email,
+          fullName: secureDrivers.fullName,
+          driverCode: secureDrivers.driverCode,
+          phone: secureDrivers.phone,
+          vehicleType: secureDrivers.vehicleType,
+          vehiclePlate: secureDrivers.vehiclePlate,
+          isActive: secureDrivers.isActive,
+          status: secureDrivers.status,
+          lastLogin: secureDrivers.lastLogin,
+          rating: secureDrivers.rating,
+          totalDeliveries: secureDrivers.totalDeliveries,
+          createdAt: secureDrivers.createdAt
+        })
+        .from(secureDrivers)
+        .orderBy(desc(secureDrivers.createdAt));
+      
+      return drivers;
+    } catch (error) {
+      console.error('Error getting all secure drivers:', error);
+      return [];
+    }
+  }
+
+  async createSecurityLog(logData: any): Promise<any> {
+    try {
+      const [newLog] = await db
+        .insert(securityLogs)
+        .values({
+          ...logData,
+          createdAt: new Date()
+        })
+        .returning();
+      
+      return newLog;
+    } catch (error) {
+      console.error('Error creating security log:', error);
+      throw new Error('Failed to create security log');
+    }
+  }
+
+  async getSecurityLogs(options: any): Promise<any[]> {
+    try {
+      let query = db.select().from(securityLogs);
+      
+      if (options.userType) {
+        query = query.where(eq(securityLogs.userType, options.userType));
+      }
+      
+      if (options.action) {
+        query = query.where(eq(securityLogs.action, options.action));
+      }
+      
+      const logs = await query
+        .orderBy(desc(securityLogs.createdAt))
+        .limit(options.limit || 50);
+      
+      return logs;
+    } catch (error) {
+      console.error('Error getting security logs:', error);
+      return [];
+    }
+  }
+
+  // Initialize test accounts for security system
+  async initializeTestAccounts(): Promise<void> {
+    try {
+      // Check if test admin exists
+      const existingAdmin = await this.getSecureAdminByCredentials('testadmin', 'admin@test.com');
+      if (!existingAdmin) {
+        await this.createSecureAdmin({
+          username: 'testadmin',
+          email: 'admin@test.com',
+          password: 'hashed_testpass123',
+          fullName: 'مدير تجريبي',
+          role: 'admin',
+          permissions: ['read', 'write', 'admin']
+        });
+        console.log('🔐 Test admin account created in database');
+      }
+
+      // Check if test driver exists
+      const existingDriver = await this.getSecureDriverByCredentials('testdriver', 'driver@test.com', 'DR001');
+      if (!existingDriver) {
+        await this.createSecureDriver({
+          username: 'testdriver',
+          email: 'driver@test.com',
+          password: 'hashed_driverpass123',
+          driverCode: 'DR001',
+          fullName: 'سائق تجريبي',
+          phone: '1234567890',
+          licenseNumber: 'LIC123',
+          vehicleType: 'motorcycle',
+          vehiclePlate: 'ABC123'
+        });
+        console.log('🚚 Test driver account created in database');
+      }
+    } catch (error) {
+      console.error('Error initializing test accounts:', error);
+    }
+  }
 }
 
 // In-memory storage to bypass database connection issues
@@ -2837,4 +3095,4 @@ class MemStorage implements IStorage {
 
 // Use MemStorage temporarily due to database connection issues
 // Will switch to DatabaseStorage when database is ready
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

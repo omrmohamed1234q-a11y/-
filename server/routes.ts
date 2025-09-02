@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { createClient } from '@supabase/supabase-js';
+import { supabaseSecurityStorage, checkSecurityTablesExist } from "./db-supabase";
+import bcrypt from 'bcrypt';
 
 // Global storage for notifications
 const globalNotificationStorage: any[] = [];
@@ -3671,50 +3673,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: 'Username, email and password are required' });
       }
 
-      const admin = await storage.getSecureAdminByCredentials(username, email);
+      const admin = await supabaseSecurityStorage.getSecureAdminByCredentials(username, email);
       
       if (!admin) {
-        await storage.createSecurityLog({
-          userId: username,
-          userType: 'admin',
+        await supabaseSecurityStorage.createSecurityLog({
+          user_id: username,
+          user_type: 'admin',
           action: 'failed_login',
-          ipAddress: req.ip || 'unknown',
-          userAgent: req.get('User-Agent') || 'unknown',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          errorMessage: 'Admin not found'
+          error_message: 'Admin not found'
         });
         
         return res.status(401).json({ success: false, message: 'Invalid credentials' });
       }
 
-      if (admin.password !== `hashed_${password}`) {
-        await storage.createSecurityLog({
-          userId: admin.id,
-          userType: 'admin',
+      // Compare password using bcrypt
+      const isPasswordValid = await bcrypt.compare(password, admin.password);
+      if (!isPasswordValid) {
+        await supabaseSecurityStorage.createSecurityLog({
+          user_id: admin.id,
+          user_type: 'admin',
           action: 'failed_login',
-          ipAddress: req.ip || 'unknown',
-          userAgent: req.get('User-Agent') || 'unknown',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          errorMessage: 'Invalid password'
+          error_message: 'Invalid password'
         });
         
         return res.status(401).json({ success: false, message: 'Invalid credentials' });
       }
 
-      if (!admin.isActive) {
+      if (!admin.is_active) {
         return res.status(401).json({ success: false, message: 'Account is deactivated' });
       }
 
-      await storage.updateSecureAdmin(admin.id, { lastLogin: new Date() });
+      await supabaseSecurityStorage.updateSecureAdmin(admin.id, { last_login: new Date().toISOString() });
 
-      await storage.createSecurityLog({
-        userId: admin.id,
-        userType: 'admin',
+      await supabaseSecurityStorage.createSecurityLog({
+        user_id: admin.id,
+        user_type: 'admin',
         action: 'successful_login',
-        ipAddress: req.ip || 'unknown',
-        userAgent: req.get('User-Agent') || 'unknown',
+        ip_address: req.ip || 'unknown',
+        user_agent: req.get('User-Agent') || 'unknown',
         success: true,
-        errorMessage: null
+        error_message: null
       });
 
       res.json({ 
@@ -3722,7 +3726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: { 
           id: admin.id, 
           username: admin.username, 
-          fullName: admin.fullName, 
+          fullName: admin.full_name, 
           role: admin.role 
         } 
       });
@@ -3740,53 +3744,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: 'Username, email and password are required' });
       }
 
-      const driver = await storage.getSecureDriverByCredentials(username, email, driverCode);
+      const driver = await supabaseSecurityStorage.getSecureDriverByCredentials(username, email, driverCode);
       
       if (!driver) {
-        await storage.createSecurityLog({
-          userId: username,
-          userType: 'driver',
+        await supabaseSecurityStorage.createSecurityLog({
+          user_id: username,
+          user_type: 'driver',
           action: 'failed_login',
-          ipAddress: req.ip || 'unknown',
-          userAgent: req.get('User-Agent') || 'unknown',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          errorMessage: 'Driver not found'
+          error_message: 'Driver not found'
         });
         
         return res.status(401).json({ success: false, message: 'Invalid credentials' });
       }
 
-      if (driver.password !== `hashed_${password}`) {
-        await storage.createSecurityLog({
-          userId: driver.id,
-          userType: 'driver',
+      // Compare password using bcrypt
+      const isPasswordValid = await bcrypt.compare(password, driver.password);
+      if (!isPasswordValid) {
+        await supabaseSecurityStorage.createSecurityLog({
+          user_id: driver.id,
+          user_type: 'driver',
           action: 'failed_login',
-          ipAddress: req.ip || 'unknown',
-          userAgent: req.get('User-Agent') || 'unknown',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          errorMessage: 'Invalid password'
+          error_message: 'Invalid password'
         });
         
         return res.status(401).json({ success: false, message: 'Invalid credentials' });
       }
 
-      if (!driver.isActive) {
+      if (!driver.is_active) {
         return res.status(401).json({ success: false, message: 'Account is deactivated' });
       }
 
-      await storage.updateSecureDriver(driver.id, { 
-        lastLogin: new Date(),
+      await supabaseSecurityStorage.updateSecureDriver(driver.id, { 
+        last_login: new Date().toISOString(),
         status: 'online'
       });
 
-      await storage.createSecurityLog({
-        userId: driver.id,
-        userType: 'driver',
+      await supabaseSecurityStorage.createSecurityLog({
+        user_id: driver.id,
+        user_type: 'driver',
         action: 'successful_login',
-        ipAddress: req.ip || 'unknown',
-        userAgent: req.get('User-Agent') || 'unknown',
+        ip_address: req.ip || 'unknown',
+        user_agent: req.get('User-Agent') || 'unknown',
         success: true,
-        errorMessage: null
+        error_message: null
       });
 
       res.json({ 
@@ -3794,9 +3800,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: { 
           id: driver.id, 
           username: driver.username, 
-          fullName: driver.fullName, 
-          driverCode: driver.driverCode,
-          vehicleType: driver.vehicleType
+          fullName: driver.full_name, 
+          driverCode: driver.driver_code,
+          vehicleType: driver.vehicle_type
         } 
       });
     } catch (error) {
@@ -3806,6 +3812,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Initialize security system with Supabase on server start
+  (async () => {
+    try {
+      console.log('🔧 Initializing security system with Supabase...');
+      
+      // Check if tables exist first
+      const tablesExist = await checkSecurityTablesExist();
+      if (tablesExist) {
+        // Tables exist, initialize test accounts
+        await supabaseSecurityStorage.initializeTestAccounts();
+        console.log('✅ Security system fully initialized with Supabase');
+      } else {
+        console.warn('⚠️ Security tables don\'t exist. Please create them in Supabase Dashboard first.');
+        console.log('📄 Use the SQL script in supabase-schema.sql to create the required tables.');
+      }
+    } catch (error) {
+      console.error('Failed to initialize security system:', error);
+    }
+  })();
+  
   return httpServer;
 }
 
