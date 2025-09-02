@@ -3591,8 +3591,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple endpoint for security dashboard
-  app.get('/api/admin/security/users', async (req, res) => {
+  // Security dashboard endpoint (replacing /admin/drivers)
+  app.get('/api/admin/security-dashboard/users', async (req, res) => {
     try {
       const { memorySecurityStorage } = await import('./memory-security-storage');
       const users = await memorySecurityStorage.getAllSecurityUsers();
@@ -3603,7 +3603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/security/logs', async (req, res) => {
+  app.get('/api/admin/security-dashboard/logs', async (req, res) => {
     try {
       const { memorySecurityStorage } = await import('./memory-security-storage');
       const logs = await memorySecurityStorage.getAllSecurityLogs();
@@ -3614,7 +3614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/admin/security/users/:id/status', async (req, res) => {
+  app.put('/api/admin/security-dashboard/users/:id/status', async (req, res) => {
     try {
       const { id } = req.params;
       const { isActive } = req.body;
@@ -3634,7 +3634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new security user (admin only)
-  app.post('/api/admin/security/create-user', async (req, res) => {
+  app.post('/api/admin/security-dashboard/create-user', async (req, res) => {
     try {
       const { role, ...userData } = req.body;
       

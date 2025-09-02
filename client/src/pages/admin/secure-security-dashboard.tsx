@@ -58,10 +58,10 @@ export default function SecureSecurityDashboard() {
   const fetchSecurityData = async () => {
     try {
       const [usersResponse, logsResponse] = await Promise.all([
-        fetch('/api/admin/security/users', {
+        fetch('/api/admin/security-dashboard/users', {
           headers: { 'Authorization': 'Bearer admin-token' }
         }),
-        fetch('/api/admin/security/logs', {
+        fetch('/api/admin/security-dashboard/logs', {
           headers: { 'Authorization': 'Bearer admin-token' }
         })
       ]);
@@ -107,7 +107,7 @@ export default function SecureSecurityDashboard() {
     }
 
     try {
-      const response = await fetch('/api/admin/security/create-user', {
+      const response = await fetch('/api/admin/security-dashboard/create-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -149,7 +149,7 @@ export default function SecureSecurityDashboard() {
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const response = await fetch(`/api/admin/security/users/${userId}/status`, {
+      const response = await fetch(`/api/admin/security-dashboard/users/${userId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

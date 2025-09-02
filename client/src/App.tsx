@@ -113,12 +113,11 @@ function Router() {
         <Route path="/admin/announcements" component={AdminAnnouncements} />
         <Route path="/admin/reports" component={SimpleAnalytics} />
         <Route path="/admin/orders" component={OrdersManagement} />
-        <Route path="/admin/drivers" component={SecureSecurityDashboard} />
         <Route path="/admin/partners" component={AdminPartners} />
         <Route path="/admin/security" component={SecurityManagement} />
         <Route path="/admin/security-dashboard" component={SecureSecurityDashboard} />
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
-        <Route path="/driver/login" component={DriverLogin} />
+
         <Route path="/driver/dashboard" component={SecureDriverControl} />
         <Route path="/quick-access" component={QuickAccess} />
 
