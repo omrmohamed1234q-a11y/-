@@ -10,8 +10,8 @@ import { LocationTracker } from '@/components/LocationTracker';
 
 export default function SecureAdminLogin() {
   const [credentials, setCredentials] = useState({
-    username: 'testadmin',
-    email: 'admin@test.com',
+    username: '',
+    email: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
@@ -148,14 +148,7 @@ export default function SecureAdminLogin() {
           </AlertDescription>
         </Alert>
 
-        {/* Example Credentials */}
-        <Alert className="mb-6 border-red-200 bg-red-50">
-          <AlertDescription className="text-red-800 text-sm">
-            <strong>مثال للاختبار:</strong><br/>
-            المستخدم: test_admin | الإيميل: admin@test.com<br/>
-            كلمة المرور: 123456
-          </AlertDescription>
-        </Alert>
+
 
         <Card className="shadow-2xl border-red-800 border-2 bg-slate-900 bg-opacity-95 backdrop-blur-lg">
           <CardHeader className="text-center space-y-4 bg-gradient-to-r from-red-900 to-red-800 text-white rounded-t-lg relative overflow-hidden">

@@ -149,14 +149,7 @@ export default function SecureDriverLogin() {
           </AlertDescription>
         </Alert>
 
-        {/* Example Credentials */}
-        <Alert className="mb-6 border-blue-200 bg-blue-50">
-          <AlertDescription className="text-blue-800 text-sm">
-            <strong>مثال للاختبار:</strong><br/>
-            المستخدم: ahmedd | الإيميل: omarr3loush@gmail.com<br/>
-            كلمة المرور: 123456 | كود السائق: 123456
-          </AlertDescription>
-        </Alert>
+
 
         <Card className="shadow-2xl border-blue-800 border-2 bg-slate-900 bg-opacity-95 backdrop-blur-lg">
           <CardHeader className="text-center space-y-4 bg-gradient-to-r from-blue-900 to-blue-800 text-white rounded-t-lg relative overflow-hidden">
