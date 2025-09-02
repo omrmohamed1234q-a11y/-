@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Lock, Mail, User, AlertTriangle } from 'lucide-react';
+import { LocationTracker } from '@/components/LocationTracker';
 
 export default function SecureAdminLogin() {
   const [credentials, setCredentials] = useState({
@@ -85,9 +86,9 @@ export default function SecureAdminLogin() {
         // Clear credentials from memory
         setCredentials({ username: '', email: '', password: '' });
         
-        // Redirect to secure admin dashboard
+        // Redirect to main admin dashboard
         setTimeout(() => {
-          window.location.href = '/admin/security-dashboard';
+          window.location.href = '/admin/dashboard';
         }, 1000);
       } else {
         const newAttempts = attempts + 1;
@@ -127,13 +128,23 @@ export default function SecureAdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-gray-100 flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-md">
-        {/* Security Warning */}
-        <Alert className="mb-6 border-amber-200 bg-amber-50">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800">
-            هذه منطقة آمنة. يتم تسجيل جميع محاولات الدخول ومراقبتها.
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-950 to-black flex items-center justify-center p-4" dir="rtl">
+      {/* Surveillance Pattern Background */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 2px 2px, #ff6b6b 1px, transparent 0)`,
+          backgroundSize: '50px 50px'
+        }}></div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* High Security Warning */}
+        <Alert className="mb-6 border-red-500 bg-red-950 bg-opacity-90 backdrop-blur-sm">
+          <AlertTriangle className="h-5 w-5 text-red-400" />
+          <AlertDescription className="text-red-200 font-medium">
+            🔒 منطقة حساسة - مراقبة مستمرة نشطة
+            <br />
+            <span className="text-red-300 text-xs">جميع الأنشطة مُسجلة ومُراقبة بواسطة الأمان الرقمي</span>
           </AlertDescription>
         </Alert>
 
@@ -146,19 +157,27 @@ export default function SecureAdminLogin() {
           </AlertDescription>
         </Alert>
 
-        <Card className="shadow-xl border-0">
-          <CardHeader className="text-center space-y-4 bg-red-600 text-white rounded-t-lg">
-            <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto">
-              <Shield className="w-8 h-8" />
+        <Card className="shadow-2xl border-red-800 border-2 bg-slate-900 bg-opacity-95 backdrop-blur-lg">
+          <CardHeader className="text-center space-y-4 bg-gradient-to-r from-red-900 to-red-800 text-white rounded-t-lg relative overflow-hidden">
+            {/* Animated Security Pattern */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute top-0 left-0 w-full h-full animate-pulse" style={{
+                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)'
+              }}></div>
             </div>
-            <CardTitle className="text-2xl font-bold">
-              دخول الإدارة المحمي
+            
+            <div className="w-20 h-20 bg-red-700 bg-opacity-30 rounded-full flex items-center justify-center mx-auto border-2 border-red-400 relative z-10">
+              <Shield className="w-10 h-10 text-red-200" />
+              <div className="absolute inset-0 rounded-full border-2 border-red-400 animate-ping"></div>
+            </div>
+            <CardTitle className="text-3xl font-bold relative z-10 text-shadow">
+              🛡️ لوحة الأمان العليا
             </CardTitle>
-            <p className="text-red-100 text-sm">
-              صفحة دخول آمنة للإدارة العليا فقط
+            <p className="text-red-100 text-sm relative z-10 font-medium">
+              مراكز القيادة والمراقبة الأمنية المتقدمة
             </p>
           </CardHeader>
-          <CardContent className="p-8">
+          <CardContent className="p-8 bg-slate-800 bg-opacity-50">
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
                 <Alert className="border-red-200 bg-red-50">
@@ -219,6 +238,15 @@ export default function SecureAdminLogin() {
                   data-testid="input-admin-password"
                 />
               </div>
+
+              {/* Location Tracker */}
+              <LocationTracker 
+                userType="admin"
+                onLocationUpdate={(location) => {
+                  console.log('Admin location updated:', location);
+                }}
+                autoStart={false}
+              />
 
               <Button
                 type="submit"
