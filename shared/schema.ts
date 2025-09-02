@@ -239,7 +239,8 @@ export const printJobs = pgTable("print_jobs", {
   pages: integer("pages").notNull(),
   copies: integer("copies").default(1),
   colorMode: text("color_mode").notNull(), // "color" | "grayscale"
-  paperSize: text("paper_size").default("A4"),
+  paperSize: text("paper_size").default("A4"), // "A4" | "A3"
+  paperType: text("paper_type").default("plain"), // "plain" | "glossy" | "matte" | "sticker"
   doubleSided: boolean("double_sided").default(false),
   status: text("status").notNull(), // "pending" | "printing" | "completed" | "failed"
   progress: integer("progress").default(0),

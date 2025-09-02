@@ -31,6 +31,8 @@ import { DragDropUpload } from '@/components/upload/DragDropUpload';
 import { uploadFile, validateFile, checkUploadServiceStatus } from '@/lib/upload-service';
 import { PDFProcessor } from '@/components/pdf/PDFProcessor';
 import { UploadStatus } from '@/components/upload/UploadStatus';
+import { PriceGuide } from '@/components/print/PriceGuide';
+import { calculate_price, convertLegacySettings } from '@/lib/pricing';
 
 export default function Print() {
   const { user } = useAuth();
@@ -42,6 +44,7 @@ export default function Print() {
     copies: 1,
     colorMode: 'grayscale',
     paperSize: 'A4',
+    paperType: 'plain',
     doubleSided: false,
     pages: 'all',
   });
@@ -107,11 +110,7 @@ export default function Print() {
         try {
           console.log(`📤 Uploading to Cloudinary: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
           
-          const result = await uploadFile(file, {
-            provider: 'cloudinary',
-            folder: 'print-jobs',
-            userId: user?.id || 'admin-user'
-          });
+          const result = await uploadFile(file);
           
           if (result.success && result.url) {
             console.log('✅ Cloudinary upload successful!');
@@ -203,6 +202,7 @@ export default function Print() {
         copies: printSettings.copies,
         colorMode: printSettings.colorMode,
         paperSize: printSettings.paperSize,
+        paperType: printSettings.paperType,
         doubleSided: printSettings.doubleSided,
         pageRange: printSettings.pages
       }));
@@ -217,6 +217,7 @@ export default function Print() {
         copies: 1,
         colorMode: 'grayscale',
         paperSize: 'A4',
+        paperType: 'plain',
         doubleSided: false,
         pages: 'all',
       });
@@ -231,11 +232,25 @@ export default function Print() {
   const calculateCost = () => {
     if (selectedFiles.length === 0) return 0;
     
-    const basePrice = printSettings.colorMode === 'color' ? 2 : 1;
-    const pages = selectedFiles.length * 10;
-    const total = pages * printSettings.copies * basePrice;
+    // Convert current settings to new pricing format
+    const pricingSettings = convertLegacySettings(printSettings);
     
-    return total;
+    // Calculate estimated pages (1 page per file for now, can be improved with PDF page detection)
+    const estimatedPages = selectedFiles.length;
+    
+    // Calculate price using professional pricing function
+    const pricingResult = calculate_price(
+      pricingSettings.paper_size,
+      pricingSettings.paper_type,
+      pricingSettings.print_type,
+      estimatedPages,
+      pricingSettings.is_black_white
+    );
+    
+    // Multiply by copies
+    const totalCost = pricingResult.finalPrice * printSettings.copies;
+    
+    return totalCost;
   };
 
   return (
@@ -331,11 +346,33 @@ export default function Print() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="A4">A4</SelectItem>
+                            <SelectItem value="A3">A3</SelectItem>
                             <SelectItem value="A5">A5</SelectItem>
                             <SelectItem value="Letter">Letter</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="paper-type">نوع الورق</Label>
+                      <Select
+                        value={printSettings.paperType}
+                        onValueChange={(value) => setPrintSettings({
+                          ...printSettings,
+                          paperType: value
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="plain">عادي (Plain)</SelectItem>
+                          <SelectItem value="glossy">لامع (Glossy)</SelectItem>
+                          <SelectItem value="matte">مطفي (Matte)</SelectItem>
+                          <SelectItem value="sticker">استيكر (Sticker)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     
                     <div>
@@ -374,14 +411,24 @@ export default function Print() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">التكلفة المتوقعة:</span>
                         <span className="text-xl font-bold text-accent arabic-nums">
-                          {calculateCost()} جنيه
+                          {calculateCost().toFixed(2)} جنيه
                         </span>
                       </div>
+                      {printSettings.colorMode === 'grayscale' && (
+                        <div className="text-sm text-green-600 mb-2">
+                          ✓ خصم 10% للطباعة بالأبيض والأسود
+                        </div>
+                      )}
                       <div className="text-sm text-muted-foreground">
                         <div className="flex justify-between">
                           <span>نقاط المكافآت المحتملة:</span>
                           <span className="arabic-nums">+{Math.floor(calculateCost() / 2)}</span>
                         </div>
+                      </div>
+                      
+                      {/* Price Guide Button */}
+                      <div className="mt-3">
+                        <PriceGuide compact />
                       </div>
                     </div>
                     
