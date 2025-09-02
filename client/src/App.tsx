@@ -49,6 +49,8 @@ import TestAnnouncements from "@/pages/test-announcements";
 import ArticlePage from "@/pages/article";
 import SecurityTest from "@/pages/security-test";
 import SetupComplete from "@/pages/setup-complete";
+import ApiConnectionTest from "@/pages/api-connection-test";
+import ConnectivityDashboard from "@/pages/connectivity-dashboard";
 
 
 function Router() {
@@ -119,6 +121,8 @@ function Router() {
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/security-test" component={SecurityTest} />
         <Route path="/setup-complete" component={SetupComplete} />
+        <Route path="/api-test" component={ApiConnectionTest} />
+        <Route path="/connectivity" component={ConnectivityDashboard} />
         <Route path="/article/:id" component={ArticlePage} />
         <Route path="/" component={EnhancedLanding} />
         <Route component={NotFound} />

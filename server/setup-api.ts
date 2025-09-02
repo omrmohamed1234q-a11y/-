@@ -17,8 +17,8 @@ export function addSetupEndpoints(app: Express) {
       }
       
       // Check if test accounts exist
-      const hasTestAdmin = await supabaseSecurityStorage.getAdminByUsername('testadmin');
-      const hasTestDriver = await supabaseSecurityStorage.getDriverByUsername('testdriver');
+      const hasTestAdmin = await supabaseSecurityStorage.getSecureAdminByCredentials('testadmin', 'admin@test.com');
+      const hasTestDriver = await supabaseSecurityStorage.getSecureDriverByCredentials('testdriver', 'driver@test.com', 'DR001');
       
       res.json({
         success: true,
@@ -50,10 +50,10 @@ export function addSetupEndpoints(app: Express) {
       
       // Create test admin
       try {
-        const existingAdmin = await supabaseSecurityStorage.getAdminByUsername('testadmin');
+        const existingAdmin = await supabaseSecurityStorage.getSecureAdminByCredentials('testadmin', 'admin@test.com');
         if (!existingAdmin) {
           const hashedPassword = await bcrypt.hash('testpass123', 10);
-          await supabaseSecurityStorage.createAdmin({
+          await supabaseSecurityStorage.createSecureAdmin({
             username: 'testadmin',
             email: 'admin@test.com',
             password: hashedPassword,
@@ -70,10 +70,10 @@ export function addSetupEndpoints(app: Express) {
       
       // Create test driver
       try {
-        const existingDriver = await supabaseSecurityStorage.getDriverByUsername('testdriver');
+        const existingDriver = await supabaseSecurityStorage.getSecureDriverByCredentials('testdriver', 'driver@test.com', 'DR001');
         if (!existingDriver) {
           const hashedPassword = await bcrypt.hash('driverpass123', 10);
-          await supabaseSecurityStorage.createDriver({
+          await supabaseSecurityStorage.createSecureDriver({
             username: 'testdriver',
             email: 'driver@test.com',
             password: hashedPassword,
