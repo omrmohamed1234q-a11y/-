@@ -163,10 +163,10 @@ export default function AdminDashboard() {
       count: 0
     },
     {
-      title: 'إدارة الكباتن',
-      description: 'إدارة طاقم التوصيل وتتبع الأداء',
+      title: 'إدارة السائقين والمديرين',
+      description: 'لوحة الأمان المتقدمة - نظام آمن لإدارة الحسابات',
       icon: Truck,
-      link: '/admin/drivers',
+      link: '/admin/security-access',
       color: 'cyan',
       count: 0
     },
@@ -268,7 +268,7 @@ export default function AdminDashboard() {
                   <ChevronDown className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56" dir="rtl">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem 
                   onClick={() => navigate('/admin/profile')}
                   className="gap-2 cursor-pointer"

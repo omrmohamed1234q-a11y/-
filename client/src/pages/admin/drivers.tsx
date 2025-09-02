@@ -211,8 +211,8 @@ export default function DriversManagement() {
               <Truck className="w-6 h-6 text-cyan-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">إدارة السائقين</h1>
-              <p className="text-gray-600">إدارة طاقم التوصيل ومتابعة الأداء</p>
+              <h1 className="text-3xl font-bold text-gray-900">إدارة السائقين والمديرين</h1>
+              <p className="text-gray-600">نظام الأمان المتقدم لإدارة الحسابات الآمنة</p>
             </div>
           </div>
         </div>

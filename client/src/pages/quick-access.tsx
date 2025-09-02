@@ -26,11 +26,11 @@ export default function QuickAccess() {
       requiresAuth: false
     },
     {
-      title: 'لوحة الكابتن',
-      description: 'إدارة الطلبات والتوصيلات',
-      icon: Truck,
-      route: '/driver/login',
-      color: 'green',
+      title: 'إدارة السائقين والمديرين',
+      description: 'لوحة الأمان المتقدمة - يتطلب كلمة مرور خاصة',
+      icon: ShieldCheck,
+      route: '/admin/security-access',
+      color: 'red',
       requiresAuth: true
     },
     {
@@ -80,6 +80,13 @@ export default function QuickAccess() {
           hover: 'hover:bg-orange-600',
           border: 'border-orange-200',
           icon: 'bg-orange-100 text-orange-600'
+        };
+      case 'red':
+        return {
+          bg: 'bg-red-500',
+          hover: 'hover:bg-red-600',
+          border: 'border-red-200',
+          icon: 'bg-red-100 text-red-600'
         };
       default:
         return {

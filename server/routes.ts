@@ -3548,7 +3548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== SECURITY MANAGEMENT APIs ====================
   
   // Get all security users (admin only)
-  app.get('/api/admin/security/users', isAdminAuthenticated, async (req, res) => {
+  app.get('/api/admin/security-dashboard/users', isAdminAuthenticated, async (req, res) => {
     try {
       // Get both admin and driver users from security tables
       const [adminUsers, driverUsers] = await Promise.all([
@@ -3581,7 +3581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get security logs (admin only)
-  app.get('/api/admin/security/logs', isAdminAuthenticated, async (req, res) => {
+  app.get('/api/admin/security-dashboard/logs', isAdminAuthenticated, async (req, res) => {
     try {
       const logs = await storage.getAllSecurityLogs();
       res.json(logs);
@@ -3724,7 +3724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Toggle user status (admin only)
-  app.put('/api/admin/security/users/:id/status', isAdminAuthenticated, async (req, res) => {
+  app.put('/api/admin/security-dashboard/users/:id/status', isAdminAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
       const { isActive } = req.body;

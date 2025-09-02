@@ -53,6 +53,7 @@ import ApiConnectionTest from "@/pages/api-connection-test";
 import ConnectivityDashboard from "@/pages/connectivity-dashboard";
 import SQLGenerator from "@/pages/sql-generator";
 import SecureSecurityDashboard from '@/pages/admin/secure-security-dashboard';
+import SecurityAccess from '@/pages/admin/security-access';
 import SecureDriverControl from '@/pages/driver/secure-driver-control';
 
 
@@ -115,6 +116,7 @@ function Router() {
         <Route path="/admin/orders" component={OrdersManagement} />
         <Route path="/admin/partners" component={AdminPartners} />
         <Route path="/admin/security" component={SecurityManagement} />
+        <Route path="/admin/security-access" component={SecurityAccess} />
         <Route path="/admin/security-dashboard" component={SecureSecurityDashboard} />
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
 
