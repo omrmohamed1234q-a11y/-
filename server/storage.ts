@@ -1073,11 +1073,50 @@ class MemStorage implements IStorage {
   private users: User[] = [];
   private cartItems: any[] = [];
   private announcements: Announcement[] = [];
-
   private partners: Partner[] = [];
+  private secureAdmins: any[] = [];
+  private secureDrivers: any[] = [];
+  private securityLogs: any[] = [];
 
   constructor() {
-    // Initialize empty storage
+    // Initialize with test admin account
+    this.secureAdmins.push({
+      id: 'admin-1',
+      username: 'testadmin',
+      email: 'admin@test.com',
+      password: 'hashed_testpass123',
+      fullName: 'مدير تجريبي',
+      role: 'admin',
+      permissions: ['read', 'write', 'admin'],
+      isActive: true,
+      lastLogin: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    // Initialize with test driver account
+    this.secureDrivers.push({
+      id: 'driver-1',
+      username: 'testdriver',
+      email: 'driver@test.com',
+      password: 'hashed_driverpass123',
+      driverCode: 'DR001',
+      fullName: 'سائق تجريبي',
+      phone: '1234567890',
+      licenseNumber: 'LIC123',
+      vehicleType: 'motorcycle',
+      vehiclePlate: 'ABC123',
+      isActive: true,
+      status: 'offline',
+      rating: 5.0,
+      totalDeliveries: 0,
+      lastLogin: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    console.log('🔐 Test admin created: username=testadmin, email=admin@test.com, password=testpass123');
+    console.log('🚚 Test driver created: username=testdriver, email=driver@test.com, password=driverpass123, code=DR001');
   }
 
   // Method to clean up duplicate priorities in existing data
@@ -2667,10 +2706,7 @@ class MemStorage implements IStorage {
     );
   }
 
-  // Security System operations - In-memory implementation
-  private secureAdmins: any[] = [];
-  private secureDrivers: any[] = [];
-  private securityLogs: any[] = [];
+  // Security System operations are initialized in constructor
 
   async getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined> {
     return this.secureAdmins.find(admin => 

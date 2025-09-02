@@ -47,6 +47,7 @@ import SecurityManagement from "@/pages/admin/security-management";
 import QuickAccess from "@/pages/quick-access";
 import TestAnnouncements from "@/pages/test-announcements";
 import ArticlePage from "@/pages/article";
+import SecurityTest from "@/pages/security-test";
 
 
 function Router() {
@@ -113,6 +114,7 @@ function Router() {
 
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
+        <Route path="/security-test" component={SecurityTest} />
         <Route path="/article/:id" component={ArticlePage} />
         <Route path="/" component={EnhancedLanding} />
         <Route component={NotFound} />
