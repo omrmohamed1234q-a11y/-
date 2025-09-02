@@ -129,22 +129,103 @@ function Router() {
         <Route path="/secure-driver-login" component={SecureDriverLogin} />
         
         {/* Admin routes - all redirect to secure login if not authenticated */}
-        <Route path="/admin" component={AdminRedirect} />
-        <Route path="/admin/profile" component={AdminRedirect} />
-        <Route path="/admin/store" component={AdminRedirect} />
-        <Route path="/admin/products" component={AdminRedirect} />
-        <Route path="/admin-products" component={AdminRedirect} />
-        <Route path="/admin/teachers-corner" component={AdminRedirect} />
-        <Route path="/admin/users" component={AdminRedirect} />
-        <Route path="/admin/coupons" component={AdminRedirect} />
-        <Route path="/admin/inquiries" component={AdminRedirect} />
-        <Route path="/admin/announcements" component={AdminRedirect} />
-        <Route path="/admin/reports" component={AdminRedirect} />
-        <Route path="/admin/orders" component={AdminRedirect} />
-        <Route path="/admin/partners" component={AdminRedirect} />
-        <Route path="/admin/security" component={AdminRedirect} />
-        <Route path="/admin/security-access" component={AdminRedirect} />
-        <Route path="/admin/security-dashboard" component={AdminRedirect} />
+        <Route path="/admin">
+          {() => {
+            console.log('Admin route accessed - redirecting to secure login');
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/profile">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/store">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/products">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin-products">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/teachers-corner">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/users">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/coupons">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/inquiries">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/announcements">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/reports">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/orders">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/partners">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/security">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/security-access">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
+        <Route path="/admin/security-dashboard">
+          {() => {
+            window.location.replace('/admin/secure-login');
+            return null;
+          }}
+        </Route>
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
 
         <Route path="/driver/dashboard" component={SecureDriverControl} />
