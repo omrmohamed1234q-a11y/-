@@ -21,7 +21,7 @@ import Home from "@/pages/home-new";
 import Print from "@/pages/print";
 import Store from "@/pages/store";
 import Rewards from "@/pages/rewards";
-import ProfileSimple from "@/pages/profile-simple";
+import Profile from "@/pages/profile";
 import Payment from "@/pages/payment";
 import Scan from "@/pages/scan";
 import AdminDashboard from "@/pages/admin/dashboard-new";
@@ -125,25 +125,16 @@ function Router() {
         <Route path="/auth/callback" component={AuthCallback} />
         
         {/* Hidden secure routes - direct access only */}
-        <Route path="/admin/secure-login">
-          <SimpleAdminLogin />
-        </Route>
-        <Route path="/secure-admin-login">
-          <SimpleAdminLogin />
-        </Route>
-        <Route path="/driver/secure-login">
-          <SecureDriverLogin />
-        </Route>
-        <Route path="/secure-driver-login">
-          <SecureDriverLogin />
-        </Route>
+        <Route path="/admin/secure-login" component={SecureAdminLogin} />
+        <Route path="/secure-admin-login" component={SecureAdminLogin} />
+        <Route path="/driver/secure-login" component={SecureDriverLogin} />
+        <Route path="/secure-driver-login" component={SecureDriverLogin} />
         
         {/* Admin routes - all redirect to secure login if not authenticated */}
         <Route path="/admin">
           {() => {
-            console.log('Redirecting /admin to /admin/secure-login');
             window.location.href = '/admin/secure-login';
-            return <div>جاري التحويل...</div>;
+            return null;
           }}
         </Route>
         <Route path="/admin/profile">
@@ -268,7 +259,7 @@ function Router() {
         <Route path="/store" component={Store} />
         <Route path="/checkout" component={CheckoutPage} />
         <Route path="/rewards" component={Rewards} />
-        <Route path="/profile" component={ProfileSimple} />
+        <Route path="/profile" component={Profile} />
         <Route path="/payment" component={Payment} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/order-tracking/:id" component={OrderTracking} />

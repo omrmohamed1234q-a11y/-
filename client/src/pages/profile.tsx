@@ -70,6 +70,7 @@ const mockOrders = [
 export default function Profile() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>(mockUserProfile);
 
@@ -84,20 +85,31 @@ export default function Profile() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Simulate update profile
-  const handleUpdateProfile = async () => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast({
-      title: "تم تحديث الملف الشخصي",
-      description: "تم حفظ التغييرات بنجاح",
-    });
-    setIsEditing(false);
-  };
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (updates: Partial<UserProfile>) => {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return updates;
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم تحديث الملف الشخصي",
+        description: "تم حفظ التغييرات بنجاح",
+      });
+      setIsEditing(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "خطأ في التحديث",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSave = () => {
-    handleUpdateProfile();
+    updateProfileMutation.mutate(formData);
   };
 
   const handleLogout = async () => {
