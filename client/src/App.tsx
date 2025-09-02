@@ -104,22 +104,24 @@ function Router() {
         <Route path="/secure-admin-login" component={SecureAdminLogin} />
         <Route path="/driver/secure-login" component={SecureDriverLogin} />
         <Route path="/secure-driver-login" component={SecureDriverLogin} />
-        <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
-        <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
-        <Route path="/admin/store" component={() => <AdminProtectedRoute><AdminStore /></AdminProtectedRoute>} />
-        <Route path="/admin/products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
-        <Route path="/admin-products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
-        <Route path="/admin/teachers-corner" component={() => <AdminProtectedRoute><TeachersCorner /></AdminProtectedRoute>} />
-        <Route path="/admin/users" component={() => <AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
-        <Route path="/admin/coupons" component={() => <AdminProtectedRoute><AdminCoupons /></AdminProtectedRoute>} />
-        <Route path="/admin/inquiries" component={() => <AdminProtectedRoute><AdminInquiries /></AdminProtectedRoute>} />
-        <Route path="/admin/announcements" component={() => <AdminProtectedRoute><AdminAnnouncements /></AdminProtectedRoute>} />
-        <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
-        <Route path="/admin/orders" component={() => <AdminProtectedRoute><OrdersManagement /></AdminProtectedRoute>} />
-        <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
-        <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
-        <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
-        <Route path="/admin/security-dashboard" component={() => <AdminProtectedRoute><SecureSecurityDashboard /></AdminProtectedRoute>} />
+        
+        {/* Admin routes - all redirect to secure login if not authenticated */}
+        <Route path="/admin" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/profile" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/store" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/products" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin-products" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/teachers-corner" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/users" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/coupons" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/inquiries" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/announcements" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/reports" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/orders" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/partners" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/security" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/security-access" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
+        <Route path="/admin/security-dashboard" component={() => { window.location.href = '/admin/secure-login'; return null; }} />
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
 
         <Route path="/driver/dashboard" component={SecureDriverControl} />
