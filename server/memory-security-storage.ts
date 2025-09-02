@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL!;
@@ -38,10 +40,42 @@ interface SecurityLog {
 export class MemorySecurityStorage {
   private users: SecurityUser[] = [];
   private logs: SecurityLog[] = [];
+  private dataFilePath = path.join(process.cwd(), 'security-data.json');
 
   constructor() {
-    // Load data from Supabase only - no test accounts
+    // Load data from local JSON file first, then sync with Supabase
+    this.loadDataFromLocalFile();
     this.loadDataFromSupabase();
+  }
+
+  // Local JSON File Operations
+  private loadDataFromLocalFile() {
+    try {
+      if (fs.existsSync(this.dataFilePath)) {
+        const data = JSON.parse(fs.readFileSync(this.dataFilePath, 'utf8'));
+        this.users = data.users || [];
+        this.logs = data.logs || [];
+        console.log(`✅ Loaded ${this.users.length} users and ${this.logs.length} logs from local file`);
+      } else {
+        console.log('📄 No local security data file found, starting fresh');
+      }
+    } catch (error) {
+      console.log('⚠️ Error loading local security data:', error.message);
+    }
+  }
+
+  private saveDataToLocalFile() {
+    try {
+      const data = {
+        users: this.users,
+        logs: this.logs,
+        lastSaved: new Date().toISOString()
+      };
+      fs.writeFileSync(this.dataFilePath, JSON.stringify(data, null, 2));
+      console.log(`💾 Security data saved locally (${this.users.length} users, ${this.logs.length} logs)`);
+    } catch (error) {
+      console.log('⚠️ Error saving security data locally:', error.message);
+    }
   }
 
   // Supabase Synchronization
@@ -192,7 +226,10 @@ export class MemorySecurityStorage {
 
       this.users.push(newUser);
       
-      // Sync to Supabase
+      // Save to local file immediately
+      this.saveDataToLocalFile();
+      
+      // Sync to Supabase (best effort)
       await this.syncUserToSupabase(newUser);
       
       // Log the creation
@@ -255,6 +292,9 @@ export class MemorySecurityStorage {
     this.users[userIndex].is_active = isActive;
     this.users[userIndex].updated_at = new Date().toISOString();
 
+    // Save to local file
+    this.saveDataToLocalFile();
+
     // Log the status change
     await this.createSecurityLog({
       user_id: id,
@@ -306,6 +346,9 @@ export class MemorySecurityStorage {
 
       // Update last login
       user.last_login = new Date().toISOString();
+      
+      // Save to local file
+      this.saveDataToLocalFile();
 
       await this.createSecurityLog({
         user_id: user.id,
@@ -333,7 +376,10 @@ export class MemorySecurityStorage {
       this.users[userIndex].password_hash = passwordHash;
       this.users[userIndex].updated_at = new Date().toISOString();
       
-      // Sync to Supabase
+      // Save to local file
+      this.saveDataToLocalFile();
+      
+      // Sync to Supabase (best effort)
       await this.syncUserToSupabase(this.users[userIndex]);
       
       console.log(`🔑 Password reset for ${username}: ${newPassword}`);
@@ -378,12 +424,16 @@ export class MemorySecurityStorage {
 
     this.logs.push(log);
     
-    // Sync to Supabase
+    // Save to local file immediately
+    this.saveDataToLocalFile();
+    
+    // Sync to Supabase (best effort)
     await this.syncLogToSupabase(log);
 
     // Keep only last 1000 logs to prevent memory overflow
     if (this.logs.length > 1000) {
       this.logs = this.logs.slice(-1000);
+      this.saveDataToLocalFile(); // Save again after trimming
     }
 
     return log;

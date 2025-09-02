@@ -1,0 +1,70 @@
+{
+  "users": [
+    {
+      "id": "5d7839cb-6450-4107-a00c-0a19f90490dd",
+      "username": "production_admin",
+      "email": "admin@production.com",
+      "password_hash": "$2b$10$6wG4lhLraVM6rhBudZk9ruUob5tb3uzKTWSo1WGgxYwlhy/G6cxYW",
+      "full_name": "Production Administrator",
+      "role": "admin",
+      "is_active": true,
+      "created_at": "2025-09-02T15:10:13.157Z",
+      "updated_at": "2025-09-02T15:10:13.157Z"
+    },
+    {
+      "id": "1f625a42-ad3f-4b93-9e8d-218c6ae22866",
+      "username": "ahmedd",
+      "email": "omarr3loush@gmail.com",
+      "password_hash": "$2b$10$ZX.jgyCBaIMWMJIIH9BawedmDpgk67Gwygs3L5k1vLSerEwwLFGCq",
+      "full_name": "Ahmed Driver",
+      "role": "driver",
+      "is_active": true,
+      "created_at": "2025-09-02T15:10:15.730Z",
+      "updated_at": "2025-09-02T15:10:15.730Z",
+      "driver_code": "OM001",
+      "vehicle_type": "دراجة نارية",
+      "working_area": "القاهرة"
+    }
+  ],
+  "logs": [
+    {
+      "id": "3455ce96-9dba-4a2a-94d9-e43ee5c8bd5f",
+      "user_id": "5d7839cb-6450-4107-a00c-0a19f90490dd",
+      "action": "تم إنشاء مدير جديد",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Security System",
+      "success": true,
+      "timestamp": "2025-09-02T15:10:13.651Z",
+      "details": "Username: production_admin, Email: admin@production.com"
+    },
+    {
+      "id": "22c23006-8847-4640-a2eb-44528908087f",
+      "user_id": "admin",
+      "action": "Created new admin: production_admin",
+      "ip_address": "127.0.0.1",
+      "user_agent": "curl/8.14.1",
+      "success": true,
+      "timestamp": "2025-09-02T15:10:14.105Z"
+    },
+    {
+      "id": "fc9efefc-2869-4fe3-b05a-2f4d7a892167",
+      "user_id": "1f625a42-ad3f-4b93-9e8d-218c6ae22866",
+      "action": "تم إنشاء سائق جديد",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Security System",
+      "success": true,
+      "timestamp": "2025-09-02T15:10:16.172Z",
+      "details": "Username: ahmedd, Email: omarr3loush@gmail.com"
+    },
+    {
+      "id": "da7008c5-1956-4f5d-ac28-7d23572836c7",
+      "user_id": "admin",
+      "action": "Created new driver: ahmedd (OM001)",
+      "ip_address": "127.0.0.1",
+      "user_agent": "curl/8.14.1",
+      "success": true,
+      "timestamp": "2025-09-02T15:10:16.598Z"
+    }
+  ],
+  "lastSaved": "2025-09-02T15:10:16.598Z"
+}
