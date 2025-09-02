@@ -4162,6 +4162,201 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ====== ADDITIONAL SECURITY DASHBOARD CRUD OPERATIONS ======
+  
+  // Update user
+  app.put('/api/admin/security-dashboard/update-user/:id', async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const { username, email, fullName, password, role, driverCode, vehicleType, workingArea, isActive } = req.body;
+      
+      if (!username || !email || !fullName) {
+        return res.status(400).json({
+          success: false,
+          message: 'الحقول الأساسية مطلوبة'
+        });
+      }
+
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      
+      const existingUser = await memorySecurityStorage.getUserById(userId);
+      if (!existingUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'المستخدم غير موجود'
+        });
+      }
+
+      // Check if username or email conflicts with other users
+      const conflictUser = await memorySecurityStorage.getUserByUsernameOrEmail(username, email);
+      if (conflictUser && conflictUser.id !== userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'اسم المستخدم أو البريد الإلكتروني مستخدم بالفعل'
+        });
+      }
+
+      const updateData = {
+        username,
+        email,
+        full_name: fullName,
+        role,
+        is_active: isActive !== undefined ? isActive : existingUser.is_active,
+        updated_at: new Date(),
+        ...(role === 'driver' && { 
+          driver_code: driverCode, 
+          vehicle_type: vehicleType, 
+          working_area: workingArea 
+        })
+      };
+
+      // Update password if provided
+      if (password) {
+        updateData.password_hash = await bcrypt.hash(password, 10);
+      }
+
+      const updatedUser = await memorySecurityStorage.updateUser(userId, updateData);
+
+      // Log update
+      await memorySecurityStorage.createSecurityLog({
+        user_id: userId,
+        action: 'تم تحديث بيانات المستخدم',
+        ip_address: req.ip || '127.0.0.1',
+        user_agent: 'Security Dashboard',
+        success: true,
+        timestamp: new Date(),
+        details: `Updated: ${username} (${email})`
+      });
+
+      console.log(`✅ Updated user: ${username}`);
+      res.json({ success: true, user: updatedUser });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في تحديث المستخدم'
+      });
+    }
+  });
+
+  // Delete user
+  app.delete('/api/admin/security-dashboard/delete-user/:id', async (req, res) => {
+    try {
+      const userId = req.params.id;
+      
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      
+      const existingUser = await memorySecurityStorage.getUserById(userId);
+      if (!existingUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'المستخدم غير موجود'
+        });
+      }
+
+      await memorySecurityStorage.deleteUser(userId);
+
+      // Log deletion
+      await memorySecurityStorage.createSecurityLog({
+        user_id: userId,
+        action: 'تم حذف المستخدم',
+        ip_address: req.ip || '127.0.0.1',
+        user_agent: 'Security Dashboard',
+        success: true,
+        timestamp: new Date(),
+        details: `Deleted: ${existingUser.username} (${existingUser.email})`
+      });
+
+      console.log(`🗑️ Deleted user: ${existingUser.username}`);
+      res.json({ success: true, message: 'تم حذف المستخدم بنجاح' });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في حذف المستخدم'
+      });
+    }
+  });
+
+  // Get single user
+  app.get('/api/admin/security-dashboard/user/:id', async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const user = await memorySecurityStorage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'المستخدم غير موجود'
+        });
+      }
+
+      res.json({ success: true, user });
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب بيانات المستخدم'
+      });
+    }
+  });
+
+  // Reset user password
+  app.put('/api/admin/security-dashboard/reset-password/:id', async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const { newPassword } = req.body;
+      
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
+        });
+      }
+
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      
+      const existingUser = await memorySecurityStorage.getUserById(userId);
+      if (!existingUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'المستخدم غير موجود'
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await memorySecurityStorage.updateUser(userId, { 
+        password_hash: hashedPassword,
+        updated_at: new Date()
+      });
+
+      // Log password reset
+      await memorySecurityStorage.createSecurityLog({
+        user_id: userId,
+        action: 'تم إعادة تعيين كلمة المرور',
+        ip_address: req.ip || '127.0.0.1',
+        user_agent: 'Security Dashboard',
+        success: true,
+        timestamp: new Date(),
+        details: `Password reset for: ${existingUser.username}`
+      });
+
+      console.log(`🔑 Password reset for user: ${existingUser.username}`);
+      res.json({ 
+        success: true, 
+        message: 'تم إعادة تعيين كلمة المرور بنجاح',
+        newPassword: newPassword
+      });
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إعادة تعيين كلمة المرور'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Initialize security system with Supabase on server start

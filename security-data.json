@@ -24,6 +24,31 @@
       "driver_code": "OM001",
       "vehicle_type": "دراجة نارية",
       "working_area": "القاهرة"
+    },
+    {
+      "id": "d29ec230-057c-4634-8053-4a20bf9f657f",
+      "username": "sarah_admin",
+      "email": "sarah@company.com",
+      "password_hash": "$2b$10$YbEBIQOucMu67OefOy/cZ.y7oyeWp4vs0ri.lkzElKObg0xJlARhm",
+      "full_name": "Sarah Mohamed",
+      "role": "admin",
+      "is_active": true,
+      "created_at": "2025-09-02T15:15:08.486Z",
+      "updated_at": "2025-09-02T15:15:08.486Z"
+    },
+    {
+      "id": "7c579190-af22-461c-969e-5f1df0a26c5e",
+      "username": "ali_driver",
+      "email": "ali@delivery.com",
+      "password_hash": "$2b$10$hz1TfHgLY5G.xMaEwjbe/ukUoX26SXwuo0o68SgNvXMhDDsLad/Aq",
+      "full_name": "Ali Hassan",
+      "role": "driver",
+      "is_active": true,
+      "created_at": "2025-09-02T15:15:10.563Z",
+      "updated_at": "2025-09-02T15:18:36.591Z",
+      "driver_code": "AL002",
+      "vehicle_type": "سيارة",
+      "working_area": "الجيزة"
     }
   ],
   "logs": [
@@ -64,7 +89,84 @@
       "user_agent": "curl/8.14.1",
       "success": true,
       "timestamp": "2025-09-02T15:10:16.598Z"
+    },
+    {
+      "id": "75e9ad33-e911-4cba-93e1-a806c4bafea2",
+      "user_id": "d29ec230-057c-4634-8053-4a20bf9f657f",
+      "action": "تم إنشاء مدير جديد",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Security System",
+      "success": true,
+      "timestamp": "2025-09-02T15:15:08.747Z",
+      "details": "Username: sarah_admin, Email: sarah@company.com"
+    },
+    {
+      "id": "ca26568e-175c-43c7-87ec-cc0f5889d88f",
+      "user_id": "admin",
+      "action": "Created new admin: sarah_admin",
+      "ip_address": "127.0.0.1",
+      "user_agent": "curl/8.14.1",
+      "success": true,
+      "timestamp": "2025-09-02T15:15:08.911Z"
+    },
+    {
+      "id": "ddf37569-b149-45a0-a1bd-1d781bf5e13e",
+      "user_id": "7c579190-af22-461c-969e-5f1df0a26c5e",
+      "action": "تم إنشاء سائق جديد",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Security System",
+      "success": true,
+      "timestamp": "2025-09-02T15:15:10.997Z",
+      "details": "Username: ali_driver, Email: ali@delivery.com"
+    },
+    {
+      "id": "4dacd6c1-749b-47ea-a93a-6b99e8bfdfd9",
+      "user_id": "admin",
+      "action": "Created new driver: ali_driver (AL002)",
+      "ip_address": "127.0.0.1",
+      "user_agent": "curl/8.14.1",
+      "success": true,
+      "timestamp": "2025-09-02T15:15:11.421Z"
+    },
+    {
+      "id": "bfc947cb-9711-4723-b302-dde0b2114b94",
+      "user_id": "5dbcb319-1d06-4f5c-9234-849500c8a41c",
+      "action": "تم إنشاء سائق جديد",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Security System",
+      "success": true,
+      "timestamp": "2025-09-02T15:15:12.502Z",
+      "details": "Username: noor_driver, Email: noor@transport.com"
+    },
+    {
+      "id": "c3a27016-2cd2-4084-8856-867a9315857d",
+      "user_id": "admin",
+      "action": "Created new driver: noor_driver (NR003)",
+      "ip_address": "127.0.0.1",
+      "user_agent": "curl/8.14.1",
+      "success": true,
+      "timestamp": "2025-09-02T15:15:12.668Z"
+    },
+    {
+      "id": "c60f3000-8f6e-43a1-97a9-a3c9b641cd4b",
+      "user_id": "5dbcb319-1d06-4f5c-9234-849500c8a41c",
+      "action": "تم حذف المستخدم",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Security Dashboard",
+      "success": true,
+      "timestamp": "2025-09-02T15:18:12.070Z",
+      "details": "Deleted: noor_driver (noor@transport.com)"
+    },
+    {
+      "id": "75911cd6-2df4-4faf-91bc-dada3b83addd",
+      "user_id": "7c579190-af22-461c-969e-5f1df0a26c5e",
+      "action": "تم إعادة تعيين كلمة المرور",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Security Dashboard",
+      "success": true,
+      "timestamp": "2025-09-02T15:18:37.066Z",
+      "details": "Password reset for: ali_driver"
     }
   ],
-  "lastSaved": "2025-09-02T15:10:16.598Z"
+  "lastSaved": "2025-09-02T15:18:37.066Z"
 }

@@ -277,6 +277,12 @@ export class MemorySecurityStorage {
     );
   }
 
+  async getUserByUsernameOrEmail(username: string, email: string): Promise<SecurityUser | undefined> {
+    return this.users.find(user => 
+      user.username === username || user.email === email
+    );
+  }
+
   async getSecurityUserByToken(token: string): Promise<SecurityUser | undefined> {
     return this.users.find(user => user.currentToken === token);
   }
@@ -468,6 +474,86 @@ export class MemorySecurityStorage {
       successfulLogins: todayLogs.filter(log => log.action.includes('تسجيل دخول ناجح')).length,
       failedLogins: todayLogs.filter(log => log.action.includes('محاولة دخول فاشلة')).length
     };
+  }
+
+  // Additional CRUD operations
+  async getUserById(id: string): Promise<SecurityUser | null> {
+    try {
+      const user = this.users.find(u => u.id === id);
+      return user || null;
+    } catch (error) {
+      console.error('Error getting user by ID:', error);
+      return null;
+    }
+  }
+
+  async updateUser(id: string, updateData: any): Promise<SecurityUser | null> {
+    try {
+      const userIndex = this.users.findIndex(u => u.id === id);
+      if (userIndex === -1) {
+        return null;
+      }
+
+      // Update user data
+      this.users[userIndex] = { ...this.users[userIndex], ...updateData };
+      
+      // Save to local file
+      this.saveDataToLocalFile();
+      
+      // Sync to Supabase
+      await this.syncUserToSupabase(this.users[userIndex]);
+
+      console.log(`✅ Updated user: ${this.users[userIndex].username}`);
+      return this.users[userIndex];
+    } catch (error) {
+      console.error('Error updating user:', error);
+      return null;
+    }
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    try {
+      const userIndex = this.users.findIndex(u => u.id === id);
+      if (userIndex === -1) {
+        return false;
+      }
+
+      const user = this.users[userIndex];
+      
+      // Remove from memory
+      this.users.splice(userIndex, 1);
+      
+      // Save to local file
+      this.saveDataToLocalFile();
+      
+      // Remove from Supabase
+      await this.deleteUserFromSupabase(user);
+
+      console.log(`🗑️ Deleted user: ${user.username}`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+  }
+
+  private async deleteUserFromSupabase(user: SecurityUser) {
+    try {
+      const tableName = user.role === 'admin' ? 'secure_admins' : 'secure_drivers';
+      
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', user.id);
+
+      if (error) {
+        console.log(`⚠️ Failed to delete ${user.username} from Supabase:`, error.message);
+      } else {
+        console.log(`✅ Deleted ${user.username} from Supabase`);
+      }
+    } catch (error) {
+      console.log('⚠️ Supabase delete failed:', error.message);
+    }
   }
 }
 
