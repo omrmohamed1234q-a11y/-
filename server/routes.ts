@@ -98,19 +98,22 @@ import crypto from 'crypto';
 const GOOGLE_PAY_MERCHANT_ID = process.env.GOOGLE_PAY_MERCHANT_ID || 'merchant.com.atbaalee';
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Add global API protection middleware
-  app.use('/api', (req, res, next) => {
-    // Skip authentication for login endpoints
+  // Add global API protection middleware (applied after login routes are defined)
+  const protectAPI = (req: any, res: any, next: any) => {
+    // Skip authentication for public endpoints
     const publicEndpoints = [
       '/api/auth/admin/secure-login',
-      '/api/auth/driver/secure-login',
+      '/api/auth/driver/secure-login', 
       '/api/location/update',
       '/api/public',
       '/api/setup',
       '/api/test'
     ];
     
-    if (publicEndpoints.some(endpoint => req.path.startsWith(endpoint))) {
+    // Check if current path is a public endpoint
+    const isPublicEndpoint = publicEndpoints.some(endpoint => req.path === endpoint || req.path.startsWith(endpoint + '/'));
+    
+    if (isPublicEndpoint) {
       return next();
     }
     
@@ -128,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     next();
-  });
+  };
 
   // Add setup and testing endpoints
   addSetupEndpoints(app);
@@ -4176,6 +4179,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Failed to initialize security system:', error);
     }
   })();
+
+  // Apply API protection to all routes except public endpoints
+  app.use('/api', protectAPI);
   
   return httpServer;
 }
