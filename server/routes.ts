@@ -3169,8 +3169,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get admin by username and email
-      const admin = await storage.getSecureAdminByCredentials(username, email);
+      // Get admin by username and email using Memory Storage
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const admin = await memorySecurityStorage.getSecurityUserByCredentials(username, email);
       
       if (!admin) {
         await logSecurityEvent('unknown', 'admin', 'failed_login', false, req, 'Admin not found');
@@ -3189,8 +3190,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Check if user is admin role
+      if (admin.role !== 'admin') {
+        await logSecurityEvent(admin.id, 'admin', 'failed_login', false, req, 'Not admin role');
+        return res.status(403).json({
+          success: false,
+          message: 'غير مخول بالدخول'
+        });
+      }
+
       // Check if admin is active
-      if (!admin.isActive) {
+      if (!admin.is_active) {
         await logSecurityEvent(admin.id, 'admin', 'failed_login', false, req, 'Account inactive');
         return res.status(403).json({
           success: false,
@@ -3198,31 +3208,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Verify password
-      if (!verifyPassword(password, admin.password)) {
-        // Increment failed attempts
-        const failedAttempts = (admin.failedAttempts || 0) + 1;
-        const lockUntil = failedAttempts >= 3 ? new Date(Date.now() + 15 * 60 * 1000) : null; // 15 minutes lock
-        
-        await storage.updateSecureAdmin(admin.id, {
-          failedAttempts,
-          lockedUntil: lockUntil
-        });
-
-        await logSecurityEvent(admin.id, 'admin', 'failed_login', false, req, `Wrong password (attempt ${failedAttempts})`);
-        
+      // Verify password using bcrypt
+      const isPasswordValid = await bcrypt.compare(password, admin.password_hash);
+      if (!isPasswordValid) {
+        await logSecurityEvent(admin.id, 'admin', 'failed_login', false, req, 'Wrong password');
         return res.status(401).json({
           success: false,
           message: 'بيانات الدخول غير صحيحة'
         });
       }
-
-      // Successful login - reset failed attempts and update last login
-      await storage.updateSecureAdmin(admin.id, {
-        failedAttempts: 0,
-        lockedUntil: null,
-        lastLogin: new Date()
-      });
 
       // Generate secure token
       const token = generateSecureToken();
@@ -3237,9 +3231,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: admin.id,
           username: admin.username,
           email: admin.email,
-          fullName: admin.fullName,
-          role: admin.role,
-          permissions: admin.permissions
+          fullName: admin.full_name,
+          role: admin.role
         }
       });
 

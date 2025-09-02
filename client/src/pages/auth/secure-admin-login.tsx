@@ -36,7 +36,7 @@ export default function SecureAdminLogin() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/admin-login', {
+      const response = await fetch('/api/auth/admin/secure-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,7 +51,14 @@ export default function SecureAdminLogin() {
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('HTTP Error:', response.status, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
       const result = await response.json();
+      console.log('Admin login response:', result);
 
       if (result.success) {
         // Reset attempts on success
@@ -59,23 +66,28 @@ export default function SecureAdminLogin() {
         
         toast({
           title: "✅ تم تسجيل الدخول بنجاح",
-          description: `مرحباً بك ${result.user.fullName} - الوصول الآمن مُفعَّل`
+          description: `مرحباً بك ${result.admin.fullName} - الوصول الآمن مُفعَّل`
         });
         
         // Store admin session with security info
         localStorage.setItem('adminAuth', JSON.stringify({
-          user: result.user,
+          user: result.admin,
+          token: result.token,
           loginTime: new Date().toISOString(),
           sessionToken: `admin_${Date.now()}`,
           securityLevel: 'high'
         }));
         
+        // Also store in adminData for compatibility
+        localStorage.setItem('adminData', JSON.stringify(result.admin));
+        localStorage.setItem('adminToken', result.token);
+        
         // Clear credentials from memory
         setCredentials({ username: '', email: '', password: '' });
         
-        // Redirect to admin dashboard
+        // Redirect to secure admin dashboard
         setTimeout(() => {
-          window.location.href = '/admin';
+          window.location.href = '/admin/security-dashboard';
         }, 1000);
       } else {
         const newAttempts = attempts + 1;
@@ -93,8 +105,22 @@ export default function SecureAdminLogin() {
         }
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setError('🔴 خطأ في الاتصال بالخادم. حاول مرة أخرى.');
+      console.error('Admin login error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+      setError(`🔴 خطأ في الاتصال: ${errorMessage}`);
+      
+      // Count this as a failed attempt
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      
+      if (newAttempts >= 3) {
+        setIsBlocked(true);
+        setError('🚫 تم حظر المحاولات لمدة 5 دقائق بسبب الأخطاء المتكررة');
+        setTimeout(() => {
+          setIsBlocked(false);
+          setAttempts(0);
+        }, 300000); // 5 minutes
+      }
     } finally {
       setLoading(false);
     }
@@ -108,6 +134,15 @@ export default function SecureAdminLogin() {
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
             هذه منطقة آمنة. يتم تسجيل جميع محاولات الدخول ومراقبتها.
+          </AlertDescription>
+        </Alert>
+
+        {/* Example Credentials */}
+        <Alert className="mb-6 border-red-200 bg-red-50">
+          <AlertDescription className="text-red-800 text-sm">
+            <strong>مثال للاختبار:</strong><br/>
+            المستخدم: test_admin | الإيميل: admin@test.com<br/>
+            كلمة المرور: 123456
           </AlertDescription>
         </Alert>
 
