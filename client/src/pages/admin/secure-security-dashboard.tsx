@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Users, Activity, Plus, Eye, EyeOff, UserCheck, UserX, Clock } from 'lucide-react';
+import { Shield, Users, Activity, Plus, Eye, EyeOff, UserCheck, UserX, Clock, KeyRound } from 'lucide-react';
 
 interface SecurityUser {
   id: string;
@@ -39,6 +39,9 @@ export default function SecureSecurityDashboard() {
   const [logs, setLogs] = useState<SecurityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState<string>('');
+  const [newPassword, setNewPassword] = useState('');
   const [newUser, setNewUser] = useState({
     role: 'admin',
     username: '',
@@ -176,6 +179,56 @@ export default function SecureSecurityDashboard() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!selectedUserForPassword || !newPassword) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار المستخدم وإدخال كلمة المرور الجديدة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/security-dashboard/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer admin-token'
+        },
+        body: JSON.stringify({ 
+          username: selectedUserForPassword, 
+          newPassword: newPassword 
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "نجح",
+          description: `تم تحديث كلمة المرور بنجاح للمستخدم: ${selectedUserForPassword}`,
+        });
+        setShowPasswordForm(false);
+        setSelectedUserForPassword('');
+        setNewPassword('');
+      } else {
+        toast({
+          title: "خطأ",
+          description: data.error || "فشل في تحديث كلمة المرور",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحديث كلمة المرور",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
@@ -203,15 +256,35 @@ export default function SecureSecurityDashboard() {
                 إدارة السائقين والمديرين
               </h1>
               <p className="text-gray-600 mt-2">إدارة المديرين والسائقين ومراقبة النشاط الأمني</p>
+              
+              {/* معلومات Supabase */}
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="text-sm font-semibold text-blue-800 mb-2">معلومات حساب Supabase المربوط:</h3>
+                <div className="text-sm text-blue-700 space-y-1">
+                  <p><strong>معرف المشروع:</strong> rsvqqchuxajvqtpkxjtm</p>
+                  <p><strong>الخادم:</strong> aws-0-us-east-1.pooler.supabase.com</p>
+                  <p><strong>الحالة:</strong> متصل ومتزامن مع التخزين المحلي</p>
+                </div>
+              </div>
             </div>
-            <Button 
-              onClick={() => setShowCreateForm(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-              data-testid="button-create-user"
-            >
-              <Plus className="h-4 w-4 ml-2" />
-              إضافة مستخدم جديد
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                onClick={() => setShowPasswordForm(true)}
+                className="bg-orange-600 hover:bg-orange-700"
+                data-testid="button-reset-password"
+              >
+                <KeyRound className="h-4 w-4 ml-2" />
+                تغيير كلمة المرور
+              </Button>
+              <Button 
+                onClick={() => setShowCreateForm(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+                data-testid="button-create-user"
+              >
+                <Plus className="h-4 w-4 ml-2" />
+                إضافة مستخدم جديد
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -499,6 +572,69 @@ export default function SecureSecurityDashboard() {
           </div>
         )}
       </div>
+
+      {/* Password Reset Dialog */}
+      {showPasswordForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" dir="rtl">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold mb-4 text-center">تغيير كلمة المرور</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="user-select">اختر المستخدم</Label>
+                <Select value={selectedUserForPassword} onValueChange={setSelectedUserForPassword}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر مستخدم" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map(user => (
+                      <SelectItem key={user.username} value={user.username}>
+                        {user.fullName} (@{user.username}) - {user.role === 'admin' ? 'مدير' : 'سائق'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="new-password">كلمة المرور الجديدة</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="ادخل كلمة المرور الجديدة"
+                  data-testid="input-new-password"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button 
+                onClick={handleResetPassword}
+                className="flex-1 bg-orange-600 hover:bg-orange-700"
+                disabled={!selectedUserForPassword || !newPassword}
+                data-testid="button-confirm-reset"
+              >
+                <KeyRound className="h-4 w-4 ml-2" />
+                تحديث كلمة المرور
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowPasswordForm(false);
+                  setSelectedUserForPassword('');
+                  setNewPassword('');
+                }}
+                className="flex-1"
+                data-testid="button-cancel-reset"
+              >
+                إلغاء
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
