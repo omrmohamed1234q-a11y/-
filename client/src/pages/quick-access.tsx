@@ -18,22 +18,6 @@ export default function QuickAccess() {
 
   const accessOptions = [
     {
-      title: 'لوحة الإدارة',
-      description: 'إدارة المنتجات والطلبات والعملاء',
-      icon: ShieldCheck,
-      route: '/admin',
-      color: 'blue',
-      requiresAuth: false
-    },
-    {
-      title: 'إدارة السائقين والمديرين',
-      description: 'لوحة الأمان المتقدمة - يتطلب كلمة مرور خاصة',
-      icon: ShieldCheck,
-      route: '/admin/security-access',
-      color: 'red',
-      requiresAuth: true
-    },
-    {
       title: 'حساب عميل جديد',
       description: 'إنشاء حساب جديد للعملاء',
       icon: UserPlus,
