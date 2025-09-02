@@ -103,7 +103,7 @@ function Router() {
         <Route path="/secure-admin-login" component={SecureAdminLogin} />
         <Route path="/driver/secure-login" component={SecureDriverLogin} />
         <Route path="/secure-driver-login" component={SecureDriverLogin} />
-        <Route path="/admin" component={MainAdmin} />
+        <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/profile" component={AdminProfile} />
         <Route path="/admin/store" component={AdminStore} />
         <Route path="/admin/products" component={AdminProducts} />

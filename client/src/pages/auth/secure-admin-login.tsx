@@ -86,7 +86,7 @@ export default function SecureAdminLogin() {
         // Clear credentials from memory
         setCredentials({ username: '', email: '', password: '' });
         
-        // Redirect to main admin panel
+        // Redirect to main admin dashboard
         setTimeout(() => {
           window.location.href = '/admin';
         }, 1000);
