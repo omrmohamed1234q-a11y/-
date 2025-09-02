@@ -691,19 +691,7 @@ export default function EnhancedLanding() {
                   </button>
                 </div>
 
-                {/* Quick Access */}
-                <div className="text-center p-6 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-600 text-white">
-                  <motion.h3 
-                    className="text-xl font-bold mb-2"
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                  >
-                    مرحباً بك في منصة اطبعلي
-                  </motion.h3>
-                  <p className="text-sm opacity-90">
-                    خدمات طباعة ومسح ضوئي متطورة لجميع احتياجاتك التعليمية
-                  </p>
-                </div>
+
               </CardContent>
             </Card>
           </motion.div>
