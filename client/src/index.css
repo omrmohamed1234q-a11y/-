@@ -136,7 +136,38 @@
   .arabic-nums {
     font-variant-numeric: tabular-nums;
     direction: ltr;
-    unicode-bidi: bidi-override;
+    unicode-bidi: isolate;
+    display: inline-block;
+  }
+
+  /* Fix for Arabic text with numbers */
+  .price-text {
+    direction: rtl;
+    unicode-bidi: embed;
+  }
+
+  .number-with-arabic {
+    direction: rtl;
+    unicode-bidi: embed;
+  }
+
+  .number-with-arabic .arabic-nums {
+    direction: ltr;
+    unicode-bidi: isolate;
+    display: inline;
+  }
+
+  /* Global fix for currency display */
+  .currency-display {
+    direction: rtl;
+    unicode-bidi: embed;
+    white-space: nowrap;
+  }
+
+  .currency-display .arabic-nums {
+    direction: ltr;
+    unicode-bidi: isolate;
+    display: inline;
   }
   
   .shadow-paper {

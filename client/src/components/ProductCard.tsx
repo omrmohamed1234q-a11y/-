@@ -139,11 +139,15 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
                 className="text-lg font-bold text-green-600"
                 data-testid={`product-price-${product.id}`}
               >
-                {parseFloat(product.price).toFixed(0)} جنيه
+                <span className="currency-display">
+                  <span className="arabic-nums">{parseFloat(product.price).toFixed(0)}</span> جنيه
+                </span>
               </span>
               {product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price) && (
                 <span className="text-sm text-gray-500 line-through">
-                  {parseFloat(product.originalPrice).toFixed(0)} جنيه
+                  <span className="currency-display">
+                    <span className="arabic-nums">{parseFloat(product.originalPrice).toFixed(0)}</span> جنيه
+                  </span>
                 </span>
               )}
             </div>

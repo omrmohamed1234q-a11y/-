@@ -410,8 +410,8 @@ export default function Print() {
                     <div className="border-t border-border pt-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">التكلفة المتوقعة:</span>
-                        <span className="text-xl font-bold text-accent arabic-nums">
-                          {calculateCost().toFixed(2)} جنيه
+                        <span className="text-xl font-bold text-accent number-with-arabic">
+                          <span className="arabic-nums">{calculateCost().toFixed(2)}</span> جنيه
                         </span>
                       </div>
                       {printSettings.colorMode === 'grayscale' && (
@@ -422,7 +422,7 @@ export default function Print() {
                       <div className="text-sm text-muted-foreground">
                         <div className="flex justify-between">
                           <span>نقاط المكافآت المحتملة:</span>
-                          <span className="arabic-nums">+{Math.floor(calculateCost() / 2)}</span>
+                          <span className="number-with-arabic">+<span className="arabic-nums">{Math.floor(calculateCost() / 2)}</span></span>
                         </div>
                       </div>
                       

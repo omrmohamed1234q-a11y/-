@@ -219,10 +219,14 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
                               <div className="text-left">
                                 <div className="font-bold text-green-600" data-testid={`item-total-${item.id}`}>
-                                  {(parseFloat(item.price) * item.quantity).toFixed(0)} جنيه
+                                  <span className="currency-display">
+                                    <span className="arabic-nums">{(parseFloat(item.price) * item.quantity).toFixed(0)}</span> جنيه
+                                  </span>
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  {parseFloat(item.price).toFixed(0)} جنيه للقطعة
+                                  <span className="currency-display">
+                                    <span className="arabic-nums">{parseFloat(item.price).toFixed(0)}</span> جنيه للقطعة
+                                  </span>
                                 </div>
                               </div>
                             </div>

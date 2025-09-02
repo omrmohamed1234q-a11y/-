@@ -38,9 +38,9 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
       </CardHeader>
       <CardContent className="space-y-2">
         {tiers.map((tier, index) => (
-          <div key={index} className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-            <span className="text-sm font-medium">{tier.range}</span>
-            <Badge variant="secondary" className="arabic-nums font-bold">
+          <div key={index} className="flex justify-between items-center p-3 rounded-md bg-muted/50 min-h-[3rem]">
+            <span className="text-sm font-medium flex-1 ml-3">{tier.range}</span>
+            <Badge variant="secondary" className="price-text font-bold shrink-0">
               {tier.price}
             </Badge>
           </div>
