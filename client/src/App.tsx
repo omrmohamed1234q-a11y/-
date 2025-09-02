@@ -92,7 +92,9 @@ function Router() {
         
         {/* Hidden secure routes - direct access only */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
+        <Route path="/secure-admin-login" component={SecureAdminLogin} />
         <Route path="/driver/secure-login" component={SecureDriverLogin} />
+        <Route path="/secure-driver-login" component={SecureDriverLogin} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/profile" component={AdminProfile} />
         <Route path="/admin/store" component={AdminStore} />

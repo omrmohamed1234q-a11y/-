@@ -267,8 +267,8 @@ export default function SecurityTest() {
           <CardContent className="text-blue-700 space-y-2">
             <p>🔐 <strong>مسارات الدخول الآمنة:</strong></p>
             <ul className="list-disc list-inside space-y-1 mr-4">
-              <li><code>/secure-admin-login</code> - للمدراء فقط</li>
-              <li><code>/secure-driver-login</code> - للسائقين فقط</li>
+              <li><code>/secure-admin-login</code> أو <code>/admin/secure-login</code> - للمدراء فقط</li>
+              <li><code>/secure-driver-login</code> أو <code>/driver/secure-login</code> - للسائقين فقط</li>
             </ul>
             <p>👥 <strong>حسابات التجريب:</strong></p>
             <ul className="list-disc list-inside space-y-1 mr-4">
