@@ -86,9 +86,9 @@ export default function SecureAdminLogin() {
         // Clear credentials from memory
         setCredentials({ username: '', email: '', password: '' });
         
-        // Redirect to main admin dashboard
+        // Redirect to main admin panel
         setTimeout(() => {
-          window.location.href = '/admin/dashboard';
+          window.location.href = '/admin';
         }, 1000);
       } else {
         const newAttempts = attempts + 1;

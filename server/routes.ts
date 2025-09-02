@@ -98,6 +98,38 @@ import crypto from 'crypto';
 const GOOGLE_PAY_MERCHANT_ID = process.env.GOOGLE_PAY_MERCHANT_ID || 'merchant.com.atbaalee';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add global API protection middleware
+  app.use('/api', (req, res, next) => {
+    // Skip authentication for login endpoints
+    const publicEndpoints = [
+      '/api/auth/admin/secure-login',
+      '/api/auth/driver/secure-login',
+      '/api/location/update',
+      '/api/public',
+      '/api/setup',
+      '/api/test'
+    ];
+    
+    if (publicEndpoints.some(endpoint => req.path.startsWith(endpoint))) {
+      return next();
+    }
+    
+    // Check for authentication token in headers
+    const authHeader = req.headers.authorization;
+    const adminToken = req.headers['x-admin-token'];
+    const driverToken = req.headers['x-driver-token'];
+    
+    if (!authHeader && !adminToken && !driverToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required - يجب تسجيل الدخول للوصول لهذا المورد',
+        code: 'AUTH_REQUIRED'
+      });
+    }
+    
+    next();
+  });
+
   // Add setup and testing endpoints
   addSetupEndpoints(app);
   
