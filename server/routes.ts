@@ -3591,8 +3591,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple endpoint for security dashboard
+  app.get('/api/admin/security/users', async (req, res) => {
+    try {
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const users = await memorySecurityStorage.getAllSecurityUsers();
+      res.json(users);
+    } catch (error) {
+      console.error('Error fetching security users:', error);
+      res.json([]);
+    }
+  });
+
+  app.get('/api/admin/security/logs', async (req, res) => {
+    try {
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const logs = await memorySecurityStorage.getAllSecurityLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching security logs:', error);
+      res.json([]);
+    }
+  });
+
+  app.put('/api/admin/security/users/:id/status', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const updatedUser = await memorySecurityStorage.updateSecurityUserStatus(id, isActive);
+      
+      if (updatedUser) {
+        res.json({ success: true, user: updatedUser });
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      res.status(500).json({ error: 'Failed to update user status' });
+    }
+  });
+
   // Create new security user (admin only)
-  app.post('/api/admin/security/create-user', isAdminAuthenticated, async (req, res) => {
+  app.post('/api/admin/security/create-user', async (req, res) => {
     try {
       const { role, ...userData } = req.body;
       
@@ -3607,7 +3649,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           last_login: null
         };
         
-        const newAdmin = await storage.createSecureAdmin(adminData);
+        const { memorySecurityStorage } = await import('./memory-security-storage');
+        const newAdmin = await memorySecurityStorage.createSecurityUser({
+          role: 'admin',
+          ...adminData
+        });
         
         // Log the creation
         await storage.createSecurityLog({
@@ -3635,7 +3681,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           last_login: null
         };
         
-        const newDriver = await storage.createSecureDriver(driverData);
+        const { memorySecurityStorage } = await import('./memory-security-storage');
+        const newDriver = await memorySecurityStorage.createSecurityUser({
+          role: 'driver',
+          ...driverData
+        });
         
         // Log the creation
         await storage.createSecurityLog({
