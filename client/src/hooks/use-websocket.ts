@@ -25,6 +25,7 @@ interface WebSocketHook {
   sendMessage: (message: WebSocketMessage) => void;
   subscribeToOrderUpdates: (orderId: string) => void;
   updateDriverLocation: (latitude: number, longitude: number, orderId?: string) => void;
+  broadcastOrderStatusUpdate: (orderId: string, status: string, statusText: string, additionalData?: any) => void;
   disconnect: () => void;
   reconnect: () => void;
 }
@@ -228,10 +229,26 @@ export function useWebSocket(): WebSocketHook {
     sendMessage({
       type: 'driver_location_update',
       data: {
-        latitude,
-        longitude,
+        lat: latitude,
+        lng: longitude,
         orderId,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        speed: 0,
+        heading: 0
+      }
+    });
+  }, [sendMessage]);
+
+  // بث تحديث حالة الطلب
+  const broadcastOrderStatusUpdate = useCallback((orderId: string, status: string, statusText: string, additionalData?: any) => {
+    sendMessage({
+      type: 'order_status_update',
+      data: {
+        orderId,
+        status,
+        statusText,
+        timestamp: Date.now(),
+        ...additionalData
       }
     });
   }, [sendMessage]);
@@ -286,6 +303,7 @@ export function useWebSocket(): WebSocketHook {
     sendMessage,
     subscribeToOrderUpdates,
     updateDriverLocation,
+    broadcastOrderStatusUpdate,
     disconnect,
     reconnect
   };

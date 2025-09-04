@@ -58,6 +58,8 @@ import SecureDriverControl from '@/pages/driver/secure-driver-control';
 import MainAdmin from '@/pages/admin/main-admin';
 import ApiDocumentation from '@/pages/admin/api-documentation';
 import WebSocketTest from '@/pages/websocket-test';
+import MapsTest from '@/pages/maps-test';
+import DriverLocationTest from '@/pages/driver-location-test';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 
 
@@ -131,6 +133,8 @@ function Router() {
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/websocket-test" component={WebSocketTest} />
+        <Route path="/maps-test" component={MapsTest} />
+        <Route path="/driver-location-test" component={DriverLocationTest} />
         <Route path="/security-test" component={SecurityTest} />
         <Route path="/setup-complete" component={SetupComplete} />
         <Route path="/api-test" component={ApiConnectionTest} />
@@ -195,6 +199,8 @@ function Router() {
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/websocket-test" component={WebSocketTest} />
+        <Route path="/maps-test" component={MapsTest} />
+        <Route path="/driver-location-test" component={DriverLocationTest} />
         <Route path="/article/:id" component={ArticlePage} />
         <Route component={NotFound} />
       </Switch>

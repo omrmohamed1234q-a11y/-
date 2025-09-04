@@ -4652,6 +4652,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             handleDriverLocationUpdate(connectionId, message, ws);
             break;
             
+          case 'order_status_update':
+            handleOrderStatusUpdate(connectionId, message, ws);
+            break;
+            
           case 'ping':
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
@@ -4737,21 +4741,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // دالة تحديث موقع الكابتن
   function handleDriverLocationUpdate(connectionId: string, message: any, ws: WebSocket) {
     const connection = activeConnections.get(connectionId);
-    if (!connection || connection.userType !== 'driver') return;
+    if (!connection) return;
 
-    const { latitude, longitude, orderId } = message.data || {};
+    const { lat, lng, orderId, speed, heading } = message.data || {};
     
-    if (latitude && longitude) {
-      console.log(`🚗 Driver location updated: ${latitude}, ${longitude}`);
+    if (lat && lng) {
+      console.log(`🚗 Driver location updated: ${lat}, ${lng} for order: ${orderId || 'general'}`);
       
-      // بث الموقع للعملاء المشتركين في هذا الطلب
-      broadcastToOrderSubscribers(orderId, {
-        type: 'driver_location_update',
+      // بث الموقع لجميع العملاء (في التطبيق الفعلي، فلتر حسب الطلب)
+      broadcastToAll({
+        type: 'driverLocationUpdate',
         data: {
-          latitude,
-          longitude,
+          lat,
+          lng,
           timestamp: Date.now(),
-          driverId: connection.userId
+          driverId: connection.userId || 'driver-test',
+          orderId,
+          speed: speed || 0,
+          heading: heading || 0
+        }
+      });
+    }
+  }
+
+  // دالة تحديث حالة الطلب
+  function handleOrderStatusUpdate(connectionId: string, message: any, ws: WebSocket) {
+    const connection = activeConnections.get(connectionId);
+    if (!connection) return;
+
+    const { orderId, status, statusText, ...additionalData } = message.data || {};
+    
+    if (orderId && status) {
+      console.log(`📦 Order status updated: ${orderId} -> ${status}`);
+      
+      // بث تحديث الحالة لجميع العملاء
+      broadcastToAll({
+        type: 'orderStatusUpdate',
+        data: {
+          id: orderId,
+          status,
+          statusText,
+          timestamp: Date.now(),
+          ...additionalData
         }
       });
     }
@@ -4766,9 +4797,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // دالة بث الرسائل لجميع المستخدمين
+  // دالة بث الرسائل لجميع المتصلين
   function broadcastToAll(message: any) {
-    activeConnections.forEach((connection) => {
+    activeConnections.forEach((connection, connectionId) => {
       if (connection.ws.readyState === WebSocket.OPEN) {
         connection.ws.send(JSON.stringify(message));
       }
