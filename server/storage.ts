@@ -150,7 +150,27 @@ const globalInquiryStorage: any[] = [];
 // Memory Storage للاختبار السريع
 export class MemoryStorage implements IStorage {
   private users: User[] = [];
-  private products: Product[] = [];
+  private products: Product[] = [
+    // Add print service as a virtual product
+    {
+      id: 'print-service',
+      name: 'خدمة الطباعة',
+      description: 'خدمة طباعة المستندات والملفات',
+      price: '1.00', // Base price, will be calculated dynamically
+      imageUrl: '/print-icon.png',
+      category: 'services',
+      subCategory: 'printing',
+      inStock: true,
+      stockQuantity: 999999,
+      isActive: true,
+      tags: ['طباعة', 'خدمات', 'مستندات'],
+      gradeLevel: 'all',
+      subject: 'all',
+      productType: 'service',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ];
   private orders: Order[] = [];
   private cartItems: CartItem[] = [];
   private partners: Partner[] = [];

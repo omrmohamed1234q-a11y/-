@@ -2418,10 +2418,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add print job to cart
-  app.post('/api/cart/print-job', async (req, res) => {
+  app.post('/api/cart/print-job', requireAuth, async (req: any, res) => {
     try {
       const printJobData = req.body;
+      const userId = req.user.id; // Get actual user ID from auth
       console.log('Received print job data:', printJobData);
+      console.log('Adding print job for user:', userId);
       
       // Extract data from the request - frontend sends individual print job objects
       const filename = printJobData.filename || 'طباعة جديدة';
@@ -2450,12 +2452,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         doubleSidedDiscount
       );
 
-      // Use existing admin user for print jobs (since we don't have authentication)
-      const adminUserId = '48c03e72-d53b-4a3f-a729-c38276268315'; // Existing admin user from database
-
-      // Create print job record for admin panel with proper field mapping
+      // Create print job record with actual user ID
       const printJobRecord = {
-        userId: adminUserId,
+        userId: userId, // Use actual authenticated user ID
         filename: filename,
         fileUrl: fileUrl,
         fileSize: printJobData.fileSize || 0,
@@ -2475,16 +2474,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const createdPrintJob = await storage.createPrintJob(printJobRecord);
       console.log('Print job created in admin panel:', createdPrintJob);
 
-      // Create cart item for print job
-      const cartItem = {
-        id: `print-job-${createdPrintJob.id}`,
-        productId: 'print-service',
-        productName: `طباعة: ${printJobData.filename}`,
-        productImage: '/print-icon.png',
-        price: totalCost,
-        quantity: 1,
+      // Add print job to user's cart using storage method
+      const cartItem = await storage.addToCart(userId, 'print-service', 1, {
         isPrintJob: true,
-        printJobId: createdPrintJob.id, // Link to the actual print job record
+        printJobId: createdPrintJob.id,
         printJob: {
           filename: printJobData.filename,
           fileUrl: printJobData.fileUrl,
@@ -2498,15 +2491,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pageRange: printJobData.pageRange,
           cost: totalCost
         },
-        variant: {
-          copies: printJobData.copies,
-          colorMode: printJobData.colorMode === 'color' ? 'ملون' : 'أبيض وأسود',
-          paperSize: printJobData.paperSize,
-          doubleSided: printJobData.doubleSided ? 'وجهين' : 'وجه واحد'
-        }
-      };
+        productName: `طباعة: ${printJobData.filename}`,
+        productImage: '/print-icon.png',
+        copies: printJobData.copies,
+        colorMode: printJobData.colorMode === 'color' ? 'ملون' : 'أبيض وأسود',
+        paperSize: printJobData.paperSize,
+        doubleSided: printJobData.doubleSided ? 'وجهين' : 'وجه واحد'
+      });
 
-      console.log('Print job added to cart and admin panel:', cartItem);
+      console.log('✅ Print job added to cart successfully:', cartItem.id);
+      console.log('📋 Print job also saved to admin panel:', createdPrintJob.id);
       
       res.json({ 
         success: true, 
