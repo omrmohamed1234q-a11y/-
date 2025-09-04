@@ -57,6 +57,7 @@ import SecurityAccess from '@/pages/admin/security-access';
 import SecureDriverControl from '@/pages/driver/secure-driver-control';
 import MainAdmin from '@/pages/admin/main-admin';
 import ApiDocumentation from '@/pages/admin/api-documentation';
+import WebSocketTest from '@/pages/websocket-test';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 
 
@@ -192,6 +193,7 @@ function Router() {
         
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
+        <Route path="/websocket-test" component={WebSocketTest} />
         <Route path="/article/:id" component={ArticlePage} />
         <Route component={NotFound} />
       </Switch>

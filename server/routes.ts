@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from 'ws';
 import { storage } from "./storage";
 import { createClient } from '@supabase/supabase-js';
 import { supabaseSecurityStorage, checkSecurityTablesExist } from "./db-supabase";
@@ -4605,6 +4606,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+
+  // إضافة WebSocket server للتتبع المباشر
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    clientTracking: true
+  });
+
+  // تخزين الاتصالات النشطة
+  const activeConnections = new Map<string, {
+    ws: WebSocket,
+    userId?: string,
+    userType?: 'customer' | 'admin' | 'driver',
+    lastSeen: Date
+  }>();
+
+  // معالج اتصالات WebSocket
+  wss.on('connection', (ws, request) => {
+    const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`🔗 WebSocket connection established: ${connectionId}`);
+
+    // تسجيل الاتصال الجديد
+    activeConnections.set(connectionId, {
+      ws,
+      lastSeen: new Date()
+    });
+
+    // معالج الرسائل الواردة
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        console.log(`📨 WebSocket message received:`, message);
+
+        switch (message.type) {
+          case 'authenticate':
+            handleAuthentication(connectionId, message, ws);
+            break;
+            
+          case 'subscribe_order_updates':
+            handleOrderSubscription(connectionId, message, ws);
+            break;
+            
+          case 'driver_location_update':
+            handleDriverLocationUpdate(connectionId, message, ws);
+            break;
+            
+          case 'ping':
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+            }
+            break;
+            
+          default:
+            console.log(`❓ Unknown WebSocket message type: ${message.type}`);
+        }
+      } catch (error) {
+        console.error('❌ Error processing WebSocket message:', error);
+      }
+    });
+
+    // معالج إغلاق الاتصال
+    ws.on('close', () => {
+      console.log(`❌ WebSocket connection closed: ${connectionId}`);
+      activeConnections.delete(connectionId);
+    });
+
+    // معالج الأخطاء
+    ws.on('error', (error) => {
+      console.error(`💥 WebSocket error for ${connectionId}:`, error);
+      activeConnections.delete(connectionId);
+    });
+
+    // إرسال رسالة ترحيب
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'welcome',
+        connectionId,
+        timestamp: Date.now(),
+        message: 'تم الاتصال بنجاح - مرحباً بك في نظام التتبع المباشر'
+      }));
+    }
+  });
+
+  // دالة مصادقة المستخدم
+  function handleAuthentication(connectionId: string, message: any, ws: WebSocket) {
+    const connection = activeConnections.get(connectionId);
+    if (!connection) return;
+
+    const { userId, userType, token } = message.data || {};
+    
+    if (userId && userType) {
+      connection.userId = userId;
+      connection.userType = userType;
+      activeConnections.set(connectionId, connection);
+      
+      console.log(`✅ User authenticated: ${userId} (${userType})`);
+      
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'authenticated',
+          userId,
+          userType,
+          timestamp: Date.now()
+        }));
+      }
+    }
+  }
+
+  // دالة الاشتراك في تحديثات الطلبات
+  function handleOrderSubscription(connectionId: string, message: any, ws: WebSocket) {
+    const connection = activeConnections.get(connectionId);
+    if (!connection) return;
+
+    const { orderId } = message.data || {};
+    
+    if (orderId) {
+      console.log(`📦 User subscribed to order updates: ${orderId}`);
+      
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'subscription_confirmed',
+          orderId,
+          timestamp: Date.now()
+        }));
+      }
+    }
+  }
+
+  // دالة تحديث موقع الكابتن
+  function handleDriverLocationUpdate(connectionId: string, message: any, ws: WebSocket) {
+    const connection = activeConnections.get(connectionId);
+    if (!connection || connection.userType !== 'driver') return;
+
+    const { latitude, longitude, orderId } = message.data || {};
+    
+    if (latitude && longitude) {
+      console.log(`🚗 Driver location updated: ${latitude}, ${longitude}`);
+      
+      // بث الموقع للعملاء المشتركين في هذا الطلب
+      broadcastToOrderSubscribers(orderId, {
+        type: 'driver_location_update',
+        data: {
+          latitude,
+          longitude,
+          timestamp: Date.now(),
+          driverId: connection.userId
+        }
+      });
+    }
+  }
+
+  // دالة بث الرسائل للمشتركين في طلب معين
+  function broadcastToOrderSubscribers(orderId: string, message: any) {
+    activeConnections.forEach((connection, connectionId) => {
+      if (connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify(message));
+      }
+    });
+  }
+
+  // دالة بث الرسائل لجميع المستخدمين
+  function broadcastToAll(message: any) {
+    activeConnections.forEach((connection) => {
+      if (connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify(message));
+      }
+    });
+  }
+
+  // دالة بث للمستخدم المحدد
+  function sendToUser(userId: string, message: any) {
+    activeConnections.forEach((connection) => {
+      if (connection.userId === userId && connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify(message));
+      }
+    });
+  }
+
+  // تنظيف الاتصالات المنتهية الصلاحية كل دقيقة
+  setInterval(() => {
+    const now = new Date();
+    activeConnections.forEach((connection, connectionId) => {
+      if (now.getTime() - connection.lastSeen.getTime() > 5 * 60 * 1000) { // 5 دقائق
+        console.log(`🧹 Cleaning up inactive connection: ${connectionId}`);
+        connection.ws.close();
+        activeConnections.delete(connectionId);
+      }
+    });
+  }, 60000);
+
+  // إضافة WebSocket helpers إلى app للاستخدام في routes أخرى
+  (app as any).websocket = {
+    broadcastToAll,
+    broadcastToOrderSubscribers,
+    sendToUser,
+    getActiveConnections: () => activeConnections.size
+  };
+
+  console.log('🔌 WebSocket server initialized on /ws');
   
   // Initialize security system with Supabase on server start
   (async () => {
