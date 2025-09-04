@@ -4629,6 +4629,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Apply API protection to all routes except public endpoints
+  // Import Paymob payment functions
+  const { createPaymobPayment, handlePaymobCallback, getPaymobPaymentMethods } = await import('./paymob');
+
+  // Paymob payment routes
+  app.post('/api/payments/paymob/create', createPaymobPayment);
+  app.post('/api/payments/paymob/callback', handlePaymobCallback);
+  app.get('/api/payments/paymob/methods', getPaymobPaymentMethods);
+
   app.use('/api', protectAPI);
   
   return httpServer;

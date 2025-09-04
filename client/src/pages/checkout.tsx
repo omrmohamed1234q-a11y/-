@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ShoppingBag, MapPin, CreditCard, Truck, Gift, Star, Package } from 'lucide-react';
+import PaymentMethods from '@/components/PaymentMethods';
 
 export default function CheckoutPage() {
   const [, setLocation] = useLocation();
@@ -32,6 +33,9 @@ export default function CheckoutPage() {
     notes: '',
     usePoints: false,
   });
+
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
+  const [orderCreated, setOrderCreated] = useState(false);
 
   // Check if cart is empty and redirect
   useEffect(() => {
@@ -90,11 +94,34 @@ export default function CheckoutPage() {
       deliveryAddress: fullAddress,
     };
 
+    // If payment method is Paymob, show payment methods instead of creating order directly
+    if (formData.paymentMethod === 'paymob') {
+      setShowPaymentMethods(true);
+      return;
+    }
+
     checkout(checkoutData, {
       onSuccess: () => {
         setLocation('/orders');
       },
     });
+  };
+
+  const handlePaymentSuccess = (result: any) => {
+    toast({
+      title: 'تم الدفع بنجاح',
+      description: `تم الدفع بـ ${result.method}`,
+    });
+    setLocation('/orders');
+  };
+
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: 'فشل في الدفع',
+      description: error,
+      variant: 'destructive',
+    });
+    setShowPaymentMethods(false);
   };
 
   if (isLoading) {
@@ -294,8 +321,8 @@ export default function CheckoutPage() {
                       <Label htmlFor="cash">نقدي عند الاستلام</Label>
                     </div>
                     <div className="flex items-center space-x-2 space-x-reverse">
-                      <RadioGroupItem value="card" id="card" />
-                      <Label htmlFor="card">بطاقة ائتمانية</Label>
+                      <RadioGroupItem value="paymob" id="paymob" />
+                      <Label htmlFor="paymob">الدفع الإلكتروني (InstaPay، Vodafone Cash، بطاقات)</Label>
                     </div>
                   </RadioGroup>
                 </CardContent>
@@ -427,6 +454,46 @@ export default function CheckoutPage() {
             </Card>
           </div>
         </div>
+
+        {/* Payment Methods Modal */}
+        {showPaymentMethods && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold">إتمام الدفع</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPaymentMethods(false)}
+                    data-testid="close-payment-modal"
+                  >
+                    إلغاء
+                  </Button>
+                </div>
+
+                <PaymentMethods
+                  amount={total}
+                  orderId={Date.now().toString()}
+                  customerData={{
+                    firstName: formData.customerName.split(' ')[0] || 'Customer',
+                    lastName: formData.customerName.split(' ').slice(1).join(' ') || 'User',
+                    email: formData.customerEmail || 'customer@example.com',
+                    phone: formData.customerPhone,
+                    address: formData.deliveryAddress,
+                    building: formData.buildingNumber,
+                    floor: formData.floor,
+                    apartment: formData.apartment,
+                    city: 'Cairo',
+                    country: 'Egypt'
+                  }}
+                  onPaymentSuccess={handlePaymentSuccess}
+                  onPaymentError={handlePaymentError}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

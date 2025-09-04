@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Package, Printer, Truck, CheckCircle, Clock, ArrowRight
+  Package, Printer, Truck, CheckCircle2, Clock, ArrowRight, MapPin, Phone, Star, MessageCircle
 } from 'lucide-react';
 
 interface OrderTrackingProps {
