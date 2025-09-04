@@ -159,6 +159,37 @@ function Router() {
         <Route path="/checkout" component={Checkout} />
         <Route path="/order-tracking/:id" component={OrderTracking} />
         <Route path="/student/teachers" component={StudentTeachers} />
+        
+        {/* Admin routes - available for authenticated users too */}
+        <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+        <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
+        <Route path="/admin/store" component={() => <AdminProtectedRoute><AdminStore /></AdminProtectedRoute>} />
+        <Route path="/admin/products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
+        <Route path="/admin-products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
+        <Route path="/admin/teachers-corner" component={() => <AdminProtectedRoute><TeachersCorner /></AdminProtectedRoute>} />
+        <Route path="/admin/users" component={() => <AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
+        <Route path="/admin/coupons" component={() => <AdminProtectedRoute><AdminCoupons /></AdminProtectedRoute>} />
+        <Route path="/admin/inquiries" component={() => <AdminProtectedRoute><AdminInquiries /></AdminProtectedRoute>} />
+        <Route path="/admin/announcements" component={() => <AdminProtectedRoute><AdminAnnouncements /></AdminProtectedRoute>} />
+        <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
+        <Route path="/admin/orders" component={() => <AdminProtectedRoute><OrdersManagement /></AdminProtectedRoute>} />
+        <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
+        <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
+        <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
+        <Route path="/admin/security-dashboard" component={() => <AdminProtectedRoute><SecureSecurityDashboard /></AdminProtectedRoute>} />
+        <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
+        <Route path="/admin/apis" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
+        
+        {/* Driver routes */}
+        <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
+        <Route path="/driver/dashboard" component={SecureDriverControl} />
+        
+        {/* Secure login routes - available always */}
+        <Route path="/admin/secure-login" component={SecureAdminLogin} />
+        <Route path="/secure-admin-login" component={SecureAdminLogin} />
+        <Route path="/driver/secure-login" component={SecureDriverLogin} />
+        <Route path="/secure-driver-login" component={SecureDriverLogin} />
+        
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/article/:id" component={ArticlePage} />
