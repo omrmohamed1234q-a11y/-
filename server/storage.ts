@@ -1,5 +1,5 @@
 import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, partnerProducts, secureAdmins, secureDrivers, securityLogs, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct, type SecureAdmin, type InsertSecureAdmin, type SecureDriver, type InsertSecureDriver, type SecurityLog, type InsertSecurityLog } from "@shared/schema";
-import { db } from "./db";
+// import { db } from "./db"; // تعطيل مؤقتاً
 import { eq, desc, sql, and } from "drizzle-orm";
 
 export interface IStorage {
@@ -146,6 +146,288 @@ export interface IStorage {
 // Global storage to persist across application lifecycle
 const globalCouponStorage: any[] = [];
 const globalInquiryStorage: any[] = [];
+
+// Memory Storage للاختبار السريع
+export class MemoryStorage implements IStorage {
+  private users: User[] = [];
+  private products: Product[] = [];
+  private orders: Order[] = [];
+  private cartItems: CartItem[] = [];
+  private partners: Partner[] = [];
+  private announcements: Announcement[] = [];
+  
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.find(u => u.id === id);
+  }
+
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return this.users.find(u => u.email === email);
+  }
+
+  async createUser(userData: any): Promise<User> {
+    const user: User = {
+      id: userData.id || `user-${Date.now()}`,
+      username: userData.username || `user-${Date.now()}`,
+      email: userData.email || `${Date.now()}@example.com`,
+      fullName: userData.fullName || 'مستخدم جديد',
+      phone: userData.phone || null,
+      countryCode: userData.countryCode || '+20',
+      age: userData.age || null,
+      gradeLevel: userData.gradeLevel || null,
+      role: userData.role || 'customer',
+      bountyPoints: userData.bountyPoints || 0,
+      level: userData.level || 1,
+      totalPrints: userData.totalPrints || 0,
+      totalPurchases: userData.totalPurchases || 0,
+      totalReferrals: userData.totalReferrals || 0,
+      isTeacher: userData.isTeacher || false,
+      teacherSubscription: userData.teacherSubscription || false,
+      createdAt: new Date()
+    };
+    this.users.push(user);
+    return user;
+  }
+
+  async updateUser(id: string, updates: any): Promise<User> {
+    const userIndex = this.users.findIndex(u => u.id === id);
+    if (userIndex === -1) {
+      throw new Error('User not found');
+    }
+    this.users[userIndex] = { ...this.users[userIndex], ...updates };
+    return this.users[userIndex];
+  }
+
+  async upsertUser(userData: any): Promise<User> {
+    const existingUser = this.users.find(u => u.id === userData.id);
+    if (existingUser) {
+      return await this.updateUser(userData.id, userData);
+    } else {
+      return await this.createUser(userData);
+    }
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return [...this.users];
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const userIndex = this.users.findIndex(u => u.id === id);
+    if (userIndex === -1) return false;
+    this.users.splice(userIndex, 1);
+    return true;
+  }
+
+  // Product operations
+  async getAllProducts(): Promise<Product[]> {
+    return [...this.products];
+  }
+
+  async createProduct(productData: any): Promise<Product> {
+    const product: Product = {
+      id: `product-${Date.now()}`,
+      ...productData,
+      createdAt: new Date()
+    };
+    this.products.push(product);
+    return product;
+  }
+
+  async updateProduct(id: string, updates: any): Promise<Product> {
+    const productIndex = this.products.findIndex(p => p.id === id);
+    if (productIndex === -1) {
+      throw new Error('Product not found');
+    }
+    this.products[productIndex] = { ...this.products[productIndex], ...updates };
+    return this.products[productIndex];
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    const productIndex = this.products.findIndex(p => p.id === id);
+    if (productIndex !== -1) {
+      this.products.splice(productIndex, 1);
+    }
+  }
+
+  // Cart operations
+  async getCart(userId: string): Promise<any> {
+    const items = this.cartItems.filter(item => item.userId === userId);
+    const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const subtotal = items.reduce((sum, item) => sum + parseFloat(item.price.toString()) * (item.quantity || 0), 0);
+    
+    return {
+      items,
+      totalQuantity,
+      subtotal,
+      currency: 'جنيه'
+    };
+  }
+
+  async addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<CartItem> {
+    const cartItem: CartItem = {
+      id: `cart-${Date.now()}`,
+      userId,
+      productId,
+      quantity,
+      price: '10.00', // Default price
+      variant: variant || null,
+      notes: null,
+      createdAt: new Date()
+    };
+    this.cartItems.push(cartItem);
+    return cartItem;
+  }
+
+  async updateCartItem(itemId: string, quantity: number): Promise<CartItem> {
+    const itemIndex = this.cartItems.findIndex(item => item.id === itemId);
+    if (itemIndex === -1) {
+      throw new Error('Cart item not found');
+    }
+    this.cartItems[itemIndex].quantity = quantity;
+    return this.cartItems[itemIndex];
+  }
+
+  async removeCartItem(itemId: string): Promise<boolean> {
+    const itemIndex = this.cartItems.findIndex(item => item.id === itemId);
+    if (itemIndex === -1) return false;
+    this.cartItems.splice(itemIndex, 1);
+    return true;
+  }
+
+  async clearCart(userId: string): Promise<boolean> {
+    this.cartItems = this.cartItems.filter(item => item.userId !== userId);
+    return true;
+  }
+
+  async getCartItemCount(userId: string): Promise<number> {
+    return this.cartItems.filter(item => item.userId === userId).length;
+  }
+
+  // Basic implementations for other required methods
+  async getAllOrders(): Promise<Order[]> { return []; }
+  async getOrder(id: string): Promise<Order | undefined> { return undefined; }
+  async createOrder(order: any): Promise<Order> { 
+    const newOrder: Order = {
+      id: `order-${Date.now()}`,
+      ...order,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.orders.push(newOrder);
+    return newOrder;
+  }
+  async updateOrder(id: string, updates: any): Promise<Order> { throw new Error('Not implemented'); }
+  async updateOrderStatus(id: string, status: string): Promise<Order> { throw new Error('Not implemented'); }
+  async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> { throw new Error('Not implemented'); }
+  async cancelOrder(id: string): Promise<Order> { throw new Error('Not implemented'); }
+  async addDriverNote(id: string, note: string): Promise<Order> { throw new Error('Not implemented'); }
+  async getActiveOrders(): Promise<Order[]> { return []; }
+  async getOrdersByStatus(status: string): Promise<Order[]> { return []; }
+  async deleteOrder(id: string): Promise<boolean> { return false; }
+  
+  // Print jobs
+  async getAllPrintJobs(): Promise<PrintJob[]> { return []; }
+  async createPrintJob(printJob: any): Promise<PrintJob> { throw new Error('Not implemented'); }
+  async updatePrintJobStatus(id: string, status: string): Promise<PrintJob> { throw new Error('Not implemented'); }
+  
+  // Admin stats
+  async getAdminStats(): Promise<any> { 
+    return {
+      totalUsers: this.users.length,
+      totalProducts: this.products.length,
+      totalOrders: this.orders.length
+    };
+  }
+  
+  // Stubs for all other methods - to be implemented as needed
+  async getAllTeacherPlans(): Promise<any[]> { return []; }
+  async getAllTeacherSubscriptions(): Promise<any[]> { return []; }
+  async getAllTeachers(): Promise<any[]> { return []; }
+  async createTeacher(teacher: any): Promise<any> { throw new Error('Not implemented'); }
+  async updateTeacher(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
+  async deleteTeacher(id: string): Promise<void> { throw new Error('Not implemented'); }
+  
+  createNotification(data: any): any { return { id: `notif-${Date.now()}`, ...data }; }
+  getUserNotifications(userId: string): any[] { return []; }
+  markNotificationAsRead(notificationId: string): void { }
+  
+  async getAllCoupons(): Promise<any[]> { return []; }
+  async createCoupon(coupon: any): Promise<any> { throw new Error('Not implemented'); }
+  async updateCoupon(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
+  async updateCouponStatus(id: string, isActive: boolean): Promise<any> { throw new Error('Not implemented'); }
+  async deleteCoupon(id: string): Promise<boolean> { return false; }
+  async validateCoupon(code: string, orderTotal: number, userId: string): Promise<any> { return null; }
+  async applyCoupon(code: string, orderId: string, orderTotal: number, userId: string): Promise<any> { return null; }
+  
+  async getAllInquiries(): Promise<any[]> { return []; }
+  async createInquiry(inquiry: any): Promise<any> { throw new Error('Not implemented'); }
+  async sendInquiry(inquiryId: string): Promise<any> { throw new Error('Not implemented'); }
+  async getInquiryResponses(inquiryId: string): Promise<any[]> { return []; }
+  async createInquiryNotifications(notifications: any[]): Promise<void> { }
+  
+  async getAllDrivers(): Promise<any[]> { return []; }
+  async getDriver(id: string): Promise<any | undefined> { return undefined; }
+  async getDriverByEmail(email: string): Promise<any | undefined> { return undefined; }
+  async getDriverByUsername(username: string): Promise<any | undefined> { return undefined; }
+  async createDriver(driver: any): Promise<any> { throw new Error('Not implemented'); }
+  async updateDriver(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
+  async updateDriverStatus(id: string, status: string): Promise<any> { throw new Error('Not implemented'); }
+  async updateDriverLocation(id: string, location: any): Promise<any> { throw new Error('Not implemented'); }
+  async updateDriverLastActive(id: string): Promise<void> { }
+  async authenticateDriver(identifier: string, password: string): Promise<any> { return null; }
+  async getAvailableDrivers(): Promise<any[]> { return []; }
+  async getAvailableOrdersForDriver(driverId: string): Promise<any[]> { return []; }
+  async assignOrderToDriver(orderId: string, driverId: string): Promise<any> { throw new Error('Not implemented'); }
+  async getDriverOrders(driverId: string): Promise<any[]> { return []; }
+  async deleteDriver(id: string): Promise<boolean> { return false; }
+  
+  async getCoupon(id: string): Promise<any> { return null; }
+  async createCouponNotifications(notifications: any[]): Promise<void> { }
+  async getCouponUsageAnalytics(couponId: string): Promise<any> { return {}; }
+  
+  // Partners
+  async getFeaturedPartners(): Promise<Partner[]> { return []; }
+  async getAllPartners(): Promise<Partner[]> { return []; }
+  async getPartnerById(id: string): Promise<Partner | undefined> { return undefined; }
+  async createPartner(partner: any): Promise<Partner> { throw new Error('Not implemented'); }
+  async updatePartner(id: string, updates: any): Promise<Partner> { throw new Error('Not implemented'); }
+  async deletePartner(id: string): Promise<boolean> { return false; }
+  
+  // Partner Products
+  async getPartnerProducts(partnerId: string): Promise<any[]> { return []; }
+  async getAllPartnerProducts(): Promise<any[]> { return []; }
+  async createPartnerProduct(product: any): Promise<any> { throw new Error('Not implemented'); }
+  async updatePartnerProduct(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
+  async deletePartnerProduct(id: string): Promise<boolean> { return false; }
+  async getPartnerProductsByCategory(category: string): Promise<any[]> { return []; }
+  
+  // Announcements
+  async getActiveAnnouncements(): Promise<Announcement[]> { return []; }
+  async getHomepageAnnouncements(): Promise<Announcement[]> { return []; }
+  async getAllAnnouncements(): Promise<Announcement[]> { return []; }
+  async getAnnouncement(id: string): Promise<Announcement | undefined> { return undefined; }
+  async createAnnouncement(announcement: any): Promise<Announcement> { throw new Error('Not implemented'); }
+  async updateAnnouncement(id: string, updates: any): Promise<Announcement> { throw new Error('Not implemented'); }
+  async deleteAnnouncement(id: string): Promise<boolean> { return false; }
+  
+  // Security
+  async getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined> { return undefined; }
+  async getSecureDriverByCredentials(username: string, email: string, driverCode?: string): Promise<any | undefined> { return undefined; }
+  async createSecureAdmin(admin: any): Promise<any> { throw new Error('Not implemented'); }
+  async createSecureDriver(driver: any): Promise<any> { throw new Error('Not implemented'); }
+  async updateSecureAdmin(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
+  async updateSecureDriver(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
+  async getAllSecureAdmins(): Promise<any[]> { return []; }
+  async getAllSecureDrivers(): Promise<any[]> { return []; }
+  async createSecurityLog(log: any): Promise<any> { throw new Error('Not implemented'); }
+  async getSecurityLogs(options: any): Promise<any[]> { return []; }
+  async updateSecureAdminStatus(id: string, isActive: boolean): Promise<any> { throw new Error('Not implemented'); }
+  async updateSecureDriverStatus(id: string, isActive: boolean): Promise<any> { throw new Error('Not implemented'); }
+}
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
@@ -3095,4 +3377,5 @@ class MemStorage implements IStorage {
 
 // Use MemStorage temporarily due to database connection issues
 // Will switch to DatabaseStorage when database is ready
-export const storage = new DatabaseStorage();
+// تبديل إلى Memory Storage مؤقتاً
+export const storage = new MemoryStorage();

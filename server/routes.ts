@@ -41,7 +41,7 @@ const requireAuth = async (req: any, res: any, next: any) => {
           authenticatedUserId = user.id;
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log('⚠️ Failed to validate Supabase token:', error.message);
     }
   }

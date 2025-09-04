@@ -2,10 +2,10 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@shared/schema';
 
+// تعطيل قاعدة البيانات مؤقتاً - سنستخدم Memory Storage
 if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+  console.log("⚠️ DATABASE_URL missing - using Memory Storage");
+  process.env.DATABASE_URL = "postgresql://dummy:dummy@localhost:5432/dummy";
 }
 
 const client = postgres(process.env.DATABASE_URL);
