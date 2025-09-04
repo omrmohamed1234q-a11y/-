@@ -56,6 +56,7 @@ import SecureSecurityDashboard from '@/pages/admin/secure-security-dashboard';
 import SecurityAccess from '@/pages/admin/security-access';
 import SecureDriverControl from '@/pages/driver/secure-driver-control';
 import MainAdmin from '@/pages/admin/main-admin';
+import ApiDocumentation from '@/pages/admin/api-documentation';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 
 
@@ -120,6 +121,7 @@ function Router() {
         <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
         <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
         <Route path="/admin/security-dashboard" component={() => <AdminProtectedRoute><SecureSecurityDashboard /></AdminProtectedRoute>} />
+        <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
 
         <Route path="/driver/dashboard" component={SecureDriverControl} />
