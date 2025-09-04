@@ -54,6 +54,7 @@ import ApiConnectionTest from "@/pages/api-connection-test";
 import ConnectivityDashboard from "@/pages/connectivity-dashboard";
 import SQLGenerator from "@/pages/sql-generator";
 import PaymobTestPage from "@/pages/paymob-test";
+import PaymobSetupPage from "@/pages/paymob-setup";
 import SecureSecurityDashboard from '@/pages/admin/secure-security-dashboard';
 import SecurityAccess from '@/pages/admin/security-access';
 import SecureDriverControl from '@/pages/driver/secure-driver-control';
@@ -143,6 +144,7 @@ function Router() {
         <Route path="/connectivity" component={ConnectivityDashboard} />
         <Route path="/sql-generator" component={SQLGenerator} />
         <Route path="/paymob-test" component={PaymobTestPage} />
+        <Route path="/paymob-setup" component={PaymobSetupPage} />
         <Route path="/article/:id" component={ArticlePage} />
         <Route path="/" component={EnhancedLanding} />
         <Route component={NotFound} />
@@ -206,6 +208,7 @@ function Router() {
         <Route path="/maps-test" component={MapsTest} />
         <Route path="/driver-location-test" component={DriverLocationTest} />
         <Route path="/paymob-test" component={PaymobTestPage} />
+        <Route path="/paymob-setup" component={PaymobSetupPage} />
         <Route path="/article/:id" component={ArticlePage} />
         <Route component={NotFound} />
       </Switch>

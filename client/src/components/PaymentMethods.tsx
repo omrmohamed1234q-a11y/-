@@ -201,6 +201,8 @@ export default function PaymentMethods({
     switch (method.id) {
       case 'card':
         return <CreditCard className="h-6 w-6" />;
+      case 'valu':
+        return <span className="text-2xl font-bold text-purple-600">💰</span>;
       case 'vodafone_cash':
       case 'orange_money':
       case 'etisalat_cash':
@@ -248,13 +250,19 @@ export default function PaymentMethods({
             <Button
               key={method.id}
               variant="outline"
-              className={`h-auto p-4 flex flex-col items-center gap-3 hover:bg-gray-50 ${
+              className={`h-auto p-4 flex flex-col items-center gap-3 hover:bg-gray-50 relative ${
                 method.comingSoon ? 'opacity-60' : ''
-              }`}
+              } ${method.featured ? 'border-purple-200 bg-purple-50 hover:bg-purple-100' : ''}`}
               onClick={() => handlePaymentMethod(method)}
               disabled={processingPayment === method.id || method.comingSoon}
               data-testid={`payment-method-${method.id}`}
             >
+              {method.featured && (
+                <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs px-2 py-1 rounded-full">
+                  مميز
+                </div>
+              )}
+
               {processingPayment === method.id ? (
                 <Loader2 className="h-6 w-6 animate-spin" />
               ) : (
@@ -264,6 +272,9 @@ export default function PaymentMethods({
               <div className="text-center">
                 <div className="font-medium">{method.name}</div>
                 <div className="text-xs text-gray-500">{method.nameEn}</div>
+                {method.description && (
+                  <div className="text-xs text-purple-600 mt-1">{method.description}</div>
+                )}
               </div>
 
               {method.comingSoon && (

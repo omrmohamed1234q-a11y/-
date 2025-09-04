@@ -189,7 +189,14 @@ export class PaymobService {
       });
 
       if (!response.ok) {
-        throw new Error(`Payment key generation failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('🚨 Payment key generation failed:', response.status, errorText);
+        console.error('🔧 Using integration_id:', paymentData.integration_id);
+        
+        if (response.status === 401) {
+          throw new Error('المفاتيح أو Integration IDs غير صحيحة - يرجى التحقق من إعدادات Paymob');
+        }
+        throw new Error(`Payment key generation failed: ${response.status} - ${errorText}`);
       }
 
       const data: PaymobPaymentKeyResponse = await response.json();
@@ -396,34 +403,49 @@ export async function handlePaymobCallback(req: Request, res: Response) {
 // Get supported payment methods for Paymob
 export async function getPaymobPaymentMethods(req: Request, res: Response) {
   try {
+    // Note: These are demo integration IDs. In production, replace with your actual Paymob integration IDs
     const paymentMethods = [
       {
         id: 'card',
         name: 'بطاقة ائتمانية',
         nameEn: 'Credit Card',
         icon: '💳',
-        integration_id: 4736159
+        integration_id: 4736159, // Replace with your actual card integration ID
+        category: 'card'
+      },
+      {
+        id: 'valu',
+        name: 'فاليو',
+        nameEn: 'valU',
+        icon: '💰',
+        integration_id: process.env.PAYMOB_VALU_INTEGRATION_ID || 4736164,
+        description: 'دفع بالتقسيط حتى 60 شهر',
+        category: 'installment',
+        featured: true
       },
       {
         id: 'vodafone_cash',
         name: 'فودافون كاش',
         nameEn: 'Vodafone Cash',
         icon: '📱',
-        integration_id: 4736160
+        integration_id: 4736160,
+        category: 'wallet'
       },
       {
         id: 'orange_money',
         name: 'اورنچ موني',
         nameEn: 'Orange Money',
         icon: '🟠',
-        integration_id: 4736161
+        integration_id: 4736161,
+        category: 'wallet'
       },
       {
         id: 'etisalat_cash',
         name: 'اتصالات كاش',
         nameEn: 'Etisalat Cash',
         icon: '🟢',
-        integration_id: 4736162
+        integration_id: 4736162,
+        category: 'wallet'
       },
       {
         id: 'instapay',
@@ -431,21 +453,15 @@ export async function getPaymobPaymentMethods(req: Request, res: Response) {
         nameEn: 'InstaPay',
         icon: '⚡',
         integration_id: 4736163,
-        comingSoon: true
-      },
-      {
-        id: 'valu',
-        name: 'فاليو',
-        nameEn: 'valU',
-        icon: '💰',
-        integration_id: 4736164
+        category: 'instant'
       },
       {
         id: 'souhoola',
         name: 'سهولة',
         nameEn: 'Souhoola',
         icon: '💳',
-        integration_id: 4736165
+        integration_id: 4736165,
+        category: 'installment'
       }
     ];
 
