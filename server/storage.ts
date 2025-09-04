@@ -330,9 +330,57 @@ export class MemoryStorage implements IStorage {
   async deleteOrder(id: string): Promise<boolean> { return false; }
   
   // Print jobs
-  async getAllPrintJobs(): Promise<PrintJob[]> { return []; }
-  async createPrintJob(printJob: any): Promise<PrintJob> { throw new Error('Not implemented'); }
-  async updatePrintJobStatus(id: string, status: string): Promise<PrintJob> { throw new Error('Not implemented'); }
+  printJobs: PrintJob[] = [];
+
+  async getAllPrintJobs(): Promise<PrintJob[]> { 
+    return this.printJobs; 
+  }
+  
+  async createPrintJob(printJobData: any): Promise<PrintJob> { 
+    const printJob: PrintJob = {
+      id: `pj-${Date.now()}`,
+      userId: printJobData.userId,
+      filename: printJobData.filename,
+      fileUrl: printJobData.fileUrl,
+      fileSize: printJobData.fileSize || 0,
+      fileType: printJobData.fileType || 'application/pdf',
+      pages: printJobData.pages || 1,
+      copies: printJobData.copies || 1,
+      colorMode: printJobData.colorMode || 'grayscale',
+      paperSize: printJobData.paperSize || 'A4',
+      paperType: printJobData.paperType || 'plain',
+      doubleSided: printJobData.doubleSided || false,
+      pageRange: printJobData.pageRange || 'all',
+      status: printJobData.status || 'pending',
+      progress: 0,
+      queuePosition: this.printJobs.length + 1,
+      cost: printJobData.cost || '0',
+      pointsEarned: 0,
+      priority: printJobData.priority || 'normal',
+      createdAt: new Date(),
+      completedAt: null
+    };
+    
+    this.printJobs.push(printJob);
+    console.log('📋 Created print job:', printJob.id, 'for', printJob.filename);
+    return printJob;
+  }
+  
+  async updatePrintJobStatus(id: string, status: string): Promise<PrintJob> { 
+    const printJob = this.printJobs.find(pj => pj.id === id);
+    if (!printJob) {
+      throw new Error(`Print job not found: ${id}`);
+    }
+    
+    printJob.status = status;
+    if (status === 'completed') {
+      printJob.completedAt = new Date();
+      printJob.progress = 100;
+    }
+    
+    console.log('📋 Updated print job status:', id, '->', status);
+    return printJob;
+  }
   
   // Admin stats
   async getAdminStats(): Promise<any> { 
