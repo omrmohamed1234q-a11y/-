@@ -137,8 +137,24 @@ export default function PaymentMethods({
 
     } catch (error: any) {
       console.error('Payment error:', error);
-      onPaymentError(error.message || 'فشل في بدء عملية الدفع');
       setProcessingPayment(null);
+      
+      // Special handling for Paymob authentication errors
+      if (error.message?.includes('مفاتيح Paymob') || error.message?.includes('401')) {
+        toast({
+          title: "مشكلة في إعدادات الدفع",
+          description: "مفاتيح Paymob غير صحيحة أو منتهية الصلاحية. يرجى التواصل مع الإدارة.",
+          variant: "destructive",
+        });
+        onPaymentError('مشكلة في إعدادات الدفع - يرجى التواصل مع الإدارة');
+      } else {
+        toast({
+          title: "فشل في بدء الدفع",
+          description: error.message || 'فشل في بدء عملية الدفع',
+          variant: "destructive",
+        });
+        onPaymentError(error.message || 'فشل في بدء عملية الدفع');
+      }
     }
   };
 

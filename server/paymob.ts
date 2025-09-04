@@ -54,7 +54,7 @@ interface PaymobPaymentKeyResponse {
   token: string;
 }
 
-class PaymobService {
+export class PaymobService {
   private apiKey: string;
   private publicKey: string;
   private secretKey: string;
@@ -75,6 +75,10 @@ class PaymobService {
   // Step 1: Authentication - Get token
   async authenticate(): Promise<string> {
     try {
+      console.log('🔐 Attempting Paymob authentication...');
+      console.log('🔑 API Key exists:', !!this.apiKey);
+      console.log('🔑 API Key length:', this.apiKey.length);
+      
       const response = await fetch(`${PAYMOB_API_URL}/auth/tokens`, {
         method: 'POST',
         headers: {
@@ -85,20 +89,27 @@ class PaymobService {
         })
       });
 
+      console.log('📡 Paymob auth response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('🚨 Paymob authentication failed:', response.status, errorText);
+        
         if (response.status === 401) {
-          throw new Error('مفاتيح Paymob غير صحيحة أو منتهية الصلاحية - يرجى مراجعة إعدادات الحساب');
+          throw new Error('مفاتيح Paymob غير صحيحة أو منتهية الصلاحية - يرجى التحقق من PAYMOB_API_KEY');
         }
-        throw new Error(`Authentication failed: ${response.status} - ${errorText}`);
+        throw new Error(`فشل التحقق من Paymob: ${response.status} - ${errorText}`);
       }
 
       const data: PaymobAuthResponse = await response.json();
+      console.log('✅ Paymob authentication successful');
       return data.token;
-    } catch (error) {
-      console.error('Paymob authentication error:', error);
-      throw new Error('Failed to authenticate with Paymob');
+    } catch (error: any) {
+      console.error('💥 Paymob authentication error:', error.message);
+      if (error.message.includes('مفاتيح Paymob')) {
+        throw error; // Re-throw the Arabic error message
+      }
+      throw new Error('فشل في الاتصال بخدمة Paymob - يرجى المحاولة لاحقاً');
     }
   }
 

@@ -4745,6 +4745,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/payments/paymob/create', createPaymobPayment);
   app.post('/api/payments/paymob/callback', handlePaymobCallback);
   app.get('/api/payments/paymob/methods', getPaymobPaymentMethods);
+  
+  // Paymob diagnostic endpoint
+  app.get('/api/payments/paymob/test', async (req, res) => {
+    try {
+      const paymobModule = await import('./paymob');
+      const PaymobService = paymobModule.default || paymobModule.PaymobService;
+      
+      if (!PaymobService) {
+        return res.status(500).json({
+          success: false,
+          error: 'PaymobService not found'
+        });
+      }
+      
+      const paymob = new PaymobService();
+      const token = await paymob.authenticate();
+      
+      res.json({
+        success: true,
+        message: "Paymob authentication successful",
+        hasToken: !!token,
+        tokenLength: token?.length || 0
+      });
+    } catch (error: any) {
+      console.error('Paymob test failed:', error.message);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        code: error.message.includes('مفاتيح Paymob') ? 'AUTH_FAILED' : 'UNKNOWN_ERROR'
+      });
+    }
+  });
 
   app.use('/api', protectAPI);
   
