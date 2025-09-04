@@ -130,6 +130,7 @@ function Router() {
 
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
+        <Route path="/websocket-test" component={WebSocketTest} />
         <Route path="/security-test" component={SecurityTest} />
         <Route path="/setup-complete" component={SetupComplete} />
         <Route path="/api-test" component={ApiConnectionTest} />
