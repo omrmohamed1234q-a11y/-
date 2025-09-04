@@ -29,7 +29,7 @@ export default function CheckoutPage() {
     apartment: '',
     landmarks: '',
     deliveryMethod: 'delivery',
-    paymentMethod: 'cash',
+    paymentMethod: 'paymob',
     notes: '',
     usePoints: false,
   });
@@ -94,11 +94,9 @@ export default function CheckoutPage() {
       deliveryAddress: fullAddress,
     };
 
-    // If payment method is Paymob, show payment methods instead of creating order directly
-    if (formData.paymentMethod === 'paymob') {
-      setShowPaymentMethods(true);
-      return;
-    }
+    // Show Paymob payment methods
+    setShowPaymentMethods(true);
+    return;
 
     checkout(checkoutData, {
       onSuccess: () => {
@@ -311,20 +309,17 @@ export default function CheckoutPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <RadioGroup
-                    value={formData.paymentMethod}
-                    onValueChange={(value) => handleInputChange('paymentMethod', value)}
-                    data-testid="payment-method-group"
-                  >
-                    <div className="flex items-center space-x-2 space-x-reverse">
-                      <RadioGroupItem value="cash" id="cash" />
-                      <Label htmlFor="cash">نقدي عند الاستلام</Label>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="h-6 w-6 text-blue-600" />
+                      <div>
+                        <div className="font-medium text-blue-900">الدفع الإلكتروني</div>
+                        <div className="text-sm text-blue-700">
+                          ادفع بأمان باستخدام البطاقة الائتمانية أو المحافظ الرقمية
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2 space-x-reverse">
-                      <RadioGroupItem value="paymob" id="paymob" />
-                      <Label htmlFor="paymob">الدفع الإلكتروني (InstaPay، Vodafone Cash، بطاقات)</Label>
-                    </div>
-                  </RadioGroup>
+                  </div>
                 </CardContent>
               </Card>
 

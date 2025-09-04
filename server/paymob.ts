@@ -67,7 +67,8 @@ class PaymobService {
     this.hmacSecret = process.env.PAYMOB_HMAC || '';
 
     if (!this.apiKey || !this.publicKey) {
-      console.warn('⚠️ Paymob API keys not configured');
+      console.error('🚨 Paymob API keys not configured properly');
+      console.error('Required keys: PAYMOB_API_KEY, PAYMOB_PUBLIC_KEY, PAYMOB_SECRET_KEY, PAYMOB_HMAC');
     }
   }
 
@@ -85,7 +86,12 @@ class PaymobService {
       });
 
       if (!response.ok) {
-        throw new Error(`Authentication failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('🚨 Paymob authentication failed:', response.status, errorText);
+        if (response.status === 401) {
+          throw new Error('مفاتيح Paymob غير صحيحة أو منتهية الصلاحية - يرجى مراجعة إعدادات الحساب');
+        }
+        throw new Error(`Authentication failed: ${response.status} - ${errorText}`);
       }
 
       const data: PaymobAuthResponse = await response.json();
@@ -298,10 +304,20 @@ export async function createPaymobPayment(req: Request, res: Response) {
 
   } catch (error: any) {
     console.error('Create Paymob payment error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to create payment'
-    });
+    
+    // Special handling for authentication errors
+    if (error.message.includes('مفاتيح Paymob')) {
+      res.status(401).json({
+        success: false,
+        error: error.message,
+        code: 'PAYMOB_AUTH_ERROR'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: error.message || 'فشل في إنشاء عملية الدفع'
+      });
+    }
   }
 }
 

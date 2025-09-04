@@ -3,9 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { GooglePayButton } from '@/components/payment/GooglePayButton';
-import { VodafoneCashButton } from '@/components/payment/VodafoneCashButton';
-import { CreditCard, Smartphone, Receipt, ArrowLeft } from 'lucide-react';
+import PaymentMethods from '@/components/PaymentMethods';
+import { CreditCard, Receipt, ArrowLeft } from 'lucide-react';
 import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 
@@ -93,26 +92,26 @@ export default function PaymentPage() {
                       </Badge>
                     </div>
                     <div className="text-left">
-                      <p className="font-semibold">{(item.price * item.quantity).toFixed(2)} ج.م</p>
+                      <p className="font-semibold">{(item.price * item.quantity).toFixed(2)} جنيه</p>
                     </div>
                   </div>
                 ))}
-
+                
                 <Separator />
-
+                
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>المجموع الفرعي:</span>
-                    <span>{subtotal.toFixed(2)} ج.م</span>
+                    <span>{subtotal.toFixed(2)} جنيه</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>ضريبة القيمة المضافة (14%):</span>
-                    <span>{tax.toFixed(2)} ج.م</span>
+                    <span>الضريبة (14%):</span>
+                    <span>{tax.toFixed(2)} جنيه</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>الإجمالي:</span>
-                    <span className="text-green-600">{total.toFixed(2)} ج.م</span>
+                    <span className="text-green-600">{total.toFixed(2)} جنيه</span>
                   </div>
                 </div>
               </CardContent>
@@ -121,85 +120,19 @@ export default function PaymentPage() {
 
           {/* Payment Methods */}
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 space-x-reverse">
-                  <CreditCard className="w-5 h-5" />
-                  <span>طرق الدفع</span>
-                </CardTitle>
-                <p className="text-sm text-gray-600">
-                  اختر طريقة الدفع المناسبة لك
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Google Pay Section */}
-                <div className="border rounded-lg p-4">
-                  <div className="flex items-center mb-4">
-                    <CreditCard className="w-6 h-6 text-blue-600 ml-3" />
-                    <div>
-                      <h3 className="font-semibold text-lg">Google Pay</h3>
-                      <p className="text-sm text-gray-600">
-                        ادفع بسرعة وأمان باستخدام بطاقتك المحفوظة
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <div className="flex items-center space-x-2 space-x-reverse text-sm text-gray-600">
-                      <Badge variant="outline">آمن</Badge>
-                      <Badge variant="outline">سريع</Badge>
-                      <Badge variant="outline">مقبول دولياً</Badge>
-                    </div>
-                  </div>
-
-                  <GooglePayButton
-                    amount={total}
-                    currency="EGP"
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
-                  />
-                </div>
-
-                {/* Vodafone Cash Section */}
-                <div className="border rounded-lg p-4">
-                  <div className="flex items-center mb-4">
-                    <Smartphone className="w-6 h-6 text-red-600 ml-3" />
-                    <div>
-                      <h3 className="font-semibold text-lg">فودافون كاش</h3>
-                      <p className="text-sm text-gray-600">
-                        ادفع من محفظتك الإلكترونية بسهولة
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <div className="flex items-center space-x-2 space-x-reverse text-sm text-gray-600">
-                      <Badge variant="outline">محلي</Badge>
-                      <Badge variant="outline">فوري</Badge>
-                      <Badge variant="outline">بدون رسوم</Badge>
-                    </div>
-                  </div>
-
-                  <VodafoneCashButton
-                    amount={total}
-                    currency="EGP"
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
-                  />
-                </div>
-
-                {/* Additional Payment Info */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-blue-800 mb-2">معلومات مهمة</h4>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• جميع المعاملات مشفرة ومحمية بأعلى معايير الأمان</li>
-                    <li>• ستتلقى إيصال إلكتروني فوراً بعد إتمام الدفع</li>
-                    <li>• يمكنك تتبع حالة طلبك من لوحة التحكم</li>
-                    <li>• خدمة العملاء متاحة 24/7 لمساعدتك</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
+            <PaymentMethods
+              amount={total}
+              orderId={`order-${Date.now()}`}
+              customerData={{
+                firstName: 'محمد',
+                lastName: 'أحمد',
+                email: 'customer@example.com',
+                phone: '01012345678',
+                address: 'Cairo, Egypt'
+              }}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentError={handlePaymentError}
+            />
           </div>
         </div>
       </div>
