@@ -94,15 +94,6 @@ export function UploadStatus({ isUploading, uploadResults = [], uploadErrors = [
           </div>
         )}
 
-        {/* Upload Service Status Info */}
-        {!isUploading && (uploadResults.length > 0 || uploadErrors.length > 0) && (
-          <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <div className="flex items-center gap-2 text-xs text-blue-600">
-              <AlertCircle className="w-3 h-3" />
-              النظام يستخدم خدمتي Cloudinary و Firebase لضمان موثوقية الرفع
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

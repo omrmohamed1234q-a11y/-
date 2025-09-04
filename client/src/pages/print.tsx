@@ -63,22 +63,16 @@ export default function Print() {
   // Mutation to add print jobs to cart
   const addToCartMutation = useMutation({
     mutationFn: async (printJobData: any) => {
-      return await apiRequest('POST', '/api/cart/print-job', printJobData);
+      const response = await apiRequest('POST', '/api/cart/print-job', printJobData);
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-      toast({
-        title: 'تمت إضافة المهمة للسلة',
-        description: 'تم إضافة ملفاتك للطباعة إلى السلة بنجاح',
-      });
+      console.log('✅ Print job added successfully:', variables.filename);
     },
-    onError: (error) => {
-      console.error('Error adding to cart:', error);
-      toast({
-        title: 'خطأ',
-        description: 'فشل في إضافة المهمة للسلة',
-        variant: 'destructive',
-      });
+    onError: (error: any, variables: any) => {
+      console.error('❌ Failed to add print job:', variables.filename, error);
+      throw error; // Re-throw للسماح للـ parent handler بمعالجة الخطأ
     },
   });
 
@@ -187,6 +181,15 @@ export default function Print() {
       return;
     }
 
+    if (uploadedUrls.length !== selectedFiles.length) {
+      toast({
+        title: 'خطأ في الملفات',
+        description: 'يرجى التأكد من رفع جميع الملفات بنجاح',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setIsUploading(true);
     
     try {
@@ -207,23 +210,55 @@ export default function Print() {
         pageRange: printSettings.pages
       }));
 
+      // إضافة الملفات للسلة بشكل متتالي مع معالجة أفضل للأخطاء
+      let successCount = 0;
+      let failureCount = 0;
+
       for (const printJob of printJobs) {
-        await addToCartMutation.mutateAsync(printJob);
+        try {
+          console.log('Adding to cart:', printJob);
+          await addToCartMutation.mutateAsync(printJob);
+          successCount++;
+        } catch (error) {
+          console.error('Failed to add single print job:', error);
+          failureCount++;
+        }
       }
-      
-      setSelectedFiles([]);
-      setUploadedUrls([]);
-      setPrintSettings({
-        copies: 1,
-        colorMode: 'grayscale',
-        paperSize: 'A4',
-        paperType: 'plain',
-        doubleSided: false,
-        pages: 'all',
-      });
+
+      if (successCount > 0) {
+        toast({
+          title: 'تمت الإضافة للسلة',
+          description: `تم إضافة ${successCount} من ${printJobs.length} ملف للطباعة`,
+        });
+
+        // إعادة تعيين النماذج فقط إذا تم إضافة ملف واحد على الأقل بنجاح
+        setSelectedFiles([]);
+        setUploadedUrls([]);
+        setPrintSettings({
+          copies: 1,
+          colorMode: 'grayscale',
+          paperSize: 'A4',
+          paperType: 'plain',
+          doubleSided: false,
+          pages: 'all',
+        });
+      }
+
+      if (failureCount > 0) {
+        toast({
+          title: 'خطأ في بعض الملفات',
+          description: `فشل في إضافة ${failureCount} ملف للسلة`,
+          variant: 'destructive'
+        });
+      }
       
     } catch (error) {
       console.error('Failed to add print jobs to cart:', error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ في إضافة الملفات للسلة',
+        variant: 'destructive'
+      });
     } finally {
       setIsUploading(false);
     }
