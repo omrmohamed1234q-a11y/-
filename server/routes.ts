@@ -4870,6 +4870,261 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.use('/api', protectAPI);
   
+  // ===== نظام المكافآت والأوراق المجانية =====
+
+  // تهيئة إعدادات المكافآت الافتراضية
+  const DEFAULT_REWARD_SETTINGS = {
+    pages_per_milestone: 500,     // كل 500 ورقة
+    milestone_reward: 10,         // 10 أوراق هدية
+    referral_reward: 10,          // 10 أوراق عند دعوة صديق
+    first_login_bonus: 10,        // 10 أوراق عند أول تسجيل دخول
+    max_referral_rewards: 100     // حد أقصى للمكافآت من الدعوات
+  };
+
+  const rewardSettings = new Map(Object.entries(DEFAULT_REWARD_SETTINGS));
+
+  // Helper functions لنظام المكافآت
+  function generateReferralCode(userId: string): string {
+    const timestamp = Date.now().toString(36);
+    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `${randomStr}${timestamp.substring(-4)}`;
+  }
+
+  function calculatePrintMilestoneRewards(totalPages: number, lastCheckpoint: number): number {
+    const pagesPerMilestone = parseInt(rewardSettings.get('pages_per_milestone') || '500');
+    const rewardPerMilestone = parseInt(rewardSettings.get('milestone_reward') || '10');
+    
+    const completedMilestones = Math.floor(totalPages / pagesPerMilestone);
+    const lastMilestones = Math.floor(lastCheckpoint / pagesPerMilestone);
+    
+    const newMilestones = completedMilestones - lastMilestones;
+    return Math.max(0, newMilestones * rewardPerMilestone);
+  }
+
+  // الحصول على بيانات المكافآت للمستخدم
+  app.get('/api/rewards', async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const userId = req.user.id;
+      
+      // إرجاع بيانات تجريبية مؤقتاً
+      const mockUserReward = {
+        freePages: 25,
+        totalPrintedPages: 350,
+        totalEarnedPages: 35,
+        referralCode: generateReferralCode(userId),
+        referralCount: 3,
+        firstLoginBonusGiven: true
+      };
+
+      const pagesPerMilestone = parseInt(rewardSettings.get('pages_per_milestone') || '500');
+      const currentMilestone = Math.floor(mockUserReward.totalPrintedPages / pagesPerMilestone);
+      const nextMilestonePages = (currentMilestone + 1) * pagesPerMilestone;
+      const progressToNext = mockUserReward.totalPrintedPages % pagesPerMilestone;
+      const progressPercent = (progressToNext / pagesPerMilestone) * 100;
+
+      const mockRecentRewards = [
+        {
+          id: '1',
+          rewardType: 'referral',
+          pagesEarned: 10,
+          description: 'مكافأة دعوة صديق',
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: '2',
+          rewardType: 'first_login',
+          pagesEarned: 10,
+          description: 'مكافأة الترحيب',
+          createdAt: new Date(Date.now() - 24*60*60*1000).toISOString()
+        }
+      ];
+
+      res.json({
+        success: true,
+        data: {
+          userReward: mockUserReward,
+          progress: {
+            currentMilestone,
+            nextMilestonePages,
+            progressToNext,
+            progressPercent,
+            pagesRemaining: pagesPerMilestone - progressToNext
+          },
+          recentRewards: mockRecentRewards,
+          settings: Object.fromEntries(rewardSettings)
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching user rewards:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // الحصول على إعدادات المكافآت (Admin only)
+  app.get('/api/admin/rewards/settings', async (req, res) => {
+    try {
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      res.json({
+        success: true,
+        data: Object.fromEntries(rewardSettings)
+      });
+    } catch (error) {
+      console.error('Error fetching reward settings:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // تحديث إعدادات المكافآت (Admin only)
+  app.post('/api/admin/rewards/settings', async (req, res) => {
+    try {
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const { 
+        pages_per_milestone,
+        milestone_reward,
+        referral_reward,
+        first_login_bonus,
+        max_referral_rewards 
+      } = req.body;
+
+      // تحديث الإعدادات
+      if (pages_per_milestone) rewardSettings.set('pages_per_milestone', pages_per_milestone.toString());
+      if (milestone_reward) rewardSettings.set('milestone_reward', milestone_reward.toString());
+      if (referral_reward) rewardSettings.set('referral_reward', referral_reward.toString());
+      if (first_login_bonus) rewardSettings.set('first_login_bonus', first_login_bonus.toString());
+      if (max_referral_rewards) rewardSettings.set('max_referral_rewards', max_referral_rewards.toString());
+
+      console.log(`⚙️ Admin ${req.user.id} updated reward settings`);
+
+      res.json({
+        success: true,
+        message: 'تم تحديث إعدادات المكافآت بنجاح',
+        data: Object.fromEntries(rewardSettings)
+      });
+    } catch (error) {
+      console.error('Error updating reward settings:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // منح مكافأة يدوية للمستخدم (Admin only)
+  app.post('/api/admin/rewards/grant', async (req, res) => {
+    try {
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const { userId, pages, reason } = req.body;
+
+      if (!userId || !pages || pages <= 0) {
+        return res.status(400).json({ message: 'Valid userId and pages count required' });
+      }
+
+      console.log(`🎁 Admin ${req.user.id} granted ${pages} pages to user ${userId}: ${reason}`);
+
+      res.json({
+        success: true,
+        message: `تم منح ${pages} ورقة مجانية للمستخدم بنجاح`
+      });
+    } catch (error) {
+      console.error('Error granting admin reward:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // إحصائيات المكافآت (Admin only)
+  app.get('/api/admin/rewards/stats', async (req, res) => {
+    try {
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      // بيانات تجريبية للإحصائيات
+      const mockStats = {
+        totalUsers: 156,
+        totalFreePages: 2340,
+        totalEarnedPages: 4680,
+        totalPrintedPages: 15600,
+        totalReferrals: 89,
+        rewardTypeStats: {
+          print_milestone: 2340,
+          referral: 890,
+          first_login: 1560,
+          admin_bonus: 390
+        },
+        averagePagesPerUser: 100,
+        averageEarnedPerUser: 30
+      };
+
+      res.json({
+        success: true,
+        data: mockStats
+      });
+    } catch (error) {
+      console.error('Error fetching reward stats:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // تطبيق كود دعوة صديق
+  app.post('/api/rewards/apply-referral', async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { referralCode } = req.body;
+
+      if (!referralCode) {
+        return res.status(400).json({ message: 'Referral code is required' });
+      }
+
+      console.log(`✅ User ${req.user.id} applied referral code: ${referralCode}`);
+
+      const referralReward = parseInt(rewardSettings.get('referral_reward') || '10');
+
+      res.json({
+        success: true,
+        message: `تم تطبيق كود الدعوة بنجاح! حصلت على ${referralReward} ورقة مجانية`,
+        pagesEarned: referralReward
+      });
+    } catch (error) {
+      console.error('Error applying referral code:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // مكافأة أول تسجيل دخول
+  app.post('/api/rewards/first-login-bonus', async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const firstLoginBonus = parseInt(rewardSettings.get('first_login_bonus') || '10');
+
+      console.log(`🎁 First login bonus given to user: ${req.user.id} (${firstLoginBonus} pages)`);
+
+      res.json({
+        success: true,
+        message: `مرحباً بك! حصلت على ${firstLoginBonus} ورقة مجانية كهدية ترحيب`,
+        pagesEarned: firstLoginBonus
+      });
+    } catch (error) {
+      console.error('Error giving first login bonus:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   return httpServer;
 }
 
@@ -5061,4 +5316,5 @@ function generateTeacherMaterialsData(products: any[]) {
     rating: 4.2 + Math.random() * 0.6
   }));
 }
+
 

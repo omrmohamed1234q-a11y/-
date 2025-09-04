@@ -44,6 +44,7 @@ import DriverDashboard from "@/pages/driver/driver-dashboard";
 import DriversManagement from "@/pages/admin/drivers";
 import AdminPartners from "@/pages/admin/partners";
 import SecurityManagement from "@/pages/admin/security-management";
+import RewardsManagement from "@/pages/admin/rewards-management";
 import QuickAccess from "@/pages/quick-access";
 import TestAnnouncements from "@/pages/test-announcements";
 import ArticlePage from "@/pages/article";
@@ -185,6 +186,7 @@ function Router() {
         <Route path="/admin/security-dashboard" component={() => <AdminProtectedRoute><SecureSecurityDashboard /></AdminProtectedRoute>} />
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/apis" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
+        <Route path="/admin/rewards-management" component={() => <AdminProtectedRoute><RewardsManagement /></AdminProtectedRoute>} />
         
         {/* Driver routes */}
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />

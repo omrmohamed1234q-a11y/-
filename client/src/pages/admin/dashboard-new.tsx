@@ -163,6 +163,14 @@ export default function AdminDashboard() {
       count: 0
     },
     {
+      title: 'نظام المكافآت والأوراق المجانية',
+      description: 'إدارة قوانين المكافآت ومتابعة الاستخدام',
+      icon: Gift,
+      link: '/admin/rewards-management',
+      color: 'pink',
+      count: 0
+    },
+    {
       title: 'إدارة السائقين والمديرين',
       description: 'لوحة الأمان المتقدمة - نظام آمن لإدارة الحسابات',
       icon: Truck,

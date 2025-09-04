@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, jsonb, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { relations } from "drizzle-orm";
 import { z } from "zod";
 
 export const users = pgTable("users", {
@@ -1051,3 +1052,107 @@ export type SecureDriver = typeof secureDrivers.$inferSelect;
 export type InsertSecureDriver = z.infer<typeof insertSecureDriverSchema>;
 export type SecurityLog = typeof securityLogs.$inferSelect;
 export type InsertSecurityLog = z.infer<typeof insertSecurityLogSchema>;
+
+// ===== نظام المكافآت والأوراق المجانية =====
+
+// جدول إعدادات نظام المكافآت
+export const rewardSettings = pgTable('reward_settings', {
+  id: serial('id').primaryKey(),
+  settingKey: varchar('setting_key', { length: 100 }).notNull().unique(),
+  settingValue: integer('setting_value').notNull(),
+  description: text('description'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+// جدول أرصدة المكافآت للمستخدمين
+export const userRewards = pgTable('user_rewards', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id', { length: 255 }).notNull().unique(),
+  freePages: integer('free_pages').default(0), // الأوراق المجانية المتاحة
+  totalPrintedPages: integer('total_printed_pages').default(0), // إجمالي الأوراق المطبوعة
+  totalEarnedPages: integer('total_earned_pages').default(0), // إجمالي الأوراق المكتسبة
+  referralCode: varchar('referral_code', { length: 20 }).unique(), // كود الدعوة الخاص
+  referredBy: varchar('referred_by', { length: 20 }), // كود من دعاه
+  referralCount: integer('referral_count').default(0), // عدد الدعوات الناجحة
+  firstLoginBonusGiven: boolean('first_login_bonus_given').default(false),
+  lastPrintRewardCheck: integer('last_print_reward_check').default(0), // آخر عدد أوراق تم حساب المكافآت عنده
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+// جدول سجل المكافآت
+export const rewardHistory = pgTable('reward_history', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  rewardType: varchar('reward_type', { length: 50 }).notNull(), // print_milestone, referral, first_login, admin_bonus
+  pagesEarned: integer('pages_earned').notNull(),
+  description: text('description'),
+  metadata: jsonb('metadata'), // معلومات إضافية (رقم الطلب، كود الإحالة، إلخ)
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+// جدول تتبع الأوراق المطبوعة
+export const printHistory = pgTable('print_history', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  orderId: varchar('order_id', { length: 255 }),
+  pagesCount: integer('pages_count').notNull(),
+  pagesCost: decimal('pages_cost', { precision: 10, scale: 2 }),
+  freePagesUsed: integer('free_pages_used').default(0),
+  paidPages: integer('paid_pages').default(0),
+  printType: varchar('print_type', { length: 50 }), // document, photo, etc
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+// Relations للمكافآت
+export const userRewardsRelations = relations(userRewards, ({ many }) => ({
+  rewardHistory: many(rewardHistory),
+  printHistory: many(printHistory)
+}));
+
+export const rewardHistoryRelations = relations(rewardHistory, ({ one }) => ({
+  user: one(userRewards, {
+    fields: [rewardHistory.userId],
+    references: [userRewards.userId]
+  })
+}));
+
+export const printHistoryRelations = relations(printHistory, ({ one }) => ({
+  user: one(userRewards, {
+    fields: [printHistory.userId],
+    references: [userRewards.userId]
+  })
+}));
+
+// Reward schemas
+export const insertRewardSettingsSchema = createInsertSchema(rewardSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+export type InsertRewardSettings = z.infer<typeof insertRewardSettingsSchema>;
+export type RewardSettings = typeof rewardSettings.$inferSelect;
+
+export const insertUserRewardsSchema = createInsertSchema(userRewards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+export type InsertUserRewards = z.infer<typeof insertUserRewardsSchema>;
+export type UserRewards = typeof userRewards.$inferSelect;
+
+export const insertRewardHistorySchema = createInsertSchema(rewardHistory).omit({
+  id: true,
+  createdAt: true
+});
+export type InsertRewardHistory = z.infer<typeof insertRewardHistorySchema>;
+export type RewardHistory = typeof rewardHistory.$inferSelect;
+
+export const insertPrintHistorySchema = createInsertSchema(printHistory).omit({
+  id: true,
+  createdAt: true
+});
+export type InsertPrintHistory = z.infer<typeof insertPrintHistorySchema>;
+export type PrintHistory = typeof printHistory.$inferSelect;
