@@ -46,15 +46,65 @@
       "password_hash": "$2b$10$hz1TfHgLY5G.xMaEwjbe/ukUoX26SXwuo0o68SgNvXMhDDsLad/Aq",
       "full_name": "Ali Hassan",
       "role": "driver",
-      "is_active": true,
+      "is_active": false,
       "created_at": "2025-09-02T15:15:10.563Z",
-      "updated_at": "2025-09-02T15:18:36.591Z",
+      "updated_at": "2025-09-05T01:53:46.202Z",
       "driver_code": "AL002",
       "vehicle_type": "سيارة",
       "working_area": "الجيزة"
     }
   ],
   "logs": [
+    {
+      "id": "465b101a-587c-4126-a5cb-a505a7e169d5",
+      "user_id": "1f625a42-ad3f-4b93-9e8d-218c6ae22866",
+      "action": "تسجيل دخول سائق ناجح",
+      "ip_address": "172.31.66.2",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "success": true,
+      "timestamp": "2025-09-02T15:43:02.191Z",
+      "details": "Driver: ahmedd (OM001)"
+    },
+    {
+      "id": "a1daf1c0-1e18-43c8-8ce7-f524efc37ad5",
+      "user_id": "1f625a42-ad3f-4b93-9e8d-218c6ae22866",
+      "action": "تم تفعيل المستخدم",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Security System",
+      "success": true,
+      "timestamp": "2025-09-02T15:43:01.763Z",
+      "details": "User: ahmedd"
+    },
+    {
+      "id": "205bc54f-7bbf-4d55-97eb-fa0e7b6cd1d2",
+      "user_id": "1f625a42-ad3f-4b93-9e8d-218c6ae22866",
+      "action": "تسجيل دخول ناجح",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Login System",
+      "success": true,
+      "timestamp": "2025-09-02T15:43:01.290Z",
+      "details": "Username: ahmedd, Role: driver"
+    },
+    {
+      "id": "b3accc6a-ada2-42bf-ae60-bb0c5206977c",
+      "user_id": "unknown",
+      "action": "محاولة دخول سائق فاشلة",
+      "ip_address": "172.31.66.2",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "success": false,
+      "timestamp": "2025-09-02T15:42:33.051Z",
+      "details": "Username: ahmedd, Email: omarr3loush@gmail.com, DriverCode: 123456"
+    },
+    {
+      "id": "5c693993-8298-4ab3-b10d-b385f897d632",
+      "user_id": "unknown",
+      "action": "محاولة دخول فاشلة",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Login System",
+      "success": false,
+      "timestamp": "2025-09-02T15:42:32.520Z",
+      "details": "Username: ahmedd, Reason: User not found"
+    },
     {
       "id": "75911cd6-2df4-4faf-91bc-dada3b83addd",
       "user_id": "7c579190-af22-461c-969e-5f1df0a26c5e",
@@ -171,55 +221,15 @@
       "details": "Username: production_admin, Email: admin@production.com"
     },
     {
-      "id": "5c693993-8298-4ab3-b10d-b385f897d632",
-      "user_id": "unknown",
-      "action": "محاولة دخول فاشلة",
-      "ip_address": "127.0.0.1",
-      "user_agent": "Login System",
-      "success": false,
-      "timestamp": "2025-09-02T15:42:32.520Z",
-      "details": "Username: ahmedd, Reason: User not found"
-    },
-    {
-      "id": "b3accc6a-ada2-42bf-ae60-bb0c5206977c",
-      "user_id": "unknown",
-      "action": "محاولة دخول سائق فاشلة",
-      "ip_address": "172.31.66.2",
-      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-      "success": false,
-      "timestamp": "2025-09-02T15:42:33.051Z",
-      "details": "Username: ahmedd, Email: omarr3loush@gmail.com, DriverCode: 123456"
-    },
-    {
-      "id": "205bc54f-7bbf-4d55-97eb-fa0e7b6cd1d2",
-      "user_id": "1f625a42-ad3f-4b93-9e8d-218c6ae22866",
-      "action": "تسجيل دخول ناجح",
-      "ip_address": "127.0.0.1",
-      "user_agent": "Login System",
-      "success": true,
-      "timestamp": "2025-09-02T15:43:01.290Z",
-      "details": "Username: ahmedd, Role: driver"
-    },
-    {
-      "id": "a1daf1c0-1e18-43c8-8ce7-f524efc37ad5",
-      "user_id": "1f625a42-ad3f-4b93-9e8d-218c6ae22866",
-      "action": "تم تفعيل المستخدم",
+      "id": "8dc76572-71c9-4b91-b322-bc5bfbcd2bab",
+      "user_id": "7c579190-af22-461c-969e-5f1df0a26c5e",
+      "action": "تم إلغاء تفعيل المستخدم",
       "ip_address": "127.0.0.1",
       "user_agent": "Security System",
       "success": true,
-      "timestamp": "2025-09-02T15:43:01.763Z",
-      "details": "User: ahmedd"
-    },
-    {
-      "id": "465b101a-587c-4126-a5cb-a505a7e169d5",
-      "user_id": "1f625a42-ad3f-4b93-9e8d-218c6ae22866",
-      "action": "تسجيل دخول سائق ناجح",
-      "ip_address": "172.31.66.2",
-      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-      "success": true,
-      "timestamp": "2025-09-02T15:43:02.191Z",
-      "details": "Driver: ahmedd (OM001)"
+      "timestamp": "2025-09-05T01:53:46.203Z",
+      "details": "User: ali_driver"
     }
   ],
-  "lastSaved": "2025-09-02T15:43:02.191Z"
+  "lastSaved": "2025-09-05T01:53:46.203Z"
 }
