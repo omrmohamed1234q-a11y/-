@@ -270,23 +270,4 @@ export function registerInventoryRoutes(app: Express) {
     }
   });
 
-  // ==================== SAMPLE DATA (Development) ====================
-
-  // Create sample inventory data
-  app.post('/api/inventory/create-sample-data', async (req: any, res) => {
-    try {
-      await inventoryService.createSampleData();
-      
-      res.json({
-        success: true,
-        message: 'Sample inventory data created successfully'
-      });
-    } catch (error) {
-      console.error('Error creating sample data:', error);
-      res.status(500).json({ 
-        success: false,
-        error: 'Failed to create sample data' 
-      });
-    }
-  });
 }

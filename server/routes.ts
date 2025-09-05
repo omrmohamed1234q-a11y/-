@@ -236,52 +236,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { status, search } = req.query;
       
-      // Simulated orders data - replace with real database query
-      let orders = [
-        {
-          id: '1',
-          orderNumber: 'ORD-2024-001',
-          userId: 'user-001',
-          customerName: 'أحمد محمد',
-          customerPhone: '01234567890',
-          items: [{ name: 'طباعة 10 صفحات', quantity: 1, price: 5 }],
-          subtotal: 5,
-          totalAmount: 7,
-          deliveryFee: 2,
-          status: 'new',
-          statusText: 'مش مستلمة من الموظف',
-          deliveryMethod: 'delivery',
-          deliveryAddress: '123 شارع النيل، القاهرة',
-          paymentMethod: 'vodafone_cash',
-          paymentStatus: 'completed',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          timeline: []
-        },
-        {
-          id: '2',
-          orderNumber: 'ORD-2024-002',
-          userId: 'user-002',
-          customerName: 'فاطمة علي',
-          customerPhone: '01987654321',
-          items: [{ name: 'طباعة 25 صفحة ملونة', quantity: 1, price: 25 }],
-          subtotal: 25,
-          totalAmount: 27,
-          deliveryFee: 2,
-          status: 'printing',
-          statusText: 'جاري الطباعة دلوقتي',
-          deliveryMethod: 'pickup',
-          paymentMethod: 'card',
-          paymentStatus: 'completed',
-          staffId: 'staff-001',
-          staffName: 'محمود الموظف',
-          receivedAt: new Date(Date.now() - 3600000).toISOString(),
-          printingStartedAt: new Date(Date.now() - 1800000).toISOString(),
-          createdAt: new Date(Date.now() - 7200000).toISOString(),
-          updatedAt: new Date().toISOString(),
-          timeline: []
-        }
-      ];
+      // Get real orders from storage
+      let orders = await storage.getAllOrders();
       
       // Apply filters
       if (status && status !== 'all') {
@@ -408,29 +364,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { orderNumber } = req.params;
       
-      // Simulated order lookup - replace with real database query
-      const order = {
-        orderNumber,
-        status: 'printing',
-        statusText: 'جاري الطباعة دلوقتي',
-        estimatedDelivery: 30,
-        driverName: null,
-        driverPhone: null,
-        timeline: [
-          {
-            event: 'تم إنشاء الطلب وتأكيد الدفع',
-            timestamp: new Date(Date.now() - 7200000).toISOString()
-          },
-          {
-            event: 'استلم الطلب: محمود الموظف',
-            timestamp: new Date(Date.now() - 3600000).toISOString()
-          },
-          {
-            event: 'بدء الطباعة',
-            timestamp: new Date(Date.now() - 1800000).toISOString()
-          }
-        ]
-      };
+      // Get real order from storage
+      const order = await storage.getOrderByOrderNumber(orderNumber);
+      
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
       
       res.json(order);
     } catch (error: any) {
@@ -444,13 +383,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get driver statistics
   app.get("/api/driver/stats", async (req, res) => {
     try {
-      // Simulated driver stats - replace with real data
-      const stats = {
-        totalOrders: 127,
-        completedToday: 8,
-        ongoingOrders: 2,
-        todayEarnings: 45
-      };
+      // Get real driver stats from storage
+      const stats = await storage.getDriverStats(req.user?.id);
       
       res.json(stats);
     } catch (error: any) {
@@ -462,29 +396,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available orders for driver
   app.get("/api/driver/available-orders", async (req, res) => {
     try {
-      // Simulated available orders - replace with real database query
-      const availableOrders = [
-        {
-          id: 'order-available-1',
-          orderNumber: 'ORD-2024-001',
-          customerName: 'أحمد محمد',
-          customerPhone: '01234567890',
-          deliveryAddress: '123 شارع النيل، المعادي، القاهرة',
-          totalAmount: 15,
-          createdAt: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
-          status: 'ready_delivery'
-        },
-        {
-          id: 'order-available-2',
-          orderNumber: 'ORD-2024-003',
-          customerName: 'مريم علي', 
-          customerPhone: '01987654321',
-          deliveryAddress: '456 شارع التحرير، وسط البلد، القاهرة',
-          totalAmount: 25,
-          createdAt: new Date(Date.now() - 600000).toISOString(), // 10 minutes ago
-          status: 'ready_delivery'
-        }
-      ];
+      // Get real available orders from storage
+      const availableOrders = await storage.getAvailableOrders();
       
       res.json(availableOrders);
     } catch (error: any) {

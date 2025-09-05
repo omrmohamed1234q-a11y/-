@@ -225,29 +225,6 @@ class InventoryService {
     };
   }
 
-  // Simulate stock data for demonstration
-  async createSampleData(): Promise<void> {
-    const sampleProducts = [
-      'print-service',
-      'scan-service', 
-      'book-math-grade-1',
-      'book-science-grade-2'
-    ];
-
-    for (const productId of sampleProducts) {
-      // Create some sample stock movements
-      await this.updateStock(productId, 100, 'in', 'initial_stock', 'INV-001', 'admin', 'Initial inventory setup');
-      await this.updateStock(productId, 15, 'out', 'sale', 'ORD-001', 'system', 'Customer purchase');
-      await this.updateStock(productId, 5, 'out', 'sale', 'ORD-002', 'system', 'Customer purchase');
-      
-      // Create low stock alert for demonstration
-      if (productId === 'print-service') {
-        await this.createAlert(productId, 'low_stock', 8, 10);
-      }
-    }
-
-    console.log('📊 Sample inventory data created');
-  }
 }
 
 export const inventoryService = new InventoryService();

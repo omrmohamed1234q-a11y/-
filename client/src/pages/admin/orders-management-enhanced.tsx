@@ -243,29 +243,6 @@ export default function OrdersManagementEnhanced() {
     }
   };
 
-  const createSampleData = async () => {
-    try {
-      const response = await fetch('/api/inventory/create-sample-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (response.ok) {
-        await refetchInventory();
-        await refetchProducts();
-        toast({
-          title: "تم إنشاء البيانات",
-          description: "تم إنشاء البيانات التجريبية بنجاح"
-        });
-      }
-    } catch (err) {
-      toast({
-        title: "خطأ",
-        description: "فشل في إنشاء البيانات التجريبية",
-        variant: "destructive"
-      });
-    }
-  };
 
   const filteredOrders = orders.filter((order: any) => {
     const matchesSearch = !searchQuery || 
@@ -1053,10 +1030,6 @@ export default function OrdersManagementEnhanced() {
                     </DialogContent>
                   </Dialog>
                   
-                  <Button variant="outline" onClick={createSampleData} className="border-gray-200 hover:bg-gray-50">
-                    <Plus className="w-4 h-4 mr-2" />
-                    📊 بيانات تجريبية
-                  </Button>
                   
                   <Button variant="outline" onClick={() => refetchInventory()} className="border-gray-200 hover:bg-gray-50">
                     <RefreshCw className="w-4 h-4 mr-2" />
@@ -1162,7 +1135,7 @@ export default function OrdersManagementEnhanced() {
                   {!inventorySearchTerm && (
                     <Button onClick={() => setShowAddDialog(true)} className="mt-4">
                       <Plus className="w-4 h-4 mr-2" />
-                      إضافة أول منتج
+                      إضافة منتج جديد
                     </Button>
                   )}
                 </div>
