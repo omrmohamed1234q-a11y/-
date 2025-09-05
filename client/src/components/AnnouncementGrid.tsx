@@ -30,8 +30,8 @@ export function AnnouncementGrid() {
   const { data: announcements = [], isLoading, error } = useQuery<Announcement[]>({
     queryKey: ['/api/announcements/homepage'],
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: false, // Disable retries to prevent errors
-    enabled: false, // Temporarily disable API calls
+    retry: 1,
+    enabled: true, // Enable API calls
   });
 
   // Show loading state
