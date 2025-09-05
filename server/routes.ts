@@ -13,6 +13,7 @@ import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { MemorySecurityStorage } from './memory-security-storage';
+import { registerInventoryRoutes } from "./inventory-routes";
 
 // Initialize memory security storage
 const memorySecurityStorage = new MemorySecurityStorage();
@@ -5505,6 +5506,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // ==================== INVENTORY MANAGEMENT ROUTES ====================
+  
+  registerInventoryRoutes(app);
 
   const httpServer = createServer(app);
 

@@ -72,10 +72,12 @@ function NotificationItem({ notification, onMarkAsRead }: {
     }
   };
 
-  const timeAgo = formatDistanceToNow(new Date(notification.sentAt), {
-    addSuffix: true,
-    locale: ar
-  });
+  const timeAgo = notification.sentAt 
+    ? formatDistanceToNow(new Date(notification.sentAt), {
+        addSuffix: true,
+        locale: ar
+      })
+    : 'الآن';
 
   return (
     <motion.div

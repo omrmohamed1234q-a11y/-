@@ -235,6 +235,18 @@ export const products = pgTable("products", {
   curriculum: text("curriculum"),
   stock: integer("stock").default(0),
   
+  // Enhanced Inventory Management
+  currentStock: integer("current_stock").default(0),
+  minStockLevel: integer("min_stock_level").default(5),
+  maxStockLevel: integer("max_stock_level").default(1000),
+  reorderPoint: integer("reorder_point").default(10),
+  reorderQuantity: integer("reorder_quantity").default(50),
+  isTrackingEnabled: boolean("is_tracking_enabled").default(true),
+  stockStatus: text("stock_status").default("in_stock"), // "in_stock", "low_stock", "out_of_stock", "discontinued"
+  lastStockUpdate: timestamp("last_stock_update").defaultNow(),
+  totalSold: integer("total_sold").default(0),
+  averageMonthlySales: integer("average_monthly_sales").default(0),
+  
   // Ratings and engagement
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
   ratingCount: integer("rating_count").default(0),
