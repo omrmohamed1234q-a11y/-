@@ -6,6 +6,10 @@ import { createClient } from '@supabase/supabase-js';
 import { supabaseSecurityStorage, checkSecurityTablesExist } from "./db-supabase";
 import { addSetupEndpoints } from "./setup-api";
 import bcrypt from 'bcrypt';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import slowDown from 'express-slow-down';
+import jwt from 'jsonwebtoken';
 import { MemorySecurityStorage } from './memory-security-storage';
 
 // Initialize memory security storage
@@ -124,6 +128,96 @@ import crypto from 'crypto';
 const GOOGLE_PAY_MERCHANT_ID = process.env.GOOGLE_PAY_MERCHANT_ID || 'merchant.com.atbaalee';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // ==================== SECURITY MIDDLEWARE ====================
+  
+  // Enhanced security headers with helmet
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.google.com", "https://www.gstatic.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
+        connectSrc: ["'self'", "https:", "wss:", "ws:"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'self'", "https://www.google.com"]
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    }
+  }));
+
+  // Rate limiting for authentication endpoints
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 requests per windowMs for auth
+    message: {
+      success: false,
+      message: 'تم تجاوز عدد المحاولات المسموحة. حاول مرة أخرى بعد 15 دقيقة',
+      retryAfter: '15 minutes'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => {
+      // Skip rate limiting for non-auth endpoints
+      return !req.path.includes('/auth/') && !req.path.includes('/security-access');
+    }
+  });
+
+  // General API rate limiting
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000, // Limit each IP to 1000 requests per windowMs
+    message: {
+      success: false,
+      message: 'تم تجاوز عدد الطلبات المسموحة. حاول مرة أخرى لاحقاً',
+      retryAfter: '15 minutes'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Speed limiting for suspicious behavior
+  const speedLimiter = slowDown({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    delayAfter: 100, // Allow 100 requests per 15 minutes at full speed
+    delayMs: (hits) => hits * 500 // Add 500ms delay per request after limit
+  });
+
+  // Configure Express to trust proxy for rate limiting
+  app.set('trust proxy', true);
+
+  // Force HTTPS in production
+  if (process.env.NODE_ENV === 'production') {
+    app.use((req, res, next) => {
+      if (!req.secure && req.get('x-forwarded-proto') !== 'https') {
+        return res.redirect(301, `https://${req.get('host')}${req.url}`);
+      }
+      next();
+    });
+  }
+
+  // Additional security headers
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
+
+  // Apply security middleware
+  app.use('/api/auth', authLimiter);
+  app.use('/api/admin/security-access', authLimiter);
+  app.use('/api', generalLimiter);
+  app.use('/api', speedLimiter);
   
   // ==================== ORDER MANAGEMENT APIS ====================
   
@@ -3834,8 +3928,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update driver last login in memory
       await memorySecurityStorage.updateSecurityUserStatus(driver.id, true);
 
-      // Generate secure token
-      const token = generateSecureToken();
+      // Generate secure JWT token instead of simple token
+      const secretKey = process.env.JWT_SECRET_KEY || 'fallback-dev-key-change-in-production-URGENT';
+      const driverToken = jwt.sign(
+        {
+          driverId: driver.id,
+          username: driver.username,
+          email: driver.email,
+          driverCode: driver.driver_code,
+          type: 'driver_access',
+          iat: Math.floor(Date.now() / 1000)
+        },
+        secretKey,
+        {
+          expiresIn: '8h', // 8 hours for driver sessions
+          issuer: 'atbaali-driver',
+          audience: 'driver-panel'
+        }
+      );
       
       // Log successful login to memory storage
       await memorySecurityStorage.createSecurityLog({
@@ -3850,7 +3960,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         success: true,
-        token,
+        token: driverToken,
+        expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(), // 8 hours
         driver: {
           id: driver.id,
           username: driver.username,
@@ -3869,6 +3980,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: 'خطأ في الخادم'
+      });
+    }
+  });
+
+  // Security Access Password Verification (Enhanced Security)
+  app.post('/api/admin/security-access/verify', async (req, res) => {
+    try {
+      const { password, timestamp, userAgent } = req.body;
+      const ip = req.ip || 'unknown';
+      
+      // Get security access password from environment (fallback to current)
+      const validPassword = process.env.SECURITY_ACCESS_PASSWORD || 'S3519680s';
+      
+      // Log the attempt
+      const { memorySecurityStorage } = await import('./memory-security-storage');
+      await memorySecurityStorage.createSecurityLog({
+        user_id: 'security_access',
+        action: 'محاولة الوصول لوحة الأمان',
+        ip_address: ip,
+        user_agent: userAgent || 'unknown',
+        success: password === validPassword,
+        timestamp: new Date(),
+        details: `Timestamp: ${timestamp}, IP: ${ip}`
+      });
+
+      if (password !== validPassword) {
+        return res.status(401).json({
+          success: false,
+          message: 'كلمة مرور خاطئة - تم تسجيل المحاولة',
+          attempts: true
+        });
+      }
+
+      // Generate secure JWT token with short expiry
+      const secretKey = process.env.JWT_SECRET_KEY || 'fallback-dev-key-change-in-production-URGENT';
+      
+      const token = jwt.sign(
+        { 
+          type: 'security_access',
+          ip: ip,
+          timestamp: timestamp,
+          userAgent: userAgent
+        },
+        secretKey,
+        { 
+          expiresIn: '1h', // 1 hour expiry
+          issuer: 'atbaali-security',
+          audience: 'admin-panel'
+        }
+      );
+
+      res.json({
+        success: true,
+        token: token,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour from now
+        message: 'تم منح الوصول للوحة الأمان'
+      });
+
+    } catch (error) {
+      console.error('Security access verification error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في التحقق من كلمة المرور'
       });
     }
   });

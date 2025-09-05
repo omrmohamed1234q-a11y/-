@@ -17,21 +17,50 @@ export default function SecurityAccess() {
     e.preventDefault();
     setLoading(true);
 
-    // Check password
-    if (password === 'S3519680s') {
-      toast({
-        title: "✅ تم منح الوصول",
-        description: "مرحباً بك في لوحة الأمان المتقدمة",
+    // Check password via API for security
+    try {
+      const response = await fetch('/api/admin/security-access/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          password,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent
+        }),
       });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "✅ تم منح الوصول",
+          description: "مرحباً بك في لوحة الأمان المتقدمة",
+        });
       
-      // Redirect to security dashboard
-      setTimeout(() => {
-        setLocation('/admin/security-dashboard');
-      }, 1000);
-    } else {
+        // Store security access token
+        localStorage.setItem('securityAccess', JSON.stringify({
+          token: result.token,
+          timestamp: new Date().toISOString(),
+          expiresAt: result.expiresAt
+        }));
+
+        // Redirect to security dashboard
+        setTimeout(() => {
+          setLocation('/admin/security-dashboard');
+        }, 1000);
+      } else {
+        toast({
+          title: "❌ كلمة مرور خاطئة",
+          description: result.message || "يرجى إدخال كلمة المرور الصحيحة",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
-        title: "❌ كلمة مرور خاطئة",
-        description: "يرجى إدخال كلمة المرور الصحيحة",
+        title: "❌ خطأ في الاتصال",
+        description: "تعذر التحقق من كلمة المرور",
         variant: "destructive",
       });
     }

@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL!;
@@ -51,7 +52,43 @@ export class MemorySecurityStorage {
     });
   }
 
-  // Local JSON File Operations
+  // Encryption utilities for local storage
+  private getEncryptionKey(): string {
+    return process.env.SECURITY_ENCRYPTION_KEY || 'default-local-key-change-in-production';
+  }
+
+  private encrypt(text: string): string {
+    const algorithm = 'aes-256-gcm';
+    const key = crypto.scryptSync(this.getEncryptionKey(), 'salt', 32);
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipher(algorithm, key);
+    
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    
+    return iv.toString('hex') + ':' + encrypted;
+  }
+
+  private decrypt(encryptedText: string): string {
+    try {
+      const algorithm = 'aes-256-gcm';
+      const key = crypto.scryptSync(this.getEncryptionKey(), 'salt', 32);
+      const textParts = encryptedText.split(':');
+      const iv = Buffer.from(textParts.shift()!, 'hex');
+      const encrypted = textParts.join(':');
+      const decipher = crypto.createDecipher(algorithm, key);
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      return decrypted;
+    } catch (error) {
+      console.error('❌ Decryption error:', error);
+      return encryptedText; // Return original if decryption fails
+    }
+  }
+
+  // Local JSON File Operations (with encryption)
   private loadDataFromLocalFile() {
     try {
       if (fs.existsSync(this.dataFilePath)) {
@@ -74,8 +111,13 @@ export class MemorySecurityStorage {
         logs: this.logs,
         lastSaved: new Date().toISOString()
       };
-      fs.writeFileSync(this.dataFilePath, JSON.stringify(data, null, 2));
-      console.log(`💾 Security data saved locally (${this.users.length} users, ${this.logs.length} logs)`);
+      
+      // Encrypt sensitive data before saving
+      const jsonData = JSON.stringify(data, null, 2);
+      const encryptedData = this.encrypt(jsonData);
+      
+      fs.writeFileSync(this.dataFilePath, encryptedData);
+      console.log(`💾 Security data encrypted and saved locally (${this.users.length} users, ${this.logs.length} logs)`);
     } catch (error) {
       console.log('⚠️ Error saving security data locally:', error.message);
     }
