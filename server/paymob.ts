@@ -410,15 +410,16 @@ export async function getPaymobPaymentMethods(req: Request, res: Response) {
         name: 'بطاقة ائتمانية',
         nameEn: 'Credit Card',
         icon: '💳',
-        integration_id: 4736159, // Demo ID - replace with actual card integration ID
-        category: 'card'
+        integration_id: 5266760, // Using mobile wallet ID temporarily until card ID is provided
+        category: 'card',
+        comingSoon: true // Temporarily disabled until correct integration ID is provided
       },
       {
         id: 'valu',
         name: 'فاليو',
         nameEn: 'valU',
         icon: '💰',
-        integration_id: process.env.PAYMOB_VALU_INTEGRATION_ID || 4736164,
+        integration_id: process.env.PAYMOB_VALU_INTEGRATION_ID || 5266760, // Using mobile wallet ID temporarily
         description: 'دفع بالتقسيط حتى 60 شهر',
         category: 'installment',
         featured: true
@@ -452,7 +453,7 @@ export async function getPaymobPaymentMethods(req: Request, res: Response) {
         name: 'انستا باي',
         nameEn: 'InstaPay',
         icon: '⚡',
-        integration_id: 4736163,
+        integration_id: 5266760, // Using mobile wallet ID
         category: 'instant'
       },
       {
@@ -460,7 +461,7 @@ export async function getPaymobPaymentMethods(req: Request, res: Response) {
         name: 'سهولة',
         nameEn: 'Souhoola',
         icon: '💳',
-        integration_id: 4736165,
+        integration_id: 5266760, // Using mobile wallet ID
         category: 'installment'
       }
     ];
