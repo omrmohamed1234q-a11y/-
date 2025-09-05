@@ -9,6 +9,8 @@ import { Shield, Smartphone, Key, Check, X, RefreshCw, AlertTriangle, QrCode } f
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { MoreVertical, Settings as SettingsIcon, Home, ArrowLeft } from 'lucide-react';
 
 interface TwoFactorStatus {
   isEnabled: boolean;
@@ -303,14 +305,57 @@ const TwoFactorSettings: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Shield className="w-8 h-8 text-blue-600" />
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <Shield className="w-8 h-8 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">المصادقة الثنائية</h1>
+                <p className="text-gray-600">إضافة طبقة حماية إضافية لحسابك</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">المصادقة الثنائية</h1>
-              <p className="text-gray-600">إضافة طبقة حماية إضافية لحسابك</p>
-            </div>
+            
+            {/* Three dots dropdown menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem 
+                  onClick={() => window.location.href = '/admin/two-factor-settings'}
+                  className="cursor-pointer"
+                >
+                  <SettingsIcon className="mr-2 h-4 w-4" />
+                  إعدادات المصادقة الثنائية
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => window.location.href = '/admin/security-dashboard'}
+                  className="cursor-pointer"
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  لوحة الأمان
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => window.location.href = '/admin'}
+                  className="cursor-pointer"
+                >
+                  <Home className="mr-2 h-4 w-4" />
+                  لوحة الإدارة
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => window.history.back()}
+                  className="cursor-pointer"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  رجوع
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </motion.div>
 
