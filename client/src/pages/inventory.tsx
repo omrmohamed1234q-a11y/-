@@ -46,12 +46,12 @@ export default function InventoryPage() {
     refetchInterval: 30000,
   });
 
-  const { data: alerts } = useQuery({
+  const { data: alerts } = useQuery<{ success: boolean; data: any[] }>({
     queryKey: ['/api/inventory/alerts'],
     refetchInterval: 10000,
   });
 
-  const { data: movements } = useQuery({
+  const { data: movements } = useQuery<{ success: boolean; data: any[] }>({
     queryKey: ['/api/inventory/movements'],
     enabled: selectedTab === 'movements',
   });
