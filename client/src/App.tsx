@@ -201,7 +201,7 @@ function Router() {
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/apis" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/rewards-management" component={() => <AdminProtectedRoute><RewardsManagement /></AdminProtectedRoute>} />
-        <Route path="/inventory" component={lazy(() => import("./pages/inventory"))} />
+        <Route path="/inventory" component={lazy(() => import("./pages/inventory-simple"))} />
         
         {/* Driver routes */}
         <Route path="/driver" component={EnhancedDriverDashboard} />
