@@ -13,8 +13,15 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Star
+  Star,
+  MoreVertical,
+  Smartphone,
+  Shield,
+  Settings,
+  Home
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 interface AdminStats {
   totalOrders: number;
@@ -79,9 +86,44 @@ export default function AdminDashboard() {
     <div className="p-6 space-y-6" dir="rtl">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">لوحة تحكم الإدارة</h1>
-        <Badge variant="outline" className="text-sm">
-          آخر تحديث: {new Date().toLocaleDateString('ar-EG')}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="text-sm">
+            آخر تحديث: {new Date().toLocaleDateString('ar-EG')}
+          </Badge>
+          
+          {/* Three dots dropdown menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem 
+                onClick={() => window.location.href = '/admin/two-factor-settings'}
+                className="cursor-pointer"
+              >
+                <Smartphone className="mr-2 h-4 w-4" />
+                المصادقة الثنائية
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => window.location.href = '/admin/security-dashboard'}
+                className="cursor-pointer"
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                لوحة الأمان
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => window.location.href = '/admin/settings'}
+                className="cursor-pointer"
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                الإعدادات
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* KPI Cards */}
