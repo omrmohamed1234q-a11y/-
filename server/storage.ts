@@ -441,9 +441,39 @@ export class MemoryStorage implements IStorage {
   async getFeaturedPartners(): Promise<Partner[]> { return []; }
   async getAllPartners(): Promise<Partner[]> { return []; }
   async getPartnerById(id: string): Promise<Partner | undefined> { return undefined; }
-  async createPartner(partner: any): Promise<Partner> { throw new Error('Not implemented'); }
-  async updatePartner(id: string, updates: any): Promise<Partner> { throw new Error('Not implemented'); }
-  async deletePartner(id: string): Promise<boolean> { return false; }
+  async createPartner(partner: any): Promise<Partner> {
+    const newPartner: Partner = {
+      id: `partner-${Date.now()}`,
+      ...partner,
+      rating: "0.00",
+      reviewCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.partners.push(newPartner);
+    console.log(`🤝 New partner created: ${newPartner.name}`);
+    return newPartner;
+  }
+  async updatePartner(id: string, updates: any): Promise<Partner> {
+    const index = this.partners.findIndex(p => p.id === id);
+    if (index === -1) throw new Error('Partner not found');
+    
+    this.partners[index] = {
+      ...this.partners[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    console.log(`🤝 Partner updated: ${id}`);
+    return this.partners[index];
+  }
+  async deletePartner(id: string): Promise<boolean> {
+    const index = this.partners.findIndex(p => p.id === id);
+    if (index === -1) return false;
+    
+    this.partners.splice(index, 1);
+    console.log(`🤝 Partner deleted: ${id}`);
+    return true;
+  }
   
   // Partner Products
   async getPartnerProducts(partnerId: string): Promise<any[]> { return []; }
