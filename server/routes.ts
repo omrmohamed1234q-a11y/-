@@ -10,6 +10,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import slowDown from 'express-slow-down';
 import jwt from 'jsonwebtoken';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 import { MemorySecurityStorage } from './memory-security-storage';
 
 // Initialize memory security storage
@@ -4043,6 +4045,322 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: 'خطأ في التحقق من كلمة المرور'
+      });
+    }
+  });
+
+  // ==================== 2FA AUTHENTICATION SYSTEM ====================
+
+  // Setup 2FA - Generate secret and QR code
+  app.post('/api/auth/2fa/setup', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { userId, userType } = req.body;
+      
+      if (!userId || !userType) {
+        return res.status(400).json({
+          success: false,
+          message: 'معرف المستخدم ونوع المستخدم مطلوبان'
+        });
+      }
+
+      // Generate secret
+      const secret = speakeasy.generateSecret({
+        name: `اطبعلي - ${userType === 'admin' ? 'أدمن' : 'سائق'}`,
+        issuer: 'اطبعلي',
+        length: 32
+      });
+
+      // Generate QR code
+      const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url!);
+
+      // Store in memory (not enabled yet)
+      const twoFARecord = {
+        id: crypto.randomUUID(),
+        userId: userId,
+        userType: userType,
+        secret: secret.base32,
+        isEnabled: false,
+        qrCodeUrl: qrCodeUrl,
+        backupCodes: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // Save to memory storage temporarily
+      await memorySecurityStorage.createTwoFactorAuth(twoFARecord);
+
+      // Log setup attempt
+      await memorySecurityStorage.createSecurityLog({
+        user_id: userId,
+        action: 'إعداد 2FA - تم توليد سر جديد',
+        ip_address: req.ip || 'unknown',
+        user_agent: req.get('User-Agent') || 'unknown',
+        success: true,
+        timestamp: new Date(),
+        details: `UserType: ${userType}`
+      });
+
+      res.json({
+        success: true,
+        secret: secret.base32,
+        qrCode: qrCodeUrl,
+        manualEntryKey: secret.base32,
+        message: 'تم إنشاء رمز QR بنجاح. امسحه باستخدام تطبيق المصادقة'
+      });
+
+    } catch (error) {
+      console.error('Error setting up 2FA:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إعداد المصادقة الثنائية'
+      });
+    }
+  });
+
+  // Verify and enable 2FA
+  app.post('/api/auth/2fa/enable', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { userId, userType, token } = req.body;
+      
+      if (!userId || !userType || !token) {
+        return res.status(400).json({
+          success: false,
+          message: 'جميع الحقول مطلوبة'
+        });
+      }
+
+      // Get 2FA record
+      const twoFARecord = await memorySecurityStorage.getTwoFactorAuth(userId, userType);
+      if (!twoFARecord) {
+        return res.status(404).json({
+          success: false,
+          message: 'لم يتم العثور على إعدادات المصادقة الثنائية'
+        });
+      }
+
+      // Verify token
+      const verified = speakeasy.totp.verify({
+        secret: twoFARecord.secret,
+        encoding: 'base32',
+        token: token,
+        window: 2 // Allow 2-step tolerance
+      });
+
+      if (!verified) {
+        await memorySecurityStorage.createSecurityLog({
+          user_id: userId,
+          action: 'فشل في تفعيل 2FA - رمز خاطئ',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          success: false,
+          timestamp: new Date(),
+          details: `UserType: ${userType}, Token: ${token.substring(0, 2)}***`
+        });
+
+        return res.status(400).json({
+          success: false,
+          message: 'رمز التحقق غير صحيح'
+        });
+      }
+
+      // Generate backup codes
+      const backupCodes = [];
+      for (let i = 0; i < 8; i++) {
+        backupCodes.push(Math.random().toString(36).substring(2, 10).toUpperCase());
+      }
+
+      // Enable 2FA
+      await memorySecurityStorage.enableTwoFactorAuth(userId, userType, backupCodes);
+
+      // Log successful activation
+      await memorySecurityStorage.createSecurityLog({
+        user_id: userId,
+        action: 'تم تفعيل 2FA بنجاح',
+        ip_address: req.ip || 'unknown',
+        user_agent: req.get('User-Agent') || 'unknown',
+        success: true,
+        timestamp: new Date(),
+        details: `UserType: ${userType}`
+      });
+
+      res.json({
+        success: true,
+        backupCodes: backupCodes,
+        message: 'تم تفعيل المصادقة الثنائية بنجاح! احفظ أكواد الطوارئ في مكان آمن'
+      });
+
+    } catch (error) {
+      console.error('Error enabling 2FA:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في تفعيل المصادقة الثنائية'
+      });
+    }
+  });
+
+  // Verify 2FA token during login
+  app.post('/api/auth/2fa/verify', async (req, res) => {
+    try {
+      const { userId, userType, token, isBackupCode = false } = req.body;
+      
+      if (!userId || !userType || !token) {
+        return res.status(400).json({
+          success: false,
+          message: 'جميع الحقول مطلوبة'
+        });
+      }
+
+      // Get 2FA record
+      const twoFARecord = await memorySecurityStorage.getTwoFactorAuth(userId, userType);
+      if (!twoFARecord || !twoFARecord.isEnabled) {
+        return res.status(404).json({
+          success: false,
+          message: 'المصادقة الثنائية غير مفعلة'
+        });
+      }
+
+      let verified = false;
+
+      if (isBackupCode) {
+        // Verify backup code
+        verified = twoFARecord.backupCodes && twoFARecord.backupCodes.includes(token);
+        if (verified) {
+          // Remove used backup code
+          await memorySecurityStorage.useBackupCode(userId, userType, token);
+        }
+      } else {
+        // Verify TOTP token
+        verified = speakeasy.totp.verify({
+          secret: twoFARecord.secret,
+          encoding: 'base32',
+          token: token,
+          window: 2
+        });
+      }
+
+      // Log verification attempt
+      await memorySecurityStorage.createSecurityLog({
+        user_id: userId,
+        action: `محاولة التحقق من 2FA - ${isBackupCode ? 'كود طوارئ' : 'TOTP'}`,
+        ip_address: req.ip || 'unknown',
+        user_agent: req.get('User-Agent') || 'unknown',
+        success: verified,
+        timestamp: new Date(),
+        details: `UserType: ${userType}, TokenType: ${isBackupCode ? 'backup' : 'totp'}`
+      });
+
+      if (verified) {
+        // Update last used timestamp
+        await memorySecurityStorage.updateTwoFactorAuthLastUsed(userId, userType);
+      }
+
+      res.json({
+        success: verified,
+        message: verified ? 'تم التحقق بنجاح' : 'رمز التحقق غير صحيح'
+      });
+
+    } catch (error) {
+      console.error('Error verifying 2FA:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في التحقق من المصادقة الثنائية'
+      });
+    }
+  });
+
+  // Disable 2FA
+  app.post('/api/auth/2fa/disable', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { userId, userType, token } = req.body;
+      
+      if (!userId || !userType || !token) {
+        return res.status(400).json({
+          success: false,
+          message: 'جميع الحقول مطلوبة'
+        });
+      }
+
+      // Get 2FA record
+      const twoFARecord = await memorySecurityStorage.getTwoFactorAuth(userId, userType);
+      if (!twoFARecord || !twoFARecord.isEnabled) {
+        return res.status(404).json({
+          success: false,
+          message: 'المصادقة الثنائية غير مفعلة'
+        });
+      }
+
+      // Verify current token before disabling
+      const verified = speakeasy.totp.verify({
+        secret: twoFARecord.secret,
+        encoding: 'base32',
+        token: token,
+        window: 2
+      });
+
+      if (!verified) {
+        await memorySecurityStorage.createSecurityLog({
+          user_id: userId,
+          action: 'فشل في إلغاء 2FA - رمز خاطئ',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          success: false,
+          timestamp: new Date(),
+          details: `UserType: ${userType}`
+        });
+
+        return res.status(400).json({
+          success: false,
+          message: 'رمز التحقق غير صحيح'
+        });
+      }
+
+      // Disable 2FA
+      await memorySecurityStorage.disableTwoFactorAuth(userId, userType);
+
+      // Log successful deactivation
+      await memorySecurityStorage.createSecurityLog({
+        user_id: userId,
+        action: 'تم إلغاء 2FA بنجاح',
+        ip_address: req.ip || 'unknown',
+        user_agent: req.get('User-Agent') || 'unknown',
+        success: true,
+        timestamp: new Date(),
+        details: `UserType: ${userType}`
+      });
+
+      res.json({
+        success: true,
+        message: 'تم إلغاء المصادقة الثنائية بنجاح'
+      });
+
+    } catch (error) {
+      console.error('Error disabling 2FA:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إلغاء المصادقة الثنائية'
+      });
+    }
+  });
+
+  // Get 2FA status
+  app.get('/api/auth/2fa/status/:userId/:userType', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { userId, userType } = req.params;
+      
+      const twoFARecord = await memorySecurityStorage.getTwoFactorAuth(userId, userType);
+      
+      res.json({
+        success: true,
+        isEnabled: twoFARecord ? twoFARecord.isEnabled : false,
+        hasBackupCodes: twoFARecord ? (twoFARecord.backupCodes?.length || 0) > 0 : false,
+        lastUsed: twoFARecord ? twoFARecord.lastUsed : null
+      });
+
+    } catch (error) {
+      console.error('Error getting 2FA status:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب حالة المصادقة الثنائية'
       });
     }
   });

@@ -38,9 +38,23 @@ interface SecurityLog {
   details?: string;
 }
 
+interface TwoFactorAuth {
+  id: string;
+  userId: string;
+  userType: 'admin' | 'driver';
+  secret: string;
+  isEnabled: boolean;
+  qrCodeUrl?: string;
+  backupCodes: string[];
+  lastUsed?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class MemorySecurityStorage {
   private users: SecurityUser[] = [];
   private logs: SecurityLog[] = [];
+  private twoFactorAuth: TwoFactorAuth[] = [];
   private dataFilePath = path.join(process.cwd(), 'security-data.json');
 
   constructor() {
@@ -95,7 +109,8 @@ export class MemorySecurityStorage {
         const data = JSON.parse(fs.readFileSync(this.dataFilePath, 'utf8'));
         this.users = data.users || [];
         this.logs = data.logs || [];
-        console.log(`✅ Loaded ${this.users.length} users and ${this.logs.length} logs from local file`);
+        this.twoFactorAuth = data.twoFactorAuth || [];
+        console.log(`✅ Loaded ${this.users.length} users, ${this.logs.length} logs, and ${this.twoFactorAuth.length} 2FA records from local file`);
       } else {
         console.log('📄 No local security data file found, starting fresh');
       }
@@ -109,6 +124,7 @@ export class MemorySecurityStorage {
       const data = {
         users: this.users,
         logs: this.logs,
+        twoFactorAuth: this.twoFactorAuth,
         lastSaved: new Date().toISOString()
       };
       
@@ -694,6 +710,76 @@ export class MemorySecurityStorage {
     console.log('   Password: Driver123!');
     console.log('   Driver Code: DR001');
     console.log('   Access: Driver dashboard');
+  }
+
+  // ==================== TWO-FACTOR AUTHENTICATION METHODS ====================
+
+  // Create 2FA record
+  async createTwoFactorAuth(twoFAData: TwoFactorAuth): Promise<TwoFactorAuth> {
+    // Remove existing record for this user if exists
+    this.twoFactorAuth = this.twoFactorAuth.filter(
+      record => !(record.userId === twoFAData.userId && record.userType === twoFAData.userType)
+    );
+    
+    this.twoFactorAuth.push(twoFAData);
+    this.saveDataToLocalFile();
+    return twoFAData;
+  }
+
+  // Get 2FA record
+  async getTwoFactorAuth(userId: string, userType: 'admin' | 'driver'): Promise<TwoFactorAuth | undefined> {
+    return this.twoFactorAuth.find(
+      record => record.userId === userId && record.userType === userType
+    );
+  }
+
+  // Enable 2FA with backup codes
+  async enableTwoFactorAuth(userId: string, userType: 'admin' | 'driver', backupCodes: string[]): Promise<void> {
+    const record = await this.getTwoFactorAuth(userId, userType);
+    if (record) {
+      record.isEnabled = true;
+      record.backupCodes = backupCodes;
+      record.updatedAt = new Date().toISOString();
+      this.saveDataToLocalFile();
+    }
+  }
+
+  // Disable 2FA
+  async disableTwoFactorAuth(userId: string, userType: 'admin' | 'driver'): Promise<void> {
+    this.twoFactorAuth = this.twoFactorAuth.filter(
+      record => !(record.userId === userId && record.userType === userType)
+    );
+    this.saveDataToLocalFile();
+  }
+
+  // Update last used timestamp
+  async updateTwoFactorAuthLastUsed(userId: string, userType: 'admin' | 'driver'): Promise<void> {
+    const record = await this.getTwoFactorAuth(userId, userType);
+    if (record) {
+      record.lastUsed = new Date().toISOString();
+      record.updatedAt = new Date().toISOString();
+      this.saveDataToLocalFile();
+    }
+  }
+
+  // Use backup code (removes it from available codes)
+  async useBackupCode(userId: string, userType: 'admin' | 'driver', code: string): Promise<void> {
+    const record = await this.getTwoFactorAuth(userId, userType);
+    if (record && record.backupCodes) {
+      record.backupCodes = record.backupCodes.filter(backupCode => backupCode !== code);
+      record.lastUsed = new Date().toISOString();
+      record.updatedAt = new Date().toISOString();
+      this.saveDataToLocalFile();
+    }
+  }
+
+  // Get all 2FA records (admin only)
+  async getAllTwoFactorAuth(): Promise<TwoFactorAuth[]> {
+    return this.twoFactorAuth.map(record => ({
+      ...record,
+      secret: '***HIDDEN***', // Never expose secrets in list view
+      backupCodes: []
+    }));
   }
 }
 

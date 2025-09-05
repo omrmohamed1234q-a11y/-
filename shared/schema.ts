@@ -109,6 +109,20 @@ export const securityLogs = pgTable("security_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Two-Factor Authentication table
+export const twoFactorAuth = pgTable("two_factor_auth", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // Reference to admin or driver
+  userType: text("user_type").notNull(), // "admin" | "driver"
+  secret: text("secret").notNull(), // TOTP secret key
+  isEnabled: boolean("is_enabled").default(false),
+  qrCodeUrl: text("qr_code_url"), // Base64 QR code for setup
+  backupCodes: text("backup_codes").array(), // Emergency backup codes (encrypted)
+  lastUsed: timestamp("last_used"), // Last time 2FA was used
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Partners/Print Shops table
 export const partners = pgTable("partners", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1057,6 +1071,14 @@ export type SecureDriver = typeof secureDrivers.$inferSelect;
 export type InsertSecureDriver = z.infer<typeof insertSecureDriverSchema>;
 export type SecurityLog = typeof securityLogs.$inferSelect;
 export type InsertSecurityLog = z.infer<typeof insertSecurityLogSchema>;
+
+export const insertTwoFactorAuthSchema = createInsertSchema(twoFactorAuth).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTwoFactorAuth = z.infer<typeof insertTwoFactorAuthSchema>;
+export type TwoFactorAuth = typeof twoFactorAuth.$inferSelect;
 
 // ===== نظام المكافآت والأوراق المجانية =====
 

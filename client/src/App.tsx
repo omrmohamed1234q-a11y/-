@@ -60,6 +60,7 @@ import PaymobTestPage from "@/pages/paymob-test";
 import PaymobSetupPage from "@/pages/paymob-setup";
 import SecureSecurityDashboard from '@/pages/admin/secure-security-dashboard';
 import SecurityAccess from '@/pages/admin/security-access';
+import TwoFactorSettings from '@/pages/admin/two-factor-settings';
 import SecureDriverControl from '@/pages/driver/secure-driver-control';
 import MainAdmin from '@/pages/admin/main-admin';
 import ApiDocumentation from '@/pages/admin/api-documentation';
@@ -194,6 +195,7 @@ function Router() {
         <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
         <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
         <Route path="/admin/security-dashboard" component={() => <AdminProtectedRoute><SecureSecurityDashboard /></AdminProtectedRoute>} />
+        <Route path="/admin/two-factor-settings" component={() => <AdminProtectedRoute><TwoFactorSettings /></AdminProtectedRoute>} />
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/apis" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/rewards-management" component={() => <AdminProtectedRoute><RewardsManagement /></AdminProtectedRoute>} />
