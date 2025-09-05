@@ -31,11 +31,28 @@ const TwoFactorSettings: React.FC = () => {
   const [verificationCode, setVerificationCode] = useState('');
   const [showDisableDialog, setShowDisableDialog] = useState(false);
   const [disableCode, setDisableCode] = useState('');
+  const [error, setError] = useState<string>('');
   
   // Get current user from localStorage or session
-  const currentUser = JSON.parse(localStorage.getItem('securityUser') || '{}');
-  const userId = currentUser.id;
-  const userType = currentUser.role === 'admin' ? 'admin' : 'driver';
+  const [userId, setUserId] = useState<string>('');
+  const [userType, setUserType] = useState<'admin' | 'driver'>('admin');
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const currentUser = JSON.parse(localStorage.getItem('securityUser') || '{}');
+        if (currentUser.id) {
+          setUserId(currentUser.id);
+          setUserType(currentUser.role === 'admin' ? 'admin' : 'driver');
+        } else {
+          setError('لم يتم العثور على بيانات المستخدم. يرجى تسجيل الدخول مرة أخرى.');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      setError('خطأ في تحميل بيانات المستخدم');
+    }
+  }, []);
 
   useEffect(() => {
     if (userId) {
@@ -205,6 +222,28 @@ const TwoFactorSettings: React.FC = () => {
       description: `تم نسخ ${label} إلى الحافظة`,
     });
   };
+
+  // Show error message if there's an error
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 flex items-center justify-center" dir="rtl">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-red-600">خطأ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700">{error}</p>
+            <Button 
+              onClick={() => window.location.href = '/admin/secure-login'}
+              className="mt-4 w-full"
+            >
+              العودة إلى تسجيل الدخول
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6" dir="rtl">
