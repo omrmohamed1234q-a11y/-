@@ -70,6 +70,7 @@ import MapsTest from '@/pages/maps-test';
 import DriverLocationTest from '@/pages/driver-location-test';
 import PaymentSuccess from '@/pages/payment-success';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
+import InventoryTest from '@/pages/inventory-test';
 
 
 function Router() {
@@ -152,6 +153,7 @@ function Router() {
         <Route path="/sql-generator" component={SQLGenerator} />
         <Route path="/paymob-test" component={PaymobTestPage} />
         <Route path="/paymob-setup" component={PaymobSetupPage} />
+        <Route path="/inventory" component={InventoryTest} />
         <Route path="/article/:id" component={ArticlePage} />
         <Route path="/" component={EnhancedLanding} />
         <Route component={NotFound} />
@@ -201,7 +203,7 @@ function Router() {
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/apis" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/rewards-management" component={() => <AdminProtectedRoute><RewardsManagement /></AdminProtectedRoute>} />
-        <Route path="/inventory" component={lazy(() => import("./pages/inventory-test"))} />
+        <Route path="/inventory" component={InventoryTest} />
         
         {/* Driver routes */}
         <Route path="/driver" component={EnhancedDriverDashboard} />
