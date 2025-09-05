@@ -123,15 +123,22 @@ export function LocationTracker({ userType, onLocationUpdate, autoStart = false 
         setPermitted(false);
         
         let errorMessage = 'فشل في تحديد الموقع';
+        let showRetryButton = false;
+        let showInstructions = false;
+        
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = 'تم رفض إذن الموقع. يرجى السماح بالوصول للموقع';
+            errorMessage = 'تم رفض إذن الموقع';
+            showRetryButton = true;
+            showInstructions = true;
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = 'معلومات الموقع غير متاحة';
+            errorMessage = 'معلومات الموقع غير متاحة. تأكد من تفعيل GPS';
+            showRetryButton = true;
             break;
           case error.TIMEOUT:
-            errorMessage = 'انتهت مهلة تحديد الموقع';
+            errorMessage = 'انتهت مهلة تحديد الموقع. تأكد من قوة الإشارة';
+            showRetryButton = true;
             break;
         }
         setError(errorMessage);
@@ -194,14 +201,50 @@ export function LocationTracker({ userType, onLocationUpdate, autoStart = false 
         </AlertDescription>
       </Alert>
 
-      {/* Error Alert */}
+      {/* Error Alert with Instructions */}
       {error && (
-        <Alert className="border-orange-200 bg-orange-50">
-          <AlertCircle className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">
-            {error}
-          </AlertDescription>
-        </Alert>
+        <div className="space-y-3">
+          <Alert className="border-orange-200 bg-orange-50">
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              <div className="space-y-2">
+                <p className="font-semibold">{error}</p>
+                {error.includes('رفض') && (
+                  <div className="text-sm space-y-2">
+                    <p className="font-medium">📋 خطوات إعادة تفعيل الموقع:</p>
+                    <ol className="list-decimal list-inside space-y-1 mr-4 text-sm">
+                      <li>اضغط على أيقونة القفل 🔒 في شريط العنوان</li>
+                      <li>اختر "السماح" للموقع الجغرافي</li>
+                      <li>أعد تحميل الصفحة أو اضغط "إعادة المحاولة"</li>
+                    </ol>
+                  </div>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+          
+          {error.includes('رفض') && (
+            <div className="flex gap-2">
+              <Button
+                onClick={handleLocationRequest}
+                disabled={loading}
+                variant="outline"
+                className="flex-1 border-orange-300 text-orange-700 hover:bg-orange-50"
+              >
+                🔄 إعادة المحاولة
+              </Button>
+              <Button
+                onClick={() => {
+                  window.open('https://support.google.com/chrome/answer/142065?hl=ar', '_blank');
+                }}
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+              >
+                📖 مساعدة
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Location Request Button */}
