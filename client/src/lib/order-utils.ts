@@ -8,6 +8,7 @@ export const ORDER_STATUSES = {
   ready_delivery: "جاهزة للتوصيل",
   driver_assigned: "راح للكابتن",
   out_for_delivery: "الكابتن في الطريق إليك",
+  arrived: "الكابتن وصل - استلم طلبك",
   delivered: "وصلت خلاص - تم التسليم",
   cancelled: "تم الإلغاء"
 } as const;
@@ -20,6 +21,7 @@ export const ORDER_STATUS_COLORS = {
   ready_delivery: "text-purple-600 bg-purple-50",
   driver_assigned: "text-indigo-600 bg-indigo-50",
   out_for_delivery: "text-yellow-600 bg-yellow-50",
+  arrived: "text-cyan-600 bg-cyan-50",
   delivered: "text-emerald-600 bg-emerald-50",
   cancelled: "text-gray-600 bg-gray-50"
 } as const;
@@ -32,6 +34,7 @@ export const ORDER_STATUS_ICONS = {
   ready_delivery: "🚚",
   driver_assigned: "🏍️",
   out_for_delivery: "🛵",
+  arrived: "🚪",
   delivered: "✅",
   cancelled: "❌"
 } as const;
@@ -70,7 +73,8 @@ export function canUpdateOrderStatus(currentStatus: string, newStatus: string): 
     ready_pickup: ["delivered", "cancelled"],
     ready_delivery: ["driver_assigned", "cancelled"],
     driver_assigned: ["out_for_delivery", "cancelled"],
-    out_for_delivery: ["delivered", "cancelled"],
+    out_for_delivery: ["arrived", "cancelled"],
+    arrived: ["delivered", "cancelled"],
     delivered: [],
     cancelled: []
   };
@@ -120,6 +124,13 @@ export function getOrderTimeline(order: any): Array<{event: string, timestamp: D
     timeline.push({
       event: `خرج للتوصيل مع ${order.driverName || 'الكابتن'}`,
       timestamp: new Date(order.outForDeliveryAt)
+    });
+  }
+  
+  if (order.arrivedAt) {
+    timeline.push({
+      event: `الكابتن وصل للعنوان`,
+      timestamp: new Date(order.arrivedAt)
     });
   }
   

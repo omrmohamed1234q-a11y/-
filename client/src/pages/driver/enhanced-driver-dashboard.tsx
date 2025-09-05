@@ -396,12 +396,13 @@ export default function EnhancedDriverDashboard() {
                     {order.status === 'out_for_delivery' && (
                       <>
                         <Button
-                          onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'delivered' })}
+                          onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'arrived' })}
                           disabled={updateOrderStatusMutation.isPending}
                           className="flex-1"
+                          variant="outline"
                         >
-                          <CheckCircle2 className="w-4 h-4 mr-1" />
-                          تم التسليم
+                          <span className="mr-1">🚪</span>
+                          وصلت للعنوان
                         </Button>
                         <Button
                           onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'cancelled' })}
@@ -410,6 +411,27 @@ export default function EnhancedDriverDashboard() {
                           className="flex-1"
                         >
                           إلغاء
+                        </Button>
+                      </>
+                    )}
+                    
+                    {order.status === 'arrived' && (
+                      <>
+                        <Button
+                          onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'delivered' })}
+                          disabled={updateOrderStatusMutation.isPending}
+                          className="flex-1"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-1" />
+                          تم التسليم
+                        </Button>
+                        <Button
+                          onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'out_for_delivery' })}
+                          disabled={updateOrderStatusMutation.isPending}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          في الطريق مرة تانية
                         </Button>
                       </>
                     )}

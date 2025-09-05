@@ -75,8 +75,8 @@ export default function OrderTrackingEnhanced() {
       } else if (orderToTrack === 'ORD-2024-002') {
         return {
           orderNumber: 'ORD-2024-002',
-          status: 'out_for_delivery',
-          statusText: 'الكابتن في الطريق إليك',
+          status: 'arrived',
+          statusText: 'الكابتن وصل - استلم طلبك',
           customerName: 'فاطمة أحمد',
           customerPhone: '01555666777',
           deliveryAddress: '789 شارع الهرم، الجيزة',
@@ -111,6 +111,10 @@ export default function OrderTrackingEnhanced() {
             {
               event: 'خرج للتوصيل مع الكابتن',
               timestamp: new Date(Date.now() - 600000).toISOString()
+            },
+            {
+              event: 'الكابتن وصل للعنوان',
+              timestamp: new Date(Date.now() - 120000).toISOString()
             }
           ]
         };

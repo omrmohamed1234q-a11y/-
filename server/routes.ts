@@ -465,6 +465,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           outForDeliveryAt: new Date().toISOString(),
           driverLocation: location 
         }),
+        ...(status === 'arrived' && { 
+          arrivedAt: new Date().toISOString(),
+          driverLocation: location 
+        }),
         ...(status === 'delivered' && { deliveredAt: new Date().toISOString() }),
         ...(status === 'cancelled' && { cancelledAt: new Date().toISOString() }),
         timeline: [
@@ -492,6 +496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ready_delivery: "جاهزة للتوصيل",
       driver_assigned: "راح للكابتن",
       out_for_delivery: "الكابتن في الطريق إليك",
+      arrived: "الكابتن وصل - استلم طلبك",
       delivered: "وصلت خلاص - تم التسليم",
       cancelled: "تم الإلغاء"
     };
