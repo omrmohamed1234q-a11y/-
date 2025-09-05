@@ -63,6 +63,7 @@ import ApiDocumentation from '@/pages/admin/api-documentation';
 import WebSocketTest from '@/pages/websocket-test';
 import MapsTest from '@/pages/maps-test';
 import DriverLocationTest from '@/pages/driver-location-test';
+import PaymentSuccess from '@/pages/payment-success';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 
 
@@ -167,6 +168,7 @@ function Router() {
         <Route path="/rewards" component={Rewards} />
         <Route path="/profile" component={Profile} />
         <Route path="/payment" component={Payment} />
+        <Route path="/payment-success" component={PaymentSuccess} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/order-tracking/:id" component={OrderTracking} />
         <Route path="/student/teachers" component={StudentTeachers} />

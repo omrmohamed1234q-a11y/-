@@ -315,9 +315,11 @@ export async function createPaymobPayment(req: Request, res: Response) {
       success: true,
       paymentKey,
       paymobOrderId: paymobOrder.id,
-      iframeUrl: `https://accept.paymob.com/api/acceptance/iframes/884577?payment_token=${paymentKey}`, // Using default iframe ID
+      // Using direct payment URL instead of iframe to avoid ownership issues
+      paymentUrl: `https://accept.paymob.com/standalone/?ref=${paymobOrder.id}&token=${paymentKey}`,
       amount_cents: Math.round(amount * 100),
-      currency
+      currency,
+      redirectUrl: `${req.get('origin')}/payment-success?order_id=${paymobOrder.id}`
     });
 
   } catch (error: any) {

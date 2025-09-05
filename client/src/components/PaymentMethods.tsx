@@ -87,45 +87,20 @@ export default function PaymentMethods({
 
       if (paymentData.success) {
         // For mobile wallets, redirect to payment URL
-        if (['vodafone_cash', 'orange_money', 'etisalat_cash'].includes(method.id)) {
-          // Open payment iframe in new window
-          const paymentWindow = window.open(
-            paymentData.iframeUrl,
-            'PaymentWindow',
-            'width=800,height=600,scrollbars=yes,resizable=yes'
-          );
-
-          // Check payment status
-          const checkPaymentStatus = setInterval(() => {
-            if (paymentWindow?.closed) {
-              clearInterval(checkPaymentStatus);
-              setProcessingPayment(null);
-              
-              toast({
-                title: 'تم إغلاق نافذة الدفع',
-                description: 'يرجى المحاولة مرة أخرى إذا لم يكتمل الدفع',
-                variant: 'destructive'
-              });
-            }
-          }, 1000);
-
-          // Listen for payment completion message
-          window.addEventListener('message', (event) => {
-            if (event.origin === 'https://accept.paymob.com') {
-              clearInterval(checkPaymentStatus);
-              paymentWindow?.close();
-              setProcessingPayment(null);
-
-              if (event.data.success) {
-                onPaymentSuccess({
-                  method: method.name,
-                  transactionId: event.data.transactionId
-                });
-              } else {
-                onPaymentError(event.data.error || 'فشل في عملية الدفع');
-              }
-            }
+        if (['vodafone_cash', 'orange_money', 'etisalat_cash', 'valu'].includes(method.id)) {
+          // Redirect to Paymob payment page
+          toast({
+            title: "جاري التوجيه للدفع",
+            description: `سيتم توجيهك لصفحة الدفع الآمنة لـ ${method.name}`,
           });
+          
+          // Redirect to payment page after a brief delay
+          setTimeout(() => {
+            window.location.href = paymentData.paymentUrl || paymentData.iframeUrl;
+          }, 1500);
+          return;
+
+          // This code is removed as we're using redirect instead
 
         } else if (method.id === 'card') {
           // For cards, embed iframe directly
