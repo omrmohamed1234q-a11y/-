@@ -52,6 +52,81 @@
       "driver_code": "AL002",
       "vehicle_type": "سيارة",
       "working_area": "الجيزة"
+    },
+    {
+      "id": "ca59e028-85ba-45cf-975b-fb1c2814cfcd",
+      "username": "ahmed_driver",
+      "email": "ahmed.driver@atbaali.com",
+      "password_hash": "$2b$10$DYzxEGrPL95OIC5uX5rXIuN6LQ4RQJal/YN2yBlIkXbBdl6YUOfze",
+      "full_name": "أحمد محمد السائق",
+      "role": "driver",
+      "is_active": true,
+      "created_at": "2025-09-05T01:56:48.683Z",
+      "updated_at": "2025-09-05T01:56:48.683Z",
+      "driver_code": "DR002",
+      "vehicle_type": "دراجة نارية",
+      "working_area": "القاهرة الجديدة",
+      "last_login": "2025-09-04T01:56:48.683Z"
+    },
+    {
+      "id": "beff4e2d-9b56-4fbc-8925-2e1cb78dc123",
+      "username": "mohamed_captain",
+      "email": "mohamed.captain@atbaali.com",
+      "password_hash": "$2b$10$3LToNXEuWqIXaYRrMb09XuT.udUsPhisJfLt7fzet37YaGUnhF6Kq",
+      "full_name": "محمد علي الكابتن",
+      "role": "driver",
+      "is_active": true,
+      "created_at": "2025-09-05T01:56:48.821Z",
+      "updated_at": "2025-09-05T01:56:48.821Z",
+      "driver_code": "DR003",
+      "vehicle_type": "سكوتر كهربائي",
+      "working_area": "مدينة نصر",
+      "last_login": "2025-09-05T00:56:48.821Z"
+    },
+    {
+      "id": "328dc5c8-0183-44ff-95bb-fcf6eba76913",
+      "username": "omar_delivery",
+      "email": "omar.delivery@atbaali.com",
+      "password_hash": "$2b$10$h.ok7uTOjdnQzpKjT3EAI.vhdFhOv53aNTaPe6C/iteIH1l39GAri",
+      "full_name": "عمر حسن التوصيل",
+      "role": "driver",
+      "is_active": false,
+      "created_at": "2025-09-05T01:56:50.796Z",
+      "updated_at": "2025-09-05T01:56:50.796Z",
+      "driver_code": "DR004",
+      "vehicle_type": "دراجة نارية",
+      "working_area": "المعادي",
+      "last_login": "2025-08-29T01:56:50.796Z"
+    },
+    {
+      "id": "98622183-b9fb-416a-a422-7ced405cbcca",
+      "username": "sara_driver",
+      "email": "sara.driver@atbaali.com",
+      "password_hash": "$2b$10$OkaTBe15K6YLtR6MWoxisO4qjK21f/iv0TS/1NNvsIlu9tRtHOGBu",
+      "full_name": "سارة أحمد السائقة",
+      "role": "driver",
+      "is_active": true,
+      "created_at": "2025-09-05T01:56:51.887Z",
+      "updated_at": "2025-09-05T01:56:51.887Z",
+      "driver_code": "DR005",
+      "vehicle_type": "سيارة صغيرة",
+      "working_area": "مصر الجديدة",
+      "last_login": "2025-09-05T01:26:51.887Z"
+    },
+    {
+      "id": "eee1a86e-49c7-4930-b5bb-a8ec86b288c8",
+      "username": "hassan_express",
+      "email": "hassan.express@atbaali.com",
+      "password_hash": "$2b$10$VM2c4MCQlJVvBOlhOW0SJu/I9w2kJTxAb0HQS63TQxayCUPC6JvHW",
+      "full_name": "حسن محمود الإكسبرس",
+      "role": "driver",
+      "is_active": true,
+      "created_at": "2025-09-05T01:56:52.971Z",
+      "updated_at": "2025-09-05T01:56:52.971Z",
+      "driver_code": "DR006",
+      "vehicle_type": "دراجة نارية",
+      "working_area": "الجيزة",
+      "last_login": "2025-09-05T01:56:52.971Z"
     }
   ],
   "logs": [
@@ -229,7 +304,52 @@
       "success": true,
       "timestamp": "2025-09-05T01:53:46.203Z",
       "details": "User: ali_driver"
+    },
+    {
+      "id": "1ece91d5-0039-4da8-af98-edfefd5fdc82",
+      "user_id": "ca59e028-85ba-45cf-975b-fb1c2814cfcd",
+      "action": "إنشاء حساب سائق تجريبي",
+      "ip_address": "192.168.1.1",
+      "user_agent": "System/Auto-Generated",
+      "success": true,
+      "timestamp": "2025-09-05T01:56:52.971Z"
+    },
+    {
+      "id": "4e3f03c3-1f41-4e27-8981-7382708dc12a",
+      "user_id": "beff4e2d-9b56-4fbc-8925-2e1cb78dc123",
+      "action": "إنشاء حساب سائق تجريبي",
+      "ip_address": "192.168.1.1",
+      "user_agent": "System/Auto-Generated",
+      "success": true,
+      "timestamp": "2025-09-05T01:56:53.887Z"
+    },
+    {
+      "id": "c16d18e7-0df1-4705-b7ba-7b9f2a333160",
+      "user_id": "328dc5c8-0183-44ff-95bb-fcf6eba76913",
+      "action": "إنشاء حساب سائق تجريبي",
+      "ip_address": "192.168.1.1",
+      "user_agent": "System/Auto-Generated",
+      "success": true,
+      "timestamp": "2025-09-05T01:56:54.433Z"
+    },
+    {
+      "id": "078c250a-cb77-424b-ae7e-8f9252e6ca49",
+      "user_id": "98622183-b9fb-416a-a422-7ced405cbcca",
+      "action": "إنشاء حساب سائق تجريبي",
+      "ip_address": "192.168.1.1",
+      "user_agent": "System/Auto-Generated",
+      "success": true,
+      "timestamp": "2025-09-05T01:56:54.901Z"
+    },
+    {
+      "id": "a4e3ac46-2dc1-47e0-bf03-a3ccd6c17a3d",
+      "user_id": "eee1a86e-49c7-4930-b5bb-a8ec86b288c8",
+      "action": "إنشاء حساب سائق تجريبي",
+      "ip_address": "192.168.1.1",
+      "user_agent": "System/Auto-Generated",
+      "success": true,
+      "timestamp": "2025-09-05T01:56:55.328Z"
     }
   ],
-  "lastSaved": "2025-09-05T01:53:46.203Z"
+  "lastSaved": "2025-09-05T01:56:55.758Z"
 }
