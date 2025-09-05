@@ -403,14 +403,14 @@ export async function handlePaymobCallback(req: Request, res: Response) {
 // Get supported payment methods for Paymob
 export async function getPaymobPaymentMethods(req: Request, res: Response) {
   try {
-    // Note: These are demo integration IDs. In production, replace with your actual Paymob integration IDs
+    // Updated with real integration IDs from Paymob dashboard
     const paymentMethods = [
       {
         id: 'card',
         name: 'بطاقة ائتمانية',
         nameEn: 'Credit Card',
         icon: '💳',
-        integration_id: 4736159, // Replace with your actual card integration ID
+        integration_id: 4736159, // Demo ID - replace with actual card integration ID
         category: 'card'
       },
       {
@@ -428,7 +428,7 @@ export async function getPaymobPaymentMethods(req: Request, res: Response) {
         name: 'فودافون كاش',
         nameEn: 'Vodafone Cash',
         icon: '📱',
-        integration_id: 4736160,
+        integration_id: 5266760, // Real integration ID provided by user
         category: 'wallet'
       },
       {
@@ -436,7 +436,7 @@ export async function getPaymobPaymentMethods(req: Request, res: Response) {
         name: 'اورنچ موني',
         nameEn: 'Orange Money',
         icon: '🟠',
-        integration_id: 4736161,
+        integration_id: 5266760, // Using same mobile wallet integration ID
         category: 'wallet'
       },
       {
@@ -444,7 +444,7 @@ export async function getPaymobPaymentMethods(req: Request, res: Response) {
         name: 'اتصالات كاش',
         nameEn: 'Etisalat Cash',
         icon: '🟢',
-        integration_id: 4736162,
+        integration_id: 5266760, // Using same mobile wallet integration ID
         category: 'wallet'
       },
       {
