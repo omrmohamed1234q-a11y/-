@@ -315,7 +315,7 @@ export async function createPaymobPayment(req: Request, res: Response) {
       success: true,
       paymentKey,
       paymobOrderId: paymobOrder.id,
-      iframeUrl: `https://accept.paymob.com/api/acceptance/iframes/${process.env.PAYMOB_IFRAME_ID}?payment_token=${paymentKey}`,
+      iframeUrl: `https://accept.paymob.com/api/acceptance/iframes/884577?payment_token=${paymentKey}`, // Using default iframe ID
       amount_cents: Math.round(amount * 100),
       currency
     });
