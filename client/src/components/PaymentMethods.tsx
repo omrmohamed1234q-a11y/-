@@ -86,18 +86,39 @@ export default function PaymentMethods({
       const paymentData = await response.json();
 
       if (paymentData.success) {
-        // For mobile wallets, redirect to payment URL
+        // For mobile wallets, use iframe in popup
         if (['vodafone_cash', 'orange_money', 'etisalat_cash', 'valu'].includes(method.id)) {
-          // Redirect to Paymob payment page
-          toast({
-            title: "جاري التوجيه للدفع",
-            description: `سيتم توجيهك لصفحة الدفع الآمنة لـ ${method.name}`,
-          });
+          // Open payment iframe in popup window
+          const paymentWindow = window.open(
+            paymentData.iframeUrl || paymentData.paymentUrl,
+            'PaymentWindow',
+            'width=800,height=600,scrollbars=yes,resizable=yes'
+          );
           
-          // Redirect to payment page after a brief delay
-          setTimeout(() => {
-            window.location.href = paymentData.paymentUrl || paymentData.iframeUrl;
-          }, 1500);
+          if (!paymentWindow) {
+            toast({
+              title: 'يرجى السماح بالنوافذ المنبثقة',
+              description: 'لإكمال عملية الدفع بنجاح',
+              variant: 'destructive'
+            });
+            setProcessingPayment(null);
+            return;
+          }
+
+          // Check if popup is closed
+          const checkPaymentStatus = setInterval(() => {
+            if (paymentWindow.closed) {
+              clearInterval(checkPaymentStatus);
+              setProcessingPayment(null);
+              
+              toast({
+                title: 'تم إغلاق نافذة الدفع',
+                description: 'يرجى المحاولة مرة أخرى إذا لم يكتمل الدفع',
+                variant: 'destructive'
+              });
+            }
+          }, 1000);
+
           return;
 
           // This code is removed as we're using redirect instead

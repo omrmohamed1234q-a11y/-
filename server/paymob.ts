@@ -315,7 +315,8 @@ export async function createPaymobPayment(req: Request, res: Response) {
       success: true,
       paymentKey,
       paymobOrderId: paymobOrder.id,
-      // Using direct payment URL instead of iframe to avoid ownership issues
+      // Using both iframe and standalone URLs for flexibility
+      iframeUrl: `https://accept.paymob.com/api/acceptance/iframes/956251?payment_token=${paymentKey}`,
       paymentUrl: `https://accept.paymob.com/standalone/?ref=${paymobOrder.id}&token=${paymentKey}`,
       amount_cents: Math.round(amount * 100),
       currency,
