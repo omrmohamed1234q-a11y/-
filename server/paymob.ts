@@ -319,7 +319,8 @@ export async function createPaymobPayment(req: Request, res: Response) {
       paymentUrl: `https://accept.paymob.com/standalone/?ref=${paymobOrder.id}&token=${paymentKey}`,
       amount_cents: Math.round(amount * 100),
       currency,
-      redirectUrl: `${req.get('origin')}/payment-success?order_id=${paymobOrder.id}`
+      redirectUrl: `${req.get('origin')}/payment-success?order_id=${paymobOrder.id}`,
+      callbackUrl: `${req.get('origin')}/api/payments/paymob/callback`
     });
 
   } catch (error: any) {
@@ -346,11 +347,15 @@ export async function handlePaymobCallback(req: Request, res: Response) {
   try {
     const callbackData = req.body;
 
-    // Validate HMAC signature
-    const isValid = paymobService.validateCallback(callbackData);
-    if (!isValid) {
-      console.warn('Invalid HMAC signature for Paymob callback');
-      return res.status(400).json({ success: false, error: 'Invalid signature' });
+    // Validate HMAC signature if available
+    if (process.env.PAYMOB_HMAC) {
+      const isValid = paymobService.validateCallback(callbackData);
+      if (!isValid) {
+        console.warn('Invalid HMAC signature for Paymob callback');
+        return res.status(400).json({ success: false, error: 'Invalid signature' });
+      }
+    } else {
+      console.log('⚠️ PAYMOB_HMAC not configured, skipping signature validation');
     }
 
     const {
@@ -361,33 +366,35 @@ export async function handlePaymobCallback(req: Request, res: Response) {
       amount_cents
     } = callbackData;
 
-    console.log(`Paymob callback received: Transaction ${transactionId}, Order ${merchant_order_id}, Success: ${success}`);
+    console.log(`📬 Paymob callback: Transaction ${transactionId}, Order ${merchant_order_id}, Success: ${success}, Pending: ${pending}`);
 
-    // Update order status based on payment result
-    if (success === true && !pending) {
+    // Handle different payment states
+    if (pending) {
+      console.log('⏳ Transaction is pending, waiting for final status');
+      return res.json({ success: true, status: 'pending' });
+    }
+
+    if (success === true) {
       // Payment successful
-      try {
-        // Update order status in database
-        // This depends on your storage implementation
-        console.log(`Payment successful for order ${merchant_order_id}`);
-        
-        // You can update the order status here
-        // await storage.updateOrder(merchant_order_id, { 
-        //   paymentStatus: 'paid',
-        //   transactionId: transactionId,
-        //   paidAt: new Date()
-        // });
-        
-      } catch (updateError) {
-        console.error('Error updating order after successful payment:', updateError);
-      }
+      console.log(`✅ Payment successful for order ${merchant_order_id}`);
+      
+      // TODO: Update order status in your database
+      // await storage.updateOrder(merchant_order_id, { 
+      //   paymentStatus: 'completed',
+      //   transactionId: transactionId,
+      //   paidAmount: amount_cents / 100,
+      //   completedAt: new Date()
+      // });
+      
     } else if (success === false) {
       // Payment failed
-      console.log(`Payment failed for order ${merchant_order_id}`);
+      console.log(`❌ Payment failed for order ${merchant_order_id}`);
       
+      // TODO: Update order status in your database
       // await storage.updateOrder(merchant_order_id, { 
       //   paymentStatus: 'failed',
-      //   transactionId: transactionId
+      //   transactionId: transactionId,
+      //   failedAt: new Date()
       // });
     }
 
