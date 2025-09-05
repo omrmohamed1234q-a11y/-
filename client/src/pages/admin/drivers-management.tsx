@@ -66,7 +66,7 @@ export default function DriversManagement() {
   });
 
   // Fetch drivers
-  const { data: drivers = [], isLoading } = useQuery({
+  const { data: drivers = [], isLoading } = useQuery<Driver[]>({
     queryKey: ['/api/admin/drivers'],
   });
 

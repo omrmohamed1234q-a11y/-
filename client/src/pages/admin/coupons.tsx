@@ -16,7 +16,7 @@ export default function AdminCoupons() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: coupons = [], isLoading } = useQuery({
+  const { data: coupons = [], isLoading } = useQuery<AdminCoupon[]>({
     queryKey: ["/api/admin/coupons"],
   });
 

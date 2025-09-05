@@ -136,10 +136,16 @@ export default function UsersManagement() {
   };
 
   const handleSaveUser = (userData: Partial<User>) => {
+    // Ensure age is a number if provided
+    const cleanedData = {
+      ...userData,
+      age: userData.age && typeof userData.age === 'string' ? parseInt(userData.age) : userData.age
+    };
+    
     if (selectedUser) {
-      updateUserMutation.mutate({ ...userData, id: selectedUser.id });
+      updateUserMutation.mutate({ ...cleanedData, id: selectedUser.id });
     } else {
-      createUserMutation.mutate(userData);
+      createUserMutation.mutate(cleanedData);
     }
   };
 

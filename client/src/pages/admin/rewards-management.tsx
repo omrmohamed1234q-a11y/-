@@ -73,9 +73,10 @@ export default function RewardsManagement() {
     try {
       setLoading(true);
       const response = await apiRequest('GET', '/api/admin/rewards/settings');
-      if (response.success) {
-        setSettings(response.data);
-        setOriginalSettings(response.data);
+      const data = await response.json();
+      if (data.success) {
+        setSettings(data.data);
+        setOriginalSettings(data.data);
         setHasChanges(false);
       }
     } catch (error) {
@@ -95,8 +96,9 @@ export default function RewardsManagement() {
   const loadStats = async () => {
     try {
       const response = await apiRequest('GET', '/api/admin/rewards/stats');
-      if (response.success) {
-        setStats(response.data);
+      const data = await response.json();
+      if (data.success) {
+        setStats(data.data);
       }
     } catch (error) {
       console.error('Error loading stats:', error);
