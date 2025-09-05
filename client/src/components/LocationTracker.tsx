@@ -65,6 +65,12 @@ export function LocationTracker({ userType, onLocationUpdate, autoStart = false 
       return;
     }
 
+    // Check if we're in a secure context (HTTPS or localhost)
+    if (!window.isSecureContext && window.location.protocol !== 'http:') {
+      setError('المصادقة الآمنة مطلوبة لتحديد الموقع. تأكد من استخدام HTTPS');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
