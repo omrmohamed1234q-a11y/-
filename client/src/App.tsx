@@ -201,7 +201,7 @@ function Router() {
         {/* Driver routes */}
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
         <Route path="/driver/dashboard" component={SecureDriverControl} />
-        <Route path="/driver/enhanced" component={EnhancedDriverDashboard} />
+        <Route path="/driver" component={EnhancedDriverDashboard} />
         
         {/* Secure login routes - available always */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
