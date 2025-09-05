@@ -87,9 +87,9 @@ export default function SecureDriverLogin() {
         // Clear credentials from memory
         setCredentials({ username: '', email: '', password: '', driverCode: '' });
         
-        // Redirect to secure driver control dashboard
+        // Redirect to driver dashboard
         setTimeout(() => {
-          window.location.href = '/driver/secure-dashboard';
+          window.location.href = '/driver';
         }, 1000);
       } else {
         const newAttempts = attempts + 1;

@@ -46,8 +46,8 @@ export class MemorySecurityStorage {
     // Load data from local JSON file first, then sync with Supabase
     this.loadDataFromLocalFile();
     this.loadDataFromSupabase().then(() => {
-      // Add dummy drivers after loading data
-      this.initializeDummyDrivers();
+      // Initialize super admin if not exists
+      this.initializeSuperAdmin();
     });
   }
 
@@ -569,118 +569,89 @@ export class MemorySecurityStorage {
       console.log('⚠️ Supabase delete failed:', error.message);
     }
   }
-  // Initialize dummy drivers for testing
-  private async initializeDummyDrivers() {
-    // Check if we already have drivers (to avoid duplicates)
-    const existingDrivers = this.users.filter(user => user.role === 'driver');
-    if (existingDrivers.length > 2) {
-      console.log(`🚚 Already have ${existingDrivers.length} drivers, skipping dummy initialization`);
+  // Initialize super admin with delete permissions
+  private async initializeSuperAdmin() {
+    // Check if super admin already exists
+    const superAdmin = this.users.find(user => user.username === 'superadmin');
+    if (superAdmin) {
+      console.log('🔐 Super admin already exists, skipping initialization');
       return;
     }
 
-    console.log('🚚 Adding dummy drivers for testing...');
+    console.log('🔐 Creating super admin account...');
 
-    const dummyDrivers = [
-      {
-        id: uuidv4(),
-        username: 'ahmed_driver',
-        email: 'ahmed.driver@atbaali.com',
-        password_hash: await bcrypt.hash('123456', 10),
-        full_name: 'أحمد محمد السائق',
-        role: 'driver' as const,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        driver_code: 'DR002',
-        vehicle_type: 'دراجة نارية',
-        working_area: 'القاهرة الجديدة',
-        last_login: new Date(Date.now() - 86400000).toISOString() // يوم مضى
-      },
-      {
-        id: uuidv4(),
-        username: 'mohamed_captain',
-        email: 'mohamed.captain@atbaali.com',
-        password_hash: await bcrypt.hash('driver123', 10),
-        full_name: 'محمد علي الكابتن',
-        role: 'driver' as const,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        driver_code: 'DR003',
-        vehicle_type: 'سكوتر كهربائي',
-        working_area: 'مدينة نصر',
-        last_login: new Date(Date.now() - 3600000).toISOString() // ساعة مضت
-      },
-      {
-        id: uuidv4(),
-        username: 'omar_delivery',
-        email: 'omar.delivery@atbaali.com',
-        password_hash: await bcrypt.hash('Omar2024', 10),
-        full_name: 'عمر حسن التوصيل',
-        role: 'driver' as const,
-        is_active: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        driver_code: 'DR004',
-        vehicle_type: 'دراجة نارية',
-        working_area: 'المعادي',
-        last_login: new Date(Date.now() - 7*86400000).toISOString() // أسبوع مضى
-      },
-      {
-        id: uuidv4(),
-        username: 'sara_driver',
-        email: 'sara.driver@atbaali.com',
-        password_hash: await bcrypt.hash('Sara123!', 10),
-        full_name: 'سارة أحمد السائقة',
-        role: 'driver' as const,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        driver_code: 'DR005',
-        vehicle_type: 'سيارة صغيرة',
-        working_area: 'مصر الجديدة',
-        last_login: new Date(Date.now() - 1800000).toISOString() // 30 دقيقة مضت
-      },
-      {
-        id: uuidv4(),
-        username: 'hassan_express',
-        email: 'hassan.express@atbaali.com',
-        password_hash: await bcrypt.hash('Hassan2024', 10),
-        full_name: 'حسن محمود الإكسبرس',
-        role: 'driver' as const,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        driver_code: 'DR006',
-        vehicle_type: 'دراجة نارية',
-        working_area: 'الجيزة',
-        last_login: new Date().toISOString() // متصل الآن
-      }
-    ];
+    const adminAccount = {
+      id: uuidv4(),
+      username: 'superadmin',
+      email: 'superadmin@atbaali.com',
+      password_hash: await bcrypt.hash('SuperAdmin2025!', 10),
+      full_name: 'مدير النظام الرئيسي',
+      role: 'admin' as const,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_login: null
+    };
 
-    // Add dummy drivers to memory
-    for (const driver of dummyDrivers) {
-      // Check if driver already exists
-      const exists = this.users.find(u => u.username === driver.username || u.driver_code === driver.driver_code);
-      if (!exists) {
-        this.users.push(driver);
-        console.log(`👤 Added dummy driver: ${driver.full_name} (${driver.driver_code})`);
-        
-        // Create a login log for each driver
-        await this.createSecurityLog({
-          user_id: driver.id,
-          action: 'إنشاء حساب سائق تجريبي',
-          ip_address: '192.168.1.1',
-          user_agent: 'System/Auto-Generated',
-          success: true,
-          timestamp: new Date()
-        });
-      }
-    }
+    // Add super admin to memory
+    this.users.push(adminAccount);
+    
+    // Create a log for super admin creation
+    await this.createSecurityLog({
+      user_id: adminAccount.id,
+      action: 'إنشاء حساب المدير الرئيسي',
+      ip_address: '127.0.0.1',
+      user_agent: 'System/Auto-Generated',
+      success: true,
+      timestamp: new Date()
+    });
+
+    // Create single test driver
+    console.log('🚚 Creating test driver account...');
+
+    const testDriver = {
+      id: uuidv4(),
+      username: 'testdriver',
+      email: 'testdriver@atbaali.com',
+      password_hash: await bcrypt.hash('Driver123!', 10),
+      full_name: 'محمد أحمد السائق التجريبي',
+      role: 'driver' as const,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      driver_code: 'DR001',
+      vehicle_type: 'دراجة نارية',
+      working_area: 'القاهرة الجديدة',
+      last_login: null
+    };
+
+    this.users.push(testDriver);
+    
+    // Create a log for test driver creation
+    await this.createSecurityLog({
+      user_id: testDriver.id,
+      action: 'إنشاء حساب سائق تجريبي',
+      ip_address: '127.0.0.1',
+      user_agent: 'System/Auto-Generated',
+      success: true,
+      timestamp: new Date()
+    });
 
     // Save the updated data
     this.saveDataToLocalFile();
-    console.log(`🚚 Dummy drivers initialization complete. Total drivers: ${this.users.filter(u => u.role === 'driver').length}`);
+    console.log('🔐 Super admin created successfully');
+    console.log('📋 Super Admin Login Details:');
+    console.log('   Username: superadmin');
+    console.log('   Email: superadmin@atbaali.com');  
+    console.log('   Password: SuperAdmin2025!');
+    console.log('   Access: Full delete permissions');
+    console.log('🚚 Test driver created successfully');
+    console.log('📋 Test Driver Login Details:');
+    console.log('   Username: testdriver');
+    console.log('   Email: testdriver@atbaali.com');
+    console.log('   Password: Driver123!');
+    console.log('   Driver Code: DR001');
+    console.log('   Access: Driver dashboard');
   }
 }
 
