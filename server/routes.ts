@@ -3034,6 +3034,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get unread notifications count
+  app.get('/api/notifications/count', async (req: any, res) => {
+    try {
+      const authenticatedUserId = req.user?.id || '3e3882cc-81fa-48c9-bc69-c290128f4ff2';
+      const userId = req.headers['x-user-id'] || authenticatedUserId;
+      
+      // Get notifications and count unread ones
+      const notifications = storage.getUserNotifications(userId);
+      const userSpecificNotifications = globalNotificationStorage.filter(n => n.userId === userId && !n.isRead);
+      
+      const unreadFromStorage = notifications.filter((n: any) => !n.isRead).length;
+      const unreadFromGlobal = userSpecificNotifications.length;
+      const totalUnread = unreadFromStorage + unreadFromGlobal;
+      
+      res.json({ count: totalUnread });
+    } catch (error) {
+      console.error('Error getting notification count:', error);
+      res.json({ count: 0 });
+    }
+  });
+
+  // Create sample notifications for testing (development only)
+  app.post('/api/notifications/create-samples', async (req: any, res) => {
+    try {
+      const authenticatedUserId = req.user?.id || '3e3882cc-81fa-48c9-bc69-c290128f4ff2';
+      const userId = req.headers['x-user-id'] || authenticatedUserId;
+      
+      const sampleNotifications = [
+        {
+          userId,
+          title: '📦 طلب جديد مُستلم',
+          message: 'تم استلام طلبك رقم #12345 وسيتم معالجته خلال 24 ساعة',
+          type: 'order',
+          iconType: 'success',
+          priority: 'normal',
+          isRead: false,
+          isClicked: false,
+          isPinned: false
+        },
+        {
+          userId,
+          title: '🎉 مكافأة جديدة!',
+          message: 'تهانينا! حصلت على 50 نقطة مكافآت لإكمال طلبك الخامس',
+          type: 'reward',
+          iconType: 'success',
+          priority: 'high',
+          isRead: false,
+          isClicked: false,
+          isPinned: true
+        },
+        {
+          userId,
+          title: '🚚 طلبك في الطريق',
+          message: 'الكابتن أحمد في طريقه إليك. الوصول المتوقع خلال 15 دقيقة',
+          type: 'delivery',
+          iconType: 'info',
+          priority: 'high',
+          isRead: false,
+          isClicked: false,
+          isPinned: false,
+          actionUrl: '/orders/track'
+        },
+        {
+          userId,
+          title: '🔔 إعلان مهم',
+          message: 'خصم 20% على جميع خدمات الطباعة لفترة محدودة!',
+          type: 'announcement',
+          iconType: 'warning',
+          priority: 'urgent',
+          isRead: true,
+          isClicked: false,
+          isPinned: false,
+          actionUrl: '/store'
+        },
+        {
+          userId,
+          title: '⚙️ تحديث النظام',
+          message: 'تم تحديث النظام لتحسين الأداء وإضافة ميزات جديدة',
+          type: 'system',
+          iconType: 'info',
+          priority: 'low',
+          isRead: false,
+          isClicked: false,
+          isPinned: false
+        }
+      ];
+
+      // Add notifications to global storage
+      sampleNotifications.forEach(notification => {
+        const notificationWithId = {
+          ...notification,
+          id: `sample-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          createdAt: new Date().toISOString(),
+          sentAt: new Date().toISOString()
+        };
+        globalNotificationStorage.push(notificationWithId);
+      });
+
+      console.log(`📧 Created ${sampleNotifications.length} sample notifications for user ${userId}`);
+      res.json({ 
+        success: true, 
+        message: `Created ${sampleNotifications.length} sample notifications`,
+        notifications: sampleNotifications.length
+      });
+    } catch (error) {
+      console.error('Error creating sample notifications:', error);
+      res.status(500).json({ error: 'Failed to create sample notifications' });
+    }
+  });
+
   // ==================== ADMIN COUPONS MANAGEMENT ====================
   
   // Get all coupons (admin only)

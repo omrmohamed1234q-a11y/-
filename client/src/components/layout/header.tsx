@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import CartDrawer from '@/components/cart/CartDrawer';
+import { NotificationCenter } from '@/components/NotificationCenter';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export default function Header() {
   const { user } = useAuth();
@@ -20,15 +22,10 @@ export default function Header() {
     enabled: !!user
   });
 
-  // Fetch real notifications
-  const { data: notifications } = useQuery({
-    queryKey: ['/api/notifications'],
-    retry: false,
-    enabled: !!user
-  });
+  // Use the notifications hook
+  const { unreadCount } = useNotifications();
 
   const cartItemsCount = (cartData as any)?.items?.length || 0;
-  const unreadNotifications = (notifications as any[])?.filter((n: any) => !n.read)?.length || 0;
 
   return (
     <>
@@ -74,12 +71,12 @@ export default function Header() {
                 data-testid="button-notifications"
               >
                 <Bell className="w-5 h-5" />
-                {unreadNotifications > 0 && (
+                {unreadCount > 0 && (
                   <Badge 
-                    variant="secondary" 
-                    className="absolute -top-1 -left-1 bg-warning text-white text-xs rounded-full w-5 h-5 flex items-center justify-center p-0 arabic-nums"
+                    variant="destructive" 
+                    className="absolute -top-1 -left-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center p-0 arabic-nums"
                   >
-                    {unreadNotifications}
+                    {unreadCount}
                   </Badge>
                 )}
               </Button>
@@ -110,53 +107,11 @@ export default function Header() {
         onClose={() => setIsCartOpen(false)} 
       />
 
-      {/* Notification Panel */}
-      {isNotificationOpen && (
-        <div className="fixed top-16 left-4 w-80 bg-white rounded-lg shadow-lg border z-50 p-4" dir="rtl">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900">الإشعارات</h3>
-            <button 
-              onClick={() => setIsNotificationOpen(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="space-y-3">
-            {(notifications as any[]) && (notifications as any[]).length > 0 ? (
-              (notifications as any[]).map((notification: any) => (
-                <div 
-                  key={notification.id} 
-                  className={`p-3 rounded-lg ${
-                    notification.type === 'order' ? 'bg-blue-50' : 
-                    notification.type === 'delivery' ? 'bg-green-50' : 
-                    notification.type === 'print' ? 'bg-orange-50' : 'bg-gray-50'
-                  }`}
-                >
-                  <p className={`text-sm ${
-                    notification.type === 'order' ? 'text-blue-800' : 
-                    notification.type === 'delivery' ? 'text-green-800' : 
-                    notification.type === 'print' ? 'text-orange-800' : 'text-gray-800'
-                  }`}>
-                    {notification.message}
-                  </p>
-                  <p className={`text-xs mt-1 ${
-                    notification.type === 'order' ? 'text-blue-600' : 
-                    notification.type === 'delivery' ? 'text-green-600' : 
-                    notification.type === 'print' ? 'text-orange-600' : 'text-gray-600'
-                  }`}>
-                    {notification.createdAt && new Date(notification.createdAt).toLocaleString('ar-EG')}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <div className="p-3 text-center text-gray-500">
-                <p className="text-sm">لا توجد إشعارات جديدة</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Notification Center */}
+      <NotificationCenter 
+        isOpen={isNotificationOpen} 
+        onClose={() => setIsNotificationOpen(false)} 
+      />
     </>
   );
 }

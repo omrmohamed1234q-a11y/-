@@ -30,6 +30,14 @@ interface UserProfile {
   memberSince: string;
 }
 
+interface UserOrder {
+  id: string;
+  orderNumber: string;
+  status: string;
+  totalAmount: string;
+  createdAt: string;
+}
+
 export default function Profile() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -44,7 +52,7 @@ export default function Profile() {
   });
 
   // Fetch user orders
-  const { data: userOrders = [] } = useQuery({
+  const { data: userOrders = [] } = useQuery<UserOrder[]>({
     queryKey: ['/api/orders/user'],
     retry: false,
   });
