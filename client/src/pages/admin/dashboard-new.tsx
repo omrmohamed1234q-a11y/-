@@ -114,7 +114,7 @@ export default function AdminDashboard() {
       icon: ShoppingCart,
       link: '/admin/orders',
       color: 'red',
-      count: stats?.ordersByStatus.pending || 0,
+      count: stats?.ordersByStatus?.pending || 0,
       urgent: true
     },
     {
@@ -202,14 +202,14 @@ export default function AdminDashboard() {
     },
     {
       title: 'قيد المعالجة',
-      value: (stats?.ordersByStatus.processing || 0) + (stats?.ordersByStatus.printing || 0),
+      value: (stats?.ordersByStatus?.processing || 0) + (stats?.ordersByStatus?.printing || 0),
       icon: Activity,
       color: 'yellow',
       description: 'طلبات تحتاج متابعة'
     },
     {
       title: 'تم التسليم',
-      value: stats?.ordersByStatus.delivered || 0,
+      value: stats?.ordersByStatus?.delivered || 0,
       icon: CheckCircle2,
       color: 'green',
       description: 'طلبات مكتملة اليوم'
@@ -259,9 +259,9 @@ export default function AdminDashboard() {
             <Button variant="outline" size="lg" className="gap-2">
               <Bell className="w-5 h-5" />
               التنبيهات
-              {(stats?.ordersByStatus.pending || 0) > 0 && (
+              {(stats?.ordersByStatus?.pending || 0) > 0 && (
                 <Badge variant="destructive" className="ml-2">
-                  {stats?.ordersByStatus.pending}
+                  {stats?.ordersByStatus?.pending}
                 </Badge>
               )}
             </Button>
@@ -489,7 +489,7 @@ export default function AdminDashboard() {
                 طلبات في انتظار المعالجة
               </h3>
               <p className="text-2xl font-bold text-red-600 mb-2">
-                {stats?.ordersByStatus.pending || 0}
+                {stats?.ordersByStatus?.pending || 0}
               </p>
               <p className="text-sm text-gray-600">طلب يحتاج مراجعة فورية</p>
             </CardContent>
@@ -507,7 +507,7 @@ export default function AdminDashboard() {
                 طلبات قيد الطباعة
               </h3>
               <p className="text-2xl font-bold text-yellow-600 mb-2">
-                {stats?.ordersByStatus.printing || 0}
+                {stats?.ordersByStatus?.printing || 0}
               </p>
               <p className="text-sm text-gray-600">طلب في مرحلة الطباعة</p>
             </CardContent>
