@@ -13,6 +13,9 @@ interface PaymentMethod {
   icon: string;
   integration_id: number;
   comingSoon?: boolean;
+  featured?: boolean;
+  description?: string;
+  category?: string;
 }
 
 interface PaymentMethodsProps {

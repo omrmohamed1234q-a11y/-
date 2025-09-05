@@ -36,6 +36,9 @@ import AdminInquiries from "@/pages/admin/inquiries";
 import AdminAnnouncements from "@/pages/admin/announcements";
 import SimpleAnalytics from "@/pages/admin/simple-analytics";
 import OrdersManagement from "@/pages/admin/orders-management";
+import OrdersManagementEnhanced from '@/pages/admin/orders-management-enhanced';
+import EnhancedDriverDashboard from '@/pages/driver/enhanced-driver-dashboard';
+import OrderTrackingEnhanced from '@/pages/order-tracking-enhanced';
 import TestSignup from "@/pages/test-signup";
 import Checkout from "@/pages/checkout";
 import OrderTracking from "@/pages/order-tracking";
@@ -171,6 +174,7 @@ function Router() {
         <Route path="/payment-success" component={PaymentSuccess} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/order-tracking/:id" component={OrderTracking} />
+        <Route path="/order-tracking-enhanced/:orderNumber?" component={OrderTrackingEnhanced} />
         <Route path="/student/teachers" component={StudentTeachers} />
         
         {/* Admin routes - available for authenticated users too */}
@@ -185,7 +189,7 @@ function Router() {
         <Route path="/admin/inquiries" component={() => <AdminProtectedRoute><AdminInquiries /></AdminProtectedRoute>} />
         <Route path="/admin/announcements" component={() => <AdminProtectedRoute><AdminAnnouncements /></AdminProtectedRoute>} />
         <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
-        <Route path="/admin/orders" component={() => <AdminProtectedRoute><OrdersManagement /></AdminProtectedRoute>} />
+        <Route path="/admin/orders" component={() => <AdminProtectedRoute><OrdersManagementEnhanced /></AdminProtectedRoute>} />
         <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
         <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
         <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
@@ -197,6 +201,7 @@ function Router() {
         {/* Driver routes */}
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
         <Route path="/driver/dashboard" component={SecureDriverControl} />
+        <Route path="/driver/enhanced" component={EnhancedDriverDashboard} />
         
         {/* Secure login routes - available always */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />

@@ -262,8 +262,13 @@ export const orders = pgTable("orders", {
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).default("0"),
   tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull(), // "pending" | "confirmed" | "preparing" | "ready" | "out_for_delivery" | "delivered" | "cancelled"
-  statusText: text("status_text"), // Arabic status text
+  status: text("status").notNull(), // "new" | "staff_received" | "printing" | "ready_pickup" | "ready_delivery" | "driver_assigned" | "out_for_delivery" | "delivered" | "cancelled"
+  statusText: text("status_text"), // Arabic status text (Egyptian dialect)
+  staffId: varchar("staff_id"), // Staff member who received the order
+  staffName: text("staff_name"), // Staff member name
+  receivedAt: timestamp("received_at"), // When staff received the order
+  printingStartedAt: timestamp("printing_started_at"), // When printing started
+  printingCompletedAt: timestamp("printing_completed_at"), // When printing finished
   
   // Address and delivery
   deliveryAddress: text("delivery_address"),

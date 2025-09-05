@@ -124,6 +124,232 @@ import crypto from 'crypto';
 const GOOGLE_PAY_MERCHANT_ID = process.env.GOOGLE_PAY_MERCHANT_ID || 'merchant.com.atbaalee';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // ==================== ORDER MANAGEMENT APIS ====================
+  
+  // Get all orders for admin (with filtering)
+  app.get("/api/admin/orders", async (req, res) => {
+    try {
+      const { status, search } = req.query;
+      
+      // Simulated orders data - replace with real database query
+      let orders = [
+        {
+          id: '1',
+          orderNumber: 'ORD-2024-001',
+          userId: 'user-001',
+          customerName: 'أحمد محمد',
+          customerPhone: '01234567890',
+          items: [{ name: 'طباعة 10 صفحات', quantity: 1, price: 5 }],
+          subtotal: 5,
+          totalAmount: 7,
+          deliveryFee: 2,
+          status: 'new',
+          statusText: 'مش مستلمة من الموظف',
+          deliveryMethod: 'delivery',
+          deliveryAddress: '123 شارع النيل، القاهرة',
+          paymentMethod: 'vodafone_cash',
+          paymentStatus: 'completed',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          timeline: []
+        },
+        {
+          id: '2',
+          orderNumber: 'ORD-2024-002',
+          userId: 'user-002',
+          customerName: 'فاطمة علي',
+          customerPhone: '01987654321',
+          items: [{ name: 'طباعة 25 صفحة ملونة', quantity: 1, price: 25 }],
+          subtotal: 25,
+          totalAmount: 27,
+          deliveryFee: 2,
+          status: 'printing',
+          statusText: 'جاري الطباعة دلوقتي',
+          deliveryMethod: 'pickup',
+          paymentMethod: 'card',
+          paymentStatus: 'completed',
+          staffId: 'staff-001',
+          staffName: 'محمود الموظف',
+          receivedAt: new Date(Date.now() - 3600000).toISOString(),
+          printingStartedAt: new Date(Date.now() - 1800000).toISOString(),
+          createdAt: new Date(Date.now() - 7200000).toISOString(),
+          updatedAt: new Date().toISOString(),
+          timeline: []
+        }
+      ];
+      
+      // Apply filters
+      if (status && status !== 'all') {
+        orders = orders.filter(order => order.status === status);
+      }
+      
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        orders = orders.filter(order => 
+          order.orderNumber.toLowerCase().includes(searchLower) ||
+          order.customerName.toLowerCase().includes(searchLower) ||
+          order.customerPhone.includes(searchLower)
+        );
+      }
+      
+      res.json(orders);
+    } catch (error: any) {
+      console.error('❌ Error fetching orders:', error);
+      res.status(500).json({ error: 'Failed to fetch orders' });
+    }
+  });
+  
+  // Update order status
+  app.patch("/api/admin/orders/:orderId/status", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { status, staffNotes, staffId, staffName } = req.body;
+      
+      console.log(`🔄 Updating order ${orderId} status to: ${status}`);
+      
+      // Simulated update - replace with real database update
+      const updatedOrder = {
+        id: orderId,
+        status: status,
+        statusText: getStatusText(status),
+        staffId: staffId,
+        staffName: staffName,
+        updatedAt: new Date().toISOString(),
+        // Add timestamp fields based on status
+        ...(status === 'staff_received' && { receivedAt: new Date().toISOString() }),
+        ...(status === 'printing' && { printingStartedAt: new Date().toISOString() }),
+        ...(status === 'ready_pickup' && { printingCompletedAt: new Date().toISOString(), readyAt: new Date().toISOString() }),
+        ...(status === 'ready_delivery' && { printingCompletedAt: new Date().toISOString(), readyAt: new Date().toISOString() }),
+        ...(status === 'out_for_delivery' && { outForDeliveryAt: new Date().toISOString() }),
+        ...(status === 'delivered' && { deliveredAt: new Date().toISOString() }),
+        ...(status === 'cancelled' && { cancelledAt: new Date().toISOString() }),
+        timeline: [
+          {
+            event: `تم تحديث الحالة إلى: ${getStatusText(status)}`,
+            timestamp: new Date().toISOString(),
+            note: staffNotes || undefined
+          }
+        ]
+      };
+      
+      res.json(updatedOrder);
+    } catch (error: any) {
+      console.error('❌ Error updating order:', error);
+      res.status(500).json({ error: 'Failed to update order' });
+    }
+  });
+  
+  // Create new order from payment success
+  app.post("/api/orders/create-from-payment", async (req, res) => {
+    try {
+      const { 
+        paymentId,
+        amount,
+        paymentMethod,
+        customerName,
+        customerPhone,
+        deliveryAddress,
+        deliveryMethod,
+        items 
+      } = req.body;
+      
+      // Generate order number
+      const orderNumber = `ORD-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+      
+      const newOrder = {
+        id: `order-${Date.now()}`,
+        orderNumber,
+        userId: req.body.userId || 'anonymous',
+        customerName,
+        customerPhone,
+        items: items || [],
+        subtotal: amount - 2, // Subtract delivery fee
+        deliveryFee: deliveryMethod === 'delivery' ? 2 : 0,
+        totalAmount: amount,
+        status: 'new',
+        statusText: 'مش مستلمة من الموظف',
+        deliveryMethod,
+        deliveryAddress,
+        paymentMethod,
+        paymentStatus: 'completed',
+        paymentId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        timeline: [
+          {
+            event: 'تم إنشاء الطلب وتأكيد الدفع',
+            timestamp: new Date().toISOString(),
+            note: `Payment ID: ${paymentId}`
+          }
+        ]
+      };
+      
+      console.log('✅ New order created:', newOrder);
+      
+      res.json({ 
+        success: true, 
+        order: newOrder,
+        message: 'تم إنشاء الطلب بنجاح' 
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Error creating order:', error);
+      res.status(500).json({ error: 'Failed to create order' });
+    }
+  });
+  
+  // Get order by tracking number for customer
+  app.get("/api/orders/track/:orderNumber", async (req, res) => {
+    try {
+      const { orderNumber } = req.params;
+      
+      // Simulated order lookup - replace with real database query
+      const order = {
+        orderNumber,
+        status: 'printing',
+        statusText: 'جاري الطباعة دلوقتي',
+        estimatedDelivery: 30,
+        driverName: null,
+        driverPhone: null,
+        timeline: [
+          {
+            event: 'تم إنشاء الطلب وتأكيد الدفع',
+            timestamp: new Date(Date.now() - 7200000).toISOString()
+          },
+          {
+            event: 'استلم الطلب: محمود الموظف',
+            timestamp: new Date(Date.now() - 3600000).toISOString()
+          },
+          {
+            event: 'بدء الطباعة',
+            timestamp: new Date(Date.now() - 1800000).toISOString()
+          }
+        ]
+      };
+      
+      res.json(order);
+    } catch (error: any) {
+      console.error('❌ Error tracking order:', error);
+      res.status(500).json({ error: 'Order not found' });
+    }
+  });
+  
+  // Helper function for status text
+  function getStatusText(status: string): string {
+    const statusMap: Record<string, string> = {
+      new: "مش مستلمة من الموظف",
+      staff_received: "استلمها الموظف",
+      printing: "جاري الطباعة دلوقتي",
+      ready_pickup: "جاهزة في الفرع - تعالى خدها",
+      ready_delivery: "جاهزة للتوصيل",
+      driver_assigned: "راح للكابتن",
+      out_for_delivery: "الكابتن في الطريق إليك",
+      delivered: "وصلت خلاص - تم التسليم",
+      cancelled: "تم الإلغاء"
+    };
+    return statusMap[status] || "حالة غير معروفة";
+  }
   // Add global API protection middleware (applied after login routes are defined)
   const protectAPI = (req: any, res: any, next: any) => {
     // Skip authentication for public endpoints
