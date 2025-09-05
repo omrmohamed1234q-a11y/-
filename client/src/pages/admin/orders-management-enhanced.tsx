@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   getOrderStatusText, 
   getOrderStatusColor, 
@@ -292,81 +293,133 @@ export default function OrdersManagementEnhanced() {
   );
 
   return (
-    <div className="space-y-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen">
-      {/* Enhanced Header */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-center justify-between">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="space-y-6 p-6 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 min-h-screen"
+    >
+      {/* Enhanced Header with Animation */}
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.1, duration: 0.5 }}
+        className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border-0 p-8 relative overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5"></div>
+        <div className="relative z-10 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <motion.h1 
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent"
+            >
               🚀 لوحة التحكم الذكية
-            </h1>
-            <p className="text-gray-600 mt-2">
-              نظام إدارة متكامل للطلبات والمخزون مع ذكاء اصطناعي وربط تلقائي
-            </p>
+            </motion.h1>
+            <motion.p 
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="text-gray-600 mt-3 text-lg"
+            >
+              نظام إدارة متكامل للطلبات والمخزون مع ذكاء اصطناعي وربط تلقائي ⚡
+            </motion.p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{orders.length}</div>
-              <div className="text-sm text-gray-500">إجمالي الطلبات</div>
+          <motion.div 
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="flex items-center gap-6"
+          >
+            <div className="text-center bg-gradient-to-br from-green-100 to-emerald-100 p-4 rounded-xl">
+              <div className="text-3xl font-bold text-green-600">{orders.length}</div>
+              <div className="text-sm text-green-700 font-medium">إجمالي الطلبات</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{inventoryStats?.totalProducts || 0}</div>
-              <div className="text-sm text-gray-500">المنتجات</div>
+            <div className="text-center bg-gradient-to-br from-blue-100 to-cyan-100 p-4 rounded-xl">
+              <div className="text-3xl font-bold text-blue-600">{inventoryStats?.totalProducts || 0}</div>
+              <div className="text-sm text-blue-700 font-medium">المنتجات</div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Smart Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-100">الطلبات اليوم</p>
-                <p className="text-2xl font-bold">{ordersByStatus.new + ordersByStatus.staff_received}</p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-green-200" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-100">في الإنتاج</p>
-                <p className="text-2xl font-bold">{ordersByStatus.printing}</p>
-              </div>
-              <Package className="w-8 h-8 text-blue-200" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-orange-100">مخزون منخفض</p>
-                <p className="text-2xl font-bold">{inventoryStats?.lowStockProducts || 0}</p>
-              </div>
-              <AlertTriangle className="w-8 h-8 text-orange-200" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100">الإيرادات</p>
-                <p className="text-2xl font-bold">{orders.reduce((sum, order) => sum + order.totalAmount, 0)} جنيه</p>
-              </div>
-              <BarChart3 className="w-8 h-8 text-purple-200" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Animated Smart Stats Overview */}
+      <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          {
+            title: "الطلبات اليوم",
+            value: ordersByStatus.new + ordersByStatus.staff_received,
+            icon: TrendingUp,
+            gradient: "from-emerald-500 via-green-500 to-teal-600",
+            bgColor: "from-emerald-50 to-green-50",
+            textColors: "text-emerald-100",
+            delay: 0.1
+          },
+          {
+            title: "في الإنتاج",
+            value: ordersByStatus.printing,
+            icon: Package,
+            gradient: "from-blue-500 via-cyan-500 to-indigo-600",
+            bgColor: "from-blue-50 to-cyan-50",
+            textColors: "text-blue-100",
+            delay: 0.2
+          },
+          {
+            title: "مخزون منخفض",
+            value: inventoryStats?.lowStockProducts || 0,
+            icon: AlertTriangle,
+            gradient: "from-orange-500 via-amber-500 to-yellow-600",
+            bgColor: "from-orange-50 to-amber-50",
+            textColors: "text-orange-100",
+            delay: 0.3
+          },
+          {
+            title: "الإيرادات",
+            value: `${orders.reduce((sum, order) => sum + order.totalAmount, 0)} جنيه`,
+            icon: BarChart3,
+            gradient: "from-purple-500 via-violet-500 to-indigo-600",
+            bgColor: "from-purple-50 to-violet-50",
+            textColors: "text-purple-100",
+            delay: 0.4
+          }
+        ].map((stat, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 30, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: stat.delay, duration: 0.5, type: "spring", stiffness: 100 }}
+            whileHover={{ scale: 1.05, y: -5 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Card className={`bg-gradient-to-br ${stat.gradient} text-white border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden relative`}>
+              <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+              <CardContent className="p-6 relative z-10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`${stat.textColors} text-sm font-medium mb-2`}>{stat.title}</p>
+                    <motion.p 
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: stat.delay + 0.3, duration: 0.5 }}
+                      className="text-3xl font-bold"
+                    >
+                      {stat.value}
+                    </motion.p>
+                  </div>
+                  <motion.div
+                    initial={{ rotate: -180, scale: 0 }}
+                    animate={{ rotate: 0, scale: 1 }}
+                    transition={{ delay: stat.delay + 0.2, duration: 0.6 }}
+                  >
+                    <stat.icon className="w-10 h-10 text-white/80" />
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </motion.div>
 
       {/* Smart Alerts System */}
       {(inventoryStats?.lowStockProducts > 0 || inventoryStats?.outOfStockProducts > 0) && (
@@ -414,20 +467,43 @@ export default function OrdersManagementEnhanced() {
         </Card>
       )}
 
-      {/* Main Tabs */}
-      <Tabs defaultValue="orders" className="space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border p-2">
-          <TabsList className="grid w-full grid-cols-2 bg-gray-50">
-            <TabsTrigger value="orders" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <Package className="w-4 h-4" />
-              📦 إدارة الطلبات
-            </TabsTrigger>
-            <TabsTrigger value="inventory" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <Package2 className="w-4 h-4" />
-              📊 إدارة المخزون
-            </TabsTrigger>
-          </TabsList>
-        </div>
+      {/* Enhanced Animated Tabs */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.5 }}
+      >
+        <Tabs defaultValue="orders" className="space-y-8">
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border-0 p-3">
+            <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-gray-100 to-gray-50 rounded-xl">
+              <TabsTrigger 
+                value="orders" 
+                className="flex items-center gap-3 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-blue-600 transition-all duration-300 rounded-lg py-3 px-6"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="flex items-center gap-3"
+                >
+                  <Package className="w-5 h-5" />
+                  <span className="font-semibold">📦 إدارة الطلبات</span>
+                </motion.div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="inventory" 
+                className="flex items-center gap-3 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-purple-600 transition-all duration-300 rounded-lg py-3 px-6"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="flex items-center gap-3"
+                >
+                  <Package2 className="w-5 h-5" />
+                  <span className="font-semibold">📊 إدارة المخزون</span>
+                </motion.div>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
         {/* Orders Tab */}
         <TabsContent value="orders" className="space-y-6">
@@ -1121,7 +1197,26 @@ export default function OrdersManagementEnhanced() {
             </Card>
           )}
         </TabsContent>
-      </Tabs>
-    </div>
+
+        </Tabs>
+      </motion.div>
+
+      {/* Floating Action Button */}
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 1, duration: 0.5 }}
+        className="fixed bottom-8 right-8 z-50"
+      >
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-full shadow-2xl hover:shadow-purple-500/25 transition-all duration-300"
+          onClick={() => refetch()}
+        >
+          <RefreshCw className="w-6 h-6" />
+        </motion.button>
+      </motion.div>
+    </motion.div>
   );
 }
