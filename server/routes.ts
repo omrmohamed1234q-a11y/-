@@ -460,21 +460,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: status,
         statusText: getStatusText(status),
         updatedAt: new Date().toISOString(),
-        // Add timestamp fields based on status
+        // Add timestamp fields and location tracking based on status
         ...(status === 'out_for_delivery' && { 
           outForDeliveryAt: new Date().toISOString(),
-          driverLocation: location 
+          driverLocation: location || { lat: 30.0444, lng: 31.2357 } // Cairo coordinates as fallback
         }),
-        ...(status === 'arrived' && { 
-          arrivedAt: new Date().toISOString(),
-          driverLocation: location 
+        ...(status === 'delivered' && { 
+          deliveredAt: new Date().toISOString(),
+          finalLocation: location || { lat: 30.0444, lng: 31.2357 }
         }),
-        ...(status === 'delivered' && { deliveredAt: new Date().toISOString() }),
         ...(status === 'cancelled' && { cancelledAt: new Date().toISOString() }),
+        // Always update driver location for active deliveries
+        ...(location && (status === 'out_for_delivery' || status === 'delivered') && {
+          currentDriverLocation: location,
+          lastLocationUpdate: new Date().toISOString()
+        }),
         timeline: [
           {
             event: `تم تحديث الحالة إلى: ${getStatusText(status)}`,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            ...(location && { location: location })
           }
         ]
       };
@@ -483,6 +488,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('❌ Error updating order status:', error);
       res.status(500).json({ error: 'Failed to update order status' });
+    }
+  });
+  
+  // Get live driver location for tracking
+  app.get("/api/orders/:orderId/driver-location", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      
+      // Simulated driver location - replace with real tracking
+      const driverLocation = {
+        orderId: orderId,
+        driverName: 'أحمد السائق',
+        currentLocation: {
+          lat: 30.0444 + (Math.random() - 0.5) * 0.01, // Simulate movement around Cairo
+          lng: 31.2357 + (Math.random() - 0.5) * 0.01
+        },
+        status: 'out_for_delivery',
+        estimatedArrival: 8, // minutes
+        lastUpdate: new Date().toISOString(),
+        distance: '2.3 كم',
+        route: [
+          { lat: 30.0444, lng: 31.2357 },
+          { lat: 30.0454, lng: 31.2367 },
+          { lat: 30.0464, lng: 31.2377 }
+        ]
+      };
+      
+      res.json(driverLocation);
+    } catch (error: any) {
+      console.error('❌ Error fetching driver location:', error);
+      res.status(500).json({ error: 'Failed to fetch driver location' });
     }
   });
 

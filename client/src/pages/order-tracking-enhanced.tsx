@@ -32,6 +32,7 @@ export default function OrderTrackingEnhanced() {
   const [match, params] = useRoute('/order-tracking-enhanced/:orderNumber?');
   const [searchOrderNumber, setSearchOrderNumber] = useState('');
   const [orderToTrack, setOrderToTrack] = useState(params?.orderNumber || '');
+  const [driverLocation, setDriverLocation] = useState<any>(null);
   const { toast } = useToast();
 
   // Track order query
@@ -44,17 +45,17 @@ export default function OrderTrackingEnhanced() {
       if (orderToTrack === 'ORD-2024-001') {
         return {
           orderNumber: 'ORD-2024-001',
-          status: 'printing',
-          statusText: 'جاري الطباعة دلوقتي',
+          status: 'out_for_delivery',
+          statusText: 'الكابتن في الطريق إليك',
           customerName: 'أحمد محمد',
           customerPhone: '01234567890',
           deliveryAddress: '123 شارع النيل، المعادي، القاهرة',
           deliveryMethod: 'delivery',
           totalAmount: 15,
           paymentMethod: 'vodafone_cash',
-          estimatedDelivery: 20,
-          driverName: null,
-          driverPhone: null,
+          estimatedDelivery: 12,
+          driverName: 'محمد السائق',
+          driverPhone: '01777666555',
           createdAt: new Date(Date.now() - 3600000).toISOString(),
           timeline: [
             {
@@ -170,6 +171,17 @@ export default function OrderTrackingEnhanced() {
     },
     enabled: Boolean(orderToTrack),
     refetchInterval: orderData?.status === 'delivered' || orderData?.status === 'cancelled' ? false : 30000
+  });
+
+  // Get live driver location if order is out for delivery
+  const { data: liveDriverLocation } = useQuery({
+    queryKey: ['/api/orders/driver-location', orderToTrack],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/orders/${orderToTrack}/driver-location`);
+      return response.json();
+    },
+    enabled: Boolean(orderToTrack && orderData?.status === 'out_for_delivery'),
+    refetchInterval: 15000 // Update every 15 seconds when delivery is active
   });
 
   const handleSearch = () => {
@@ -370,13 +382,45 @@ export default function OrderTrackingEnhanced() {
                         <div>
                           <p className="text-sm font-medium">السائق: {orderData.driverName}</p>
                           <p className="text-xs text-gray-600">{orderData.driverPhone}</p>
+                          {liveDriverLocation && (
+                            <div className="text-xs text-blue-600 mt-1">
+                              📍 المسافة: {liveDriverLocation.distance} • الوصول خلال: {liveDriverLocation.estimatedArrival} دقيقة
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <Button size="sm" onClick={callDriver}>
-                        <Phone className="w-3 h-3 mr-1" />
-                        اتصال
-                      </Button>
+                      <div className="flex gap-2">
+                        {liveDriverLocation && orderData.status === 'out_for_delivery' && (
+                          <Button size="sm" variant="outline" onClick={() => {
+                            const lat = liveDriverLocation.currentLocation.lat;
+                            const lng = liveDriverLocation.currentLocation.lng;
+                            window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+                          }}>
+                            <Navigation className="w-3 h-3 mr-1" />
+                            موقع السائق
+                          </Button>
+                        )}
+                        <Button size="sm" onClick={callDriver}>
+                          <Phone className="w-3 h-3 mr-1" />
+                          اتصال
+                        </Button>
+                      </div>
                     </div>
+                    
+                    {/* Live tracking indicator */}
+                    {liveDriverLocation && orderData.status === 'out_for_delivery' && (
+                      <div className="mt-3 p-2 bg-green-50 rounded-lg border-l-4 border-green-400">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-green-700 font-medium">
+                            🚚 السائق في الطريق إليك - تتبع مباشر
+                          </span>
+                        </div>
+                        <div className="text-xs text-green-600 mt-1">
+                          آخر تحديث: {new Date(liveDriverLocation.lastUpdate).toLocaleTimeString('ar-EG')}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

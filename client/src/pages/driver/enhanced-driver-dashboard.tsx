@@ -145,17 +145,33 @@ export default function EnhancedDriverDashboard() {
   // Update order status mutation
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string, status: string }) => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const order = assignedOrders.find((o: any) => o.id === orderId);
-      if (!order) throw new Error('Order not found');
-      
-      return {
-        ...order,
-        status: status,
-        statusText: getOrderStatusText(status as any)
-      };
+      // Get current location if updating to out_for_delivery or delivered
+      let currentLocation = null;
+      if ((status === 'out_for_delivery' || status === 'delivered') && navigator.geolocation) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 60000
+            });
+          });
+          currentLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+        } catch (error) {
+          console.log('Could not get location:', error);
+        }
+      }
+
+      // Simulate API call with location
+      const response = await apiRequest('PATCH', `/api/driver/orders/${orderId}/status`, {
+        status,
+        driverId: 'driver-001',
+        location: currentLocation
+      });
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -396,28 +412,6 @@ export default function EnhancedDriverDashboard() {
                     {order.status === 'out_for_delivery' && (
                       <>
                         <Button
-                          onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'arrived' })}
-                          disabled={updateOrderStatusMutation.isPending}
-                          className="flex-1"
-                          variant="outline"
-                        >
-                          <span className="mr-1">🚪</span>
-                          وصلت للعنوان
-                        </Button>
-                        <Button
-                          onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'cancelled' })}
-                          disabled={updateOrderStatusMutation.isPending}
-                          variant="destructive"
-                          className="flex-1"
-                        >
-                          إلغاء
-                        </Button>
-                      </>
-                    )}
-                    
-                    {order.status === 'arrived' && (
-                      <>
-                        <Button
                           onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'delivered' })}
                           disabled={updateOrderStatusMutation.isPending}
                           className="flex-1"
@@ -426,12 +420,12 @@ export default function EnhancedDriverDashboard() {
                           تم التسليم
                         </Button>
                         <Button
-                          onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'out_for_delivery' })}
+                          onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'cancelled' })}
                           disabled={updateOrderStatusMutation.isPending}
-                          variant="outline"
+                          variant="destructive"
                           className="flex-1"
                         >
-                          في الطريق مرة تانية
+                          إلغاء
                         </Button>
                       </>
                     )}
