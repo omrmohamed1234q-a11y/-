@@ -39,7 +39,10 @@ import {
   LogOut,
   ChevronDown,
   Monitor,
-  Building2
+  Building2,
+  MoreVertical,
+  Smartphone,
+  Shield
 } from 'lucide-react';
 
 interface AdminStats {
@@ -262,6 +265,39 @@ export default function AdminDashboard() {
                 </Badge>
               )}
             </Button>
+            
+            {/* Three dots menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="lg" className="h-10 w-10 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem 
+                  onClick={() => navigate('/admin/two-factor-settings')}
+                  className="cursor-pointer gap-2"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  المصادقة الثنائية
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => navigate('/admin/security-dashboard')}
+                  className="cursor-pointer gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  لوحة الأمان
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => navigate('/admin/settings')}
+                  className="cursor-pointer gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  الإعدادات
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             {/* Admin Profile Menu */}
             <DropdownMenu>
