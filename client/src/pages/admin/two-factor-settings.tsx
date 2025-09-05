@@ -40,13 +40,30 @@ const TwoFactorSettings: React.FC = () => {
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
-        const currentUser = JSON.parse(localStorage.getItem('securityUser') || '{}');
-        if (currentUser.id) {
-          setUserId(currentUser.id);
-          setUserType(currentUser.role === 'admin' ? 'admin' : 'driver');
-        } else {
-          setError('لم يتم العثور على بيانات المستخدم. يرجى تسجيل الدخول مرة أخرى.');
+        // Try admin auth first
+        const adminAuth = localStorage.getItem('adminAuth');
+        if (adminAuth) {
+          const adminData = JSON.parse(adminAuth);
+          const user = adminData.admin || adminData.user;
+          if (user && user.id) {
+            setUserId(user.id);
+            setUserType('admin');
+            return;
+          }
         }
+        
+        // Fallback to security user for drivers
+        const securityUser = localStorage.getItem('securityUser');
+        if (securityUser) {
+          const userData = JSON.parse(securityUser);
+          if (userData.id) {
+            setUserId(userData.id);
+            setUserType(userData.role === 'admin' ? 'admin' : 'driver');
+            return;
+          }
+        }
+        
+        setError('لم يتم العثور على بيانات المستخدم. يرجى تسجيل الدخول مرة أخرى.');
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -62,9 +79,17 @@ const TwoFactorSettings: React.FC = () => {
 
   const loadTwoFactorStatus = async () => {
     try {
+      // Get the appropriate token based on user type
+      let token = '';
+      if (userType === 'admin') {
+        token = localStorage.getItem('adminToken') || '';
+      } else {
+        token = localStorage.getItem('securityToken') || '';
+      }
+      
       const response = await fetch(`/api/auth/2fa/status/${userId}/${userType}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('securityToken')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
       
@@ -80,11 +105,19 @@ const TwoFactorSettings: React.FC = () => {
   const startSetup = async () => {
     setLoading(true);
     try {
+      // Get the appropriate token based on user type
+      let token = '';
+      if (userType === 'admin') {
+        token = localStorage.getItem('adminToken') || '';
+      } else {
+        token = localStorage.getItem('securityToken') || '';
+      }
+      
       const response = await fetch('/api/auth/2fa/setup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('securityToken')}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ userId, userType }),
       });
@@ -127,11 +160,19 @@ const TwoFactorSettings: React.FC = () => {
 
     setLoading(true);
     try {
+      // Get the appropriate token based on user type
+      let token = '';
+      if (userType === 'admin') {
+        token = localStorage.getItem('adminToken') || '';
+      } else {
+        token = localStorage.getItem('securityToken') || '';
+      }
+      
       const response = await fetch('/api/auth/2fa/enable', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('securityToken')}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ userId, userType, token: verificationCode }),
       });
@@ -177,11 +218,19 @@ const TwoFactorSettings: React.FC = () => {
 
     setLoading(true);
     try {
+      // Get the appropriate token based on user type
+      let token = '';
+      if (userType === 'admin') {
+        token = localStorage.getItem('adminToken') || '';
+      } else {
+        token = localStorage.getItem('securityToken') || '';
+      }
+      
       const response = await fetch('/api/auth/2fa/disable', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('securityToken')}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ userId, userType, token: disableCode }),
       });
