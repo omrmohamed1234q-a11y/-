@@ -10,47 +10,8 @@ export function registerInventoryRoutes(app: Express) {
   // Get inventory dashboard stats  
   app.get('/api/inventory/dashboard', async (req: any, res) => {
     try {
-      // Mock products data for now (will be replaced with actual database query)
-      const mockProducts = [
-        {
-          id: 'print-service',
-          name: 'خدمة الطباعة',
-          price: '0.50',
-          currentStock: 80,
-          minStockLevel: 10,
-          reorderPoint: 20,
-          totalSold: 150
-        },
-        {
-          id: 'scan-service', 
-          name: 'خدمة المسح الضوئي',
-          price: '1.00',
-          currentStock: 5,
-          minStockLevel: 10,
-          reorderPoint: 15,
-          totalSold: 45
-        },
-        {
-          id: 'book-math-grade-1',
-          name: 'كتاب الرياضيات - الصف الأول',
-          price: '25.00',
-          currentStock: 0,
-          minStockLevel: 5,
-          reorderPoint: 10,
-          totalSold: 30
-        },
-        {
-          id: 'book-science-grade-2',
-          name: 'كتاب العلوم - الصف الثاني', 
-          price: '30.00',
-          currentStock: 25,
-          minStockLevel: 5,
-          reorderPoint: 10,
-          totalSold: 20
-        }
-      ] as any[];
-
-      const stats = await inventoryService.generateStats(mockProducts);
+      const products = inventoryService.getAllProducts();
+      const stats = await inventoryService.generateStats(products);
       
       res.json({
         success: true,
@@ -61,6 +22,80 @@ export function registerInventoryRoutes(app: Express) {
       res.status(500).json({ 
         success: false,
         error: 'Failed to fetch inventory dashboard' 
+      });
+    }
+  });
+
+  // ==================== PRODUCTS MANAGEMENT ====================
+
+  // Get all products
+  app.get('/api/inventory/products', async (req: any, res) => {
+    try {
+      const products = inventoryService.getAllProducts();
+      res.json({
+        success: true,
+        data: products
+      });
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch products' 
+      });
+    }
+  });
+
+  // Add new product
+  app.post('/api/inventory/products', async (req: any, res) => {
+    try {
+      const productData = req.body;
+      const newProduct = inventoryService.addProduct(productData);
+      res.json({
+        success: true,
+        data: newProduct
+      });
+    } catch (error) {
+      console.error('Error adding product:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to add product' 
+      });
+    }
+  });
+
+  // Update product stock
+  app.patch('/api/inventory/products/:productId/stock', async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      const { currentStock } = req.body;
+      const updatedProduct = inventoryService.updateProductStock(productId, currentStock);
+      res.json({
+        success: true,
+        data: updatedProduct
+      });
+    } catch (error) {
+      console.error('Error updating product stock:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to update product stock' 
+      });
+    }
+  });
+
+  // Delete product
+  app.delete('/api/inventory/products/:productId', async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      inventoryService.deleteProduct(productId);
+      res.json({
+        success: true,
+        message: 'Product deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to delete product' 
       });
     }
   });

@@ -110,65 +110,40 @@ export default function InventoryTest() {
 
   const fetchProducts = async () => {
     try {
-      // محاكاة بيانات المنتجات - ستتصل بـ API حقيقي لاحقاً
-      const mockProducts: Product[] = [
-        {
-          id: 'print-service',
-          name: 'خدمة الطباعة',
-          currentStock: 80,
-          minStockLevel: 20,
-          price: 25,
-          category: 'خدمات',
-          status: 'in_stock'
-        },
-        {
-          id: 'scan-service',
-          name: 'خدمة المسح الضوئي',
-          currentStock: 5,
-          minStockLevel: 10,
-          price: 15,
-          category: 'خدمات',
-          status: 'low_stock'
-        },
-        {
-          id: 'book-math-grade-1',
-          name: 'كتاب الرياضيات - الصف الأول',
-          currentStock: 0,
-          minStockLevel: 5,
-          price: 45,
-          category: 'كتب',
-          status: 'out_of_stock'
-        },
-        {
-          id: 'book-science-grade-2',
-          name: 'كتاب العلوم - الصف الثاني',
-          currentStock: 25,
-          minStockLevel: 10,
-          price: 50,
-          category: 'كتب',
-          status: 'in_stock'
-        }
-      ];
-      setProducts(mockProducts);
+      const response = await fetch('/api/inventory/products');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      if (result.success) {
+        setProducts(result.data || []);
+      } else {
+        throw new Error('Failed to load products');
+      }
     } catch (err) {
       console.error('Error fetching products:', err);
+      setProducts([]); // أظهر قائمة فارغة في حالة الخطأ
     }
   };
 
   const addProduct = async () => {
     try {
-      const productId = `product-${Date.now()}`;
-      const product: Product = {
-        id: productId,
-        ...newProduct,
-        status: newProduct.currentStock > newProduct.minStockLevel ? 'in_stock' : 
-               newProduct.currentStock > 0 ? 'low_stock' : 'out_of_stock'
-      };
+      const response = await fetch('/api/inventory/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProduct)
+      });
       
-      setProducts(prev => [...prev, product]);
-      setNewProduct({ name: '', currentStock: 0, minStockLevel: 10, price: 0, category: '' });
-      setShowAddDialog(false);
-      alert('تم إضافة المنتج بنجاح!');
+      if (response.ok) {
+        await fetchProducts();
+        await fetchInventoryData();
+        setNewProduct({ name: '', currentStock: 0, minStockLevel: 10, price: 0, category: '' });
+        setShowAddDialog(false);
+        alert('تم إضافة المنتج بنجاح!');
+      } else {
+        throw new Error('Failed to add product');
+      }
     } catch (err) {
       alert('فشل في إضافة المنتج');
     }
@@ -176,15 +151,18 @@ export default function InventoryTest() {
 
   const updateProductStock = async (productId: string, newStock: number) => {
     try {
-      setProducts(prev => prev.map(product => {
-        if (product.id === productId) {
-          const status = newStock > product.minStockLevel ? 'in_stock' : 
-                        newStock > 0 ? 'low_stock' : 'out_of_stock';
-          return { ...product, currentStock: newStock, status };
-        }
-        return product;
-      }));
-      await fetchInventoryData(); // تحديث الإحصائيات
+      const response = await fetch(`/api/inventory/products/${productId}/stock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentStock: newStock })
+      });
+      
+      if (response.ok) {
+        await fetchProducts();
+        await fetchInventoryData();
+      } else {
+        throw new Error('Failed to update stock');
+      }
     } catch (err) {
       alert('فشل في تحديث المخزون');
     }
@@ -193,9 +171,17 @@ export default function InventoryTest() {
   const deleteProduct = async (productId: string) => {
     if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
       try {
-        setProducts(prev => prev.filter(product => product.id !== productId));
-        await fetchInventoryData(); // تحديث الإحصائيات
-        alert('تم حذف المنتج بنجاح!');
+        const response = await fetch(`/api/inventory/products/${productId}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          await fetchProducts();
+          await fetchInventoryData();
+          alert('تم حذف المنتج بنجاح!');
+        } else {
+          throw new Error('Failed to delete product');
+        }
       } catch (err) {
         alert('فشل في حذف المنتج');
       }
@@ -769,7 +755,7 @@ export default function InventoryTest() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">إضافات اليوم</p>
-                      <p className="text-lg font-bold">8</p>
+                      <p className="text-lg font-bold">{stats?.recentMovements?.filter(m => m.type === 'addition' && m.date === new Date().toISOString().split('T')[0])?.length || 0}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -783,7 +769,7 @@ export default function InventoryTest() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">مبيعات اليوم</p>
-                      <p className="text-lg font-bold">15</p>
+                      <p className="text-lg font-bold">{stats?.recentMovements?.filter(m => m.type === 'sale' && m.date === new Date().toISOString().split('T')[0])?.length || 0}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -797,7 +783,7 @@ export default function InventoryTest() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">إجمالي التحركات</p>
-                      <p className="text-lg font-bold">47</p>
+                      <p className="text-lg font-bold">{stats?.recentMovements?.length || 0}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -811,7 +797,7 @@ export default function InventoryTest() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">القيمة المحولة</p>
-                      <p className="text-lg font-bold">1,250 جنيه</p>
+                      <p className="text-lg font-bold">{stats?.totalStockValue || 0} جنيه</p>
                     </div>
                   </div>
                 </CardContent>
@@ -830,55 +816,9 @@ export default function InventoryTest() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {/* Sample movements data */}
-                  {[
-                    {
-                      id: 1,
-                      type: 'sale',
-                      product: 'خدمة الطباعة',
-                      quantity: 5,
-                      timestamp: '2025-01-05 09:15',
-                      user: 'أحمد محمد',
-                      notes: 'طلب رقم #12345'
-                    },
-                    {
-                      id: 2,
-                      type: 'addition',
-                      product: 'كتاب الرياضيات - الصف الأول',
-                      quantity: 20,
-                      timestamp: '2025-01-05 08:30',
-                      user: 'مدير المخزون',
-                      notes: 'شحنة جديدة من المورد'
-                    },
-                    {
-                      id: 3,
-                      type: 'sale',
-                      product: 'خدمة المسح الضوئي',
-                      quantity: 3,
-                      timestamp: '2025-01-05 07:45',
-                      user: 'فاطمة علي',
-                      notes: 'طلب رقم #12344'
-                    },
-                    {
-                      id: 4,
-                      type: 'adjustment',
-                      product: 'كتاب العلوم - الصف الثاني',
-                      quantity: -2,
-                      timestamp: '2025-01-04 16:20',
-                      user: 'مدير المخزون',
-                      notes: 'تصحيح الجرد'
-                    },
-                    {
-                      id: 5,
-                      type: 'addition',
-                      product: 'خدمة الطباعة',
-                      quantity: 50,
-                      timestamp: '2025-01-04 14:00',
-                      user: 'مدير المخزون',
-                      notes: 'تجديد المخزون'
-                    }
-                  ].map((movement) => (
+                {stats?.recentMovements?.length > 0 ? (
+                  <div className="space-y-4">
+                    {stats.recentMovements.map((movement) => (
                     <div key={movement.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -921,13 +861,24 @@ export default function InventoryTest() {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">لا توجد تحركات مخزون بعد</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      ستظهر تحركات المخزون هنا عند إجراء عمليات بيع أو إضافة للمنتجات
+                    </p>
+                  </div>
+                )}
                 
-                <div className="text-center mt-6">
-                  <Button variant="outline">
-                    عرض المزيد من التحركات
-                  </Button>
-                </div>
+                {stats?.recentMovements?.length > 0 && (
+                  <div className="text-center mt-6">
+                    <Button variant="outline">
+                      عرض المزيد من التحركات
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -13,6 +13,7 @@ class InventoryService {
   private stockMovements: Map<string, StockMovement[]> = new Map();
   private stockAlerts: StockAlert[] = [];
   private alertIdCounter = 1;
+  private products: Map<string, any> = new Map();
 
   // Stock management methods
   async updateStock(
@@ -70,9 +71,73 @@ class InventoryService {
       .slice(0, limit);
   }
 
+  // Product management methods
+  getAllProducts(): any[] {
+    return Array.from(this.products.values());
+  }
+
+  addProduct(productData: any): any {
+    const productId = `product-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const product = {
+      id: productId,
+      ...productData,
+      status: productData.currentStock > productData.minStockLevel ? 'in_stock' : 
+              productData.currentStock > 0 ? 'low_stock' : 'out_of_stock',
+      createdAt: new Date()
+    };
+    
+    this.products.set(productId, product);
+    console.log(`✅ Product added: ${product.name} (${productId})`);
+    return product;
+  }
+
+  updateProductStock(productId: string, newStock: number): any {
+    const product = this.products.get(productId);
+    if (!product) {
+      throw new Error(`Product not found: ${productId}`);
+    }
+
+    const oldStock = product.currentStock;
+    product.currentStock = newStock;
+    product.status = newStock > product.minStockLevel ? 'in_stock' : 
+                    newStock > 0 ? 'low_stock' : 'out_of_stock';
+
+    this.products.set(productId, product);
+    
+    // Record stock movement
+    this.updateStock(
+      productId,
+      Math.abs(newStock - oldStock),
+      newStock > oldStock ? 'in' : 'out',
+      newStock > oldStock ? 'stock_adjustment' : 'manual_adjustment',
+      undefined,
+      'system',
+      `Stock updated from ${oldStock} to ${newStock}`
+    );
+
+    console.log(`📦 Product stock updated: ${product.name} (${oldStock} → ${newStock})`);
+    return product;
+  }
+
+  deleteProduct(productId: string): void {
+    const product = this.products.get(productId);
+    if (!product) {
+      throw new Error(`Product not found: ${productId}`);
+    }
+
+    this.products.delete(productId);
+    this.stockMovements.delete(productId);
+    
+    // Remove related alerts
+    this.stockAlerts = this.stockAlerts.filter(alert => alert.productId !== productId);
+    
+    console.log(`❌ Product deleted: ${product.name} (${productId})`);
+  }
+
   // Stock alert management
   async checkStockLevels(productId: string): Promise<void> {
-    // This would normally fetch product data from database
+    const product = this.products.get(productId);
+    if (!product) return;
     // For now, we'll simulate the check
     console.log(`🔍 Checking stock levels for product: ${productId}`);
   }
@@ -121,7 +186,7 @@ class InventoryService {
   }
 
   // Generate inventory statistics
-  async generateStats(products: Product[]): Promise<InventoryStats> {
+  async generateStats(products: any[]): Promise<InventoryStats> {
     const inStockProducts = products.filter(p => (p.currentStock || 0) > 0);
     const lowStockProducts = products.filter(p => {
       const stock = p.currentStock || 0;
