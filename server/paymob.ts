@@ -308,7 +308,7 @@ export async function createPaymobPayment(req: Request, res: Response) {
         state: customerData.state || "Cairo"
       },
       currency,
-      integration_id: 4736159 // Default integration ID for cards
+      integration_id: 5266760 // Using mobile wallet integration ID
     });
 
     res.json({
