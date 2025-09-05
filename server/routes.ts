@@ -335,6 +335,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ==================== DRIVER APIS ====================
+  
+  // Get driver statistics
+  app.get("/api/driver/stats", async (req, res) => {
+    try {
+      // Simulated driver stats - replace with real data
+      const stats = {
+        totalOrders: 127,
+        completedToday: 8,
+        ongoingOrders: 2,
+        todayEarnings: 45
+      };
+      
+      res.json(stats);
+    } catch (error: any) {
+      console.error('❌ Error fetching driver stats:', error);
+      res.status(500).json({ error: 'Failed to fetch driver stats' });
+    }
+  });
+  
+  // Get available orders for driver
+  app.get("/api/driver/available-orders", async (req, res) => {
+    try {
+      // Simulated available orders - replace with real database query
+      const availableOrders = [
+        {
+          id: 'order-available-1',
+          orderNumber: 'ORD-2024-001',
+          customerName: 'أحمد محمد',
+          customerPhone: '01234567890',
+          deliveryAddress: '123 شارع النيل، المعادي، القاهرة',
+          totalAmount: 15,
+          createdAt: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
+          status: 'ready_delivery'
+        },
+        {
+          id: 'order-available-2',
+          orderNumber: 'ORD-2024-003',
+          customerName: 'مريم علي', 
+          customerPhone: '01987654321',
+          deliveryAddress: '456 شارع التحرير، وسط البلد، القاهرة',
+          totalAmount: 25,
+          createdAt: new Date(Date.now() - 600000).toISOString(), // 10 minutes ago
+          status: 'ready_delivery'
+        }
+      ];
+      
+      res.json(availableOrders);
+    } catch (error: any) {
+      console.error('❌ Error fetching available orders:', error);
+      res.status(500).json({ error: 'Failed to fetch available orders' });
+    }
+  });
+  
+  // Get assigned orders for driver
+  app.get("/api/driver/assigned-orders", async (req, res) => {
+    try {
+      // Simulated assigned orders - replace with real database query
+      const assignedOrders = [
+        {
+          id: 'order-assigned-1',
+          orderNumber: 'ORD-2024-002',
+          customerName: 'فاطمة أحمد',
+          customerPhone: '01555666777',
+          deliveryAddress: '789 شارع الهرم، الجيزة',
+          totalAmount: 30,
+          createdAt: new Date(Date.now() - 1200000).toISOString(), // 20 minutes ago
+          status: 'driver_assigned'
+        }
+      ];
+      
+      res.json(assignedOrders);
+    } catch (error: any) {
+      console.error('❌ Error fetching assigned orders:', error);
+      res.status(500).json({ error: 'Failed to fetch assigned orders' });
+    }
+  });
+  
+  // Accept order (driver accepts an available order)
+  app.post("/api/driver/accept-order/:orderId", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { driverId, driverName, driverPhone } = req.body;
+      
+      console.log(`🚗 Driver ${driverName} accepting order ${orderId}`);
+      
+      // Simulated order acceptance - replace with real database update
+      const updatedOrder = {
+        id: orderId,
+        status: 'driver_assigned',
+        statusText: 'راح للكابتن',
+        driverId: driverId,
+        driverName: driverName,
+        driverPhone: driverPhone,
+        driverAssignedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        timeline: [
+          {
+            event: `تم تعيين السائق: ${driverName}`,
+            timestamp: new Date().toISOString()
+          }
+        ]
+      };
+      
+      res.json(updatedOrder);
+    } catch (error: any) {
+      console.error('❌ Error accepting order:', error);
+      res.status(500).json({ error: 'Failed to accept order' });
+    }
+  });
+  
+  // Update order status by driver
+  app.patch("/api/driver/orders/:orderId/status", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { status, driverId, location } = req.body;
+      
+      console.log(`🔄 Driver updating order ${orderId} to status: ${status}`);
+      
+      // Simulated status update - replace with real database update
+      const updatedOrder = {
+        id: orderId,
+        status: status,
+        statusText: getStatusText(status),
+        updatedAt: new Date().toISOString(),
+        // Add timestamp fields based on status
+        ...(status === 'out_for_delivery' && { 
+          outForDeliveryAt: new Date().toISOString(),
+          driverLocation: location 
+        }),
+        ...(status === 'delivered' && { deliveredAt: new Date().toISOString() }),
+        ...(status === 'cancelled' && { cancelledAt: new Date().toISOString() }),
+        timeline: [
+          {
+            event: `تم تحديث الحالة إلى: ${getStatusText(status)}`,
+            timestamp: new Date().toISOString()
+          }
+        ]
+      };
+      
+      res.json(updatedOrder);
+    } catch (error: any) {
+      console.error('❌ Error updating order status:', error);
+      res.status(500).json({ error: 'Failed to update order status' });
+    }
+  });
+
   // Helper function for status text
   function getStatusText(status: string): string {
     const statusMap: Record<string, string> = {
