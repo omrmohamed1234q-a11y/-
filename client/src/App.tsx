@@ -199,8 +199,6 @@ function Router() {
         <Route path="/admin/rewards-management" component={() => <AdminProtectedRoute><RewardsManagement /></AdminProtectedRoute>} />
         
         {/* Driver routes */}
-        <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
-        <Route path="/driver/dashboard" component={SecureDriverControl} />
         <Route path="/driver" component={EnhancedDriverDashboard} />
         
         {/* Secure login routes - available always */}
