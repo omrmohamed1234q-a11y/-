@@ -77,7 +77,7 @@ export default function AdminDashboard() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { data: stats, isLoading } = useQuery<AdminStats>({
-    queryKey: ['/api/admin/dashboard/stats']
+    queryKey: ['/api/admin/stats']
   });
 
   const [currentTime] = useState(new Date());

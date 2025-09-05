@@ -84,26 +84,6 @@ export default function AdminAnalytics() {
   // Fetch analytics data
   const { data: analytics, isLoading, error } = useQuery<AnalyticsData>({
     queryKey: ['/api/admin/analytics'],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        from: dateRange.from.toISOString(),
-        to: dateRange.to.toISOString(),
-        compare: compareWith
-      });
-      
-      const response = await fetch(`/api/admin/analytics?${params.toString()}`, {
-        headers: {
-          'x-user-role': 'admin',
-          'x-user-id': 'admin-user'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch analytics data');
-      }
-      
-      return response.json();
-    },
     retry: 1,
     staleTime: 30000, // 30 seconds
     refetchOnWindowFocus: false

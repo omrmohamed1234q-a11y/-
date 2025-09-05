@@ -34,7 +34,13 @@ export default function AdminInquiries() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    message: string;
+    targetType: string;
+    targetGradeLevel: string;
+    targetUserIds: string[];
+  }>({
     title: '',
     message: '',
     targetType: 'all_customers',
@@ -43,12 +49,12 @@ export default function AdminInquiries() {
   });
 
   // Fetch inquiries
-  const { data: inquiries = [], isLoading } = useQuery({
+  const { data: inquiries = [], isLoading } = useQuery<Inquiry[]>({
     queryKey: ['/api/admin/inquiries'],
   });
 
   // Fetch users for targeting
-  const { data: users = [] } = useQuery({
+  const { data: users = [] } = useQuery<any[]>({
     queryKey: ['/api/admin/users'],
   });
 

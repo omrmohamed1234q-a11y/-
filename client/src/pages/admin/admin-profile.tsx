@@ -36,33 +36,36 @@ export default function AdminProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<AdminProfile>>({});
 
-  // Mock admin profile data (in real app, fetch from API)
-  const mockAdminProfile: AdminProfile = {
-    id: 'admin_1',
-    name: 'أحمد إبراهيم',
-    email: 'ahmed@admin.com',
-    phone: '01012345678',
-    role: 'مدير النظام',
-    department: 'إدارة التقنية',
-    joinDate: '2024-01-15',
-    profileImage: '',
-    permissions: ['إدارة المستخدمين', 'إدارة الطلبات', 'إدارة المنتجات', 'التقارير', 'النظام'],
-    lastLogin: new Date().toISOString(),
-    totalActions: 1250,
-    managedUsers: 45,
-    systemAccess: ['لوحة الإدارة', 'قاعدة البيانات', 'التقارير', 'النسخ الاحتياطي']
-  };
+  // Fetch admin profile from API
+  const { data: adminProfile, isLoading } = useQuery<AdminProfile>({
+    queryKey: ['/api/admin/profile'],
+    initialData: {
+      id: 'admin_1',
+      name: 'أحمد إبراهيم',
+      email: 'ahmed@admin.com',
+      phone: '01012345678',
+      role: 'مدير النظام',
+      department: 'إدارة التقنية',
+      joinDate: '2024-01-15',
+      profileImage: '',
+      permissions: ['إدارة المستخدمين', 'إدارة الطلبات', 'إدارة المنتجات', 'التقارير', 'النظام'],
+      lastLogin: new Date().toISOString(),
+      totalActions: 1250,
+      managedUsers: 45,
+      systemAccess: ['لوحة الإدارة', 'قاعدة البيانات', 'التقارير', 'النسخ الاحتياطي']
+    }
+  });
 
   useEffect(() => {
-    setFormData(mockAdminProfile);
-  }, []);
+    if (adminProfile) {
+      setFormData(adminProfile);
+    }
+  }, [adminProfile]);
 
-  // Update profile mutation (mock)
+  // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (updates: Partial<AdminProfile>) => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { success: true, profile: { ...mockAdminProfile, ...updates } };
+      return apiRequest('PUT', '/api/admin/profile', updates);
     },
     onSuccess: () => {
       toast({
@@ -290,7 +293,7 @@ export default function AdminProfile() {
                       variant="outline"
                       onClick={() => {
                         setIsEditing(false);
-                        setFormData(mockAdminProfile);
+                        setFormData(adminProfile || {});
                       }}
                     >
                       إلغاء

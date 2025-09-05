@@ -454,13 +454,39 @@ export class MemoryStorage implements IStorage {
   async getPartnerProductsByCategory(category: string): Promise<any[]> { return []; }
   
   // Announcements
-  async getActiveAnnouncements(): Promise<Announcement[]> { return []; }
-  async getHomepageAnnouncements(): Promise<Announcement[]> { return []; }
-  async getAllAnnouncements(): Promise<Announcement[]> { return []; }
-  async getAnnouncement(id: string): Promise<Announcement | undefined> { return undefined; }
-  async createAnnouncement(announcement: any): Promise<Announcement> { throw new Error('Not implemented'); }
-  async updateAnnouncement(id: string, updates: any): Promise<Announcement> { throw new Error('Not implemented'); }
-  async deleteAnnouncement(id: string): Promise<boolean> { return false; }
+  async getActiveAnnouncements(): Promise<Announcement[]> { 
+    return this.announcements.filter(ann => ann.isActive && (!ann.expiresAt || new Date(ann.expiresAt) > new Date()));
+  }
+  async getHomepageAnnouncements(): Promise<Announcement[]> { 
+    return this.announcements.filter(ann => ann.showOnHomepage && ann.isActive)
+      .sort((a, b) => (b.homepagePriority || 0) - (a.homepagePriority || 0));
+  }
+  async getAllAnnouncements(): Promise<Announcement[]> { return this.announcements; }
+  async getAnnouncement(id: string): Promise<Announcement | undefined> { 
+    return this.announcements.find(ann => ann.id === id);
+  }
+  async createAnnouncement(announcementData: any): Promise<Announcement> { 
+    const announcement: Announcement = {
+      id: `ann-${Date.now()}`,
+      ...announcementData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.announcements.push(announcement);
+    return announcement;
+  }
+  async updateAnnouncement(id: string, updates: any): Promise<Announcement> { 
+    const index = this.announcements.findIndex(ann => ann.id === id);
+    if (index === -1) throw new Error('Announcement not found');
+    this.announcements[index] = { ...this.announcements[index], ...updates, updatedAt: new Date().toISOString() };
+    return this.announcements[index];
+  }
+  async deleteAnnouncement(id: string): Promise<boolean> { 
+    const index = this.announcements.findIndex(ann => ann.id === id);
+    if (index === -1) return false;
+    this.announcements.splice(index, 1);
+    return true;
+  }
   
   // Security
   async getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined> { return undefined; }

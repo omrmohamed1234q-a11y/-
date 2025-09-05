@@ -58,21 +58,24 @@ export default function AdminSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch data
+  // Fetch data (with fallback for missing APIs)
   const { data: deliverySlots } = useQuery<DeliverySlot[]>({
-    queryKey: ['/api/admin/delivery-slots']
+    queryKey: ['/api/admin/delivery-slots'],
+    initialData: []
   });
 
   const { data: shippingFees } = useQuery<ShippingFee[]>({
-    queryKey: ['/api/admin/shipping-fees']
+    queryKey: ['/api/admin/shipping-fees'],
+    initialData: []
   });
 
   const { data: paymentMethods } = useQuery<PaymentMethod[]>({
-    queryKey: ['/api/admin/payment-methods']
+    queryKey: ['/api/admin/payment-methods'],
+    initialData: []
   });
 
   const { data: settings } = useQuery<AdminSetting[]>({
-    queryKey: ['/api/admin/settings']
+    queryKey: ['/api/admin/rewards/settings'],
   });
 
   // Forms

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -19,11 +20,19 @@ import { Link } from 'wouter';
 
 export default function MainAdmin() {
   const [adminData, setAdminData] = useState<any>(null);
-  const [stats, setStats] = useState({
+  // Fetch real stats from API
+  const { data: stats = {
     totalUsers: 0,
     activeDrivers: 0,
     totalOrders: 0,
     systemStatus: 'نشط'
+  }, isLoading } = useQuery<{
+    totalUsers: number;
+    activeDrivers: number;
+    totalOrders: number;
+    systemStatus: string;
+  }>({
+    queryKey: ['/api/admin/stats'],
   });
 
   useEffect(() => {
@@ -32,14 +41,6 @@ export default function MainAdmin() {
     if (adminInfo) {
       setAdminData(JSON.parse(adminInfo));
     }
-
-    // Simulate loading stats (would be real API calls)
-    setStats({
-      totalUsers: 156,
-      activeDrivers: 23,
-      totalOrders: 1247,
-      systemStatus: 'نشط'
-    });
   }, []);
 
   const handleLogout = () => {

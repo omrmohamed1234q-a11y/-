@@ -164,7 +164,7 @@ export default function AdminTeacherMaterials() {
     formData.append('description', materialForm.getValues('description') || '');
     formData.append('subject', materialForm.getValues('subject'));
     formData.append('grade', materialForm.getValues('grade'));
-    formData.append('isPublic', materialForm.getValues('isPublic').toString());
+    formData.append('isPublic', (materialForm.getValues('isPublic') || false).toString());
 
     uploadMaterialMutation.mutate(formData);
   };
