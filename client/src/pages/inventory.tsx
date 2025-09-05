@@ -43,31 +43,16 @@ export default function InventoryPage() {
 
   const { data: inventoryStats, isLoading, refetch } = useQuery<{ success: boolean; data: InventoryStats }>({
     queryKey: ['/api/inventory/dashboard'],
-    queryFn: async () => {
-      const response = await fetch('/api/inventory/dashboard');
-      if (!response.ok) throw new Error('Failed to fetch inventory stats');
-      return response.json();
-    },
     refetchInterval: 30000,
   });
 
   const { data: alerts } = useQuery({
     queryKey: ['/api/inventory/alerts'],
-    queryFn: async () => {
-      const response = await fetch('/api/inventory/alerts');
-      if (!response.ok) throw new Error('Failed to fetch alerts');
-      return response.json();
-    },
     refetchInterval: 10000,
   });
 
   const { data: movements } = useQuery({
     queryKey: ['/api/inventory/movements'],
-    queryFn: async () => {
-      const response = await fetch('/api/inventory/movements');
-      if (!response.ok) throw new Error('Failed to fetch movements');
-      return response.json();
-    },
     enabled: selectedTab === 'movements',
   });
 
