@@ -133,6 +133,7 @@ function Router() {
         <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
         <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
         <Route path="/admin/security-dashboard" component={() => <AdminProtectedRoute><SecureSecurityDashboard /></AdminProtectedRoute>} />
+        <Route path="/admin/two-factor-settings" component={() => <AdminProtectedRoute><TwoFactorSettings /></AdminProtectedRoute>} />
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
 
