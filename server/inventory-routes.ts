@@ -7,8 +7,8 @@ export function registerInventoryRoutes(app: Express) {
   
   // ==================== INVENTORY DASHBOARD ====================
   
-  // Get inventory dashboard stats
-  app.get('/api/inventory/dashboard', async (req, res) => {
+  // Get inventory dashboard stats  
+  app.get('/api/inventory/dashboard', async (req: any, res) => {
     try {
       // Mock products data for now (will be replaced with actual database query)
       const mockProducts = [
@@ -68,7 +68,7 @@ export function registerInventoryRoutes(app: Express) {
   // ==================== STOCK MOVEMENTS ====================
 
   // Get stock movements for a product
-  app.get('/api/inventory/movements/:productId', async (req, res) => {
+  app.get('/api/inventory/movements/:productId', async (req: any, res) => {
     try {
       const { productId } = req.params;
       const movements = inventoryService.getProductMovements(productId);
@@ -87,7 +87,7 @@ export function registerInventoryRoutes(app: Express) {
   });
 
   // Get recent stock movements (all products)
-  app.get('/api/inventory/movements', async (req, res) => {
+  app.get('/api/inventory/movements', async (req: any, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const movements = inventoryService.getRecentMovements(limit);
@@ -146,7 +146,7 @@ export function registerInventoryRoutes(app: Express) {
   // ==================== STOCK ALERTS ====================
 
   // Get active stock alerts
-  app.get('/api/inventory/alerts', async (req, res) => {
+  app.get('/api/inventory/alerts', async (req: any, res) => {
     try {
       const alerts = inventoryService.getActiveAlerts();
       
@@ -238,7 +238,7 @@ export function registerInventoryRoutes(app: Express) {
   // ==================== SAMPLE DATA (Development) ====================
 
   // Create sample inventory data
-  app.post('/api/inventory/create-sample-data', async (req, res) => {
+  app.post('/api/inventory/create-sample-data', async (req: any, res) => {
     try {
       await inventoryService.createSampleData();
       
