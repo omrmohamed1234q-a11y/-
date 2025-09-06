@@ -40,10 +40,6 @@ const partnerFormSchema = z.object({
   isVerified: z.boolean(),
   isFeatured: z.boolean(),
   displayOrder: z.number().min(1),
-  hasDelivery: z.boolean(),
-  deliveryFee: z.string().optional(),
-  minOrderForDelivery: z.string().optional(),
-  acceptsOnlinePayment: z.boolean(),
 });
 
 type PartnerFormData = z.infer<typeof partnerFormSchema>;
@@ -120,10 +116,6 @@ export function PartnerForm({ partner, onSuccess, onCancel }: PartnerFormProps) 
       isVerified: false,
       isFeatured: false,
       displayOrder: 1,
-      hasDelivery: false,
-      deliveryFee: '0.00',
-      minOrderForDelivery: '0.00',
-      acceptsOnlinePayment: false,
     },
   });
 
@@ -137,7 +129,7 @@ export function PartnerForm({ partner, onSuccess, onCancel }: PartnerFormProps) 
         coverImageUrl: partner.coverImageUrl || '',
         phone: partner.phone || '',
         email: partner.email || '',
-        address: partner.address,
+        address: partner.address || '',
         city: partner.city,
         governorate: partner.governorate,
         businessType: partner.businessType as any,
@@ -151,10 +143,6 @@ export function PartnerForm({ partner, onSuccess, onCancel }: PartnerFormProps) 
         isVerified: partner.isVerified ?? false,
         isFeatured: partner.isFeatured ?? false,
         displayOrder: partner.displayOrder ?? 1,
-        hasDelivery: partner.hasDelivery ?? false,
-        deliveryFee: partner.deliveryFee || '0.00',
-        minOrderForDelivery: partner.minOrderForDelivery || '0.00',
-        acceptsOnlinePayment: partner.acceptsOnlinePayment ?? false,
       });
       setSelectedServices(partner.services || []);
       setSelectedSpecialties(partner.specialties || []);
@@ -630,53 +618,6 @@ export function PartnerForm({ partner, onSuccess, onCancel }: PartnerFormProps) 
               />
             </div>
 
-            {/* Delivery Settings */}
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="hasDelivery"
-                render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2">
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel>يوفر خدمة التوصيل</FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              {form.watch('hasDelivery') && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="deliveryFee"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>رسوم التوصيل (جنيه)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="15.00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="minOrderForDelivery"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>الحد الأدنى للتوصيل (جنيه)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="50.00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
 
@@ -726,18 +667,6 @@ export function PartnerForm({ partner, onSuccess, onCancel }: PartnerFormProps) 
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="acceptsOnlinePayment"
-                render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2">
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel>يقبل الدفع الإلكتروني</FormLabel>
-                  </FormItem>
-                )}
-              />
             </div>
           </CardContent>
         </Card>

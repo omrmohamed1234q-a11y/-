@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Plus, Edit, Trash2, Eye, Star, MapPin, Phone, Building2, Shield, Truck, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Star, MapPin, Phone, Building2, Shield, ArrowLeft } from 'lucide-react';
 import type { Partner } from '@shared/schema';
 import { PartnerForm } from '@/components/admin/PartnerForm';
 import { PartnerDetailsView } from '@/components/admin/PartnerDetailsView';
@@ -229,9 +229,6 @@ export default function AdminPartners() {
                       )}
                       {partner.isFeatured && (
                         <Star className="w-4 h-4 text-yellow-500" />
-                      )}
-                      {partner.hasDelivery && (
-                        <Truck className="w-4 h-4 text-blue-500" />
                       )}
                     </div>
                   </TableCell>
