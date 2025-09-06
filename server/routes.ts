@@ -2175,6 +2175,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Track order by order number (public tracking)
+  app.get('/api/orders/track/:orderNumber', async (req, res) => {
+    try {
+      const orderNumber = req.params.orderNumber;
+      const allOrders = await storage.getAllOrders();
+      const order = allOrders.find((o: any) => o.orderNumber === orderNumber);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Return order tracking information
+      const trackingData = {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        statusText: order.statusText || order.status,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        deliveryAddress: order.deliveryAddress,
+        deliveryMethod: order.deliveryMethod,
+        totalAmount: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        estimatedDelivery: order.estimatedDelivery,
+        driverName: order.driverName,
+        driverPhone: order.driverPhone,
+        createdAt: order.createdAt,
+        items: order.items,
+        timeline: order.timeline || []
+      };
+      
+      res.json(trackingData);
+    } catch (error) {
+      console.error("Error tracking order:", error);
+      res.status(500).json({ message: "Failed to track order" });
+    }
+  });
+
   // Get driver location (mock for now)
   app.get('/api/driver-location/:driverId', async (req, res) => {
     try {

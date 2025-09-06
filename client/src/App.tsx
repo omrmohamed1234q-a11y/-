@@ -40,6 +40,7 @@ import OrdersManagementEnhanced from '@/pages/admin/orders-management-enhanced';
 import ModernOrdersManagement from '@/pages/admin/modern-orders-management';
 import EnhancedDriverDashboard from '@/pages/driver/enhanced-driver-dashboard';
 import OrderTrackingEnhanced from '@/pages/order-tracking-enhanced';
+import OrderTrackingTalabatStyle from '@/pages/order-tracking-talabat-style';
 import OrdersPage from "@/pages/orders";
 import TestSignup from "@/pages/test-signup";
 import Checkout from "@/pages/checkout";
@@ -181,7 +182,7 @@ function Router() {
         <Route path="/payment-success" component={PaymentSuccess} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/order-tracking/:id" component={OrderTracking} />
-        <Route path="/order-tracking-enhanced/:orderNumber?" component={OrderTrackingEnhanced} />
+        <Route path="/order-tracking-enhanced/:orderNumber?" component={OrderTrackingTalabatStyle} />
         <Route path="/student/teachers" component={StudentTeachers} />
         
         {/* Admin routes - available for authenticated users too */}
