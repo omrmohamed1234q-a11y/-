@@ -28,6 +28,7 @@ import {
   Printer,
   Image,
   ShoppingBag,
+  ExternalLink,
 } from 'lucide-react';
 
 interface OrderFilters {
@@ -249,16 +250,44 @@ export default function AdminOrders() {
                     </td>
                     <td className="p-4">
                       {/* Google Drive Files for Customer */}
-                      <div className="flex flex-col space-y-1">
-                        {order.items && Array.isArray(order.items) && order.items.filter((item: any) => item.fileUrl || item.googleDriveLink).length > 0 ? (
-                          order.items.filter((item: any) => item.fileUrl || item.googleDriveLink).map((item: any, index: number) => (
-                            <div key={index} className="flex items-center space-x-2 space-x-reverse">
-                              {item.googleDriveLink ? (
+                      <div className="flex flex-col space-y-2">
+                        {order.items && Array.isArray(order.items) && order.items.filter((item: any) => item.fileUrl || item.googleDriveLink || (item.printJob?.files && item.printJob.files.length > 0)).length > 0 ? (
+                          order.items.filter((item: any) => item.fileUrl || item.googleDriveLink || (item.printJob?.files && item.printJob.files.length > 0)).map((item: any, index: number) => (
+                            <div key={index} className="space-y-1">
+                              {/* Display Print Job Files if Available */}
+                              {item.printJob?.files && item.printJob.files.map((file: any, fileIndex: number) => (
+                                <div key={fileIndex} className="border rounded-lg p-2 bg-blue-50">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-2 space-x-reverse">
+                                      <FileText className="w-4 h-4 text-blue-600" />
+                                      <div>
+                                        <div className="text-xs font-medium text-blue-900">{file.displayName || 'ملف مرفوع'}</div>
+                                        <div className="text-xs text-blue-700">{item.printJob?.settings || 'إعدادات الطباعة'}</div>
+                                      </div>
+                                    </div>
+                                    {file.googleDriveLink && (
+                                      <a
+                                        href={file.googleDriveLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-green-600 hover:text-green-800 text-xs flex items-center px-2 py-1 bg-green-100 rounded"
+                                        title="فتح في Google Drive"
+                                      >
+                                        <ExternalLink className="w-3 h-3 mr-1" />
+                                        Drive
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              {/* Fallback for Direct Links */}
+                              {item.googleDriveLink && !item.printJob?.files && (
                                 <a
                                   href={item.googleDriveLink}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-green-600 hover:text-green-800 text-xs flex items-center"
+                                  className="text-green-600 hover:text-green-800 text-xs flex items-center bg-green-100 px-2 py-1 rounded"
                                 >
                                   📁 {item.filename || `ملف ${index + 1}`}
                                 </a>
@@ -618,22 +647,87 @@ export default function AdminOrders() {
                 </CardContent>
               </Card>
 
-              {/* Order Items */}
+              {/* Order Items with Print Jobs */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">عناصر الطلب</CardTitle>
+                  <CardTitle className="text-lg flex items-center space-x-2 space-x-reverse">
+                    <FileText className="w-5 h-5" />
+                    <span>عناصر الطلب والملفات المرفقة</span>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {(selectedOrder.items as any[] || []).map((item, index) => (
-                      <div key={index} className="flex justify-between items-center p-3 border rounded">
-                        <div>
-                          <h4 className="font-medium">منتج #{item.productId?.slice(-6) || 'غير محدد'}</h4>
-                          <p className="text-sm text-muted-foreground">الكمية: {item.quantity}</p>
+                      <div key={index} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h4 className="font-medium">منتج #{item.productId?.slice(-6) || 'غير محدد'}</h4>
+                            <div className="flex space-x-4 space-x-reverse text-sm text-muted-foreground mt-1">
+                              <span>الكمية: {item.quantity}</span>
+                              <span>النوع: {item.productType || 'عادي'}</span>
+                            </div>
+                          </div>
+                          <div className="text-left">
+                            <div className="font-bold arabic-nums">{item.price} جنيه</div>
+                          </div>
                         </div>
-                        <div className="text-left">
-                          <div className="font-bold arabic-nums">{item.price} جنيه</div>
-                        </div>
+
+                        {/* Print Job Files */}
+                        {item.printJob?.files && item.printJob.files.length > 0 && (
+                          <div className="border-t pt-3 mt-3">
+                            <h5 className="font-medium mb-2 flex items-center space-x-2 space-x-reverse text-sm">
+                              <FileText className="w-4 h-4 text-blue-600" />
+                              <span>الملفات المرفقة للطباعة ({item.printJob.files.length})</span>
+                            </h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {item.printJob.files.map((file: any, fileIndex: number) => (
+                                <div key={fileIndex} className="border rounded-lg p-3 bg-blue-50">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-2 space-x-reverse flex-1 min-w-0">
+                                      <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-sm font-medium text-blue-900 truncate" title={file.displayName}>
+                                          {file.displayName || `ملف ${fileIndex + 1}`}
+                                        </div>
+                                        <div className="text-xs text-blue-700 mt-1">
+                                          {item.printJob?.settings || 'إعدادات الطباعة'}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {file.googleDriveLink && (
+                                      <a
+                                        href={file.googleDriveLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-green-600 hover:text-green-800 flex items-center px-2 py-1 bg-green-100 rounded text-xs flex-shrink-0"
+                                        title="فتح في Google Drive"
+                                      >
+                                        <ExternalLink className="w-3 h-3 mr-1" />
+                                        عرض
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Additional Files (if any) */}
+                        {item.googleDriveLink && !item.printJob?.files && (
+                          <div className="border-t pt-3 mt-3">
+                            <h5 className="font-medium mb-2 text-sm">ملف إضافي:</h5>
+                            <a
+                              href={item.googleDriveLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-3 py-2 bg-green-100 text-green-800 rounded text-sm hover:bg-green-200"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              فتح الملف في Google Drive
+                            </a>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
