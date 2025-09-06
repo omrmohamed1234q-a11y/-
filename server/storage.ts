@@ -308,9 +308,15 @@ export class MemoryStorage implements IStorage {
     return this.cartItems.filter(item => item.userId === userId).length;
   }
 
-  // Basic implementations for other required methods
-  async getAllOrders(): Promise<Order[]> { return []; }
-  async getOrder(id: string): Promise<Order | undefined> { return undefined; }
+  // Order operations
+  async getAllOrders(): Promise<Order[]> { 
+    return [...this.orders]; 
+  }
+  
+  async getOrder(id: string): Promise<Order | undefined> { 
+    return this.orders.find(order => order.id === id); 
+  }
+  
   async createOrder(order: any): Promise<Order> { 
     const newOrder: Order = {
       id: `order-${Date.now()}`,
@@ -321,14 +327,122 @@ export class MemoryStorage implements IStorage {
     this.orders.push(newOrder);
     return newOrder;
   }
-  async updateOrder(id: string, updates: any): Promise<Order> { throw new Error('Not implemented'); }
-  async updateOrderStatus(id: string, status: string): Promise<Order> { throw new Error('Not implemented'); }
-  async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> { throw new Error('Not implemented'); }
-  async cancelOrder(id: string): Promise<Order> { throw new Error('Not implemented'); }
-  async addDriverNote(id: string, note: string): Promise<Order> { throw new Error('Not implemented'); }
-  async getActiveOrders(): Promise<Order[]> { return []; }
-  async getOrdersByStatus(status: string): Promise<Order[]> { return []; }
-  async deleteOrder(id: string): Promise<boolean> { return false; }
+  
+  async updateOrder(id: string, updates: any): Promise<Order> { 
+    const orderIndex = this.orders.findIndex(order => order.id === id);
+    if (orderIndex === -1) {
+      throw new Error(`Order not found: ${id}`);
+    }
+    
+    this.orders[orderIndex] = { 
+      ...this.orders[orderIndex], 
+      ...updates, 
+      updatedAt: new Date() 
+    };
+    
+    console.log('📋 Updated order:', id, 'with updates:', Object.keys(updates));
+    return this.orders[orderIndex];
+  }
+  
+  async updateOrderStatus(id: string, status: string): Promise<Order> { 
+    const orderIndex = this.orders.findIndex(order => order.id === id);
+    if (orderIndex === -1) {
+      throw new Error(`Order not found: ${id}`);
+    }
+    
+    const statusTimestamps: any = {};
+    const now = new Date();
+    
+    // Set appropriate timestamp based on status
+    switch (status) {
+      case 'confirmed':
+        statusTimestamps.confirmedAt = now;
+        break;
+      case 'preparing':
+        statusTimestamps.preparingAt = now;
+        break;
+      case 'ready':
+        statusTimestamps.readyAt = now;
+        break;
+      case 'out_for_delivery':
+        statusTimestamps.outForDeliveryAt = now;
+        break;
+      case 'delivered':
+        statusTimestamps.deliveredAt = now;
+        break;
+      case 'cancelled':
+        statusTimestamps.cancelledAt = now;
+        break;
+    }
+    
+    this.orders[orderIndex] = { 
+      ...this.orders[orderIndex], 
+      status, 
+      ...statusTimestamps,
+      updatedAt: now 
+    };
+    
+    console.log('📋 Updated order status:', id, '->', status);
+    return this.orders[orderIndex];
+  }
+  
+  async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> { 
+    const orderIndex = this.orders.findIndex(order => order.id === id);
+    if (orderIndex === -1) {
+      throw new Error(`Order not found: ${id}`);
+    }
+    
+    this.orders[orderIndex] = { 
+      ...this.orders[orderIndex], 
+      rating, 
+      review: review || this.orders[orderIndex].review,
+      updatedAt: new Date() 
+    };
+    
+    console.log('📋 Updated order rating:', id, 'rating:', rating);
+    return this.orders[orderIndex];
+  }
+  
+  async cancelOrder(id: string): Promise<Order> { 
+    return await this.updateOrderStatus(id, 'cancelled');
+  }
+  
+  async addDriverNote(id: string, note: string): Promise<Order> { 
+    const orderIndex = this.orders.findIndex(order => order.id === id);
+    if (orderIndex === -1) {
+      throw new Error(`Order not found: ${id}`);
+    }
+    
+    const existingNotes = this.orders[orderIndex].driverNotes || '';
+    const newNotes = existingNotes ? `${existingNotes}\n${note}` : note;
+    
+    this.orders[orderIndex] = { 
+      ...this.orders[orderIndex], 
+      driverNotes: newNotes,
+      updatedAt: new Date() 
+    };
+    
+    console.log('📋 Added driver note to order:', id);
+    return this.orders[orderIndex];
+  }
+  
+  async getActiveOrders(): Promise<Order[]> { 
+    return this.orders.filter(order => 
+      !['delivered', 'cancelled'].includes(order.status)
+    ); 
+  }
+  
+  async getOrdersByStatus(status: string): Promise<Order[]> { 
+    return this.orders.filter(order => order.status === status); 
+  }
+  
+  async deleteOrder(id: string): Promise<boolean> { 
+    const orderIndex = this.orders.findIndex(order => order.id === id);
+    if (orderIndex === -1) return false;
+    this.orders.splice(orderIndex, 1);
+    console.log('📋 Deleted order:', id);
+    return true;
+  }
   
   // Print jobs
   printJobs: PrintJob[] = [];
