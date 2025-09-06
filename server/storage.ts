@@ -34,6 +34,7 @@ export interface IStorage {
   
   // Print Job operations
   getAllPrintJobs(): Promise<PrintJob[]>;
+  getPrintJobsByUserId(userId: string): Promise<PrintJob[]>;
   createPrintJob(printJob: any): Promise<PrintJob>;
   updatePrintJobStatus(id: string, status: string): Promise<PrintJob>;
   
@@ -449,6 +450,10 @@ export class MemoryStorage implements IStorage {
 
   async getAllPrintJobs(): Promise<PrintJob[]> { 
     return this.printJobs; 
+  }
+
+  async getPrintJobsByUserId(userId: string): Promise<PrintJob[]> {
+    return this.printJobs.filter(pj => pj.userId === userId);
   }
   
   async createPrintJob(printJobData: any): Promise<PrintJob> { 
@@ -895,6 +900,12 @@ export class DatabaseStorage implements IStorage {
   // Print Job operations
   async getAllPrintJobs(): Promise<PrintJob[]> {
     return await db.select().from(printJobs).orderBy(desc(printJobs.createdAt));
+  }
+
+  async getPrintJobsByUserId(userId: string): Promise<PrintJob[]> {
+    return await db.select().from(printJobs)
+      .where(eq(printJobs.userId, userId))
+      .orderBy(desc(printJobs.createdAt));
   }
 
   async createPrintJob(printJobData: any): Promise<PrintJob> {
@@ -2335,6 +2346,14 @@ class MemStorage implements IStorage {
 
   async getAllPrintJobs(): Promise<PrintJob[]> {
     return [...this.printJobs].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  }
+
+  async getPrintJobsByUserId(userId: string): Promise<PrintJob[]> {
+    return this.printJobs.filter(pj => pj.userId === userId).sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
