@@ -287,6 +287,13 @@ export default function AdminDashboard() {
                   <span className="text-xs">المنتجات</span>
                 </Button>
               </Link>
+
+              <Link href="/admin/inventory">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-yellow-50">
+                  <Package className="w-6 h-6 text-yellow-600" />
+                  <span className="text-xs">المخزون</span>
+                </Button>
+              </Link>
               
               <Link href="/admin/store">
                 <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-green-50">

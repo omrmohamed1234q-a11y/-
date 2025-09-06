@@ -25,6 +25,7 @@ import Scan from "@/pages/scan";
 import AdminDashboard from "@/pages/admin/dashboard-new";
 import AdminProfile from "@/pages/admin/admin-profile";
 import AdminProducts from "@/pages/admin-products";
+import AdminInventory from "@/pages/admin/inventory";
 import AdminStore from "@/pages/admin/store";
 import TeachersCorner from "@/pages/admin/teachers-corner";
 import CloudinaryTest from "@/pages/cloudinary-test";
@@ -125,6 +126,7 @@ function Router() {
         <Route path="/admin/store" component={() => <AdminProtectedRoute><AdminStore /></AdminProtectedRoute>} />
         <Route path="/admin/products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
         <Route path="/admin-products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
+        <Route path="/admin/inventory" component={() => <AdminProtectedRoute><AdminInventory /></AdminProtectedRoute>} />
         <Route path="/admin/teachers-corner" component={() => <AdminProtectedRoute><TeachersCorner /></AdminProtectedRoute>} />
         <Route path="/admin/users" component={() => <AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
         <Route path="/admin/coupons" component={() => <AdminProtectedRoute><AdminCoupons /></AdminProtectedRoute>} />
