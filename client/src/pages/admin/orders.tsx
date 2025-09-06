@@ -295,6 +295,19 @@ export default function AdminOrders() {
                           <Eye className="w-4 h-4 ml-1" />
                           عرض
                         </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setInvoicePrintOpen(true);
+                          }}
+                          className="text-green-600 hover:text-green-700 border-green-200 hover:bg-green-50"
+                        >
+                          <Printer className="w-4 h-4 ml-1" />
+                          طباعة الإيصال
+                        </Button>
                         
                         <Select
                           value={order.status}
