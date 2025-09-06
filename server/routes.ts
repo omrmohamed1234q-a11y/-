@@ -21,6 +21,42 @@ const memorySecurityStorage = new MemorySecurityStorage();
 // Global storage for notifications
 const globalNotificationStorage: any[] = [];
 
+// Simple cache implementation for performance improvement
+const cache = new Map<string, { data: any, timestamp: number, ttl: number }>();
+
+function cacheGet(key: string): any | null {
+  const item = cache.get(key);
+  if (!item) return null;
+  
+  if (Date.now() - item.timestamp > item.ttl) {
+    cache.delete(key);
+    return null;
+  }
+  
+  return item.data;
+}
+
+function cacheSet(key: string, data: any, ttlSeconds: number = 300): void {
+  cache.set(key, {
+    data,
+    timestamp: Date.now(),
+    ttl: ttlSeconds * 1000
+  });
+}
+
+function cacheClear(pattern?: string): void {
+  if (!pattern) {
+    cache.clear();
+    return;
+  }
+  
+  for (const key of cache.keys()) {
+    if (key.includes(pattern)) {
+      cache.delete(key);
+    }
+  }
+}
+
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -235,6 +271,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/orders", async (req, res) => {
     try {
       const { status, search } = req.query;
+      const cacheKey = `orders_${status || 'all'}_${search || ''}`;
+      
+      // Try to get from cache first (30 seconds TTL)
+      let cachedOrders = cacheGet(cacheKey);
+      if (cachedOrders) {
+        console.log(`📦 Cache hit for orders: ${cacheKey}`);
+        return res.json(cachedOrders);
+      }
       
       // Get real orders from storage
       let orders = await storage.getAllOrders();
@@ -252,6 +296,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           order.customerPhone.includes(searchLower)
         );
       }
+      
+      // Cache the result for 30 seconds
+      cacheSet(cacheKey, orders, 30);
+      console.log(`💾 Cached orders: ${cacheKey}`);
       
       res.json(orders);
     } catch (error: any) {
@@ -358,6 +406,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status === 'delivered' && existingOrder) {
         await sendOrderCompletionNotification(existingOrder, orderId);
       }
+
+      // Clear orders cache when status changes
+      cacheClear('orders_');
       
       res.json(updatedOrder);
     } catch (error: any) {
@@ -856,11 +907,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User creation/update endpoint for Supabase integration
+  // User creation/update endpoint for Supabase integration with throttling
   app.post('/api/users/sync', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { email, fullName, username, role = 'customer' } = req.body;
+      
+      // Throttle sync requests - cache user for 60 seconds to prevent excessive syncs
+      const syncCacheKey = `user_sync_${userId}`;
+      const lastSync = cacheGet(syncCacheKey);
+      
+      if (lastSync) {
+        console.log(`⏱️ User sync throttled: ${userId} (cached)`);
+        return res.json({
+          success: true,
+          user: lastSync
+        });
+      }
       
       console.log(`👤 Syncing user account: ${userId}`);
       
@@ -893,6 +956,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log('✅ User updated:', user.id);
       }
+      
+      // Cache the user for 60 seconds to throttle future sync requests
+      cacheSet(syncCacheKey, user, 60);
       
       res.json({
         success: true,
@@ -3024,12 +3090,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Notifications endpoints
+  // Notifications endpoints with caching
   app.get('/api/notifications', async (req: any, res) => {
     try {
       // Get the authenticated user ID from session or fallback
       const authenticatedUserId = req.user?.id || '3e3882cc-81fa-48c9-bc69-c290128f4ff2';
       const userId = req.headers['x-user-id'] || authenticatedUserId;
+      const cacheKey = `notifications_${userId}`;
+      
+      // Check cache first (10 seconds TTL for notifications)
+      const cachedNotifications = cacheGet(cacheKey);
+      if (cachedNotifications) {
+        console.log(`📦 Cache hit for notifications: ${userId}`);
+        return res.json(cachedNotifications);
+      }
       
       // Get regular notifications from storage
       let notifications = storage.getUserNotifications(userId);
@@ -3064,6 +3138,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...notifications,
         ...transformedInquiryNotifications
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      // Cache notifications for 10 seconds
+      cacheSet(cacheKey, allNotifications, 10);
       
       console.log(`📱 User ${userId} has ${allNotifications.length} notifications (${transformedInquiryNotifications.length} inquiry notifications)`);
       console.log(`🔍 Global storage has ${globalNotificationStorage.length} total notifications`);
