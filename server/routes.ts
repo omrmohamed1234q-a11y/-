@@ -259,6 +259,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch orders' });
     }
   });
+
+  // Function to send order completion notification
+  async function sendOrderCompletionNotification(order: any, orderId: string) {
+    try {
+      if (!order.userId) {
+        console.log(`⚠️ No userId found for order ${orderId}, using fallback user`);
+        return;
+      }
+
+      // Create completion notification
+      const notification = {
+        userId: order.userId,
+        title: '🎉 تم تسليم طلبك بنجاح!',
+        message: `طلبك رقم ${order.orderNumber || orderId} تم تسليمه بنجاح. نشكرك لثقتك بنا!`,
+        type: 'order',
+        relatedId: orderId,
+        actionUrl: `/orders/${orderId}`,
+        iconType: 'success',
+        priority: 'normal',
+        isRead: false,
+        isClicked: false,
+        isPinned: false,
+        sentAt: new Date().toISOString(),
+        metadata: {
+          orderNumber: order.orderNumber || orderId,
+          customerName: order.customerName,
+          completedAt: new Date().toISOString()
+        }
+      };
+
+      // Store notification using existing system
+      const createdNotification = await storage.createNotification(notification);
+      
+      // Add to global storage for immediate availability
+      globalNotificationStorage.push({
+        id: createdNotification.id || `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        ...notification,
+        createdAt: new Date().toISOString()
+      });
+
+      console.log(`✅ Order completion notification sent to user ${order.userId} for order ${orderId}`);
+      
+      // Try to send WebSocket notification for real-time update
+      try {
+        sendToUser(order.userId, {
+          type: 'order_completed',
+          notification: createdNotification,
+          orderId: orderId,
+          orderNumber: order.orderNumber || orderId
+        });
+      } catch (wsError) {
+        console.log('📡 WebSocket notification failed, but notification stored successfully');
+      }
+
+    } catch (error) {
+      console.error(`❌ Failed to send order completion notification for order ${orderId}:`, error);
+    }
+  }
   
   // Update order status
   app.patch("/api/admin/orders/:orderId/status", async (req, res) => {
@@ -267,6 +325,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { status, staffNotes, staffId, staffName } = req.body;
       
       console.log(`🔄 Updating order ${orderId} status to: ${status}`);
+      
+      // Get order details to access customer information
+      const existingOrder = await storage.getOrder(orderId);
       
       // Simulated update - replace with real database update
       const updatedOrder = {
@@ -292,6 +353,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         ]
       };
+
+      // Send notification when order is completed (delivered)
+      if (status === 'delivered' && existingOrder) {
+        await sendOrderCompletionNotification(existingOrder, orderId);
+      }
       
       res.json(updatedOrder);
     } catch (error: any) {
