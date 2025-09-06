@@ -49,15 +49,25 @@ export default function Print() {
     pages: 'all',
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Array<{
+    fileName: string;
+    fileSize: number;
+    uploadedSize: number;
+    progress: number;
+    speed?: number;
+    timeRemaining?: number;
+  }>>([]);
   const [uploadResults, setUploadResults] = useState<Array<{
     name: string;
     url: string;
-    provider?: 'cloudinary' | 'firebase';
+    provider?: 'cloudinary' | 'firebase' | 'google_drive';
     previewUrl?: string;
+    fileSize?: number;
   }>>([]);
   const [uploadErrors, setUploadErrors] = useState<Array<{
     name: string;
     error: string;
+    fileSize?: number;
   }>>([]);
 
   // Mutation to add print jobs to cart
@@ -89,30 +99,80 @@ export default function Print() {
     setIsUploading(true);
     setUploadResults([]);
     setUploadErrors([]);
+    setUploadProgress([]);
     
     console.log('📤 Starting upload of', files.length, 'files...');
+    
+    // Initialize progress tracking for all files
+    const initialProgress = files.map(file => ({
+      fileName: file.name,
+      fileSize: file.size,
+      uploadedSize: 0,
+      progress: 0,
+      speed: 0,
+      timeRemaining: 0
+    }));
+    setUploadProgress(initialProgress);
     
     try {
       console.log('🔍 Checking Cloudinary status...');
       const status = await checkUploadServiceStatus();
       console.log('Upload service status:', status);
       
-      const results: Array<{ name: string; url: string; provider?: 'cloudinary' | 'firebase' }> = [];
-      const errors: Array<{ name: string; error: string }> = [];
+      const results: Array<{ name: string; url: string; provider?: 'cloudinary' | 'firebase' | 'google_drive'; fileSize?: number }> = [];
+      const errors: Array<{ name: string; error: string; fileSize?: number }> = [];
       
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const startTime = Date.now();
+        
         try {
           console.log(`🚀 Uploading to Google Drive (Primary): ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+          
+          // Simulate detailed progress tracking
+          const progressInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const simulatedProgress = Math.min((elapsed / 3000) * 100, 95); // Simulate progress over 3 seconds, max 95%
+            const uploadedBytes = Math.floor((simulatedProgress / 100) * file.size);
+            const speed = uploadedBytes / (elapsed / 1000); // bytes per second
+            const remainingBytes = file.size - uploadedBytes;
+            const timeRemaining = speed > 0 ? remainingBytes / speed : 0;
+            
+            setUploadProgress(prev => prev.map((p, index) => 
+              index === i ? {
+                ...p,
+                progress: simulatedProgress,
+                uploadedSize: uploadedBytes,
+                speed: speed,
+                timeRemaining: timeRemaining
+              } : p
+            ));
+          }, 200);
           
           // Use Google Drive as primary upload method for cost optimization
           const result = await uploadFileToGoogleDrive(file);
           
+          clearInterval(progressInterval);
+          
           if (result.success && result.url) {
             console.log('✅ Google Drive upload successful! Cost savings activated 💰');
+            
+            // Complete progress
+            setUploadProgress(prev => prev.map((p, index) => 
+              index === i ? {
+                ...p,
+                progress: 100,
+                uploadedSize: file.size,
+                speed: file.size / ((Date.now() - startTime) / 1000),
+                timeRemaining: 0
+              } : p
+            ));
+            
             results.push({
               name: file.name,
               url: result.url,
-              provider: 'google_drive'
+              provider: 'google_drive',
+              fileSize: file.size
             });
           } else {
             // Fallback to Cloudinary if Google Drive fails
@@ -121,10 +181,23 @@ export default function Print() {
             
             if (fallbackResult.success && fallbackResult.url) {
               console.log('✅ Cloudinary fallback successful!');
+              
+              // Complete progress
+              setUploadProgress(prev => prev.map((p, index) => 
+                index === i ? {
+                  ...p,
+                  progress: 100,
+                  uploadedSize: file.size,
+                  speed: file.size / ((Date.now() - startTime) / 1000),
+                  timeRemaining: 0
+                } : p
+              ));
+              
               results.push({
                 name: file.name,
                 url: fallbackResult.url,
-                provider: 'cloudinary'
+                provider: 'cloudinary',
+                fileSize: file.size
               });
             } else {
               throw new Error(result.error || fallbackResult.error || 'Both Google Drive and Cloudinary failed');
@@ -134,7 +207,8 @@ export default function Print() {
           console.error(`❌ Upload failed for ${file.name}:`, error);
           errors.push({
             name: file.name,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : 'Unknown error',
+            fileSize: file.size
           });
         }
       }
@@ -351,6 +425,7 @@ export default function Print() {
                   
                   <UploadStatus 
                     isUploading={isUploading}
+                    uploadProgress={uploadProgress}
                     uploadResults={uploadResults}
                     uploadErrors={uploadErrors}
                   />
