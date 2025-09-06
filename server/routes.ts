@@ -1830,31 +1830,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         orderNumber: `ORD-${Date.now()}`,
         items: cart.items.map((item: any) => {
-          // Find matching print job for file information
-          const matchingPrintJob = userPrintJobs.find((pj: any) => 
-            pj.filename === item.filename || 
-            pj.fileUrl === item.fileUrl ||
-            pj.id === item.printJobId
-          );
+          // Print job data is stored in variant.printJob, so extract it from there
+          const printJobData = item.variant?.printJob;
+          const isPrintJob = item.variant?.isPrintJob;
           
-          console.log('🔍 Mapping cart item:', item.filename, 'matched print job:', matchingPrintJob?.id);
-          
-          return {
+          console.log('🔍 Processing cart item:', {
             productId: item.productId,
-            name: item.productName,
-            quantity: item.quantity,
-            price: parseFloat(item.price),
-            // Include file information for Google Drive links display
-            filename: item.filename || matchingPrintJob?.filename,
-            fileUrl: item.fileUrl || matchingPrintJob?.fileUrl,
-            googleDriveLink: item.googleDriveLink || matchingPrintJob?.googleDriveLink,
-            googleDriveFileId: item.googleDriveFileId || matchingPrintJob?.googleDriveFileId,
-            pages: item.pages || matchingPrintJob?.pages,
-            colorMode: item.colorMode || matchingPrintJob?.colorMode,
-            paperSize: item.paperSize || matchingPrintJob?.paperSize,
-            paperType: item.paperType || matchingPrintJob?.paperType,
-            doubleSided: item.doubleSided || matchingPrintJob?.doubleSided
-          };
+            isPrintJob,
+            printJobData: printJobData ? 'found' : 'missing',
+            filename: printJobData?.filename
+          });
+          
+          // For print jobs, get file information from variant
+          if (isPrintJob && printJobData) {
+            return {
+              productId: item.productId,
+              name: item.productName || `طباعة: ${printJobData.filename}`,
+              quantity: item.quantity,
+              price: parseFloat(item.price),
+              // Include file information from variant.printJob
+              filename: printJobData.filename,
+              fileUrl: printJobData.fileUrl,
+              googleDriveLink: printJobData.googleDriveLink,
+              googleDriveFileId: printJobData.googleDriveFileId,
+              pages: printJobData.pages,
+              copies: printJobData.copies,
+              colorMode: printJobData.colorMode,
+              paperSize: printJobData.paperSize,
+              paperType: printJobData.paperType,
+              doubleSided: printJobData.doubleSided,
+              pageRange: printJobData.pageRange
+            };
+          } else {
+            // For regular products, find matching print job as fallback
+            const matchingPrintJob = userPrintJobs.find((pj: any) => 
+              pj.filename === item.filename || 
+              pj.fileUrl === item.fileUrl ||
+              pj.id === item.printJobId
+            );
+            
+            return {
+              productId: item.productId,
+              name: item.productName,
+              quantity: item.quantity,
+              price: parseFloat(item.price),
+              filename: item.filename || matchingPrintJob?.filename,
+              fileUrl: item.fileUrl || matchingPrintJob?.fileUrl,
+              googleDriveLink: item.googleDriveLink || matchingPrintJob?.googleDriveLink,
+              googleDriveFileId: item.googleDriveFileId || matchingPrintJob?.googleDriveFileId,
+              pages: item.pages || matchingPrintJob?.pages,
+              colorMode: item.colorMode || matchingPrintJob?.colorMode,
+              paperSize: item.paperSize || matchingPrintJob?.paperSize,
+              paperType: item.paperType || matchingPrintJob?.paperType,
+              doubleSided: item.doubleSided || matchingPrintJob?.doubleSided
+            };
+          }
         }),
         subtotal: cart.subtotal.toString(),
         totalAmount: cart.subtotal.toString(),
