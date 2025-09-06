@@ -263,6 +263,8 @@ export const printJobs = pgTable("print_jobs", {
   userId: varchar("user_id").notNull().references(() => users.id),
   filename: text("filename").notNull(),
   fileUrl: text("file_url").notNull(),
+  googleDriveLink: text("google_drive_link"), // Google Drive file link for cost optimization
+  googleDriveFileId: text("google_drive_file_id"), // Google Drive file ID for management
   pages: integer("pages").notNull(),
   copies: integer("copies").default(1),
   colorMode: text("color_mode").notNull(), // "color" | "grayscale"
