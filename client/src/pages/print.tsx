@@ -259,6 +259,27 @@ export default function Print() {
     console.log('File captured:', file.name, 'URL:', downloadUrl);
   };
 
+  // دالة لتوليد اسم واضح للملف حسب إعدادات الطباعة
+  const generatePrintJobFilename = (settings: any, originalName: string) => {
+    const paperTypeLabels = {
+      'plain': 'ورق عادي',
+      'glossy': 'ورق لامع',
+      'matte': 'ورق مطفي',
+      'sticker': 'استيكر'
+    };
+    
+    const colorModeLabels = {
+      'grayscale': 'أبيض وأسود',
+      'color': 'ملون'
+    };
+
+    // الحصول على امتداد الملف الأصلي
+    const fileExtension = originalName.split('.').pop() || '';
+    const displayName = `عدد ${settings.copies} ${settings.paperSize} ${paperTypeLabels[settings.paperType as keyof typeof paperTypeLabels]} ${colorModeLabels[settings.colorMode as keyof typeof colorModeLabels]}`;
+    
+    return settings.doubleSided ? `${displayName} (وجهين).${fileExtension}` : `${displayName}.${fileExtension}`;
+  };
+
   const handlePrint = async () => {
     if (selectedFiles.length === 0 || !user) {
       toast({
@@ -285,7 +306,7 @@ export default function Print() {
       console.log('File URLs:', uploadedUrls);
       
       const printJobs = selectedFiles.map((file, index) => ({
-        filename: file.name,
+        filename: generatePrintJobFilename(printSettings, file.name),
         fileUrl: uploadedUrls[index],
         fileSize: file.size,
         fileType: file.type,
