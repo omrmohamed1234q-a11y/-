@@ -2288,14 +2288,52 @@ class MemStorage implements IStorage {
   async addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<any> {
     console.log(`🛒 Adding to cart: userId=${userId}, productId=${productId}, quantity=${quantity}`);
     
-    // Check if product exists
-    const product = this.products.find(p => p.id === productId);
-    if (!product) {
-      console.error(`❌ Product not found: ${productId}`);
-      throw new Error('Product not found');
+    // Determine product source and get product details
+    let productSource = 'atbaali';
+    let partnerId = null;
+    let partnerName = null;
+    let product = null;
+    
+    if (productId === 'print-service') {
+      productSource = 'print_service';
+      product = { name: 'خدمة طباعة', price: variant?.printJob?.cost || '10.00' };
+    } else if (variant?.partnerId) {
+      productSource = 'partner';
+      partnerId = variant.partnerId;
+      const partner = this.partners.find(p => p.id === partnerId);
+      partnerName = partner?.name || 'شريك';
+      product = this.partnerProducts.find(p => p.id === productId);
+      if (!product) {
+        console.error(`❌ Partner product not found: ${productId}`);
+        throw new Error('Partner product not found');
+      }
+    } else {
+      // Regular product
+      product = this.products.find(p => p.id === productId);
+      if (!product) {
+        console.error(`❌ Product not found: ${productId}`);
+        throw new Error('Product not found');
+      }
     }
 
-    console.log(`✅ Found product: ${product.name}`);
+    console.log(`✅ Found product: ${product.name}, source: ${productSource}`);
+
+    // BUSINESS RULE CHECK: Prevent mixing different sources
+    const existingCartItems = this.cartItems.filter(item => item.userId === userId);
+    if (existingCartItems.length > 0) {
+      const existingSource = existingCartItems[0].productSource;
+      const existingPartnerId = existingCartItems[0].partnerId;
+      
+      if (existingSource !== productSource) {
+        console.log(`❌ Cannot mix ${existingSource} products with ${productSource} products`);
+        throw new Error(`لا يمكن الجمع بين منتجات ${existingSource === 'atbaali' ? 'اطبعلي' : existingSource === 'partner' ? 'الشركاء' : 'الطباعة'} و منتجات ${productSource === 'atbaali' ? 'اطبعلي' : productSource === 'partner' ? 'الشركاء' : 'الطباعة'} في نفس السلة`);
+      }
+      
+      if (productSource === 'partner' && existingPartnerId !== partnerId) {
+        console.log(`❌ Cannot mix products from different partners`);
+        throw new Error('لا يمكن الطلب من أكثر من شريك واحد في نفس الوقت. يرجى إنهاء الطلب الحالي أولاً');
+      }
+    }
 
     // Check if item already exists in cart
     const existingItemIndex = this.cartItems.findIndex(item => 
@@ -2316,6 +2354,9 @@ class MemStorage implements IStorage {
         quantity,
         price: product.price,
         variant,
+        productSource,
+        partnerId,
+        partnerName,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -2332,18 +2373,37 @@ class MemStorage implements IStorage {
       console.log(`📦 Found ${userCartItems.length} cart items for user ${userId}`);
       
       const items = userCartItems.map(item => {
-        const product = this.products.find(p => p.id === item.productId);
+        let product = null;
+        let productName = 'منتج';
+        let productImage = '';
+        
+        if (item.productSource === 'partner') {
+          product = this.partnerProducts.find(p => p.id === item.productId);
+          productName = product?.name || 'منتج شريك';
+          productImage = product?.imageUrl || '';
+        } else if (item.productSource === 'print_service') {
+          productName = item.variant?.printJob?.filename || 'خدمة طباعة';
+          productImage = '';
+        } else {
+          product = this.products.find(p => p.id === item.productId);
+          productName = product?.name || 'منتج';
+          productImage = product?.imageUrl || '';
+        }
+        
         return {
           id: item.id,
           productId: item.productId,
+          productSource: item.productSource,
+          partnerId: item.partnerId,
+          partnerName: item.partnerName,
           quantity: item.quantity,
           price: item.price,
           variant: item.variant,
           notes: item.notes,
-          productName: product?.name || 'منتج غير موجود',
-          productImage: product?.imageUrl || '',
-          productStock: product?.stock || 0,
-          productPrice: product?.price || '0',
+          productName: productName,
+          productImage: productImage,
+          productStock: product?.stock || product?.quantity || 0,
+          productPrice: product?.price || item.price,
           createdAt: item.createdAt,
         };
       });

@@ -1466,7 +1466,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, item: cartItem });
     } catch (error) {
       console.error("Error adding to cart:", error);
-      res.status(500).json({ message: "Failed to add to cart" });
+      res.status(400).json({ message: error.message || "Failed to add to cart" });
+    }
+  });
+
+  // Add partner product to cart endpoint
+  app.post('/api/cart/add-partner-product', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { productId, partnerId, quantity = 1 } = req.body;
+
+      if (!productId || !partnerId) {
+        return res.status(400).json({ message: "Product ID and Partner ID are required" });
+      }
+
+      const cartItem = await storage.addToCart(userId, productId, quantity, { 
+        partnerId: partnerId 
+      });
+      res.json({ success: true, item: cartItem });
+    } catch (error) {
+      console.error("Error adding partner product to cart:", error);
+      res.status(400).json({ message: error.message || "Failed to add partner product to cart" });
     }
   });
 

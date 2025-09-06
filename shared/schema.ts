@@ -469,6 +469,12 @@ export const cartItems = pgTable("cart_items", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   variant: text("variant"),
   notes: text("notes"),
+  
+  // Cart source control fields - للتحكم في مصدر المنتجات
+  productSource: text("product_source").notNull(), // "atbaali" | "partner" | "print_service"
+  partnerId: varchar("partner_id"), // فقط للمنتجات من الشركاء
+  partnerName: text("partner_name"), // اسم الشريك للعرض
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 

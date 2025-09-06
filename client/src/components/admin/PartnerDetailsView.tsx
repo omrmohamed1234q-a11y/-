@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +52,9 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: [`/api/partners/${partner.id}/products`],
@@ -57,6 +62,36 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
   });
 
   const partnerProducts = (products as PartnerProduct[] || []);
+
+  // Add to cart mutation for partner products
+  const addToCartMutation = useMutation({
+    mutationFn: async ({ productId, quantity = 1 }: {
+      productId: string;
+      quantity?: number;
+    }) => {
+      const response = await apiRequest('POST', '/api/cart/add-partner-product', {
+        productId,
+        partnerId: partner.id,
+        quantity,
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart/count'] });
+      toast({
+        title: "تمت الإضافة للسلة",
+        description: "تم إضافة المنتج من الشريك بنجاح",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ في الإضافة",
+        description: error.message || "فشل في إضافة المنتج للسلة",
+        variant: "destructive",
+      });
+    },
+  });
 
   // فلترة المنتجات
   const filteredProducts = partnerProducts.filter(product => {
@@ -291,9 +326,15 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
                           <Eye className="h-4 w-4 ml-1" />
                           عرض
                         </Button>
-                        <Button size="sm" className="h-9 px-3 flex-1" data-testid={`button-add-cart-${product.id}`}>
+                        <Button 
+                          size="sm" 
+                          className="h-9 px-3 flex-1" 
+                          data-testid={`button-add-cart-${product.id}`}
+                          onClick={() => addToCartMutation.mutate({ productId: product.id })}
+                          disabled={addToCartMutation.isPending || !product.isAvailable}
+                        >
                           <ShoppingCart className="h-4 w-4 ml-1" />
-                          إضافة
+                          {addToCartMutation.isPending ? 'جاري...' : 'إضافة'}
                         </Button>
                       </div>
                     </div>
