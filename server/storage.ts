@@ -438,9 +438,15 @@ export class MemoryStorage implements IStorage {
   async getCouponUsageAnalytics(couponId: string): Promise<any> { return {}; }
   
   // Partners
-  async getFeaturedPartners(): Promise<Partner[]> { return []; }
-  async getAllPartners(): Promise<Partner[]> { return []; }
-  async getPartnerById(id: string): Promise<Partner | undefined> { return undefined; }
+  async getFeaturedPartners(): Promise<Partner[]> { 
+    return this.partners.filter(partner => partner.isFeatured && partner.isActive);
+  }
+  async getAllPartners(): Promise<Partner[]> { 
+    return this.partners; 
+  }
+  async getPartnerById(id: string): Promise<Partner | undefined> { 
+    return this.partners.find(partner => partner.id === id);
+  }
   async createPartner(partner: any): Promise<Partner> {
     const newPartner: Partner = {
       id: `partner-${Date.now()}`,
