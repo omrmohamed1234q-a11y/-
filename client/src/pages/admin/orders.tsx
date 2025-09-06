@@ -251,7 +251,7 @@ export default function AdminOrders() {
                     <td className="p-4">
                       {/* Google Drive Files for Customer */}
                       <div className="flex flex-col space-y-2">
-                        {order.items && Array.isArray(order.items) && order.items.filter((item: any) => item.fileUrl || item.googleDriveLink || (item.printJob?.files && item.printJob.files.length > 0)).length > 0 ? (
+                        {console.log('Order items:', order.items) || order.items && Array.isArray(order.items) && order.items.filter((item: any) => item.fileUrl || item.googleDriveLink || (item.printJob?.files && item.printJob.files.length > 0)).length > 0 ? (
                           order.items.filter((item: any) => item.fileUrl || item.googleDriveLink || (item.printJob?.files && item.printJob.files.length > 0)).map((item: any, index: number) => (
                             <div key={index} className="space-y-1">
                               {/* Display Print Job Files if Available */}
@@ -312,37 +312,39 @@ export default function AdminOrders() {
                       {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : 'غير محدد'}
                     </td>
                     <td className="p-4">
-                      <div className="flex space-x-2 space-x-reverse">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setDetailsOpen(true);
-                          }}
-                        >
-                          <Eye className="w-4 h-4 ml-1" />
-                          عرض
-                        </Button>
+                      <div className="flex flex-col space-y-1">
+                        <div className="flex space-x-1 space-x-reverse">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setDetailsOpen(true);
+                            }}
+                            title="عرض التفاصيل"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
 
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setInvoicePrintOpen(true);
-                          }}
-                          className="text-green-600 hover:text-green-700 border-green-200 hover:bg-green-50"
-                        >
-                          <Printer className="w-4 h-4 ml-1" />
-                          طباعة الإيصال
-                        </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setInvoicePrintOpen(true);
+                            }}
+                            className="text-green-600 hover:text-green-700 border-green-200 hover:bg-green-50"
+                            title="طباعة الإيصال"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </Button>
+                        </div>
                         
                         <Select
                           value={order.status}
                           onValueChange={(newStatus) => handleStatusUpdate(order.id, newStatus)}
                         >
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className="w-full text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
