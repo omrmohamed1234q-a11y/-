@@ -35,10 +35,11 @@ interface PartnerProduct {
   category: string;
   price: string;
   imageUrl?: string;
-  stock?: number;
-  isAvailable: boolean;
-  specifications?: Record<string, any>;
+  quantity?: number;
+  inStock: boolean;
+  unit?: string;
   tags?: string[];
+  featured?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -110,10 +111,13 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
   ));
 
   const getProductStatusBadge = (product: PartnerProduct) => {
-    if (!product.isAvailable) {
+    if (!product.inStock) {
       return <Badge variant="destructive">غير متوفر</Badge>;
     }
-    if (product.stock && product.stock <= 5) {
+    if (product.quantity && product.quantity <= 0) {
+      return <Badge variant="destructive">نفدت الكمية</Badge>;
+    }
+    if (product.quantity && product.quantity <= 5) {
       return <Badge variant="outline" className="text-orange-600">مخزون قليل</Badge>;
     }
     return <Badge variant="secondary" className="text-green-600">متوفر</Badge>;
@@ -314,9 +318,9 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
                         <span className="text-lg font-bold text-primary">
                           {product.price} ج
                         </span>
-                        {product.stock && (
+                        {product.quantity && (
                           <div className="text-xs text-gray-500">
-                            متوفر: {product.stock}
+                            متوفر: {product.quantity} {product.unit || 'قطعة'}
                           </div>
                         )}
                       </div>
@@ -331,10 +335,12 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
                           className="h-9 px-3 flex-1" 
                           data-testid={`button-add-cart-${product.id}`}
                           onClick={() => addToCartMutation.mutate({ productId: product.id })}
-                          disabled={addToCartMutation.isPending || !product.isAvailable}
+                          disabled={addToCartMutation.isPending || !product.inStock || (product.quantity && product.quantity <= 0)}
                         >
                           <ShoppingCart className="h-4 w-4 ml-1" />
-                          {addToCartMutation.isPending ? 'جاري...' : 'إضافة'}
+                          {addToCartMutation.isPending ? 'جاري...' : 
+                           !product.inStock ? 'غير متوفر' : 
+                           (product.quantity && product.quantity <= 0) ? 'نفدت الكمية' : 'إضافة'}
                         </Button>
                       </div>
                     </div>
