@@ -22,6 +22,7 @@ import {
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
+import PrintingAnimation from '@/components/PrintingAnimation';
 
 interface OrderItem {
   id: string;
@@ -263,17 +264,49 @@ export default function OrdersPage() {
                   </CardHeader>
 
                   <CardContent className="space-y-4">
+                    {/* Special animation for processing orders */}
+                    {order.status === 'processing' && (
+                      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-4">
+                          <PrintingAnimation status={order.status} className="flex-shrink-0" />
+                          <div className="flex-1">
+                            <h4 className="font-medium text-blue-900 mb-2">طلبك قيد التنفيذ الآن!</h4>
+                            <p className="text-sm text-blue-700">
+                              فريقنا يعمل على تحضير طلبك بعناية فائقة. ستحصل على إشعار فور اكتمال العملية.
+                            </p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                              <span className="text-xs text-blue-600 font-medium">متوقع الانتهاء خلال 15-30 دقيقة</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Order Items */}
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm text-gray-700">المنتجات:</h4>
                       <div className="space-y-2">
                         {order.items?.slice(0, 2).map((item: OrderItem) => (
-                          <div key={item.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                          <div key={item.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg relative overflow-hidden">
+                            
+                            {/* Printing overlay for processing orders */}
+                            {order.status === 'processing' && (
+                              <div className="absolute inset-0 bg-blue-50 bg-opacity-80 flex items-center justify-center">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '100ms'}}></div>
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '200ms'}}></div>
+                                  <span className="text-xs text-blue-700 font-medium mr-2">طباعة...</span>
+                                </div>
+                              </div>
+                            )}
+                            
                             <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
                               {item.productImage ? (
                                 <img
                                   src={item.productImage}
-                                  alt={item.productName}
+                                  alt={item.productName || item.name}
                                   className="w-full h-full object-cover rounded-lg"
                                 />
                               ) : (
@@ -281,7 +314,7 @@ export default function OrdersPage() {
                               )}
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium line-clamp-1">{item.productName}</p>
+                              <p className="text-sm font-medium line-clamp-1">{item.productName || item.name}</p>
                               <p className="text-xs text-gray-600">{item.quantity}× بسعر {item.price} جنيه</p>
                             </div>
                           </div>

@@ -1160,8 +1160,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const allOrders = await storage.getAllOrders();
+      console.log('📋 Total orders in storage:', allOrders.length);
       // Filter orders for current user
       const userOrders = allOrders.filter((order: any) => order.userId === userId);
+      console.log('👤 User orders for', userId, ':', userOrders.length);
       res.json(userOrders);
     } catch (error) {
       console.error("Error fetching user orders:", error);
@@ -1612,6 +1614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const order = await storage.createOrder(orderData);
+      console.log('✅ Order created in checkout:', order.id, 'for user:', userId);
       
       // Clear cart after successful order
       await storage.clearCart(userId);

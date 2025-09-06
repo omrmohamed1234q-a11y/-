@@ -2156,11 +2156,14 @@ class MemStorage implements IStorage {
 
   async createOrder(orderData: any): Promise<Order> {
     const order: Order = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: `order-${Date.now()}`,
       ...orderData,
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     this.orders.push(order);
+    console.log('✅ Order created and stored:', order.id, 'for user:', order.userId);
+    console.log('📊 Total orders in storage:', this.orders.length);
     return order;
   }
 
@@ -2208,48 +2211,6 @@ class MemStorage implements IStorage {
     if (index === -1) return false;
     this.orders.splice(index, 1);
     return true;
-    this.orders.push(order);
-    return order;
-  }
-
-  async getOrder(id: string): Promise<Order | undefined> {
-    return this.orders.find(o => o.id === id);
-  }
-
-  async updateOrderStatus(id: string, status: string): Promise<Order> {
-    const index = this.orders.findIndex(o => o.id === id);
-    if (index !== -1) {
-      this.orders[index].status = status;
-      return this.orders[index];
-    }
-    throw new Error('Order not found');
-  }
-
-  async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> {
-    const index = this.orders.findIndex(o => o.id === id);
-    if (index !== -1) {
-      this.orders[index] = { ...this.orders[index], rating, review };
-      return this.orders[index];
-    }
-    throw new Error('Order not found');
-  }
-
-  async cancelOrder(id: string): Promise<Order> {
-    const index = this.orders.findIndex(o => o.id === id);
-    if (index !== -1) {
-      this.orders[index].status = 'cancelled';
-      return this.orders[index];
-    }
-    throw new Error('Order not found');
-  }
-
-  async addDriverNote(id: string, note: string): Promise<Order> {
-    const index = this.orders.findIndex(o => o.id === id);
-    if (index !== -1) {
-      this.orders[index] = { ...this.orders[index], driverNotes: note };
-      return this.orders[index];
-    }
-    throw new Error('Order not found');
   }
 
   async getActiveOrders(): Promise<Order[]> {
