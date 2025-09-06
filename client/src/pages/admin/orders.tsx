@@ -214,6 +214,7 @@ export default function AdminOrders() {
                   <th className="p-4 font-medium">المبلغ</th>
                   <th className="p-4 font-medium">الحالة</th>
                   <th className="p-4 font-medium">الدفع</th>
+                  <th className="p-4 font-medium">ملفات العميل</th>
                   <th className="p-4 font-medium">التاريخ</th>
                   <th className="p-4 font-medium">الإجراءات</th>
                 </tr>
@@ -245,6 +246,38 @@ export default function AdminOrders() {
                       <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}>
                         {order.paymentStatus === 'paid' ? 'مدفوع' : 'في الانتظار'}
                       </Badge>
+                    </td>
+                    <td className="p-4">
+                      {/* Google Drive Files for Customer */}
+                      <div className="flex flex-col space-y-1">
+                        {order.items && Array.isArray(order.items) && order.items.filter((item: any) => item.fileUrl || item.googleDriveLink).length > 0 ? (
+                          order.items.filter((item: any) => item.fileUrl || item.googleDriveLink).map((item: any, index: number) => (
+                            <div key={index} className="flex items-center space-x-2 space-x-reverse">
+                              {item.googleDriveLink ? (
+                                <a
+                                  href={item.googleDriveLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-green-600 hover:text-green-800 text-xs flex items-center"
+                                >
+                                  📁 {item.filename || `ملف ${index + 1}`}
+                                </a>
+                              ) : item.fileUrl ? (
+                                <a
+                                  href={item.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
+                                >
+                                  ☁️ {item.filename || `ملف ${index + 1}`}
+                                </a>
+                              ) : null}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 text-xs">لا توجد ملفات</span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4 text-sm">
                       {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : 'غير محدد'}

@@ -28,7 +28,7 @@ import {
 import { DocumentScanner } from '@/components/upload/DocumentScanner';
 import { CameraCapture } from '@/components/camera/CameraCapture';
 import { DragDropUpload } from '@/components/upload/DragDropUpload';
-import { uploadFile, validateFile, checkUploadServiceStatus } from '@/lib/upload-service';
+import { uploadFile, uploadFileToGoogleDrive, validateFile, checkUploadServiceStatus } from '@/lib/upload-service';
 import { PDFProcessor } from '@/components/pdf/PDFProcessor';
 import { UploadStatus } from '@/components/upload/UploadStatus';
 import { PriceGuide } from '@/components/print/PriceGuide';
@@ -102,19 +102,33 @@ export default function Print() {
       
       for (const file of files) {
         try {
-          console.log(`📤 Uploading to Cloudinary: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+          console.log(`🚀 Uploading to Google Drive (Primary): ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
           
-          const result = await uploadFile(file);
+          // Use Google Drive as primary upload method for cost optimization
+          const result = await uploadFileToGoogleDrive(file);
           
           if (result.success && result.url) {
-            console.log('✅ Cloudinary upload successful!');
+            console.log('✅ Google Drive upload successful! Cost savings activated 💰');
             results.push({
               name: file.name,
               url: result.url,
-              provider: 'cloudinary'
+              provider: 'google_drive'
             });
           } else {
-            throw new Error(result.error || 'Upload failed');
+            // Fallback to Cloudinary if Google Drive fails
+            console.warn('⚠️ Google Drive failed, trying Cloudinary fallback...');
+            const fallbackResult = await uploadFile(file);
+            
+            if (fallbackResult.success && fallbackResult.url) {
+              console.log('✅ Cloudinary fallback successful!');
+              results.push({
+                name: file.name,
+                url: fallbackResult.url,
+                provider: 'cloudinary'
+              });
+            } else {
+              throw new Error(result.error || fallbackResult.error || 'Both Google Drive and Cloudinary failed');
+            }
           }
         } catch (error) {
           console.error(`❌ Upload failed for ${file.name}:`, error);

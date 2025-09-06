@@ -54,6 +54,67 @@ export async function uploadFile(file: File): Promise<UploadResult> {
   }
 }
 
+// Google Drive Primary Upload for /print page - Cost Optimization
+export async function uploadFileToGoogleDrive(file: File): Promise<UploadResult> {
+  console.log(`🚀 Google Drive Priority Upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+  
+  try {
+    // Convert file to base64 for server upload
+    const fileBuffer = await fileToBuffer(file);
+    
+    console.log('📁 Uploading to Google Drive (Primary)...');
+    
+    const response = await apiRequest('POST', '/api/upload/google-drive-primary', {
+      fileName: file.name,
+      fileBuffer: fileBuffer,
+      mimeType: file.type
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log('✅ Google Drive upload successful! Cost savings activated 💰');
+      
+      const uploadResult: UploadResult = {
+        success: true,
+        url: result.url,
+        downloadUrl: result.directDownloadLink || result.url,
+        previewUrl: result.webViewLink,
+        provider: 'google_drive' as const,
+        fileId: result.fileId
+      };
+      
+      // Notify server about successful upload
+      await notifyServerUpload(file, uploadResult);
+      return uploadResult;
+    } else {
+      throw new Error(result.error || 'Google Drive upload failed');
+    }
+  } catch (error) {
+    console.error('❌ Google Drive upload failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Google Drive upload failed',
+      provider: undefined
+    };
+  }
+}
+
+// Helper function to convert File to base64 buffer
+async function fileToBuffer(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove data URL prefix and get base64 string
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // Notify server about file upload for account integration
 async function notifyServerUpload(file: File, result: UploadResult): Promise<void> {
   try {

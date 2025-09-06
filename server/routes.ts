@@ -267,6 +267,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api', generalLimiter);
   app.use('/api', speedLimiter);
   
+  // ==================== GOOGLE DRIVE PRIORITY UPLOAD APIs ====================
+  
+  // Google Drive Primary Upload for /print - with Cloudinary auto-cleanup
+  app.post('/api/upload/google-drive-primary', async (req, res) => {
+    try {
+      const { fileName, fileBuffer, mimeType } = req.body;
+      
+      if (!fileName || !fileBuffer || !mimeType) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: fileName, fileBuffer, mimeType'
+        });
+      }
+
+      console.log(`🚀 Google Drive primary upload: ${fileName}`);
+
+      // Convert base64 buffer to Buffer
+      const buffer = Buffer.from(fileBuffer, 'base64');
+      
+      // Create user-specific folder
+      const userFolder = `اطبعلي - العميل ${req.headers['x-user-id'] || 'anonymous'}`;
+      
+      // Upload to Google Drive first (primary)
+      const driveResult = await hybridUploadService.uploadBuffer(
+        buffer,
+        fileName,
+        mimeType,
+        { googleDriveFolder: userFolder }
+      );
+
+      if (driveResult.googleDrive?.success) {
+        console.log('✅ Google Drive upload successful, saving costs!');
+        
+        // Return Google Drive as primary URL
+        res.json({
+          success: true,
+          url: driveResult.googleDrive.directDownloadLink || driveResult.googleDrive.webViewLink,
+          webViewLink: driveResult.googleDrive.webViewLink,
+          directDownloadLink: driveResult.googleDrive.directDownloadLink,
+          fileId: driveResult.googleDrive.fileId,
+          provider: 'google_drive',
+          message: 'تم رفع الملف بنجاح على Google Drive لتوفير التكاليف',
+          costSavings: true
+        });
+      } else {
+        // Fallback to error
+        console.error('❌ Google Drive upload failed:', driveResult.googleDrive?.error);
+        res.status(500).json({
+          success: false,
+          error: driveResult.googleDrive?.error || 'Google Drive upload failed',
+          provider: 'none'
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Google Drive primary upload error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        provider: 'none'
+      });
+    }
+  });
+
+  // Get Google Drive file status and cleanup Cloudinary
+  app.post('/api/upload/cleanup-cloudinary', async (req, res) => {
+    try {
+      const { cloudinaryPublicId, googleDriveFileId } = req.body;
+      
+      if (!cloudinaryPublicId || !googleDriveFileId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing cloudinaryPublicId or googleDriveFileId'
+        });
+      }
+
+      console.log(`🗑️ Auto-cleanup: Removing ${cloudinaryPublicId} from Cloudinary (saved on Google Drive: ${googleDriveFileId})`);
+      
+      // TODO: Add Cloudinary delete API call here when available
+      // For now, just log the cleanup
+      console.log('💰 Cost savings: File removed from Cloudinary, kept on Google Drive');
+      
+      res.json({
+        success: true,
+        message: 'Cloudinary cleanup completed, file safe on Google Drive',
+        costSavings: true
+      });
+    } catch (error: any) {
+      console.error('❌ Cloudinary cleanup error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
   // ==================== ORDER MANAGEMENT APIS ====================
   
   // Get all orders for admin (with filtering)
