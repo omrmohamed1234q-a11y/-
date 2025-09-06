@@ -1821,16 +1821,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cart is empty" });
       }
 
+      // Get all print jobs for this user to include file information
+      const userPrintJobs = await storage.getPrintJobsByUserId(userId);
+      console.log('📋 Found', userPrintJobs.length, 'print jobs for user', userId);
+
       // Create order from cart
       const orderData = {
         userId,
         orderNumber: `ORD-${Date.now()}`,
-        items: cart.items.map((item: any) => ({
-          productId: item.productId,
-          name: item.productName,
-          quantity: item.quantity,
-          price: parseFloat(item.price)
-        })),
+        items: cart.items.map((item: any) => {
+          // Find matching print job for file information
+          const matchingPrintJob = userPrintJobs.find((pj: any) => 
+            pj.filename === item.filename || 
+            pj.fileUrl === item.fileUrl ||
+            pj.id === item.printJobId
+          );
+          
+          console.log('🔍 Mapping cart item:', item.filename, 'matched print job:', matchingPrintJob?.id);
+          
+          return {
+            productId: item.productId,
+            name: item.productName,
+            quantity: item.quantity,
+            price: parseFloat(item.price),
+            // Include file information for Google Drive links display
+            filename: item.filename || matchingPrintJob?.filename,
+            fileUrl: item.fileUrl || matchingPrintJob?.fileUrl,
+            googleDriveLink: item.googleDriveLink || matchingPrintJob?.googleDriveLink,
+            googleDriveFileId: item.googleDriveFileId || matchingPrintJob?.googleDriveFileId,
+            pages: item.pages || matchingPrintJob?.pages,
+            colorMode: item.colorMode || matchingPrintJob?.colorMode,
+            paperSize: item.paperSize || matchingPrintJob?.paperSize,
+            paperType: item.paperType || matchingPrintJob?.paperType,
+            doubleSided: item.doubleSided || matchingPrintJob?.doubleSided
+          };
+        }),
         subtotal: cart.subtotal.toString(),
         totalAmount: cart.subtotal.toString(),
         status: 'pending',
