@@ -39,6 +39,7 @@ import OrdersManagement from "@/pages/admin/orders-management";
 import OrdersManagementEnhanced from '@/pages/admin/orders-management-enhanced';
 import EnhancedDriverDashboard from '@/pages/driver/enhanced-driver-dashboard';
 import OrderTrackingEnhanced from '@/pages/order-tracking-enhanced';
+import OrdersPage from "@/pages/orders";
 import TestSignup from "@/pages/test-signup";
 import Checkout from "@/pages/checkout";
 import OrderTracking from "@/pages/order-tracking";
@@ -172,6 +173,7 @@ function Router() {
         <Route path="/scan" component={Scan} />
         <Route path="/store" component={Store} />
         <Route path="/checkout" component={CheckoutPage} />
+        <Route path="/orders" component={OrdersPage} />
         <Route path="/rewards" component={Rewards} />
         <Route path="/profile" component={Profile} />
         <Route path="/payment" component={Payment} />

@@ -1155,6 +1155,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all orders for current user
+  app.get('/api/orders/user', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const allOrders = await storage.getAllOrders();
+      // Filter orders for current user
+      const userOrders = allOrders.filter((order: any) => order.userId === userId);
+      res.json(userOrders);
+    } catch (error) {
+      console.error("Error fetching user orders:", error);
+      res.status(500).json({ message: "Failed to fetch user orders" });
+    }
+  });
+
   // Get active orders for user  
   app.get('/api/orders/active', requireAuth, async (req: any, res) => {
     try {
