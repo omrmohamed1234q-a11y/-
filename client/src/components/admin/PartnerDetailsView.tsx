@@ -62,12 +62,17 @@ export function PartnerDetailsView({ partner, onClose }: PartnerDetailsViewProps
   const filteredProducts = partnerProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'all' || 
+                           (product.category && product.category === selectedCategory);
     return matchesSearch && matchesCategory;
   });
 
-  // الحصول على الفئات المتاحة
-  const categories = Array.from(new Set(partnerProducts.map(p => p.category)));
+  // الحصول على الفئات المتاحة (تصفية الفئات الفارغة)
+  const categories = Array.from(new Set(
+    partnerProducts
+      .map(p => p.category)
+      .filter(category => category && category.trim() !== '')
+  ));
 
   const getProductStatusBadge = (product: PartnerProduct) => {
     if (!product.isAvailable) {
