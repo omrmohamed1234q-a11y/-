@@ -7,7 +7,6 @@ const navItems = [
   { path: '/print', label: 'طباعة', icon: 'fas fa-print' },
   { path: '/scan', label: 'المسح الضوئي', icon: 'fas fa-camera' },
   { path: '/store', label: 'المتجر', icon: 'fas fa-store' },
-  { path: '/inventory', label: 'المخزون', icon: 'fas fa-boxes' },
   { path: '/rewards', label: 'المكافآت', icon: 'fas fa-trophy' },
   { path: '/profile', label: 'الملف الشخصي', icon: 'fas fa-user' },
 ];
