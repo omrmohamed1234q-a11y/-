@@ -14,6 +14,8 @@ import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { MemorySecurityStorage } from './memory-security-storage';
 import { registerInventoryRoutes } from "./inventory-routes";
+import { hybridUploadService } from './hybrid-upload-service';
+import { googleDriveService } from './google-drive-service';
 
 // Initialize memory security storage
 const memorySecurityStorage = new MemorySecurityStorage();
@@ -5647,6 +5649,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== INVENTORY MANAGEMENT ROUTES ====================
   
   registerInventoryRoutes(app);
+
+  // ==================== HYBRID UPLOAD SERVICE APIS ====================
+  
+  // Get upload services status
+  app.get('/api/services/upload/status', async (req, res) => {
+    try {
+      const status = hybridUploadService.getServiceStatus();
+      res.json({
+        success: true,
+        services: status,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get services status',
+        details: error.message
+      });
+    }
+  });
+
+  // Test upload services
+  app.get('/api/services/upload/test', async (req, res) => {
+    try {
+      console.log('🧪 Testing upload services...');
+      const results = await hybridUploadService.testServices();
+      
+      res.json({
+        success: true,
+        tests: results,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to test services',
+        details: error.message
+      });
+    }
+  });
+
+  // Test Google Drive connection specifically
+  app.get('/api/services/googledrive/test', async (req, res) => {
+    try {
+      const result = await googleDriveService.testConnection();
+      res.json({
+        success: result.success,
+        configured: googleDriveService.isEnabled(),
+        error: result.error,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to test Google Drive',
+        details: error.message
+      });
+    }
+  });
 
   const httpServer = createServer(app);
 
