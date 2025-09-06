@@ -94,12 +94,13 @@ export default function CheckoutPage() {
       deliveryAddress: fullAddress,
     };
 
-    // Show Paymob payment methods
-    setShowPaymentMethods(true);
-    return;
-
+    // TEMPORARY: Direct checkout without payment methods
     checkout(checkoutData, {
       onSuccess: () => {
+        toast({
+          title: "تم إنشاء الطلب بنجاح",
+          description: "سيتم التواصل معك قريباً لتأكيد الطلب",
+        });
         setLocation('/orders');
       },
     });
@@ -300,7 +301,7 @@ export default function CheckoutPage() {
                 </Card>
               )}
 
-              {/* Payment Method */}
+              {/* Payment Method - Temporary Notice */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -309,13 +310,13 @@ export default function CheckoutPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                     <div className="flex items-center gap-3">
-                      <CreditCard className="h-6 w-6 text-blue-600" />
+                      <Package className="h-6 w-6 text-yellow-600" />
                       <div>
-                        <div className="font-medium text-blue-900">الدفع الإلكتروني</div>
-                        <div className="text-sm text-blue-700">
-                          ادفع بأمان باستخدام البطاقة الائتمانية أو المحافظ الرقمية
+                        <div className="font-medium text-yellow-900">الدفع عند الاستلام</div>
+                        <div className="text-sm text-yellow-700">
+                          سيتم التواصل معك لتأكيد الطلب وتحديد طريقة الدفع
                         </div>
                       </div>
                     </div>
@@ -437,7 +438,7 @@ export default function CheckoutPage() {
                   ) : (
                     <>
                       <Gift className="h-4 w-4 ml-2" />
-                      تأكيد الطلب
+                      إتمام الطلب (مؤقت)
                     </>
                   )}
                 </Button>
