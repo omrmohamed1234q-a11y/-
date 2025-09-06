@@ -273,9 +273,13 @@ export default function Print() {
       'color': 'ملون'
     };
 
-    // الحصول على امتداد الملف الأصلي
+    // الحصول على اسم الملف بدون امتداد
+    const fileNameWithoutExt = originalName.replace(/\.[^/.]+$/, "");
     const fileExtension = originalName.split('.').pop() || '';
-    const displayName = `عدد ${settings.copies} ${settings.paperSize} ${paperTypeLabels[settings.paperType as keyof typeof paperTypeLabels]} ${colorModeLabels[settings.colorMode as keyof typeof colorModeLabels]}`;
+    
+    // تكوين اسم الملف: الاسم الأصلي + عدد النسخ + نوع الورق
+    const printSettings = `عدد ${settings.copies} - ${settings.paperSize} ${paperTypeLabels[settings.paperType as keyof typeof paperTypeLabels]} ${colorModeLabels[settings.colorMode as keyof typeof colorModeLabels]}`;
+    const displayName = `${fileNameWithoutExt} - ${printSettings}`;
     
     return settings.doubleSided ? `${displayName} (وجهين).${fileExtension}` : `${displayName}.${fileExtension}`;
   };
