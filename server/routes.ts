@@ -1616,6 +1616,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order = await storage.createOrder(orderData);
       console.log('✅ Order created in checkout:', order.id, 'for user:', userId);
       
+      // Update order status to processing for demo
+      setTimeout(async () => {
+        await storage.updateOrderStatus(order.id, 'processing');
+        console.log('🖨️ Order status changed to processing:', order.id);
+      }, 2000);
+      
       // Clear cart after successful order
       await storage.clearCart(userId);
 
