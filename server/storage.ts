@@ -154,6 +154,7 @@ export class MemoryStorage implements IStorage {
   private orders: Order[] = [];
   private cartItems: CartItem[] = [];
   private partners: Partner[] = [];
+  private partnerProducts: any[] = [];
   private announcements: Announcement[] = [];
   
   // User operations
@@ -482,12 +483,48 @@ export class MemoryStorage implements IStorage {
   }
   
   // Partner Products
-  async getPartnerProducts(partnerId: string): Promise<any[]> { return []; }
-  async getAllPartnerProducts(): Promise<any[]> { return []; }
-  async createPartnerProduct(product: any): Promise<any> { throw new Error('Not implemented'); }
-  async updatePartnerProduct(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
-  async deletePartnerProduct(id: string): Promise<boolean> { return false; }
-  async getPartnerProductsByCategory(category: string): Promise<any[]> { return []; }
+  async getPartnerProducts(partnerId: string): Promise<any[]> { 
+    return this.partnerProducts.filter(product => product.partnerId === partnerId);
+  }
+  async getAllPartnerProducts(): Promise<any[]> { 
+    return this.partnerProducts; 
+  }
+  async createPartnerProduct(product: any): Promise<any> { 
+    const newProduct = {
+      id: `product-${Date.now()}`,
+      ...product,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.partnerProducts.push(newProduct);
+    console.log(`📦 New partner product created: ${newProduct.name} for partner ${newProduct.partnerId}`);
+    return newProduct;
+  }
+  async updatePartnerProduct(id: string, updates: any): Promise<any> { 
+    const index = this.partnerProducts.findIndex(p => p.id === id);
+    if (index === -1) throw new Error('Partner product not found');
+    
+    this.partnerProducts[index] = {
+      ...this.partnerProducts[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    console.log(`📦 Partner product updated: ${id}`);
+    return this.partnerProducts[index];
+  }
+  async deletePartnerProduct(id: string): Promise<boolean> { 
+    const index = this.partnerProducts.findIndex(p => p.id === id);
+    if (index === -1) return false;
+    
+    this.partnerProducts.splice(index, 1);
+    console.log(`📦 Partner product deleted: ${id}`);
+    return true;
+  }
+  async getPartnerProductsByCategory(partnerId: string, category: string): Promise<any[]> { 
+    return this.partnerProducts.filter(product => 
+      product.partnerId === partnerId && product.category === category
+    );
+  }
   
   // Announcements
   async getActiveAnnouncements(): Promise<Announcement[]> { 
