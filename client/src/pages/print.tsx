@@ -114,6 +114,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
   const [scannedDocuments, setScannedDocuments] = useState<ScannedDocument[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -634,7 +635,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => window.open(doc.processedImage, '_blank')}
+                      onClick={() => setPreviewImage(doc.processedImage)}
                       title="معاينة الصورة"
                     >
                       <Eye className="w-4 h-4" />
@@ -657,6 +658,28 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* نافذة معاينة منبثقة */}
+        {previewImage && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="relative max-w-4xl max-h-full">
+              <Button
+                onClick={() => setPreviewImage(null)}
+                className="absolute -top-12 left-0 bg-white/20 hover:bg-white/30 text-white border-white/20"
+                size="sm"
+              >
+                <XIcon className="w-4 h-4 ml-1" />
+                إغلاق
+              </Button>
+              <img
+                src={previewImage}
+                alt="معاينة الصورة"
+                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                onClick={() => setPreviewImage(null)}
+              />
             </div>
           </div>
         )}
