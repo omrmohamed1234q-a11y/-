@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
+import { Readable } from 'stream';
 
 export interface GoogleDriveConfig {
   clientId: string;
@@ -161,9 +162,14 @@ export class GoogleDriveService {
         fileMetadata.parents = [folderId];
       }
 
+      // Convert buffer to readable stream for Google Drive API
+      const stream = new Readable();
+      stream.push(buffer);
+      stream.push(null); // End the stream
+
       const media = {
         mimeType: mimeType,
-        body: buffer
+        body: stream
       };
 
       console.log(`📤 Uploading buffer to Google Drive: ${fileName}`);
