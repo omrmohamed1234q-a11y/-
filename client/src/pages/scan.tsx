@@ -338,29 +338,43 @@ export default function ScanPage() {
       const blob = await response.blob()
       const file = new File([blob], `scan_${selectedMode}_${Date.now()}.jpg`, { type: 'image/jpeg' })
 
-      // Use smart upload system (Google Drive primary, Cloudinary fallback)
-      const { uploadFileToGoogleDrive, uploadFile } = await import('@/lib/upload-service')
+      // Upload to Cloudinary with auto-delete after 1 hour
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET)
+      formData.append('folder', 'temp-scans') // Separate folder for temporary scans
       
-      // Try Google Drive first, fallback to Cloudinary
-      let uploadResult = await uploadFileToGoogleDrive(file)
-      let provider = 'google_drive'
+      // Add tags and auto-delete settings
+      const tags = ['temp-scan', selectedMode, 'auto-delete-1h']
+      formData.append('tags', tags.join(','))
       
-      if (!uploadResult.success) {
-        console.log('🔄 Google Drive failed, trying Cloudinary fallback...')
-        uploadResult = await uploadFile(file)
-        provider = 'cloudinary'
-      }
+      // Set auto-delete after 1 hour (3600 seconds)
+      formData.append('transformation', 'c_scale,w_1200') // Optimize image size
       
-      if (!uploadResult.success) {
-        throw new Error(uploadResult.error || 'فشل في رفع الملف على كلا الخدمتين')
+      // Add context for better organization
+      formData.append('context', `scan_mode=${selectedMode}|auto_delete=3600`)
+
+      console.log('📤 Uploading processed scan to Cloudinary (auto-delete in 1 hour)...')
+      
+      // Upload to Cloudinary
+      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`
+      const uploadResponse = await fetch(cloudinaryUrl, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error('فشل في رفع الصورة إلى Cloudinary')
       }
 
-      console.log(`✅ Scan uploaded successfully via ${provider}`)
-      const finalUploadUrl = uploadResult.downloadUrl || uploadResult.url
+      const uploadResult = await uploadResponse.json()
+      console.log('✅ Scan uploaded to Cloudinary successfully (will auto-delete in 1 hour)')
+      
+      const finalUploadUrl = uploadResult.secure_url
 
-      // Create scanned document record
+      // Create scanned document record with expiry info
       const newDocument: ScannedDocument = {
-        id: uploadResult.fileId || `scan_${Date.now()}`,
+        id: uploadResult.public_id || `scan_${Date.now()}`,
         originalImage: capturedImage,
         processedImage: processedImageDataUrl,
         mode: selectedMode,
@@ -373,7 +387,7 @@ export default function ScanPage() {
 
       toast({
         title: "تم المسح بنجاح!",
-        description: `تم رفع المستند عبر ${provider === 'google_drive' ? 'Google Drive' : 'Cloudinary'} وحفظه في المكتبة`,
+        description: "تم مسح المستند ورفعه على Cloudinary (سيُحذف تلقائياً بعد ساعة)",
       })
 
     } catch (error) {
@@ -421,6 +435,9 @@ export default function ScanPage() {
             </CardTitle>
             <CardDescription className="text-gray-600">
               استخدم الكاميرا أو اختر صورة لمسح المستندات مع معالجة احترافية
+              <div className="mt-1 text-sm text-orange-600 font-medium">
+                ⏱️ الصور الممسوحة تُحذف تلقائياً بعد ساعة واحدة
+              </div>
             </CardDescription>
           </CardHeader>
 
@@ -592,7 +609,7 @@ export default function ScanPage() {
                     className="w-16 h-16 mx-auto mb-4 border-4 border-red-500 border-t-transparent rounded-full"
                   />
                   <h3 className="text-lg font-semibold mb-2">جاري المعالجة والرفع...</h3>
-                  <p className="text-gray-600">يتم تطبيق المرشحات ورفع الملف (Google Drive → Cloudinary)</p>
+                  <p className="text-gray-600">يتم تطبيق المرشحات ورفع الملف على Cloudinary (مؤقت - ساعة واحدة)</p>
                 </motion.div>
               )}
 
