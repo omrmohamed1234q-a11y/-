@@ -417,7 +417,20 @@ export default function Home() {
                       </motion.div>
                     </div>
                     
-                    <div className="flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                      {/* خانة فك القفل */}
+                      <div className="flex gap-2 w-full">
+                        <input
+                          type="password"
+                          placeholder="مفتاح فك القفل"
+                          className="flex-1 px-3 py-2 text-xs border border-amber-300 rounded-lg bg-amber-50 focus:outline-none focus:border-amber-500 text-center placeholder-amber-600"
+                        />
+                        <button className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs rounded-lg transition-colors">
+                          <Lock className="w-3 h-3" />
+                        </button>
+                      </div>
+                      
+                      {/* نص قريباً */}
                       <motion.div
                         className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-full shadow-lg"
                         animate={{
@@ -434,7 +447,7 @@ export default function Home() {
                         }}
                       >
                         <span className="text-sm font-bold flex items-center">
-                          ✨ قريباً جداً ✨
+                          قريباً جداً
                         </span>
                       </motion.div>
                     </div>
