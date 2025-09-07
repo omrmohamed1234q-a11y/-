@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Camera, Upload, RotateCcw, Check, X, FileText, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { uploadFileToGoogleDrive } from '@/lib/upload-service';
+import { uploadFileToGoogleDrive, uploadFile } from '@/lib/upload-service';
 
 interface CameraCaptureProps {
   onCapture: (file: File, downloadUrl: string) => void;
@@ -98,11 +98,17 @@ export function CameraCapture({
 
         const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
         
-        // Upload to Google Drive
-        const result = await uploadFileToGoogleDrive(file);
+        // Try Google Drive first, fallback to Cloudinary
+        let result = await uploadFileToGoogleDrive(file);
         if (!result.success) {
-          throw new Error(result.error || 'Upload failed');
+          console.log('🔄 Google Drive failed, trying Cloudinary fallback...');
+          result = await uploadFile(file);
         }
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Upload failed on both Google Drive and Cloudinary');
+        }
+        
         const downloadUrl = result.downloadUrl || result.url;
         if (!downloadUrl) {
           throw new Error('No download URL received from upload');
@@ -112,7 +118,7 @@ export function CameraCapture({
         
         toast({
           title: 'تم الحفظ بنجاح',
-          description: 'تم رفع الصورة وحفظها بنجاح'
+          description: `تم رفع الصورة بنجاح عبر ${result.provider === 'google_drive' ? 'Google Drive' : 'Cloudinary'}`
         });
         
         setIsOpen(false);
@@ -122,7 +128,7 @@ export function CameraCapture({
       console.error('Upload error:', error);
       toast({
         title: 'خطأ في الرفع',
-        description: 'فشل في رفع الملف. حاول مرة أخرى.',
+        description: error instanceof Error ? error.message : 'فشل في رفع الملف. حاول مرة أخرى.',
         variant: 'destructive'
       });
     } finally {
@@ -147,11 +153,18 @@ export function CameraCapture({
 
     setIsUploading(true);
     try {
-      console.log('Starting Google Drive upload...');
-      const result = await uploadFileToGoogleDrive(file);
+      console.log('Starting upload process...');
+      // Try Google Drive first, fallback to Cloudinary
+      let result = await uploadFileToGoogleDrive(file);
       if (!result.success) {
-        throw new Error(result.error || 'Upload failed');
+        console.log('🔄 Google Drive failed, trying Cloudinary fallback...');
+        result = await uploadFile(file);
       }
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Upload failed on both Google Drive and Cloudinary');
+      }
+      
       const downloadUrl = result.downloadUrl || result.url;
       if (!downloadUrl) {
         throw new Error('No download URL received from upload');
@@ -162,7 +175,7 @@ export function CameraCapture({
       
       toast({
         title: 'تم الرفع بنجاح',
-        description: 'تم رفع الملف بنجاح'
+        description: `تم رفع الملف بنجاح عبر ${result.provider === 'google_drive' ? 'Google Drive' : 'Cloudinary'}`
       });
       
       setIsOpen(false);
