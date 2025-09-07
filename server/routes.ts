@@ -316,6 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           url: driveResult.googleDrive.directDownloadLink || driveResult.googleDrive.webViewLink,
           webViewLink: driveResult.googleDrive.webViewLink,
           directDownloadLink: driveResult.googleDrive.directDownloadLink,
+          folderLink: driveResult.googleDrive.folderLink,
           fileId: driveResult.googleDrive.fileId,
           provider: 'google_drive',
           message: 'تم رفع الملف بنجاح على Google Drive لتوفير التكاليف',

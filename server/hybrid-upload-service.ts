@@ -6,6 +6,7 @@ export interface HybridUploadResult {
     fileId?: string;
     webViewLink?: string;
     directDownloadLink?: string;
+    folderLink?: string;
     error?: string;
   };
   primaryUrl: string;
@@ -165,6 +166,12 @@ export class HybridUploadService {
         if (googleDriveResult.success && googleDriveResult.fileId) {
           const directLink = googleDriveService.getDirectDownloadLink(googleDriveResult.fileId);
           result.googleDrive.directDownloadLink = directLink;
+          
+          // Add folder link if folder was created
+          if (folderId) {
+            result.googleDrive.folderLink = googleDriveService.getFolderWebViewLink(folderId);
+          }
+          
           result.backupUrls.push(directLink);
           result.primaryUrl = directLink;
           result.message = 'تم رفع الملف بنجاح إلى Google Drive';

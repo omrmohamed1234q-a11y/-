@@ -292,6 +292,13 @@ export class GoogleDriveService {
   }
 
   /**
+   * Get folder web view link
+   */
+  getFolderWebViewLink(folderId: string): string {
+    return `https://drive.google.com/drive/folders/${folderId}`;
+  }
+
+  /**
    * Test connection to Google Drive
    */
   async testConnection(): Promise<{ success: boolean; error?: string }> {

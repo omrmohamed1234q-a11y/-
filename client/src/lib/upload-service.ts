@@ -8,9 +8,10 @@ export interface UploadResult {
   url?: string;
   downloadUrl?: string;
   previewUrl?: string;
-  provider?: 'cloudinary' | 'firebase';
+  provider?: 'cloudinary' | 'firebase' | 'google_drive';
   error?: string;
   fileId?: string;
+  folderLink?: string;
 }
 
 // Upload file using Cloudinary with account integration
@@ -78,11 +79,12 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
       
       const uploadResult: UploadResult = {
         success: true,
-        url: result.url,
+        url: result.folderLink || result.url, // Use folder link for admin, file link for direct access
         downloadUrl: result.directDownloadLink || result.url,
         previewUrl: result.webViewLink,
         provider: 'google_drive' as const,
-        fileId: result.fileId
+        fileId: result.fileId,
+        folderLink: result.folderLink
       };
       
       // Notify server about successful upload
