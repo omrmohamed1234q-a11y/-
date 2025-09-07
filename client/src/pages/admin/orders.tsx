@@ -332,10 +332,11 @@ export default function AdminOrders() {
                               setSelectedOrder(order);
                               setInvoicePrintOpen(true);
                             }}
-                            className="text-green-600 hover:text-green-700 border-green-200 hover:bg-green-50"
-                            title="طباعة الإيصال"
+                            className="text-green-600 hover:text-green-700 border-green-200 hover:bg-green-50 font-medium"
+                            title="طباعة الفاتورة مع شعار اطبعلي"
                           >
-                            <Printer className="w-4 h-4" />
+                            <Printer className="w-4 h-4 ml-1" />
+                            <span className="text-xs">فاتورة</span>
                           </Button>
                         </div>
                         
@@ -641,7 +642,7 @@ export default function AdminOrders() {
                       </div>
                     ))}
                     
-                    {(!selectedOrder.timeline || selectedOrder.timeline.length === 0) && (
+                    {(!selectedOrder.timeline || !Array.isArray(selectedOrder.timeline) || selectedOrder.timeline.length === 0) && (
                       <p className="text-center text-muted-foreground">لا توجد أحداث في التتبع</p>
                     )}
                   </div>
