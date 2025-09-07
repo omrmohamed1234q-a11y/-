@@ -549,6 +549,25 @@ export default function AdminOrders() {
 
                     {/* أزرار التحكم */}
                     <div className="flex flex-col gap-2 ml-6">
+                      {/* زر فتح Google Drive */}
+                      {printFiles.length > 0 && (
+                        <Button 
+                          size="sm"
+                          onClick={() => {
+                            // فتح كل الملفات في تابات منفصلة
+                            printFiles.forEach(file => {
+                              if (file.fileUrl) {
+                                window.open(file.fileUrl, '_blank');
+                              }
+                            });
+                          }}
+                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          فتح Google Drive ({printFiles.length})
+                        </Button>
+                      )}
+
                       {/* زر طباعة الفاتورة */}
                       <Dialog open={invoicePrintOpen && selectedOrder?.id === order.id} onOpenChange={setInvoicePrintOpen}>
                         <DialogTrigger asChild>

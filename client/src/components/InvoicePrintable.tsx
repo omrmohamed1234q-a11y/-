@@ -111,8 +111,8 @@ export const InvoicePrintable: React.FC<InvoicePrintableProps> = ({ order }) => 
         </div>
       </div>
 
-        {/* Invoice Content */}
-        <div id="invoice-print-area" className="p-8" dir="rtl">
+      {/* Invoice Content */}
+      <div id="invoice-print-area" className="p-8" dir="rtl">
           <style>{`
             @media print {
               body * { visibility: hidden; }
