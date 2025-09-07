@@ -152,18 +152,25 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="text-6xl md:text-8xl font-bold mb-8 leading-tight">
-              <motion.span 
-                className="bg-gradient-to-r from-red-600 via-black via-green-600 to-red-600 bg-clip-text text-transparent"
-                style={{ backgroundSize: '300% 300%', background: 'linear-gradient(45deg, #CE1126 0%, #000000 25%, #007A3D 50%, #CE1126 75%, #000000 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
-                animate={{ 
-                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+            <div className="flex flex-col items-center mb-8">
+              <motion.img 
+                src="/atbaali-logo.png" 
+                alt="اطبعلي" 
+                className="w-20 h-20 object-contain mb-4"
+                whileHover={{ scale: 1.1 }}
+                transition={{ duration: 0.3 }}
+              />
+              <motion.h1 
+                className="text-3xl md:text-4xl font-bold text-gray-800"
+                style={{ 
+                  background: 'linear-gradient(45deg, #CE1126, #007A3D)', 
+                  WebkitBackgroundClip: 'text', 
+                  WebkitTextFillColor: 'transparent' 
                 }}
-                transition={{ duration: 5, repeat: Infinity }}
               >
-                اطبعلي
-              </motion.span>
-            </h1>
+                مرحبا {user?.fullName || 'عزيزي المستخدم'}
+              </motion.h1>
+            </div>
             
             <motion.div 
               className="flex justify-center mb-8"
