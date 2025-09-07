@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { Link } from 'wouter'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,7 +10,9 @@ import {
   CheckIcon,
   XIcon,
   RotateCcwIcon,
-  ArrowLeft
+  ArrowLeft,
+  Download,
+  Eye
 } from 'lucide-react'
 
 type ScanMode = 'color' | 'grayscale' | 'blackwhite'
@@ -21,7 +23,7 @@ interface ScannedDocument {
   originalImage: string
   processedImage: string
   mode: ScanMode
-  uploadUrl?: string
+  uploadUrl: string
   timestamp: Date
 }
 
@@ -82,80 +84,14 @@ const ScanModeSelector = ({
   )
 }
 
-const ImagePreview = ({ 
-  src, 
-  alt, 
-  onRetake, 
-  onConfirm, 
-  isProcessing 
-}: {
-  src: string
-  alt: string
-  onRetake: () => void
-  onConfirm: () => void
-  isProcessing: boolean
-}) => {
-  return (
-    <div className="space-y-4">
-      <div className="relative bg-gray-100 rounded-xl overflow-hidden">
-        <img 
-          src={src} 
-          alt={alt}
-          className="w-full h-64 object-contain"
-        />
-        {isProcessing && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-8 h-8 border-4 border-white border-t-transparent rounded-full"
-            />
-          </div>
-        )}
-      </div>
-      
-      <div className="flex gap-3">
-        <Button
-          variant="outline"
-          onClick={onRetake}
-          disabled={isProcessing}
-          className="flex-1 h-12 border-2 border-gray-200 hover:border-red-300 rounded-xl"
-        >
-          <RotateCcwIcon className="w-4 h-4 ml-2" />
-          إعادة التقاط
-        </Button>
-        <Button
-          onClick={onConfirm}
-          disabled={isProcessing}
-          className="flex-1 h-12 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl"
-        >
-          {isProcessing ? (
-            <div className="flex items-center gap-2">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-              />
-              معالجة...
-            </div>
-          ) : (
-            <>
-              <CheckIcon className="w-4 h-4 ml-2" />
-              تأكيد الرفع
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
 export default function ScanPage() {
   const [currentStep, setCurrentStep] = useState<ScanStep>('capture')
   const [selectedMode, setSelectedMode] = useState<ScanMode>('color')
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [scannedDocuments, setScannedDocuments] = useState<ScannedDocument[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -163,60 +99,73 @@ export default function ScanPage() {
   const [isUsingCamera, setIsUsingCamera] = useState(false)
   const { toast } = useToast()
 
-  // Start camera
+  // ✅ تنظيف الكاميرا عند الخروج من الصفحة
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [stream])
+
+  // ✅ بدء تشغيل الكاميرا مع معالجة أخطاء محسّنة
   const startCamera = useCallback(async () => {
     try {
+      console.log('🎥 Starting camera...')
+      
       if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error('المتصفح لا يدعم الكاميرا')
+        throw new Error('CAMERA_NOT_SUPPORTED')
       }
 
-      let constraints = { 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+      // إيقاف أي كاميرا سابقة
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
       }
 
+      // تجربة الكاميرا الخلفية أولاً
+      let mediaStream: MediaStream
       try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
-        setStream(mediaStream)
-        setIsUsingCamera(true)
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream
-        }
-        
-        toast({
-          title: "تم تفعيل الكاميرا",
-          description: "يمكنك الآن التقاط الصور",
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
         })
+        console.log('✅ Back camera activated')
       } catch (backCameraError) {
-        constraints = { video: true }
-        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
-        setStream(mediaStream)
-        setIsUsingCamera(true)
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream
-        }
-        
-        toast({
-          title: "تم تفعيل الكاميرا",
-          description: "استخدام الكاميرا الأمامية",
-        })
+        // تجربة أي كاميرا متاحة
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true })
+        console.log('✅ Front camera activated')
       }
-    } catch (error) {
-      console.error('Camera error:', error)
+
+      setStream(mediaStream)
+      setIsUsingCamera(true)
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream
+        
+        // انتظار حتى يتم تحميل الفيديو
+        videoRef.current.onloadedmetadata = () => {
+          console.log('✅ Camera video loaded')
+          toast({
+            title: "تم تفعيل الكاميرا",
+            description: "يمكنك الآن التقاط الصور",
+          })
+        }
+      }
+
+    } catch (error: any) {
+      console.error('❌ Camera error:', error)
       
       let errorMessage = "لا يمكن الوصول إلى الكاميرا"
       
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError') {
-          errorMessage = "يرجى السماح بالوصول إلى الكاميرا من إعدادات المتصفح"
-        } else if (error.name === 'NotFoundError') {
-          errorMessage = "لم يتم العثور على كاميرا على هذا الجهاز"
-        } else if (error.name === 'NotSupportedError') {
-          errorMessage = "المتصفح لا يدعم استخدام الكاميرا"
-        }
+      if (error?.name === 'NotAllowedError') {
+        errorMessage = "يرجى السماح بالوصول إلى الكاميرا من إعدادات المتصفح"
+      } else if (error?.name === 'NotFoundError') {
+        errorMessage = "لم يتم العثور على كاميرا على هذا الجهاز"
+      } else if (error?.name === 'NotSupportedError' || error?.message === 'CAMERA_NOT_SUPPORTED') {
+        errorMessage = "المتصفح لا يدعم استخدام الكاميرا"
       }
       
       toast({
@@ -224,13 +173,21 @@ export default function ScanPage() {
         description: errorMessage,
         variant: "destructive",
       })
-    }
-  }, [toast])
 
-  // Stop camera
+      // إعادة تعيين حالة الكاميرا
+      setIsUsingCamera(false)
+      setStream(null)
+    }
+  }, [stream, toast])
+
+  // ✅ إيقاف الكاميرا
   const stopCamera = useCallback(() => {
+    console.log('🛑 Stopping camera...')
     if (stream) {
-      stream.getTracks().forEach(track => track.stop())
+      stream.getTracks().forEach(track => {
+        track.stop()
+        console.log(`Stopped track: ${track.kind}`)
+      })
       setStream(null)
     }
     setIsUsingCamera(false)
@@ -239,124 +196,182 @@ export default function ScanPage() {
     }
   }, [stream])
 
-  // Capture photo from camera
+  // ✅ التقاط صورة من الكاميرا
   const capturePhoto = useCallback(() => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      const context = canvas.getContext('2d')
+    if (!videoRef.current || !canvasRef.current) {
+      toast({
+        title: "خطأ",
+        description: "لا يمكن التقاط الصورة، تأكد من تشغيل الكاميرا",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const context = canvas.getContext('2d')
+    
+    if (!context || !video.videoWidth || !video.videoHeight) {
+      toast({
+        title: "خطأ",
+        description: "الكاميرا غير جاهزة، حاول مرة أخرى",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      // تعيين حجم الكانفاس
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
       
-      if (context && video.videoWidth && video.videoHeight) {
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        context.drawImage(video, 0, 0, canvas.width, canvas.height)
-        
-        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9)
-        setCapturedImage(imageDataUrl)
-        setCurrentStep('preview')
-        stopCamera()
-        
-        toast({
-          title: "تم التقاط الصورة",
-          description: "يمكنك الآن معاينتها ومعالجتها",
-        })
-      }
+      // رسم الصورة
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      
+      // تحويل إلى Data URL
+      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9)
+      setCapturedImage(imageDataUrl)
+      setCurrentStep('preview')
+      stopCamera()
+      
+      console.log('✅ Photo captured successfully')
+      toast({
+        title: "تم التقاط الصورة",
+        description: "يمكنك الآن معاينتها ومعالجتها",
+      })
+    } catch (error) {
+      console.error('❌ Capture error:', error)
+      toast({
+        title: "فشل التقاط الصورة",
+        description: "حدث خطأ، حاول مرة أخرى",
+        variant: "destructive"
+      })
     }
   }, [stopCamera, toast])
 
-  // Handle file selection
+  // ✅ اختيار ملف من الجهاز
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        setCapturedImage(result)
-        setCurrentStep('preview')
-      }
-      reader.readAsDataURL(file)
-    }
-  }, [])
+    if (!file) return
 
-  // Process and upload image
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "نوع ملف غير صحيح",
+        description: "يرجى اختيار صورة فقط (JPG, PNG, etc.)",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const result = e.target?.result as string
+      setCapturedImage(result)
+      setCurrentStep('preview')
+      
+      toast({
+        title: "تم تحديد الصورة",
+        description: "يمكنك الآن معاينتها ومعالجتها",
+      })
+    }
+    reader.onerror = () => {
+      toast({
+        title: "خطأ في قراءة الملف",
+        description: "لا يمكن قراءة الصورة المحددة",
+        variant: "destructive"
+      })
+    }
+    reader.readAsDataURL(file)
+  }, [toast])
+
+  // ✅ معالجة ورفع الصورة
   const processAndUpload = useCallback(async () => {
-    if (!capturedImage) return
+    if (!capturedImage) {
+      toast({
+        title: "لا توجد صورة",
+        description: "لا توجد صورة للمعالجة",
+        variant: "destructive"
+      })
+      return
+    }
 
     setIsProcessing(true)
+    setIsUploading(true)
     setCurrentStep('processing')
 
     try {
-      // Apply scan mode filter to image
+      console.log('🎨 Processing image...')
+      
+      // إنشاء كانفاس للمعالجة
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
-      const img = new Image()
       
-      await new Promise((resolve) => {
-        img.onload = resolve
+      if (!ctx) {
+        throw new Error('لا يمكن إنشاء Canvas للمعالجة')
+      }
+
+      // تحميل الصورة
+      const img = new Image()
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error('فشل في تحميل الصورة'))
         img.src = capturedImage
       })
 
+      // تعيين حجم الكانفاس
       canvas.width = img.width
       canvas.height = img.height
       
-      if (ctx) {
-        ctx.drawImage(img, 0, 0)
+      // رسم الصورة
+      ctx.drawImage(img, 0, 0)
+      
+      // تطبيق المرشحات حسب النوع المحدد
+      if (selectedMode === 'grayscale') {
+        console.log('🎨 Applying grayscale filter...')
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const data = imageData.data
         
-        // Apply filters based on scan mode
-        if (selectedMode === 'grayscale') {
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-          const data = imageData.data
-          
-          for (let i = 0; i < data.length; i += 4) {
-            const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
-            data[i] = gray     // red
-            data[i + 1] = gray // green  
-            data[i + 2] = gray // blue
-          }
-          
-          ctx.putImageData(imageData, 0, 0)
-        } else if (selectedMode === 'blackwhite') {
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-          const data = imageData.data
-          
-          for (let i = 0; i < data.length; i += 4) {
-            const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
-            const threshold = gray > 128 ? 255 : 0
-            data[i] = threshold     // red
-            data[i + 1] = threshold // green  
-            data[i + 2] = threshold // blue
-          }
-          
-          ctx.putImageData(imageData, 0, 0)
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
+          data[i] = gray     // red
+          data[i + 1] = gray // green  
+          data[i + 2] = gray // blue
         }
+        
+        ctx.putImageData(imageData, 0, 0)
+      } else if (selectedMode === 'blackwhite') {
+        console.log('🎨 Applying black & white filter...')
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const data = imageData.data
+        
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
+          const threshold = gray > 128 ? 255 : 0
+          data[i] = threshold     // red
+          data[i + 1] = threshold // green  
+          data[i + 2] = threshold // blue
+        }
+        
+        ctx.putImageData(imageData, 0, 0)
       }
 
+      // تحويل إلى Blob
       const processedImageDataUrl = canvas.toDataURL('image/jpeg', 0.9)
-
-      // Convert to blob for smart upload system
+      
       const response = await fetch(processedImageDataUrl)
       const blob = await response.blob()
       const file = new File([blob], `scan_${selectedMode}_${Date.now()}.jpg`, { type: 'image/jpeg' })
 
-      // Upload to Cloudinary with auto-delete after 1 hour
+      console.log('📤 Uploading to Cloudinary...')
+
+      // رفع إلى Cloudinary مع الحذف التلقائي
       const formData = new FormData()
       formData.append('file', file)
       formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET)
-      formData.append('folder', 'temp-scans') // Separate folder for temporary scans
-      
-      // Add tags and auto-delete settings
-      const tags = ['temp-scan', selectedMode, 'auto-delete-1h']
-      formData.append('tags', tags.join(','))
-      
-      // Set auto-delete after 1 hour (3600 seconds)
-      formData.append('transformation', 'c_scale,w_1200') // Optimize image size
-      
-      // Add context for better organization
-      formData.append('context', `scan_mode=${selectedMode}|auto_delete=3600`)
+      formData.append('folder', 'temp-scans')
+      formData.append('tags', `temp-scan,${selectedMode},auto-delete-1h`)
+      formData.append('transformation', 'c_scale,w_1200,q_auto')
 
-      console.log('📤 Uploading processed scan to Cloudinary (auto-delete in 1 hour)...')
-      
-      // Upload to Cloudinary
       const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`
       const uploadResponse = await fetch(cloudinaryUrl, {
         method: 'POST',
@@ -364,21 +379,20 @@ export default function ScanPage() {
       })
 
       if (!uploadResponse.ok) {
-        throw new Error('فشل في رفع الصورة إلى Cloudinary')
+        const errorData = await uploadResponse.json().catch(() => ({}))
+        throw new Error(errorData.error?.message || 'فشل في رفع الصورة إلى Cloudinary')
       }
 
       const uploadResult = await uploadResponse.json()
-      console.log('✅ Scan uploaded to Cloudinary successfully (will auto-delete in 1 hour)')
-      
-      const finalUploadUrl = uploadResult.secure_url
+      console.log('✅ Upload successful:', uploadResult.secure_url)
 
-      // Create scanned document record with expiry info
+      // إنشاء سجل المستند
       const newDocument: ScannedDocument = {
         id: uploadResult.public_id || `scan_${Date.now()}`,
         originalImage: capturedImage,
         processedImage: processedImageDataUrl,
         mode: selectedMode,
-        uploadUrl: finalUploadUrl!,
+        uploadUrl: uploadResult.secure_url,
         timestamp: new Date()
       }
 
@@ -390,28 +404,37 @@ export default function ScanPage() {
         description: "تم مسح المستند ورفعه على Cloudinary (سيُحذف تلقائياً بعد ساعة)",
       })
 
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Processing error:', error)
       toast({
         title: "خطأ في المعالجة",
-        description: error instanceof Error ? error.message : "حدث خطأ أثناء معالجة الصورة",
+        description: error?.message || "حدث خطأ أثناء معالجة الصورة",
         variant: "destructive",
       })
       setCurrentStep('preview')
     } finally {
       setIsProcessing(false)
+      setIsUploading(false)
     }
   }, [capturedImage, selectedMode, toast])
 
-  // Reset to capture mode
+  // ✅ إعادة تعيين المسح
   const resetScan = useCallback(() => {
     setCapturedImage(null)
     setCurrentStep('capture')
+    setIsProcessing(false)
+    setIsUploading(false)
     stopCamera()
+    
+    // مسح input الملف
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }, [stopCamera])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Top Header with Back Button */}
+      {/* Header */}
       <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-200">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -442,7 +465,7 @@ export default function ScanPage() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Scan Mode Selector */}
+            {/* اختيار نوع المسح */}
             <ScanModeSelector
               selectedMode={selectedMode}
               onModeChange={setSelectedMode}
@@ -450,6 +473,7 @@ export default function ScanPage() {
             />
 
             <AnimatePresence mode="wait">
+              {/* مرحلة التقاط الصورة */}
               {currentStep === 'capture' && (
                 <motion.div
                   key="capture"
@@ -458,7 +482,7 @@ export default function ScanPage() {
                   exit={{ opacity: 0, y: -20 }}
                   className="space-y-4"
                 >
-                  {/* Camera View */}
+                  {/* عرض الكاميرا */}
                   {isUsingCamera && (
                     <div className="space-y-4">
                       <div className="relative bg-black rounded-xl overflow-hidden">
@@ -470,15 +494,15 @@ export default function ScanPage() {
                           className="w-full h-64 object-cover"
                         />
                         
-                        {/* Camera overlay guide */}
+                        {/* إطار التوجيه */}
                         <div className="absolute inset-4 border-2 border-white/50 border-dashed rounded-lg flex items-center justify-center pointer-events-none">
                           <div className="text-white/70 text-center text-sm">
                             <p>ضع المستند داخل الإطار</p>
                           </div>
                         </div>
                         
-                        {/* Capture button */}
-                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
+                        {/* زر التقاط الصورة */}
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
                           <Button
                             onClick={capturePhoto}
                             className="w-16 h-16 rounded-full bg-white hover:bg-gray-100 text-black shadow-xl border-4 border-white/20"
@@ -488,32 +512,26 @@ export default function ScanPage() {
                           </Button>
                         </div>
                         
-                        {/* Close button */}
+                        {/* زر الإغلاق */}
                         <Button
                           onClick={stopCamera}
                           variant="outline"
                           size="sm"
                           className="absolute top-4 right-4 bg-white/90 hover:bg-white text-black border-0"
-                          data-testid="button-stop-camera"
                         >
                           <XIcon className="w-4 h-4" />
                         </Button>
                         
-                        {/* Camera info */}
-                        <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-xs">
-                          🔴 Live
+                        {/* مؤشر البث المباشر */}
+                        <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">
+                          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                          Live
                         </div>
-                      </div>
-                      
-                      <div className="text-center">
-                        <p className="text-gray-600 text-sm">
-                          تأكد من وضوح النص ووضع المستند بشكل مستقيم
-                        </p>
                       </div>
                     </div>
                   )}
 
-                  {/* Camera Instructions */}
+                  {/* الإرشادات */}
                   {!isUsingCamera && (
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
                       <h3 className="font-semibold text-blue-800 mb-2">إرشادات الاستخدام:</h3>
@@ -526,7 +544,7 @@ export default function ScanPage() {
                     </div>
                   )}
 
-                  {/* Capture Options */}
+                  {/* خيارات التقاط الصورة */}
                   {!isUsingCamera && (
                     <div className="grid grid-cols-2 gap-4">
                       <Button
@@ -550,51 +568,70 @@ export default function ScanPage() {
                     </div>
                   )}
 
-                  {/* Browser Compatibility Check */}
-                  {!navigator.mediaDevices && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mt-4">
-                      <div className="flex items-center gap-2 text-orange-800">
-                        <span>⚠️</span>
-                        <span className="font-semibold">تنبيه</span>
-                      </div>
-                      <p className="text-orange-700 text-sm mt-1">
-                        المتصفح الحالي لا يدعم الكاميرا. يمكنك استخدام خيار "اختيار من الجهاز" بدلاً من ذلك.
-                      </p>
-                    </div>
-                  )}
-
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleFileSelect}
                     className="hidden"
-                    data-testid="input-file-select"
                   />
-                  <canvas
-                    ref={canvasRef}
-                    className="hidden"
-                  />
+                  <canvas ref={canvasRef} className="hidden" />
                 </motion.div>
               )}
 
+              {/* مرحلة معاينة الصورة */}
               {currentStep === 'preview' && capturedImage && (
                 <motion.div
                   key="preview"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
+                  className="space-y-4"
                 >
-                  <ImagePreview
-                    src={capturedImage}
-                    alt="معاينة الصورة الملتقطة"
-                    onRetake={resetScan}
-                    onConfirm={processAndUpload}
-                    isProcessing={isProcessing}
-                  />
+                  <div className="relative bg-gray-100 rounded-xl overflow-hidden">
+                    <img 
+                      src={capturedImage} 
+                      alt="معاينة الصورة"
+                      className="w-full h-64 object-contain"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={resetScan}
+                      disabled={isProcessing}
+                      className="flex-1 h-12 border-2 border-gray-200 hover:border-red-300 rounded-xl"
+                    >
+                      <RotateCcwIcon className="w-4 h-4 ml-2" />
+                      إعادة التقاط
+                    </Button>
+                    <Button
+                      onClick={processAndUpload}
+                      disabled={isProcessing || isUploading}
+                      className="flex-1 h-12 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl"
+                    >
+                      {isProcessing ? (
+                        <div className="flex items-center gap-2">
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                          />
+                          معالجة...
+                        </div>
+                      ) : (
+                        <>
+                          <CheckIcon className="w-4 h-4 ml-2" />
+                          تأكيد الرفع
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </motion.div>
               )}
 
+              {/* مرحلة المعالجة */}
               {currentStep === 'processing' && (
                 <motion.div
                   key="processing"
@@ -613,6 +650,7 @@ export default function ScanPage() {
                 </motion.div>
               )}
 
+              {/* مرحلة الاكتمال */}
               {currentStep === 'complete' && (
                 <motion.div
                   key="complete"
@@ -624,54 +662,67 @@ export default function ScanPage() {
                   <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
                     <CheckIcon className="w-8 h-8 text-green-600" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2 text-green-700">تم الرفع بنجاح!</h3>
-                  <p className="text-gray-600 mb-6">تم حفظ المستند في مكتبتك على Cloudinary</p>
+                  <h3 className="text-lg font-semibold mb-2">تم المسح بنجاح!</h3>
+                  <p className="text-gray-600 mb-4">تم معالجة المستند ورفعه بنجاح</p>
                   
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={resetScan}
-                      className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
-                      data-testid="button-scan-another"
-                    >
-                      مسح مستند آخر
-                    </Button>
-                    <Link href="/" className="flex-1">
-                      <Button variant="outline" className="w-full" data-testid="button-go-home">
-                        العودة للرئيسية
-                      </Button>
-                    </Link>
-                  </div>
+                  <Button
+                    onClick={resetScan}
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6"
+                  >
+                    مسح مستند جديد
+                  </Button>
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* عرض المستندات الممسوحة */}
+            {scannedDocuments.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-4">المستندات الممسوحة ({scannedDocuments.length})</h3>
+                <div className="space-y-3">
+                  {scannedDocuments.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={doc.processedImage} 
+                          alt="مصغرة المستند"
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                        <div>
+                          <p className="font-medium">مسح {doc.mode === 'color' ? 'ملون' : doc.mode === 'grayscale' ? 'رمادي' : 'أبيض وأسود'}</p>
+                          <p className="text-sm text-gray-500">{doc.timestamp.toLocaleString('ar-EG')}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(doc.uploadUrl, '_blank')}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const link = document.createElement('a')
+                            link.href = doc.uploadUrl
+                            link.download = `scan_${doc.mode}_${doc.timestamp.getTime()}.jpg`
+                            document.body.appendChild(link)
+                            link.click()
+                            document.body.removeChild(link)
+                          }}
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        {/* Scanned Documents Library */}
-        {scannedDocuments.length > 0 && (
-          <Card className="mt-6 bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-            <CardHeader>
-              <CardTitle className="text-lg">المستندات الممسوحة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                {scannedDocuments.map((doc) => (
-                  <div key={doc.id} className="relative bg-gray-100 rounded-lg overflow-hidden">
-                    <img 
-                      src={doc.processedImage} 
-                      alt={`مستند ${doc.id}`}
-                      className="w-full h-32 object-cover"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2 text-xs">
-                      <p className="truncate">{doc.mode}</p>
-                      <p>{doc.timestamp.toLocaleDateString('ar-EG')}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   )
