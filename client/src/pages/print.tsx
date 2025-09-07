@@ -368,10 +368,13 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
     }
   }, [stopCamera])
 
+  // تسجيل حالة المكون للتشخيص
+  console.log('SmartScan render:', { currentStep, isUsingCamera, capturedImage: !!capturedImage })
+
   return (
-    <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+    <Card className="bg-white border shadow-lg">
       <CardHeader className="text-center pb-4">
-        <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        <CardTitle className="text-2xl font-bold text-blue-600">
           مسح ضوئي ذكي
         </CardTitle>
         <p className="text-gray-600">
@@ -386,15 +389,9 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
           disabled={currentStep !== 'capture'}
         />
 
-        <AnimatePresence mode="wait">
-          {currentStep === 'capture' && (
-            <motion.div
-              key="capture"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-4"
-            >
+        {/* تبسيط المكون للتشخيص - بدون framer-motion مؤقتاً */}
+        {currentStep === 'capture' && (
+          <div className="space-y-4">
               {isUsingCamera && (
                 <div className="space-y-4">
                   <div className="relative bg-black rounded-xl overflow-hidden">
@@ -459,25 +456,19 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
                 </div>
               )}
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <canvas ref={canvasRef} className="hidden" />
-            </motion.div>
-          )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+        )}
 
-          {currentStep === 'preview' && capturedImage && (
-            <motion.div
-              key="preview"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-4"
-            >
+        {currentStep === 'preview' && capturedImage && (
+          <div className="space-y-4">
               <div className="relative bg-gray-100 rounded-xl overflow-hidden">
                 <img 
                   src={capturedImage} 
@@ -503,11 +494,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
                 >
                   {isProcessing ? (
                     <div className="flex items-center gap-2">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                      />
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       معالجة...
                     </div>
                   ) : (
@@ -518,50 +505,33 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
                   )}
                 </Button>
               </div>
-            </motion.div>
-          )}
+            </div>
+        )}
 
-          {currentStep === 'processing' && (
-            <motion.div
-              key="processing"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="text-center py-12"
-            >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="w-16 h-16 mx-auto mb-4 border-4 border-red-500 border-t-transparent rounded-full"
-              />
-              <h3 className="text-lg font-semibold mb-2">جاري معالجة الصورة...</h3>
-              <p className="text-gray-600">يتم تحضير الملف للطباعة</p>
-            </motion.div>
-          )}
+        {currentStep === 'processing' && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+            <h3 className="text-lg font-semibold mb-2">جاري معالجة الصورة...</h3>
+            <p className="text-gray-600">يتم تحضير الملف للطباعة</p>
+          </div>
+        )}
 
-          {currentStep === 'complete' && (
-            <motion.div
-              key="complete"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="text-center py-8"
+        {currentStep === 'complete' && (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckIcon className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">تم بنجاح!</h3>
+            <p className="text-gray-600 mb-4">تم إضافة الملف للطباعة</p>
+            
+            <Button
+              onClick={resetScan}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6"
             >
-              <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckIcon className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">تم بنجاح!</h3>
-              <p className="text-gray-600 mb-4">تم إضافة الملف للطباعة</p>
-              
-              <Button
-                onClick={resetScan}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6"
-              >
-                مسح مستند جديد
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              مسح مستند جديد
+            </Button>
+          </div>
+        )}
 
         {scannedDocuments.length > 0 && (
           <div className="mt-8">
@@ -580,13 +550,31 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
                       <p className="text-sm text-gray-500">{doc.timestamp.toLocaleString('ar-EG')}</p>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(doc.processedImage, '_blank')}
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(doc.processedImage, '_blank')}
+                      title="معاينة الصورة"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const link = document.createElement('a')
+                        link.href = doc.processedImage
+                        link.download = `scan_${doc.mode}_${doc.timestamp.getTime()}.jpg`
+                        document.body.appendChild(link)
+                        link.click()
+                        document.body.removeChild(link)
+                      }}
+                      title="تحميل الصورة"
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
