@@ -198,7 +198,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
     }
   }, [stream, toast])
 
-  // التقاط صورة
+  // التقاط صورة مبسط
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) {
       toast({
@@ -223,17 +223,29 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
     }
 
     try {
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
+      // تعيين حجم محسن للكانفاس
+      const maxWidth = 1200
+      const ratio = video.videoWidth / video.videoHeight
+      
+      if (video.videoWidth > maxWidth) {
+        canvas.width = maxWidth
+        canvas.height = maxWidth / ratio
+      } else {
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+      }
+      
       context.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9)
+      
+      // حفظ الصورة كـ data URL للمعاينة فقط
+      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8)
       setCapturedImage(imageDataUrl)
       setCurrentStep('preview')
       stopCamera()
       
       toast({
         title: "تم التقاط الصورة",
-        description: "يمكنك الآن معاينتها ومعالجتها",
+        description: "يمكنك الآن إضافتها للطباعة",
       })
     } catch (error) {
       console.error('❌ Capture error:', error)
@@ -245,7 +257,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
     }
   }, [stopCamera, toast])
 
-  // اختيار ملف
+  // اختيار ملف مبسط
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -259,58 +271,78 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const result = e.target?.result as string
-      setCapturedImage(result)
-      setCurrentStep('preview')
+    // رفع الملف مباشرة بدون معالجة معقدة
+    try {
+      onScanComplete([file])
+      
+      // إنشاء معاينة للعرض فقط
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        const newDocument: ScannedDocument = {
+          id: `file_${Date.now()}`,
+          originalImage: result,
+          processedImage: result,
+          mode: selectedMode,
+          uploadUrl: '',
+          timestamp: new Date()
+        }
+        setScannedDocuments(prev => [newDocument, ...prev])
+      }
+      reader.readAsDataURL(file)
       
       toast({
-        title: "تم تحديد الصورة",
-        description: "يمكنك الآن معاينتها ومعالجتها",
+        title: "تم بنجاح!",
+        description: "تم إضافة الملف للطباعة مباشرة",
       })
-    }
-    reader.onerror = () => {
+    } catch (error) {
       toast({
-        title: "خطأ في قراءة الملف",
-        description: "لا يمكن قراءة الصورة المحددة",
+        title: "خطأ في معالجة الملف",
+        description: "حدث خطأ أثناء إضافة الملف",
         variant: "destructive"
       })
     }
-    reader.readAsDataURL(file)
-  }, [toast])
+  }, [toast, onScanComplete, selectedMode])
 
-  // معالجة ورفع
-  const processAndUpload = useCallback(async () => {
-    if (!capturedImage) return
+  // معالجة ورفع مبسطة
+  const processAndUpload = useCallback(() => {
+    if (!capturedImage || !canvasRef.current) return
 
     setIsProcessing(true)
     setCurrentStep('processing')
 
     try {
-      const response = await fetch(capturedImage)
-      const blob = await response.blob()
-      const file = new File([blob], `scan_${selectedMode}_${Date.now()}.jpg`, { type: 'image/jpeg' })
+      // استخدام toBlob مباشرة بدلاً من fetch
+      const canvas = canvasRef.current
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          throw new Error('فشل في تحويل الصورة')
+        }
 
-      // إرسال الملف للمكون الأب
-      onScanComplete([file])
+        const file = new File([blob], `scan_${selectedMode}_${Date.now()}.jpg`, { type: 'image/jpeg' })
+        
+        // إرسال الملف للمكون الأب مباشرة
+        onScanComplete([file])
 
-      const newDocument: ScannedDocument = {
-        id: `scan_${Date.now()}`,
-        originalImage: capturedImage,
-        processedImage: capturedImage,
-        mode: selectedMode,
-        uploadUrl: '',
-        timestamp: new Date()
-      }
+        const newDocument: ScannedDocument = {
+          id: `scan_${Date.now()}`,
+          originalImage: capturedImage,
+          processedImage: capturedImage,
+          mode: selectedMode,
+          uploadUrl: '',
+          timestamp: new Date()
+        }
 
-      setScannedDocuments(prev => [newDocument, ...prev])
-      setCurrentStep('complete')
+        setScannedDocuments(prev => [newDocument, ...prev])
+        setCurrentStep('complete')
+        setIsProcessing(false)
 
-      toast({
-        title: "تم المسح بنجاح!",
-        description: "تم إضافة الملف للطباعة",
-      })
+        toast({
+          title: "تم المسح بنجاح!",
+          description: "تم إضافة الملف للطباعة",
+        })
+
+      }, 'image/jpeg', 0.8)
 
     } catch (error: any) {
       console.error('❌ Processing error:', error)
@@ -320,7 +352,6 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
         variant: "destructive",
       })
       setCurrentStep('preview')
-    } finally {
       setIsProcessing(false)
     }
   }, [capturedImage, selectedMode, toast, onScanComplete])
@@ -791,6 +822,14 @@ export default function Print() {
     console.log('File captured:', file.name, 'URL:', downloadUrl);
   };
 
+  // دالة للمسح الذكي
+  const handleSmartScan = (files: File[]) => {
+    if (files && files.length > 0) {
+      setSelectedFiles(prev => [...prev, ...files]);
+      console.log('Smart scan completed:', files.map(f => f.name));
+    }
+  };
+
   // دالة لتوليد اسم واضح للملف حسب إعدادات الطباعة
   const generatePrintJobFilename = (settings: any, originalName: string) => {
     const paperTypeLabels = {
@@ -1143,7 +1182,7 @@ export default function Print() {
           </TabsContent>
 
           <TabsContent value="smart-scan">
-            <SmartScanComponent onScanComplete={handleCameraCapture} />
+            <SmartScanComponent onScanComplete={handleSmartScan} />
           </TabsContent>
         </Tabs>
       </main>
