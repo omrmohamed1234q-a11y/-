@@ -255,22 +255,22 @@ export default function AdminOrders() {
                           <>
                             {order.items.map((item: any, index: number) => (
                               <div key={`${order.id}-item-${index}`} className="text-sm">
-                                {/* إذا كان منتج طباعة */}
-                                {item.productId === 'print-service' && item.printJob ? (
+                                {/* إذا كان منتج طباعة - التحقق من كل الاحتمالات */}
+                                {(item.productId === 'print-service' || item.filename || item.fileUrl || item.printJob) ? (
                                   <div className="border border-blue-200 rounded-lg p-2 bg-blue-50">
                                     <div className="flex items-start space-x-2 space-x-reverse">
                                       <FileText className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                       <div className="flex-1 min-w-0">
                                         <div className="font-medium text-blue-900 text-xs truncate">
-                                          📄 {item.printJob.originalFilename || item.filename || 'ملف للطباعة'}
+                                          📄 {item.printJob?.originalFilename || item.filename || 'ملف للطباعة'}
                                         </div>
                                         <div className="text-xs text-blue-700 mt-1">
-                                          {item.printJob.settings || 'إعدادات الطباعة'}
+                                          {item.printJob?.settings || `عدد ${item.copies || 1} - ${item.paperSize || 'A4'} ${item.paperType || 'ورق عادي'} ${item.colorMode === 'color' ? 'ملون' : 'أبيض وأسود'}` || 'إعدادات الطباعة'}
                                         </div>
-                                        {/* رابط Google Drive إن وجد */}
-                                        {(item.printJob.googleDriveLink || item.googleDriveLink) && (
+                                        {/* رابط Google Drive أو Cloudinary */}
+                                        {(item.printJob?.googleDriveLink || item.googleDriveLink || item.fileUrl) && (
                                           <a
-                                            href={item.printJob.googleDriveLink || item.googleDriveLink}
+                                            href={item.printJob?.googleDriveLink || item.googleDriveLink || item.fileUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="inline-flex items-center text-green-600 hover:text-green-800 text-xs mt-1 px-2 py-1 bg-green-100 rounded"
