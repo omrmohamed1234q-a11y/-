@@ -156,7 +156,7 @@ export default function Home() {
               <motion.img 
                 src="/atbaali-logo.png" 
                 alt="اطبعلي" 
-                className="w-20 h-20 object-contain mb-4"
+                className="w-32 h-32 object-contain mb-6"
                 whileHover={{ scale: 1.1 }}
                 transition={{ duration: 0.3 }}
               />
@@ -172,18 +172,6 @@ export default function Home() {
               </motion.h1>
             </div>
             
-            <motion.div 
-              className="flex justify-center mb-8"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <img 
-                src="/atbaali-logo.png" 
-                alt="اطبعلي" 
-                className="w-24 h-24 object-contain" 
-              />
-            </motion.div>
             
             <motion.p 
               className="text-xl md:text-2xl text-gray-500 mb-16 max-w-3xl mx-auto leading-relaxed"
