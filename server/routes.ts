@@ -269,10 +269,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // ==================== GOOGLE DRIVE PRIORITY UPLOAD APIs ====================
   
-  // Google Drive Primary Upload for /print - with Cloudinary auto-cleanup
+  // Google Drive Primary Upload for /print - with organized folder structure
   app.post('/api/upload/google-drive-primary', async (req, res) => {
     try {
-      const { fileName, fileBuffer, mimeType, printSettings } = req.body;
+      const { fileName, fileBuffer, mimeType, printSettings, customerName, uploadDate } = req.body;
       
       if (!fileName || !fileBuffer || !mimeType) {
         return res.status(400).json({
@@ -280,6 +280,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: 'Missing required fields: fileName, fileBuffer, mimeType'
         });
       }
+
+      // Extract customer name from various sources
+      const finalCustomerName = customerName || 
+                               req.headers['x-customer-name'] || 
+                               req.headers['x-user-name'] || 
+                               req.headers['x-user-id'] || 
+                               'عميل غير محدد';
+
+      // Use provided date or current date
+      const finalUploadDate = uploadDate || new Date().toISOString().split('T')[0];
 
       // Generate full filename with print settings for Google Drive
       let fullFileName = fileName;
@@ -291,35 +301,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fullFileName = `${nameWithoutExt} - عدد ${copies} - ${paperSize} ${paperType} ${colorText}.${extension}`;
       }
 
-      console.log(`🚀 Google Drive primary upload: ${fullFileName}`);
+      console.log(`🚀 Google Drive organized upload:`);
+      console.log(`   Customer: ${finalCustomerName}`);
+      console.log(`   Date: ${finalUploadDate}`);
+      console.log(`   File: ${fullFileName}`);
 
       // Convert base64 buffer to Buffer
       const buffer = Buffer.from(fileBuffer, 'base64');
       
-      // Create user-specific folder
-      const userFolder = `اطبعلي - العميل ${req.headers['x-user-id'] || 'anonymous'}`;
-      
-      // Upload to Google Drive with full filename including settings
+      // Upload to Google Drive with organized folder structure
       const driveResult = await hybridUploadService.uploadBuffer(
         buffer,
         fullFileName,
         mimeType,
-        { googleDriveFolder: userFolder }
+        { 
+          customerName: finalCustomerName,
+          uploadDate: finalUploadDate
+        }
       );
 
       if (driveResult.googleDrive?.success) {
-        console.log('✅ Google Drive upload successful, saving costs!');
+        console.log('✅ Google Drive organized upload successful!');
+        console.log(`   Folder: ${driveResult.googleDrive.folderHierarchy}`);
         
-        // Return Google Drive as primary URL
+        // Return Google Drive as primary URL with folder information
         res.json({
           success: true,
           url: driveResult.googleDrive.directDownloadLink || driveResult.googleDrive.webViewLink,
           webViewLink: driveResult.googleDrive.webViewLink,
           directDownloadLink: driveResult.googleDrive.directDownloadLink,
           folderLink: driveResult.googleDrive.folderLink,
+          folderHierarchy: driveResult.googleDrive.folderHierarchy,
           fileId: driveResult.googleDrive.fileId,
           provider: 'google_drive',
-          message: 'تم رفع الملف بنجاح على Google Drive لتوفير التكاليف',
+          message: driveResult.message,
+          customerName: finalCustomerName,
+          uploadDate: finalUploadDate,
           costSavings: true
         });
       } else {
