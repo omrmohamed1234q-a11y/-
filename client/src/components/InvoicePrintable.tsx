@@ -2,11 +2,10 @@ import React from 'react';
 import { Order } from '@shared/schema';
 
 interface InvoicePrintableProps {
-  order: Order;
-  onClose: () => void;
+  order: any; // Using any for now to include printFiles
 }
 
-export const InvoicePrintable: React.FC<InvoicePrintableProps> = ({ order, onClose }) => {
+export const InvoicePrintable: React.FC<InvoicePrintableProps> = ({ order }) => {
   const handlePrint = () => {
     const printContent = document.getElementById('invoice-print-area');
     const originalContent = document.body.innerHTML;
@@ -17,6 +16,61 @@ export const InvoicePrintable: React.FC<InvoicePrintableProps> = ({ order, onClo
       document.body.innerHTML = originalContent;
       window.location.reload();
     }
+  };
+
+  const handleDownload = () => {
+    const invoiceContent = document.getElementById('invoice-print-area');
+    if (!invoiceContent) return;
+
+    // Create a new window for the invoice
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>فاتورة - ${order.orderNumber}</title>
+          <meta charset="utf-8">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+            body { font-family: 'Cairo', Arial, sans-serif; direction: rtl; margin: 0; padding: 20px; }
+            .no-print { display: none !important; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+            .text-center { text-align: center; }
+            .font-bold { font-weight: bold; }
+            .bg-gray-100 { background-color: #f3f4f6; }
+            .bg-blue-50 { background-color: #eff6ff; }
+            .text-green-600 { color: #16a34a; }
+            .text-blue-600 { color: #2563eb; }
+            .text-gray-600 { color: #6b7280; }
+            .text-xs { font-size: 0.75rem; }
+            .border-t { border-top: 1px solid #e5e7eb; }
+            .pt-6 { padding-top: 1.5rem; }
+            .mt-6 { margin-top: 1.5rem; }
+            .mb-6 { margin-bottom: 1.5rem; }
+            .grid-cols-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem; }
+            @media print {
+              @page { margin: 1cm; }
+              body { print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          ${invoiceContent.innerHTML}
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Wait for content to load then trigger print
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   };
 
   const calculateSubtotal = () => {
@@ -30,29 +84,32 @@ export const InvoicePrintable: React.FC<InvoicePrintableProps> = ({ order, onClo
   const total = calculateSubtotal() + tax - (order.pointsUsed || 0);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-y-auto w-full">
-        {/* Print Actions */}
-        <div className="p-4 border-b flex justify-between items-center no-print">
-          <h2 className="text-xl font-bold">معاينة الفاتورة</h2>
-          <div className="flex space-x-2 space-x-reverse">
-            <button
-              onClick={handlePrint}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 space-x-reverse"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              <span>طباعة</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
-            >
-              إغلاق
-            </button>
-          </div>
+    <div className="w-full">
+      {/* Print Actions */}
+      <div className="p-4 border-b flex justify-between items-center no-print mb-4">
+        <h2 className="text-xl font-bold">فاتورة الطلب #{order.orderNumber}</h2>
+        <div className="flex gap-3">
+          <button
+            onClick={handlePrint}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span>طباعة</span>
+          </button>
+          
+          <button
+            onClick={handleDownload}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>تحميل PDF</span>
+          </button>
         </div>
+      </div>
 
         {/* Invoice Content */}
         <div id="invoice-print-area" className="p-8" dir="rtl">
@@ -143,9 +200,24 @@ export const InvoicePrintable: React.FC<InvoicePrintableProps> = ({ order, onClo
                         {item.description && (
                           <div className="text-xs text-gray-600 mt-1">{item.description}</div>
                         )}
-                        {item.uploadedFiles && item.uploadedFiles.length > 0 && (
+                        {item.printJobData && (
                           <div className="text-xs text-blue-600 mt-1">
-                            📎 {item.uploadedFiles.length} ملف مرفق
+                            📄 {item.printJobData.filename}
+                            {item.printJobData.fileUrl && (
+                              <div className="mt-1">
+                                <a 
+                                  href={item.printJobData.fileUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-500 hover:underline"
+                                >
+                                  🔗 فتح في Google Drive
+                                </a>
+                              </div>
+                            )}
+                            <div className="text-gray-500 mt-1">
+                              {item.printJobData.copies} نسخة • {item.printJobData.paperSize} • {item.printJobData.colorMode}
+                            </div>
                           </div>
                         )}
                       </div>

@@ -421,33 +421,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }));
         }
         
-        // If no print files found in items, try alternative methods
+        // If no print files found in items, search in all print jobs by time
         if (printFiles.length === 0 && order.userId) {
           try {
-            // Try to get from cart items for the user
-            const userCartItems = await storage.getCartItems(order.userId);
-            const printCartItems = userCartItems.filter(item => 
-              item.isPrintJob && item.printJobData &&
-              item.addedAt && order.createdAt &&
-              Math.abs(new Date(item.addedAt).getTime() - new Date(order.createdAt).getTime()) < 600000 // 10 minutes
+            // Get all print jobs and filter by user and time proximity
+            const allPrintJobs = await storage.getAllPrintJobs();
+            const userPrintJobs = allPrintJobs.filter(job => 
+              job.userId === order.userId &&
+              job.createdAt && order.createdAt &&
+              Math.abs(new Date(job.createdAt).getTime() - new Date(order.createdAt).getTime()) < 600000 // 10 minutes
             );
             
-            printFiles = printCartItems.map(item => ({
-              filename: item.printJobData.filename || 'ملف غير محدد',
-              fileUrl: item.printJobData.fileUrl || '',
-              fileSize: item.printJobData.fileSize || 0,
-              fileType: item.printJobData.fileType || 'unknown',
-              copies: item.printJobData.copies || 1,
-              paperSize: item.printJobData.paperSize || 'A4',
-              paperType: item.printJobData.paperType || 'plain',
-              colorMode: item.printJobData.colorMode || 'grayscale'
+            printFiles = userPrintJobs.map(job => ({
+              filename: job.filename || 'ملف غير محدد',
+              fileUrl: job.fileUrl || '',
+              fileSize: job.fileSize || 0,
+              fileType: job.fileType || 'unknown',
+              copies: job.copies || 1,
+              paperSize: job.paperSize || 'A4',
+              paperType: job.paperType || 'plain',
+              colorMode: job.colorMode || 'grayscale'
             }));
             
             if (printFiles.length > 0) {
-              console.log(`📁 Found ${printFiles.length} print files from cart for order ${order.id}`);
+              console.log(`📁 Found ${printFiles.length} print files from print jobs for order ${order.id}`);
             }
           } catch (error) {
-            console.log(`⚠️ Could not fetch cart items for user ${order.userId}:`, error.message);
+            console.log(`⚠️ Could not fetch print jobs for user ${order.userId}:`, error.message);
           }
         }
         
