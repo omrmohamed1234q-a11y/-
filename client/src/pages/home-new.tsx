@@ -430,10 +430,26 @@ export default function Home() {
                         </button>
                       </div>
                       
-                      <div className="flex items-center text-gray-600 text-sm font-medium">
-                        <span>قريباً جداً</span>
-                        <ArrowRight className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform" />
-                      </div>
+                      {/* نص قريباً */}
+                      <motion.div
+                        className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-full shadow-lg"
+                        animate={{
+                          boxShadow: [
+                            '0 4px 15px rgba(245, 158, 11, 0.3)',
+                            '0 6px 25px rgba(245, 158, 11, 0.5)',
+                            '0 4px 15px rgba(245, 158, 11, 0.3)'
+                          ]
+                        }}
+                        transition={{ 
+                          duration: 2, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <span className="text-sm font-bold flex items-center">
+                          قريباً جداً
+                        </span>
+                      </motion.div>
                     </div>
                   </CardContent>
                 </Card>
