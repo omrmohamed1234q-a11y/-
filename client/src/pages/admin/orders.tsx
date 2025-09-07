@@ -277,7 +277,7 @@ export default function AdminOrders() {
                                             title="فتح الملف"
                                           >
                                             <ExternalLink className="w-3 h-3 ml-1" />
-                                            تحميل الملف
+                                            {item.fileUrl?.includes('drive.google.com') ? '📁 Google Drive' : '☁️ تحميل الملف'}
                                           </a>
                                         )}
                                       </div>
