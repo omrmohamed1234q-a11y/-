@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +21,14 @@ import {
   MapPin,
   Calendar,
   AlertCircle,
-  Download
+  Download,
+  Search,
+  Filter,
+  RefreshCw,
+  ArrowUpDown,
+  Users,
+  TrendingUp,
+  Activity
 } from 'lucide-react';
 
 interface PrintFile {
@@ -56,15 +64,87 @@ interface Order {
 export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+  const [lastOrderCount, setLastOrderCount] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // جلب الطلبات من السيرفر
-  const { data: orders = [], isLoading, error } = useQuery<Order[]>({
+  const { data: allOrders = [], isLoading, error } = useQuery<Order[]>({
     queryKey: ['/api/admin/orders'],
-    refetchInterval: 30000, // تحديث تلقائي كل 30 ثانية
+    refetchInterval: 10000, // تحديث تلقائي كل 10 ثواني
     retry: 3
   });
+
+  // فلترة وترتيب الطلبات
+  const orders = allOrders
+    .filter(order => {
+      // فلترة حسب النص
+      const matchesSearch = !searchTerm || 
+        order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customerPhone?.includes(searchTerm) ||
+        order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // فلترة حسب الحالة
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'amount-high':
+          return b.totalAmount - a.totalAmount;
+        case 'amount-low':
+          return a.totalAmount - b.totalAmount;
+        case 'customer':
+          return (a.customerName || '').localeCompare(b.customerName || '');
+        default:
+          return 0;
+      }
+    });
+
+  // إشعار صوتي للطلبات الجديدة
+  useEffect(() => {
+    if (allOrders.length > lastOrderCount && lastOrderCount > 0) {
+      // طلب جديد وصل!
+      toast({
+        title: '🔔 طلب جديد!',
+        description: `تم استلام ${allOrders.length - lastOrderCount} طلب جديد`,
+        duration: 5000
+      });
+      
+      // صوت إشعار (متاح في المتصفحات الحديثة)
+      if ('Audio' in window) {
+        try {
+          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj');
+          audio.play().catch(() => {}); // إذا فشل الصوت لا نعمل شيء
+        } catch {}
+      }
+    }
+    setLastOrderCount(allOrders.length);
+  }, [allOrders.length, lastOrderCount, toast]);
+
+  // حساب الإحصائيات المحسنة
+  const stats = {
+    total: allOrders.length,
+    pending: allOrders.filter(o => o.status === 'pending').length,
+    processing: allOrders.filter(o => o.status === 'processing').length,
+    printing: allOrders.filter(o => o.status === 'printing').length,
+    ready: allOrders.filter(o => o.status === 'ready').length,
+    delivered: allOrders.filter(o => o.status === 'delivered').length,
+    cancelled: allOrders.filter(o => o.status === 'cancelled').length,
+    totalRevenue: allOrders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + o.totalAmount, 0),
+    todayOrders: allOrders.filter(o => {
+      const today = new Date().toDateString();
+      return new Date(o.createdAt).toDateString() === today;
+    }).length
+  };
 
   // تحديث حالة الطلب
   const updateStatusMutation = useMutation({
@@ -173,34 +253,175 @@ export default function AdminOrders() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* رأس الصفحة مع الإحصائيات */}
+      {/* رأس الصفحة مع الإحصائيات المتقدمة */}
       <div className="mb-8">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">إدارة الطلبات</h1>
-            <p className="text-gray-600 mt-2">
-              إجمالي الطلبات: <span className="font-semibold">{orders.length}</span>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              📋 إدارة الطلبات المتقدمة
+              <Badge variant="outline" className="bg-gradient-to-r from-blue-50 to-purple-50">
+                {stats.total} طلب
+              </Badge>
+            </h1>
+            <p className="text-gray-600 mt-2 flex items-center gap-4">
+              <span>📅 طلبات اليوم: <span className="font-semibold text-blue-600">{stats.todayOrders}</span></span>
+              <span>💰 إجمالي الإيرادات: <span className="font-semibold text-green-600">{stats.totalRevenue} جنيه</span></span>
             </p>
+          </div>
+          
+          {/* أزرار التحكم السريع */}
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] })}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              تحديث
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                const csvContent = orders.map(order => 
+                  `${order.orderNumber},${order.customerName},${order.customerPhone},${order.totalAmount},${order.status},${order.createdAt}`
+                ).join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `orders-${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+              }}
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              تصدير
+            </Button>
           </div>
         </div>
 
-        {/* عدادات سريعة للحالات */}
+        {/* شريط البحث والفلاتر */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="البحث في الطلبات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              <SelectValue placeholder="فلترة حسب الحالة" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع الحالات</SelectItem>
+              <SelectItem value="pending">في الانتظار</SelectItem>
+              <SelectItem value="processing">جاري المعالجة</SelectItem>
+              <SelectItem value="printing">جاري الطباعة</SelectItem>
+              <SelectItem value="ready">جاهز للاستلام</SelectItem>
+              <SelectItem value="delivered">تم التسليم</SelectItem>
+              <SelectItem value="cancelled">ملغي</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="flex items-center gap-2">
+              <ArrowUpDown className="w-4 h-4" />
+              <SelectValue placeholder="ترتيب حسب" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">الأحدث أولاً</SelectItem>
+              <SelectItem value="oldest">الأقدم أولاً</SelectItem>
+              <SelectItem value="amount-high">المبلغ (من الأعلى)</SelectItem>
+              <SelectItem value="amount-low">المبلغ (من الأقل)</SelectItem>
+              <SelectItem value="customer">اسم العميل</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <div className="flex items-center justify-center bg-white rounded-md border px-3 py-2">
+            <span className="text-sm text-gray-600 flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              {orders.length} من {stats.total} طلب
+            </span>
+          </div>
+        </div>
+
+        {/* عدادات محسنة مع نسب مئوية */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           {Object.entries(statusConfig).map(([status, config]) => {
-            const count = orders.filter(order => order.status === status).length;
+            const count = stats[status as keyof typeof stats] as number;
+            const percentage = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
             const Icon = config.icon;
             
             return (
-              <div 
+              <Card 
                 key={status} 
-                className={`${config.bg} ${config.text} p-4 rounded-lg text-center shadow-sm`}
+                className={`${config.bg} ${config.text} border-none shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer`}
+                onClick={() => setStatusFilter(status)}
               >
-                <Icon className="w-6 h-6 mx-auto mb-2" />
-                <div className="text-2xl font-bold">{count}</div>
-                <div className="text-sm">{config.label}</div>
-              </div>
+                <CardContent className="p-4 text-center">
+                  <Icon className="w-8 h-8 mx-auto mb-3" />
+                  <div className="text-3xl font-bold mb-1">{count}</div>
+                  <div className="text-sm font-medium mb-1">{config.label}</div>
+                  <div className="text-xs opacity-75">{percentage}%</div>
+                  <div className="mt-2 w-full bg-white/30 rounded-full h-1">
+                    <div 
+                      className="bg-current h-1 rounded-full transition-all duration-300"
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
+        </div>
+
+        {/* إحصائيات سريعة إضافية */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-blue-500 text-white rounded-full">
+                <Activity className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-800">{stats.todayOrders}</div>
+                <div className="text-sm text-blue-600">طلبات اليوم</div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-green-500 text-white rounded-full">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-800">{stats.totalRevenue} جنيه</div>
+                <div className="text-sm text-green-600">إجمالي الإيرادات</div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-purple-500 text-white rounded-full">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-800">
+                  {new Set(allOrders.map(o => o.customerName)).size}
+                </div>
+                <div className="text-sm text-purple-600">عملاء مختلفين</div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
