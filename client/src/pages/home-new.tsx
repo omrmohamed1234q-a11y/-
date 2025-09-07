@@ -14,7 +14,7 @@ import {
   TrendingUp, Clock, Star, Search, GraduationCap,
   ShoppingBag, Coins, UserCircle, ArrowRight,
   Download, Upload, Sparkles, Layers, Target,
-  Settings, Package, Users, Zap, Lock, FileX
+  Settings, Package, Users, Zap, Lock, FileX, Heart
 } from 'lucide-react';
 import { PartnersSection } from '@/components/PartnersSection';
 import { AnnouncementGrid } from '@/components/AnnouncementGrid';
@@ -89,6 +89,15 @@ export default function Home() {
       link: '/rewards',
       gradient: 'from-yellow-500 to-orange-600',
       color: 'yellow'
+    },
+    {
+      id: 'donations',
+      title: 'صندوق التبرعات 🇵🇸',
+      description: 'ساهم في دعم فلسطين والتعليم',
+      icon: Heart,
+      link: '/donations',
+      gradient: 'from-red-600 to-green-600',
+      color: 'palestine'
     }
   ];
 
@@ -379,7 +388,7 @@ export default function Home() {
           إجراءات سريعة
         </motion.h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {quickActions.map((action, index) => (
             <motion.div
               key={action.id}
@@ -463,17 +472,26 @@ export default function Home() {
                           </p>
                         </div>
                         <motion.div
-                          className={`p-3 rounded-full bg-${action.color}-100`}
+                          className={action.id === 'donations' ? 'p-3 rounded-full' : `p-3 rounded-full bg-${action.color}-100`}
+                          style={action.id === 'donations' ? {
+                            background: 'linear-gradient(135deg, #CE112640, #007A3D40)',
+                            border: '2px solid #CE112620'
+                          } : {}}
                           whileHover={{ rotate: 15 }}
                         >
                           {(() => {
                             const IconComponent = action.icon;
-                            return <IconComponent className={`w-6 h-6 text-${action.color}-600`} />;
+                            return <IconComponent 
+                              className={action.id === 'donations' ? 'w-6 h-6' : `w-6 h-6 text-${action.color}-600`}
+                              style={action.id === 'donations' ? { color: '#CE1126' } : {}}
+                            />;
                           })()}
                         </motion.div>
                       </div>
                       
-                      <div className="flex items-center text-blue-600 text-sm font-medium">
+                      <div className={`flex items-center text-sm font-medium ${
+                        action.id === 'donations' ? '' : 'text-blue-600'
+                      }`} style={action.id === 'donations' ? { color: '#007A3D' } : {}}>
                         <span>ابدأ الآن</span>
                         <ArrowRight className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform" />
                       </div>
