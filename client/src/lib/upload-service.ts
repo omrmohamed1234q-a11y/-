@@ -47,9 +47,19 @@ export async function uploadFile(file: File): Promise<UploadResult> {
     }
   } catch (error) {
     console.error('❌ Cloudinary upload failed:', error);
+    
+    let errorMessage = 'Cloudinary upload failed';
+    if (error instanceof Error) {
+      if (error.message.includes('timeout') || error.message.includes('TimeoutError')) {
+        errorMessage = 'Cloudinary upload timed out. Please try again with a smaller file.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Upload failed',
+      error: errorMessage,
       provider: undefined
     };
   }
@@ -65,12 +75,28 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
     
     console.log('📁 Uploading to Google Drive (Primary)...');
     
-    const response = await apiRequest('POST', '/api/upload/google-drive-primary', {
+    // Add customer information from user context if available
+    let uploadData = {
       fileName: file.name,
       fileBuffer: fileBuffer,
       mimeType: file.type,
       printSettings: printSettings
-    });
+    };
+
+    // Try to get user info for better folder organization
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
+      if (userInfo.id) {
+        uploadData = {
+          ...uploadData,
+          customerName: userInfo.displayName || userInfo.fullName || userInfo.id
+        };
+      }
+    } catch (error) {
+      console.log('⚠️ Could not get user info for folder naming, using default');
+    }
+
+    const response = await apiRequest('POST', '/api/upload/google-drive-primary', uploadData);
 
     const result = await response.json();
     
@@ -95,9 +121,21 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
     }
   } catch (error) {
     console.error('❌ Google Drive upload failed:', error);
+    
+    let errorMessage = 'Google Drive upload failed';
+    if (error instanceof Error) {
+      if (error.message.includes('timeout') || error.message.includes('TimeoutError')) {
+        errorMessage = 'Upload timed out - the file might still be processing. Please check your Google Drive.';
+      } else if (error.message.includes('AbortError')) {
+        errorMessage = 'Upload was cancelled due to timeout. Please try with a smaller file.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Google Drive upload failed',
+      error: errorMessage,
       provider: undefined
     };
   }

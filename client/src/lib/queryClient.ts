@@ -44,18 +44,29 @@ export async function apiRequest(
 ): Promise<Response> {
   const authHeaders = await getAuthHeaders();
   
-  const res = await fetch(url, {
-    method,
-    headers: { 
-      ...(data ? { "Content-Type": "application/json" } : {}),
-      ...authHeaders,
-    },
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  // Create timeout controller for long uploads (60 seconds)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 
+        ...(data ? { "Content-Type": "application/json" } : {}),
+        ...authHeaders,
+      },
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+      signal: controller.signal,
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    clearTimeout(timeoutId);
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
