@@ -90,15 +90,6 @@ export default function Home() {
       gradient: 'from-yellow-500 to-orange-600',
       color: 'yellow'
     },
-    {
-      id: 'donations',
-      title: 'صندوق التبرعات 🇵🇸',
-      description: 'ساهم في دعم فلسطين والتعليم',
-      icon: Heart,
-      link: '/donations',
-      gradient: 'from-red-600 to-green-600',
-      color: 'palestine'
-    }
   ];
 
   const features = [
@@ -387,7 +378,7 @@ export default function Home() {
           إجراءات سريعة
         </motion.h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {quickActions.map((action, index) => (
             <motion.div
               key={action.id}
