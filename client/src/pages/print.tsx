@@ -150,7 +150,7 @@ export default function Print() {
           }, 200);
           
           // Use Google Drive as primary upload method for cost optimization
-          const result = await uploadFileToGoogleDrive(file);
+          const result = await uploadFileToGoogleDrive(file, printSettings);
           
           clearInterval(progressInterval);
           

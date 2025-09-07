@@ -55,7 +55,7 @@ export async function uploadFile(file: File): Promise<UploadResult> {
 }
 
 // Google Drive Primary Upload for /print page - Cost Optimization
-export async function uploadFileToGoogleDrive(file: File): Promise<UploadResult> {
+export async function uploadFileToGoogleDrive(file: File, printSettings?: any): Promise<UploadResult> {
   console.log(`🚀 Google Drive Priority Upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
   
   try {
@@ -67,7 +67,8 @@ export async function uploadFileToGoogleDrive(file: File): Promise<UploadResult>
     const response = await apiRequest('POST', '/api/upload/google-drive-primary', {
       fileName: file.name,
       fileBuffer: fileBuffer,
-      mimeType: file.type
+      mimeType: file.type,
+      printSettings: printSettings
     });
 
     const result = await response.json();

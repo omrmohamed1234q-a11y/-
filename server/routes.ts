@@ -272,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google Drive Primary Upload for /print - with Cloudinary auto-cleanup
   app.post('/api/upload/google-drive-primary', async (req, res) => {
     try {
-      const { fileName, fileBuffer, mimeType } = req.body;
+      const { fileName, fileBuffer, mimeType, printSettings } = req.body;
       
       if (!fileName || !fileBuffer || !mimeType) {
         return res.status(400).json({
@@ -281,7 +281,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`🚀 Google Drive primary upload: ${fileName}`);
+      // Generate full filename with print settings for Google Drive
+      let fullFileName = fileName;
+      if (printSettings) {
+        const { copies = 1, paperSize = 'A4', paperType = 'ورق عادي', colorMode = 'grayscale' } = printSettings;
+        const colorText = colorMode === 'color' ? 'ملون' : 'أبيض وأسود';
+        const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+        const extension = fileName.split('.').pop();
+        fullFileName = `${nameWithoutExt} - عدد ${copies} - ${paperSize} ${paperType} ${colorText}.${extension}`;
+      }
+
+      console.log(`🚀 Google Drive primary upload: ${fullFileName}`);
 
       // Convert base64 buffer to Buffer
       const buffer = Buffer.from(fileBuffer, 'base64');
@@ -289,10 +299,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create user-specific folder
       const userFolder = `اطبعلي - العميل ${req.headers['x-user-id'] || 'anonymous'}`;
       
-      // Upload to Google Drive first (primary)
+      // Upload to Google Drive with full filename including settings
       const driveResult = await hybridUploadService.uploadBuffer(
         buffer,
-        fileName,
+        fullFileName,
         mimeType,
         { googleDriveFolder: userFolder }
       );
