@@ -421,27 +421,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }));
         }
         
-        // If no print files found in items, try to get from print jobs
+        // If no print files found in items, try alternative methods
         if (printFiles.length === 0 && order.userId) {
           try {
-            const printJobs = await storage.getPrintJobsByUser(order.userId);
-            const orderPrintJobs = printJobs.filter(job => 
-              job.createdAt && order.createdAt && 
-              Math.abs(new Date(job.createdAt).getTime() - new Date(order.createdAt).getTime()) < 300000 // 5 minutes
+            // Try to get from cart items for the user
+            const userCartItems = await storage.getCartItems(order.userId);
+            const printCartItems = userCartItems.filter(item => 
+              item.isPrintJob && item.printJobData &&
+              item.addedAt && order.createdAt &&
+              Math.abs(new Date(item.addedAt).getTime() - new Date(order.createdAt).getTime()) < 600000 // 10 minutes
             );
             
-            printFiles = orderPrintJobs.map(job => ({
-              filename: job.filename || 'ملف غير محدد',
-              fileUrl: job.fileUrl || '',
-              fileSize: job.fileSize || 0,
-              fileType: job.fileType || 'unknown',
-              copies: job.copies || 1,
-              paperSize: job.paperSize || 'A4',
-              paperType: job.paperType || 'plain',
-              colorMode: job.colorMode || 'grayscale'
+            printFiles = printCartItems.map(item => ({
+              filename: item.printJobData.filename || 'ملف غير محدد',
+              fileUrl: item.printJobData.fileUrl || '',
+              fileSize: item.printJobData.fileSize || 0,
+              fileType: item.printJobData.fileType || 'unknown',
+              copies: item.printJobData.copies || 1,
+              paperSize: item.printJobData.paperSize || 'A4',
+              paperType: item.printJobData.paperType || 'plain',
+              colorMode: item.printJobData.colorMode || 'grayscale'
             }));
+            
+            if (printFiles.length > 0) {
+              console.log(`📁 Found ${printFiles.length} print files from cart for order ${order.id}`);
+            }
           } catch (error) {
-            console.log(`⚠️ Could not fetch print jobs for user ${order.userId}:`, error.message);
+            console.log(`⚠️ Could not fetch cart items for user ${order.userId}:`, error.message);
           }
         }
         
@@ -1503,9 +1509,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cart is empty" });
       }
 
-      // Get all print jobs for this user to include file information
-      const userPrintJobs = await storage.getPrintJobsByUserId(userId);
-      console.log('📋 Found', userPrintJobs.length, 'print jobs for user', userId);
+      // Get all print jobs for this user (using storage methods available)
+      let userPrintJobs = [];
+      try {
+        // Try to get from print jobs storage if available
+        userPrintJobs = await storage.getAllPrintJobs(); 
+        userPrintJobs = userPrintJobs.filter((pj: any) => pj.userId === userId);
+        console.log('📋 Found', userPrintJobs.length, 'print jobs for user', userId);
+      } catch (error) {
+        console.log('⚠️ Could not fetch print jobs, will use cart data only');
+        userPrintJobs = [];
+      }
 
       // Create order from cart
       const orderData = {
@@ -1530,18 +1544,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               name: item.productName || `طباعة: ${printJobData.filename}`,
               quantity: item.quantity,
               price: parseFloat(item.price),
-              // Include file information from variant.printJob
-              filename: printJobData.filename,
-              fileUrl: printJobData.fileUrl,
-              googleDriveLink: printJobData.googleDriveLink,
-              googleDriveFileId: printJobData.googleDriveFileId,
-              pages: printJobData.pages,
-              copies: printJobData.copies,
-              colorMode: printJobData.colorMode,
-              paperSize: printJobData.paperSize,
-              paperType: printJobData.paperType,
-              doubleSided: printJobData.doubleSided,
-              pageRange: printJobData.pageRange
+              isPrintJob: true,
+              printJobData: {
+                filename: printJobData.filename,
+                fileUrl: printJobData.fileUrl,
+                googleDriveLink: printJobData.googleDriveLink,
+                googleDriveFileId: printJobData.googleDriveFileId,
+                fileSize: printJobData.fileSize || 0,
+                fileType: printJobData.fileType || 'unknown',
+                pages: printJobData.pages,
+                copies: printJobData.copies,
+                colorMode: printJobData.colorMode,
+                paperSize: printJobData.paperSize,
+                paperType: printJobData.paperType,
+                doubleSided: printJobData.doubleSided,
+                pageRange: printJobData.pageRange
+              }
             };
           } else {
             // For regular products, find matching print job as fallback
@@ -1551,21 +1569,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
               pj.id === item.printJobId
             );
             
-            return {
-              productId: item.productId,
-              name: item.productName,
-              quantity: item.quantity,
-              price: parseFloat(item.price),
-              filename: item.filename || matchingPrintJob?.filename,
-              fileUrl: item.fileUrl || matchingPrintJob?.fileUrl,
-              googleDriveLink: item.googleDriveLink || matchingPrintJob?.googleDriveLink,
-              googleDriveFileId: item.googleDriveFileId || matchingPrintJob?.googleDriveFileId,
-              pages: item.pages || matchingPrintJob?.pages,
-              colorMode: item.colorMode || matchingPrintJob?.colorMode,
-              paperSize: item.paperSize || matchingPrintJob?.paperSize,
-              paperType: item.paperType || matchingPrintJob?.paperType,
-              doubleSided: item.doubleSided || matchingPrintJob?.doubleSided
-            };
+            // Check if this is a print job even without explicit isPrintJob flag
+            const isActuallyPrintJob = item.filename || item.fileUrl || matchingPrintJob;
+            
+            if (isActuallyPrintJob) {
+              return {
+                productId: item.productId,
+                name: item.productName || `طباعة: ${item.filename || matchingPrintJob?.filename}`,
+                quantity: item.quantity,
+                price: parseFloat(item.price),
+                isPrintJob: true,
+                printJobData: {
+                  filename: item.filename || matchingPrintJob?.filename,
+                  fileUrl: item.fileUrl || matchingPrintJob?.fileUrl,
+                  googleDriveLink: item.googleDriveLink || matchingPrintJob?.googleDriveLink,
+                  googleDriveFileId: item.googleDriveFileId || matchingPrintJob?.googleDriveFileId,
+                  fileSize: item.fileSize || matchingPrintJob?.fileSize || 0,
+                  fileType: item.fileType || matchingPrintJob?.fileType || 'unknown',
+                  pages: item.pages || matchingPrintJob?.pages,
+                  copies: item.copies || matchingPrintJob?.copies || 1,
+                  colorMode: item.colorMode || matchingPrintJob?.colorMode,
+                  paperSize: item.paperSize || matchingPrintJob?.paperSize,
+                  paperType: item.paperType || matchingPrintJob?.paperType,
+                  doubleSided: item.doubleSided || matchingPrintJob?.doubleSided
+                }
+              };
+            } else {
+              return {
+                productId: item.productId,
+                name: item.productName,
+                quantity: item.quantity,
+                price: parseFloat(item.price),
+                isPrintJob: false
+              };
+            }
           }
         }),
         subtotal: cart.subtotal.toString(),
