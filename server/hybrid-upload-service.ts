@@ -22,6 +22,7 @@ export interface UploadOptions {
   googleDriveFolder?: string;
   customerName?: string;
   uploadDate?: string;
+  shareWithEmail?: string;
   resourceType?: 'image' | 'video' | 'raw' | 'auto';
   useGoogleDriveAsBackup?: boolean;
   useCloudinaryAsPrimary?: boolean;
@@ -132,6 +133,7 @@ export class HybridUploadService {
     const { 
       customerName = 'عميل غير محدد',
       uploadDate = new Date().toISOString().split('T')[0],
+      shareWithEmail,
       googleDriveFolder 
     } = options;
 
@@ -191,10 +193,33 @@ export class HybridUploadService {
           if (folderId) {
             result.googleDrive.folderLink = googleDriveService.getFolderWebViewLink(folderId);
           }
+
+          // Share folder hierarchy with specified email if provided
+          if (shareWithEmail && customerName && customerName !== 'عميل غير محدد') {
+            try {
+              console.log(`🔗 Sharing folder hierarchy with: ${shareWithEmail}`);
+              const shareSuccess = await googleDriveService.shareHierarchyWithUser(
+                customerName, 
+                uploadDate, 
+                shareWithEmail
+              );
+              if (shareSuccess) {
+                result.message = `تم رفع الملف ومشاركته مع ${shareWithEmail} في: ${folderHierarchy}`;
+                console.log(`✅ Folder hierarchy shared successfully with ${shareWithEmail}`);
+              } else {
+                result.message = `تم رفع الملف ولكن فشلت المشاركة مع ${shareWithEmail} في: ${folderHierarchy}`;
+                console.log(`⚠️ Failed to share with ${shareWithEmail}, but upload successful`);
+              }
+            } catch (shareError: any) {
+              console.error(`❌ Error sharing with ${shareWithEmail}:`, shareError.message);
+              result.message = `تم رفع الملف ولكن فشلت المشاركة مع ${shareWithEmail} في: ${folderHierarchy}`;
+            }
+          } else {
+            result.message = `تم رفع الملف بنجاح إلى Google Drive في: ${folderHierarchy}`;
+          }
           
           result.backupUrls.push(directLink);
           result.primaryUrl = directLink;
-          result.message = `تم رفع الملف بنجاح إلى Google Drive في: ${folderHierarchy}`;
         }
 
         console.log(`✅ Google Drive buffer upload successful`);

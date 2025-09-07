@@ -344,6 +344,72 @@ export class GoogleDriveService {
   }
 
   /**
+   * Share folder with specific email address
+   */
+  async shareFolderWithUser(folderId: string, email: string, role: 'reader' | 'writer' = 'writer'): Promise<boolean> {
+    if (!this.isConfigured) {
+      return false;
+    }
+
+    try {
+      console.log(`🔗 Sharing folder ${folderId} with ${email} as ${role}`);
+
+      await this.drive.permissions.create({
+        fileId: folderId,
+        resource: {
+          role: role,
+          type: 'user',
+          emailAddress: email
+        }
+      });
+
+      console.log(`✅ Folder shared successfully with ${email}`);
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Failed to share folder with ${email}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Share all folders in hierarchy with user
+   */
+  async shareHierarchyWithUser(customerName: string, date: string, email: string): Promise<boolean> {
+    if (!this.isConfigured) {
+      return false;
+    }
+
+    try {
+      console.log(`🔗 Sharing folder hierarchy with ${email} for customer: ${customerName}, date: ${date}`);
+
+      // Get main "اطبعلي" folder
+      const mainFolderId = await this.createFolder('اطبعلي');
+      if (mainFolderId) {
+        await this.shareFolderWithUser(mainFolderId, email, 'reader');
+      }
+
+      // Get customer folder
+      const customerFolderName = `العميل ${customerName}`;
+      const customerFolderId = await this.createFolder(customerFolderName, mainFolderId);
+      if (customerFolderId) {
+        await this.shareFolderWithUser(customerFolderId, email, 'writer');
+      }
+
+      // Get date folder
+      const dateFolderId = await this.createFolder(date, customerFolderId);
+      if (dateFolderId) {
+        await this.shareFolderWithUser(dateFolderId, email, 'writer');
+      }
+
+      console.log(`✅ Complete folder hierarchy shared with ${email}`);
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Failed to share hierarchy with ${email}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
    * Get folder hierarchy path for display
    */
   getFolderHierarchy(customerName: string, date: string): string {

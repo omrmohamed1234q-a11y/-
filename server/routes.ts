@@ -272,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google Drive Primary Upload for /print - with organized folder structure
   app.post('/api/upload/google-drive-primary', async (req, res) => {
     try {
-      const { fileName, fileBuffer, mimeType, printSettings, customerName, uploadDate } = req.body;
+      const { fileName, fileBuffer, mimeType, printSettings, customerName, uploadDate, shareWithEmail } = req.body;
       
       if (!fileName || !fileBuffer || !mimeType) {
         return res.status(400).json({
@@ -291,6 +291,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use provided date or current date
       const finalUploadDate = uploadDate || new Date().toISOString().split('T')[0];
 
+      // Use provided email or default email for sharing
+      const finalShareEmail = shareWithEmail || 'omrmohamed1234q@gmail.com';
+
       // Generate full filename with print settings for Google Drive
       let fullFileName = fileName;
       if (printSettings) {
@@ -304,19 +307,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🚀 Google Drive organized upload:`);
       console.log(`   Customer: ${finalCustomerName}`);
       console.log(`   Date: ${finalUploadDate}`);
+      console.log(`   Share with: ${finalShareEmail}`);
       console.log(`   File: ${fullFileName}`);
 
       // Convert base64 buffer to Buffer
       const buffer = Buffer.from(fileBuffer, 'base64');
       
-      // Upload to Google Drive with organized folder structure
+      // Upload to Google Drive with organized folder structure and sharing
       const driveResult = await hybridUploadService.uploadBuffer(
         buffer,
         fullFileName,
         mimeType,
         { 
           customerName: finalCustomerName,
-          uploadDate: finalUploadDate
+          uploadDate: finalUploadDate,
+          shareWithEmail: finalShareEmail
         }
       );
 
