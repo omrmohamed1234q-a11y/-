@@ -870,27 +870,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/orders', isAdminAuthenticated, async (req: any, res) => {
-    try {
-      const orders = await storage.getAllOrders();
-      res.json(orders);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      res.status(500).json({ message: "Failed to fetch orders" });
-    }
-  });
-
-  app.put('/api/admin/orders/:id/status', isAdminAuthenticated, async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
-      const order = await storage.updateOrderStatus(id, status);
-      res.json(order);
-    } catch (error) {
-      console.error("Error updating order status:", error);
-      res.status(500).json({ message: "Failed to update order status" });
-    }
-  });
 
   app.get('/api/admin/print-jobs', isAdminAuthenticated, async (req: any, res) => {
     try {
@@ -1031,55 +1010,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Order routes
-  app.post('/api/orders', isAdminAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // Generate order number if not provided
-      const orderNumber = req.body.orderNumber || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Calculate totals if not provided
-      const items = req.body.items || [];
-      const subtotal = req.body.subtotal || items.reduce((sum: number, item: any) => sum + (parseFloat(item.price || 0) * (item.quantity || 1)), 0);
-      const deliveryFee = req.body.deliveryFee || (req.body.deliveryMethod === 'delivery' ? 15 : 0);
-      const discount = req.body.discount || 0;
-      const totalAmount = req.body.totalAmount || (subtotal + deliveryFee - discount);
-      
-      const orderData = insertOrderSchema.parse({
-        ...req.body,
-        userId,
-        orderNumber,
-        items,
-        subtotal: subtotal.toString(),
-        deliveryFee: deliveryFee.toString(),
-        discount: discount.toString(),
-        totalAmount: totalAmount.toString(),
-        status: req.body.status || "pending",
-        statusText: req.body.statusText || "قيد المراجعة"
-      });
-      
-      const order = await storage.createOrder(orderData);
-      res.json(order);
-    } catch (error) {
-      console.error("Error creating order:", error);
-      console.error("Order data that failed:", req.body);
-      res.status(500).json({ 
-        message: "Failed to create order", 
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
-
-  app.get('/api/orders', isAdminAuthenticated, async (req: any, res) => {
-    try {
-      const orders = await storage.getAllOrders();
-      res.json(orders);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      res.status(500).json({ message: "Failed to fetch orders" });
-    }
-  });
 
   // Get all orders for current user
   app.get('/api/orders/user', requireAuth, async (req: any, res) => {
@@ -3246,38 +3176,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Orders Management API Endpoints
-  
-  // Get all orders (admin only)
-  app.get('/api/admin/orders', isAdminAuthenticated, async (req, res) => {
-    try {
-      const orders = await storage.getAllOrders();
-      
-      // Transform orders to match the expected interface
-      const transformedOrders = orders.map(order => ({
-        id: order.id || order.orderNumber,
-        customerName: order.customerName || order.fullName || 'عميل غير محدد',
-        customerPhone: order.customerPhone || order.phone || '',
-        customerEmail: order.customerEmail || order.email || '',
-        items: order.items || [],
-        totalAmount: order.totalAmount || order.finalTotal || 0,
-        status: order.status || 'pending',
-        orderDate: order.createdAt || new Date().toISOString(),
-        deliveryAddress: order.deliveryAddress || order.address || '',
-        notes: order.notes || '',
-        adminNotes: order.adminNotes || '',
-        estimatedCost: order.estimatedCost || 0,
-        finalPrice: order.finalPrice || order.totalAmount || 0,
-        paymentMethod: order.paymentMethod || 'نقدي عند الاستلام',
-        priority: order.priority || 'medium'
-      }));
-      
-      res.json(transformedOrders);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      res.status(500).json({ message: 'Failed to fetch orders' });
-    }
-  });
 
   // Update order (admin only)
   app.put('/api/admin/orders/:id', isAdminAuthenticated, async (req, res) => {
