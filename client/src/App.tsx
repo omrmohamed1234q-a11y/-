@@ -72,6 +72,7 @@ import WebSocketTest from '@/pages/websocket-test';
 import MapsTest from '@/pages/maps-test';
 import DriverLocationTest from '@/pages/driver-location-test';
 import PaymentSuccess from '@/pages/payment-success';
+import DonationsPage from '@/pages/donations';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 
 
@@ -158,6 +159,7 @@ function Router() {
         <Route path="/paymob-setup" component={PaymobSetupPage} />
 
         <Route path="/article/:id" component={ArticlePage} />
+        <Route path="/donations" component={DonationsPage} />
         <Route path="/" component={EnhancedLanding} />
         <Route component={NotFound} />
       </Switch>
@@ -185,6 +187,7 @@ function Router() {
         <Route path="/order-tracking/:id" component={OrderTracking} />
         <Route path="/order-tracking-enhanced/:orderNumber?" component={OrderTrackingTalabatStyle} />
         <Route path="/student/teachers" component={StudentTeachers} />
+        <Route path="/donations" component={DonationsPage} />
         
         {/* Admin routes - available for authenticated users too */}
         <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
