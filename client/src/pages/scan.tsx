@@ -333,41 +333,38 @@ export default function ScanPage() {
 
       const processedImageDataUrl = canvas.toDataURL('image/jpeg', 0.9)
 
-      // Convert to blob for Cloudinary upload
+      // Convert to blob for smart upload system
       const response = await fetch(processedImageDataUrl)
       const blob = await response.blob()
-      const file = new File([blob], `scan_${Date.now()}.jpg`, { type: 'image/jpeg' })
+      const file = new File([blob], `scan_${selectedMode}_${Date.now()}.jpg`, { type: 'image/jpeg' })
 
-      // Create form data for Cloudinary
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET)
-      formData.append('folder', 'scanned-documents')
+      // Use smart upload system (Google Drive primary, Cloudinary fallback)
+      const { uploadFileToGoogleDrive, uploadFile } = await import('@/lib/upload-service')
       
-      // Add tags based on scan mode
-      const tags = ['scanned-document', selectedMode]
-      formData.append('tags', tags.join(','))
-
-      // Upload to Cloudinary
-      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`
-      const uploadResponse = await fetch(cloudinaryUrl, {
-        method: 'POST',
-        body: formData
-      })
-
-      if (!uploadResponse.ok) {
-        throw new Error('فشل في رفع الصورة')
+      // Try Google Drive first, fallback to Cloudinary
+      let uploadResult = await uploadFileToGoogleDrive(file)
+      let provider = 'google_drive'
+      
+      if (!uploadResult.success) {
+        console.log('🔄 Google Drive failed, trying Cloudinary fallback...')
+        uploadResult = await uploadFile(file)
+        provider = 'cloudinary'
+      }
+      
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'فشل في رفع الملف على كلا الخدمتين')
       }
 
-      const uploadResult = await uploadResponse.json()
+      console.log(`✅ Scan uploaded successfully via ${provider}`)
+      const finalUploadUrl = uploadResult.downloadUrl || uploadResult.url
 
       // Create scanned document record
       const newDocument: ScannedDocument = {
-        id: uploadResult.public_id,
+        id: uploadResult.fileId || `scan_${Date.now()}`,
         originalImage: capturedImage,
         processedImage: processedImageDataUrl,
         mode: selectedMode,
-        uploadUrl: uploadResult.secure_url,
+        uploadUrl: finalUploadUrl!,
         timestamp: new Date()
       }
 
@@ -376,7 +373,7 @@ export default function ScanPage() {
 
       toast({
         title: "تم المسح بنجاح!",
-        description: "تم رفع المستند على Cloudinary وحفظه في المكتبة",
+        description: `تم رفع المستند عبر ${provider === 'google_drive' ? 'Google Drive' : 'Cloudinary'} وحفظه في المكتبة`,
       })
 
     } catch (error) {
@@ -595,7 +592,7 @@ export default function ScanPage() {
                     className="w-16 h-16 mx-auto mb-4 border-4 border-red-500 border-t-transparent rounded-full"
                   />
                   <h3 className="text-lg font-semibold mb-2">جاري المعالجة والرفع...</h3>
-                  <p className="text-gray-600">يتم تطبيق المرشحات ورفع الملف على Cloudinary</p>
+                  <p className="text-gray-600">يتم تطبيق المرشحات ورفع الملف (Google Drive → Cloudinary)</p>
                 </motion.div>
               )}
 
