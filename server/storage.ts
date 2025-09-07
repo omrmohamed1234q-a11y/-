@@ -1,5 +1,5 @@
 import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, partnerProducts, secureAdmins, secureDrivers, securityLogs, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct, type SecureAdmin, type InsertSecureAdmin, type SecureDriver, type InsertSecureDriver, type SecurityLog, type InsertSecurityLog } from "@shared/schema";
-// import { db } from "./db"; // تعطيل مؤقتاً
+import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
 
 export interface IStorage {
