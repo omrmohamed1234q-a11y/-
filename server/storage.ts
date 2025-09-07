@@ -2677,6 +2677,10 @@ class MemStorage implements IStorage {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
+  getNotificationsByUser(userId: string): any[] {
+    return this.getUserNotifications(userId);
+  }
+
   markNotificationAsRead(notificationId: string): void {
     const notification = this.notifications.find(n => n.id === notificationId);
     if (notification) {

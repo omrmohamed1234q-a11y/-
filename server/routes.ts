@@ -1177,6 +1177,407 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== ORDER ASSIGNMENT SYSTEM ====================
+  
+  // Order assignment management system
+  const orderAssignments = new Map();
+  const driverTimers = new Map();
+
+  // Auto-assign order to available drivers with queue system
+  app.post('/api/admin/orders/:orderId/assign-to-drivers', async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      
+      console.log(`🚚 Starting auto-assignment for order: ${orderId}`);
+      
+      // Get order details
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'Order not found' 
+        });
+      }
+
+      // Get all available drivers (online and available)
+      const allDrivers = await storage.getAllDrivers();
+      const availableDrivers = allDrivers.filter(driver => 
+        driver.status === 'online' && 
+        driver.isAvailable === true
+      );
+
+      if (availableDrivers.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'No available drivers found' 
+        });
+      }
+
+      console.log(`📋 Found ${availableDrivers.length} available drivers for order ${orderId}`);
+
+      // Initialize assignment tracking
+      orderAssignments.set(orderId, {
+        orderId,
+        drivers: availableDrivers.map(d => d.id),
+        currentDriverIndex: 0,
+        status: 'pending',
+        startTime: new Date(),
+        attempts: []
+      });
+
+      // Start the assignment process
+      await startDriverAssignmentQueue(orderId);
+
+      res.json({ 
+        success: true, 
+        message: `Order assigned to driver queue. ${availableDrivers.length} drivers notified.`,
+        availableDrivers: availableDrivers.length
+      });
+
+    } catch (error) {
+      console.error('❌ Error in auto-assignment:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to assign order to drivers' 
+      });
+    }
+  });
+
+  // Function to start the driver assignment queue
+  async function startDriverAssignmentQueue(orderId: string) {
+    const assignment = orderAssignments.get(orderId);
+    if (!assignment || assignment.status !== 'pending') {
+      return;
+    }
+
+    if (assignment.currentDriverIndex >= assignment.drivers.length) {
+      console.log(`❌ No more drivers available for order ${orderId}`);
+      assignment.status = 'failed';
+      
+      // Notify admin that no driver accepted the order
+      await storage.createNotification({
+        userId: 'admin',
+        title: '⚠️ لم يتم قبول الطلب',
+        message: `الطلب رقم ${orderId} لم يتم قبوله من أي سائق`,
+        type: 'order_failed',
+        priority: 'high',
+        isRead: false
+      });
+      
+      return;
+    }
+
+    const currentDriverId = assignment.drivers[assignment.currentDriverIndex];
+    const driver = await storage.getDriver(currentDriverId);
+    
+    if (!driver) {
+      // Skip this driver and try next
+      assignment.currentDriverIndex++;
+      await startDriverAssignmentQueue(orderId);
+      return;
+    }
+
+    console.log(`📱 Sending order ${orderId} to driver: ${driver.name} (${currentDriverId})`);
+
+    // Record the attempt
+    assignment.attempts.push({
+      driverId: currentDriverId,
+      driverName: driver.name,
+      sentAt: new Date(),
+      status: 'sent'
+    });
+
+    // Send notification to driver
+    await storage.createNotification({
+      userId: currentDriverId,
+      title: '🚚 طلب توصيل جديد',
+      message: `طلب رقم ${orderId} متاح للتوصيل. لديك دقيقة للموافقة.`,
+      type: 'order_assignment',
+      priority: 'urgent',
+      isRead: false,
+      orderId: orderId,
+      expiresAt: new Date(Date.now() + 60000) // 1 minute
+    });
+
+    // Set timer for 1 minute
+    const timer = setTimeout(async () => {
+      const currentAssignment = orderAssignments.get(orderId);
+      if (currentAssignment && currentAssignment.status === 'pending') {
+        console.log(`⏰ Timer expired for driver ${currentDriverId} on order ${orderId}`);
+        
+        // Mark current attempt as expired
+        const currentAttempt = currentAssignment.attempts.find(a => 
+          a.driverId === currentDriverId && a.status === 'sent'
+        );
+        if (currentAttempt) {
+          currentAttempt.status = 'expired';
+          currentAttempt.expiredAt = new Date();
+        }
+
+        // Move to next driver
+        currentAssignment.currentDriverIndex++;
+        
+        // Try next driver
+        await startDriverAssignmentQueue(orderId);
+      }
+      
+      // Clean up timer
+      driverTimers.delete(`${orderId}-${currentDriverId}`);
+    }, 60000); // 1 minute in milliseconds
+
+    // Store timer reference
+    driverTimers.set(`${orderId}-${currentDriverId}`, timer);
+  }
+
+  // Driver accepts order
+  app.post('/api/driver/orders/:orderId/accept', requireDriverAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driver.id;
+      
+      console.log(`✅ Driver ${driverId} accepting order ${orderId}`);
+
+      const assignment = orderAssignments.get(orderId);
+      if (!assignment || assignment.status !== 'pending') {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Order no longer available' 
+        });
+      }
+
+      // Check if this driver is the current one in queue
+      const currentDriverId = assignment.drivers[assignment.currentDriverIndex];
+      if (currentDriverId !== driverId) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Order not assigned to you' 
+        });
+      }
+
+      // Clear timer for this driver
+      const timerKey = `${orderId}-${driverId}`;
+      const timer = driverTimers.get(timerKey);
+      if (timer) {
+        clearTimeout(timer);
+        driverTimers.delete(timerKey);
+      }
+
+      // Update assignment status
+      assignment.status = 'accepted';
+      assignment.acceptedBy = driverId;
+      assignment.acceptedAt = new Date();
+
+      // Mark current attempt as accepted
+      const currentAttempt = assignment.attempts.find(a => 
+        a.driverId === driverId && a.status === 'sent'
+      );
+      if (currentAttempt) {
+        currentAttempt.status = 'accepted';
+        currentAttempt.acceptedAt = new Date();
+      }
+
+      // Assign order to driver in database
+      await storage.assignOrderToDriver(orderId, driverId);
+      
+      // Update order status
+      await storage.updateOrderStatus(orderId, 'assigned_to_driver');
+
+      // Notify admin of successful assignment
+      await storage.createNotification({
+        userId: 'admin',
+        title: '✅ تم قبول الطلب',
+        message: `السائق ${req.driver.name} قبل الطلب رقم ${orderId}`,
+        type: 'order_accepted',
+        priority: 'normal',
+        isRead: false
+      });
+
+      console.log(`🎉 Order ${orderId} successfully assigned to driver ${driverId}`);
+
+      res.json({ 
+        success: true, 
+        message: 'Order accepted successfully',
+        orderId,
+        driverId 
+      });
+
+    } catch (error) {
+      console.error('❌ Error accepting order:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to accept order' 
+      });
+    }
+  });
+
+  // Driver rejects order
+  app.post('/api/driver/orders/:orderId/reject', requireDriverAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driver.id;
+      
+      console.log(`❌ Driver ${driverId} rejecting order ${orderId}`);
+
+      const assignment = orderAssignments.get(orderId);
+      if (!assignment || assignment.status !== 'pending') {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Order no longer available' 
+        });
+      }
+
+      // Check if this driver is the current one in queue
+      const currentDriverId = assignment.drivers[assignment.currentDriverIndex];
+      if (currentDriverId !== driverId) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Order not assigned to you' 
+        });
+      }
+
+      // Clear timer for this driver
+      const timerKey = `${orderId}-${driverId}`;
+      const timer = driverTimers.get(timerKey);
+      if (timer) {
+        clearTimeout(timer);
+        driverTimers.delete(timerKey);
+      }
+
+      // Mark current attempt as rejected
+      const currentAttempt = assignment.attempts.find(a => 
+        a.driverId === driverId && a.status === 'sent'
+      );
+      if (currentAttempt) {
+        currentAttempt.status = 'rejected';
+        currentAttempt.rejectedAt = new Date();
+      }
+
+      // Move to next driver
+      assignment.currentDriverIndex++;
+      
+      // Try next driver
+      await startDriverAssignmentQueue(orderId);
+
+      res.json({ 
+        success: true, 
+        message: 'Order rejected, moved to next driver' 
+      });
+
+    } catch (error) {
+      console.error('❌ Error rejecting order:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to reject order' 
+      });
+    }
+  });
+
+  // Get assignment status for admin
+  app.get('/api/admin/orders/:orderId/assignment-status', async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const assignment = orderAssignments.get(orderId);
+      
+      if (!assignment) {
+        return res.json({ 
+          success: true, 
+          status: 'not_started',
+          message: 'No assignment process found for this order'
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        assignment: {
+          orderId: assignment.orderId,
+          status: assignment.status,
+          totalDrivers: assignment.drivers.length,
+          currentDriverIndex: assignment.currentDriverIndex,
+          attempts: assignment.attempts,
+          startTime: assignment.startTime,
+          acceptedBy: assignment.acceptedBy,
+          acceptedAt: assignment.acceptedAt
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Error getting assignment status:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to get assignment status' 
+      });
+    }
+  });
+
+  // Get driver notifications
+  app.get('/api/driver/notifications', requireDriverAuth, async (req: any, res) => {
+    try {
+      const driverId = req.driver.id;
+      const notifications = await storage.getNotificationsByUser(driverId);
+      
+      res.json(notifications);
+    } catch (error) {
+      console.error('❌ Error getting driver notifications:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to get notifications' 
+      });
+    }
+  });
+
+  // Get driver orders
+  app.get('/api/driver/orders', requireDriverAuth, async (req: any, res) => {
+    try {
+      const driverId = req.driver.id;
+      const orders = await storage.getDriverOrders(driverId);
+      
+      res.json(orders);
+    } catch (error) {
+      console.error('❌ Error getting driver orders:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to get orders' 
+      });
+    }
+  });
+
+  // Mark order as delivered
+  app.put('/api/driver/orders/:orderId/delivered', requireDriverAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driver.id;
+      
+      // Verify that this order is assigned to this driver
+      const order = await storage.getOrder(orderId);
+      if (!order || order.driverId !== driverId) {
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Order not assigned to you' 
+        });
+      }
+
+      // Update order status to delivered
+      await storage.updateOrderStatus(orderId, 'delivered');
+      
+      // Update driver availability
+      await storage.updateDriverStatus(driverId, 'online', true);
+
+      console.log(`📦 Order ${orderId} marked as delivered by driver ${driverId}`);
+
+      res.json({ 
+        success: true, 
+        message: 'Order marked as delivered' 
+      });
+
+    } catch (error) {
+      console.error('❌ Error marking order as delivered:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to mark order as delivered' 
+      });
+    }
+  });
+
   // Public product routes
   app.get('/api/products', async (req, res) => {
     try {
