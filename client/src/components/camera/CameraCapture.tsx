@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Camera, Upload, RotateCcw, Check, X, FileText, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { uploadToFirebaseStorage } from '@/lib/firebase-storage';
+import { uploadFileToGoogleDrive } from '@/lib/upload-service';
 
 interface CameraCaptureProps {
   onCapture: (file: File, downloadUrl: string) => void;
@@ -98,8 +98,15 @@ export function CameraCapture({
 
         const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
         
-        // Upload to Firebase Storage
-        const downloadUrl = await uploadToFirebaseStorage(file, 'camera-captures');
+        // Upload to Google Drive
+        const result = await uploadFileToGoogleDrive(file);
+        if (!result.success) {
+          throw new Error(result.error || 'Upload failed');
+        }
+        const downloadUrl = result.downloadUrl || result.url;
+        if (!downloadUrl) {
+          throw new Error('No download URL received from upload');
+        }
         
         onCapture(file, downloadUrl);
         
@@ -140,8 +147,15 @@ export function CameraCapture({
 
     setIsUploading(true);
     try {
-      console.log('Starting Firebase upload...');
-      const downloadUrl = await uploadToFirebaseStorage(file, 'uploads');
+      console.log('Starting Google Drive upload...');
+      const result = await uploadFileToGoogleDrive(file);
+      if (!result.success) {
+        throw new Error(result.error || 'Upload failed');
+      }
+      const downloadUrl = result.downloadUrl || result.url;
+      if (!downloadUrl) {
+        throw new Error('No download URL received from upload');
+      }
       console.log('Upload successful, URL:', downloadUrl);
       
       onCapture(file, downloadUrl);

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { CameraCapture } from '@/components/camera/CameraCapture';
 import { useToast } from '@/hooks/use-toast';
-import { uploadToFirebaseStorage } from '@/lib/firebase-storage';
+// Firebase import removed - DocumentScanner now works with parent upload system
 
 interface ScannedDocument {
   id: string;
