@@ -257,7 +257,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
     }
   }, [stopCamera, toast])
 
-  // اختيار ملف مبسط
+  // اختيار ملف مع معالجة المرشحات
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -271,78 +271,141 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
       return
     }
 
-    // رفع الملف مباشرة بدون معالجة معقدة
-    try {
-      onScanComplete([file])
-      
-      // إنشاء معاينة للعرض فقط
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        const newDocument: ScannedDocument = {
-          id: `file_${Date.now()}`,
-          originalImage: result,
-          processedImage: result,
-          mode: selectedMode,
-          uploadUrl: '',
-          timestamp: new Date()
-        }
-        setScannedDocuments(prev => [newDocument, ...prev])
-      }
-      reader.readAsDataURL(file)
+    // قراءة الملف وعرضه للمعاينة قبل المعالجة
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const result = e.target?.result as string
+      setCapturedImage(result)
+      setCurrentStep('preview')
       
       toast({
-        title: "تم بنجاح!",
-        description: "تم إضافة الملف للطباعة مباشرة",
+        title: "تم تحديد الصورة",
+        description: "يمكنك الآن معاينتها ومعالجتها",
       })
-    } catch (error) {
+    }
+    reader.onerror = () => {
       toast({
-        title: "خطأ في معالجة الملف",
-        description: "حدث خطأ أثناء إضافة الملف",
+        title: "خطأ في قراءة الملف",
+        description: "لا يمكن قراءة الصورة المحددة",
         variant: "destructive"
       })
     }
-  }, [toast, onScanComplete, selectedMode])
+    reader.readAsDataURL(file)
+  }, [toast])
 
-  // معالجة ورفع مبسطة
+  // معالجة ورفع مع تطبيق المرشحات
   const processAndUpload = useCallback(() => {
-    if (!capturedImage || !canvasRef.current) return
+    if (!capturedImage) return
 
     setIsProcessing(true)
     setCurrentStep('processing')
 
     try {
-      // استخدام toBlob مباشرة بدلاً من fetch
-      const canvas = canvasRef.current
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          throw new Error('فشل في تحويل الصورة')
+      // إنشاء كانفاس لتطبيق المرشحات
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      
+      if (!ctx) {
+        throw new Error('فشل في إنشاء Canvas للمعالجة')
+      }
+
+      // تحميل الصورة
+      const img = new Image()
+      img.onload = () => {
+        try {
+          // تعيين حجم الكانفاس
+          canvas.width = img.width
+          canvas.height = img.height
+          
+          // رسم الصورة
+          ctx.drawImage(img, 0, 0)
+          
+          // تطبيق المرشح حسب النوع المحدد
+          if (selectedMode === 'grayscale') {
+            console.log('🎨 Applying grayscale filter...')
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+            const data = imageData.data
+            
+            for (let i = 0; i < data.length; i += 4) {
+              const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
+              data[i] = gray     // red
+              data[i + 1] = gray // green  
+              data[i + 2] = gray // blue
+            }
+            
+            ctx.putImageData(imageData, 0, 0)
+          } else if (selectedMode === 'blackwhite') {
+            console.log('🎨 Applying black & white filter...')
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+            const data = imageData.data
+            
+            for (let i = 0; i < data.length; i += 4) {
+              const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
+              const threshold = gray > 128 ? 255 : 0
+              data[i] = threshold     // red
+              data[i + 1] = threshold // green  
+              data[i + 2] = threshold // blue
+            }
+            
+            ctx.putImageData(imageData, 0, 0)
+          }
+
+          // تحويل إلى ملف
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              throw new Error('فشل في تحويل الصورة')
+            }
+
+            const file = new File([blob], `scan_${selectedMode}_${Date.now()}.jpg`, { type: 'image/jpeg' })
+            
+            // إرسال الملف للمكون الأب
+            onScanComplete([file])
+
+            // حفظ الصورة المعالجة للعرض
+            const processedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8)
+            const newDocument: ScannedDocument = {
+              id: `scan_${Date.now()}`,
+              originalImage: capturedImage,
+              processedImage: processedImageDataUrl,
+              mode: selectedMode,
+              uploadUrl: '',
+              timestamp: new Date()
+            }
+
+            setScannedDocuments(prev => [newDocument, ...prev])
+            setCurrentStep('complete')
+            setIsProcessing(false)
+
+            toast({
+              title: "تم المسح بنجاح!",
+              description: `تم تطبيق مرشح "${selectedMode === 'color' ? 'الألوان الأصلية' : selectedMode === 'grayscale' ? 'الرمادي' : 'الأبيض والأسود'}" وإضافة الملف للطباعة`,
+            })
+
+          }, 'image/jpeg', 0.8)
+
+        } catch (error: any) {
+          console.error('❌ Canvas processing error:', error)
+          setIsProcessing(false)
+          setCurrentStep('preview')
+          toast({
+            title: "خطأ في المعالجة",
+            description: error?.message || "حدث خطأ أثناء تطبيق المرشح",
+            variant: "destructive",
+          })
         }
+      }
 
-        const file = new File([blob], `scan_${selectedMode}_${Date.now()}.jpg`, { type: 'image/jpeg' })
-        
-        // إرسال الملف للمكون الأب مباشرة
-        onScanComplete([file])
-
-        const newDocument: ScannedDocument = {
-          id: `scan_${Date.now()}`,
-          originalImage: capturedImage,
-          processedImage: capturedImage,
-          mode: selectedMode,
-          uploadUrl: '',
-          timestamp: new Date()
-        }
-
-        setScannedDocuments(prev => [newDocument, ...prev])
-        setCurrentStep('complete')
+      img.onerror = () => {
         setIsProcessing(false)
-
+        setCurrentStep('preview')
         toast({
-          title: "تم المسح بنجاح!",
-          description: "تم إضافة الملف للطباعة",
+          title: "خطأ في تحميل الصورة",
+          description: "فشل في تحميل الصورة للمعالجة",
+          variant: "destructive",
         })
+      }
 
-      }, 'image/jpeg', 0.8)
+      img.src = capturedImage
 
     } catch (error: any) {
       console.error('❌ Processing error:', error)
