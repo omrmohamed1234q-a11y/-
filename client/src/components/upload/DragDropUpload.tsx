@@ -4,11 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Upload, FileText, Image, X, Check } from 'lucide-react';
-import { uploadWithFallback } from '@/lib/firebase-simple-upload';
 import { useToast } from '@/hooks/use-toast';
-import { FirebaseRulesError } from '@/components/storage/FirebaseRulesError';
-import { runFirebaseDiagnostics, generateFixInstructions } from '@/lib/firebase-diagnostics';
-import { processFilesLocally, getFileUrls } from '@/lib/local-file-handler';
+import { uploadFileToGoogleDrive, uploadFile } from '@/lib/upload-service';
 
 interface DragDropUploadProps {
   onUpload: (files: File[], urls: string[]) => void;
@@ -25,64 +22,30 @@ export function DragDropUpload({
 }: DragDropUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [uploadedFiles, setUploadedFiles] = useState<{ file: File; url: string }[]>([]);
-  const [firebaseError, setFirebaseError] = useState<string | null>(null);
-  const [diagnostics, setDiagnostics] = useState<any>(null);
-  const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<{ file: File; url: string; provider?: string }[]>([]);
   const { toast } = useToast();
 
-  const runDiagnostics = async () => {
-    setIsRunningDiagnostics(true);
-    try {
-      const results = await runFirebaseDiagnostics();
-      setDiagnostics(results);
-      const instructions = generateFixInstructions(results);
-      console.log('🔍 Firebase Diagnostics Results:', results);
-      console.log('📋 Fix Instructions:', instructions);
-      
-      toast({
-        title: 'تم فحص Firebase',
-        description: 'انظر في وحدة التحكم للحصول على تفاصيل المشكلة',
-      });
-    } catch (error) {
-      console.error('Diagnostics failed:', error);
-      toast({
-        title: 'فشل الفحص',
-        description: 'لا يمكن فحص إعدادات Firebase',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsRunningDiagnostics(false);
-    }
-  };
-
-  const uploadWithLocalFallback = async (acceptedFiles: File[]) => {
-    console.log('🚀 Trying local processing first while Firebase issues are resolved...');
+  // Smart upload function with Google Drive primary and Cloudinary fallback
+  const smartUpload = async (file: File, fileIndex: number, totalFiles: number): Promise<{ file: File; url: string; provider: string }> => {
+    console.log(`📤 Smart upload ${fileIndex + 1}/${totalFiles}: ${file.name}`);
     
-    try {
-      const processedFiles = await processFilesLocally(acceptedFiles, (progress) => {
-        setProgress(progress);
-      });
-      
-      const urls = getFileUrls(processedFiles);
-      const uploads = acceptedFiles.map((file, index) => ({
-        file,
-        url: urls[index]
-      }));
-      
-      setUploadedFiles(uploads);
-      onUpload(uploads.map(u => u.file), uploads.map(u => u.url));
-      
-      toast({
-        title: 'تم معالجة الملفات محلياً',
-        description: `تم معالجة ${uploads.length} ملف بنجاح (مؤقتاً بدون Firebase)`,
-      });
-      
-      return true;
-    } catch (localError) {
-      console.error('Local processing failed:', localError);
-      return false;
+    // Try Google Drive first
+    let result = await uploadFileToGoogleDrive(file);
+    
+    if (!result.success) {
+      console.log('🔄 Google Drive failed, trying Cloudinary fallback...');
+      result = await uploadFile(file);
     }
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Upload failed on both services');
+    }
+    
+    return {
+      file,
+      url: result.downloadUrl || result.url!,
+      provider: result.provider!
+    };
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -90,61 +53,58 @@ export function DragDropUpload({
 
     setUploading(true);
     setProgress(0);
-    setFirebaseError(null);
     
     try {
-      // First try Firebase upload
-      console.log('Attempting Firebase upload...');
-      const uploads: { file: File; url: string }[] = [];
+      console.log('🚀 Starting smart upload system...');
+      const uploads: { file: File; url: string; provider?: string }[] = [];
       
       for (let i = 0; i < acceptedFiles.length; i++) {
         const file = acceptedFiles[i];
-        console.log(`Uploading file ${i + 1}/${acceptedFiles.length}:`, file.name);
         
-        // Upload to Firebase with fallback
-        const downloadUrl = await uploadWithFallback(file, 'drag-drop-uploads', (fileProgress) => {
-          const totalProgress = ((i / acceptedFiles.length) * 100) + ((fileProgress / acceptedFiles.length));
-          setProgress(totalProgress);
-        });
+        // Update progress for this file
+        const fileProgress = (i / acceptedFiles.length) * 100;
+        setProgress(fileProgress);
         
-        uploads.push({ file, url: downloadUrl });
-        console.log(`File ${i + 1} uploaded successfully:`, downloadUrl);
+        // Smart upload with fallback
+        const uploadResult = await smartUpload(file, i, acceptedFiles.length);
+        uploads.push(uploadResult);
+        
+        console.log(`✅ File ${i + 1} uploaded via ${uploadResult.provider}`);
       }
+      
+      // Final progress
+      setProgress(100);
       
       setUploadedFiles(uploads);
       onUpload(uploads.map(u => u.file), uploads.map(u => u.url));
       
+      // Count providers
+      const googleDriveCount = uploads.filter(u => u.provider === 'google_drive').length;
+      const cloudinaryCount = uploads.filter(u => u.provider === 'cloudinary').length;
+      
+      let description = `تم رفع ${uploads.length} ملف بنجاح`;
+      if (googleDriveCount > 0 && cloudinaryCount > 0) {
+        description += ` (${googleDriveCount} عبر Google Drive، ${cloudinaryCount} عبر Cloudinary)`;
+      } else if (googleDriveCount > 0) {
+        description += ` عبر Google Drive`;
+      } else {
+        description += ` عبر Cloudinary`;
+      }
+      
       toast({
         title: 'تم الرفع بنجاح',
-        description: `تم رفع ${uploads.length} ملف بنجاح`,
+        description,
       });
       
     } catch (error) {
-      console.error('Firebase upload error:', error);
+      console.error('Smart upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'فشل في رفع الملفات';
       
-      // Try local processing as immediate fallback
-      console.log('Firebase failed, trying local processing...');
-      const localSuccess = await uploadWithLocalFallback(acceptedFiles);
-      
-      if (!localSuccess) {
-        // Check if it's a Firebase Storage Rules error
-        if (errorMessage.includes('Firebase Storage Rules') || 
-            errorMessage.includes('unauthorized') || 
-            errorMessage.includes('غير مصرح') ||
-            errorMessage.includes('Firebase') ||
-            errorMessage.includes('وقتاً طويلاً') ||
-            errorMessage.includes('انتهت مهلة') ||
-            errorMessage.includes('بكلا الطريقتين')) {
-          setFirebaseError(errorMessage);
-        } else {
-          toast({
-            title: 'خطأ في الرفع',
-            description: errorMessage,
-            variant: 'destructive'
-          });
-        }
-      }
+      toast({
+        title: 'خطأ في الرفع',
+        description: errorMessage,
+        variant: 'destructive'
+      });
     } finally {
       setUploading(false);
       setProgress(0);
@@ -175,25 +135,6 @@ export function DragDropUpload({
 
   return (
     <div className="space-y-4" dir="rtl">
-      {/* Firebase Rules Error */}
-      {firebaseError && (
-        <div className="space-y-3">
-          <FirebaseRulesError 
-            error={firebaseError} 
-            onRetry={() => setFirebaseError(null)} 
-          />
-          <div className="text-center">
-            <Button 
-              onClick={runDiagnostics} 
-              disabled={isRunningDiagnostics}
-              variant="outline"
-              className="bg-yellow-50 border-yellow-300 text-yellow-800 hover:bg-yellow-100"
-            >
-              {isRunningDiagnostics ? 'جاري الفحص...' : '🔍 فحص مشكلة Firebase'}
-            </Button>
-          </div>
-        </div>
-      )}
       
       <Card 
         className={`border-2 border-dashed transition-colors ${
