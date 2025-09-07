@@ -82,13 +82,13 @@ export default function Home() {
       color: 'green'
     },
     {
-      id: 'rewards',
-      title: 'المكافآت',
-      description: 'استبدل نقاطك بجوائز',
-      icon: Gift,
-      link: '/rewards',
-      gradient: 'from-yellow-500 to-orange-600',
-      color: 'yellow'
+      id: 'donations',
+      title: 'صندوق التبرعات 🇵🇸',
+      description: 'ساهم في دعم فلسطين والتعليم',
+      icon: Heart,
+      link: '/donations',
+      gradient: 'from-red-600 to-green-600',
+      color: 'palestine'
     },
   ];
 
