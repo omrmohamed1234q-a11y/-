@@ -532,43 +532,60 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
 
         {currentStep === 'preview' && capturedImage && (
           <div className="space-y-4">
-              <div className="relative bg-gray-100 rounded-xl overflow-hidden">
-                <img 
-                  src={capturedImage} 
-                  alt="معاينة الصورة"
-                  className="w-full h-64 object-contain"
-                />
-              </div>
-              
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={resetScan}
-                  disabled={isProcessing}
-                  className="flex-1 h-12 border-2 border-gray-200 hover:border-red-300 rounded-xl"
-                >
-                  <RotateCcwIcon className="w-4 h-4 ml-2" />
-                  إعادة التقاط
-                </Button>
-                <Button
-                  onClick={processAndUpload}
-                  disabled={isProcessing}
-                  className="flex-1 h-12 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl"
-                >
-                  {isProcessing ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      معالجة...
-                    </div>
-                  ) : (
-                    <>
-                      <CheckIcon className="w-4 h-4 ml-2" />
-                      إضافة للطباعة
-                    </>
-                  )}
-                </Button>
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold text-green-600 mb-2">✅ تم تحميل الصورة بنجاح!</h3>
+              <p className="text-gray-600">اختر المرشح المطلوب ثم اضغط "إضافة للطباعة"</p>
+            </div>
+            
+            <div className="relative bg-gray-100 rounded-xl overflow-hidden border-2 border-green-200">
+              <img 
+                src={capturedImage} 
+                alt="معاينة الصورة"
+                className="w-full h-64 object-contain"
+              />
+              <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
+                معاينة
               </div>
             </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <h4 className="font-semibold text-blue-800 mb-2">🎨 المرشح المحدد:</h4>
+              <p className="text-blue-700">
+                {selectedMode === 'color' ? '🌈 ملون - ستبقى الألوان كما هي' : 
+                 selectedMode === 'grayscale' ? '⚫ رمادي - ستتحول للرمادي' : 
+                 '⚪ أبيض وأسود - ستتحول لأبيض وأسود حاد'}
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={resetScan}
+                disabled={isProcessing}
+                className="flex-1 h-12 border-2 border-gray-200 hover:border-red-300 rounded-xl"
+              >
+                <RotateCcwIcon className="w-4 h-4 ml-2" />
+                إعادة التقاط
+              </Button>
+              <Button
+                onClick={processAndUpload}
+                disabled={isProcessing}
+                className="flex-1 h-12 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl"
+              >
+                {isProcessing ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    معالجة...
+                  </div>
+                ) : (
+                  <>
+                    <CheckIcon className="w-4 h-4 ml-2" />
+                    إضافة للطباعة
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         )}
 
         {currentStep === 'processing' && (
