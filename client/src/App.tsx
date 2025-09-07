@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, lazy } from "react";
 import { SplashScreen } from "@/components/SplashScreen";
-import ChatBot from "@/components/ChatBot";
 import NotFound from "@/pages/not-found";
 import EnhancedLanding from "@/pages/enhanced-landing";
 import Login from "@/pages/auth/login";
@@ -230,7 +229,6 @@ function Router() {
         <Route path="/article/:id" component={ArticlePage} />
         <Route component={NotFound} />
       </Switch>
-      <ChatBot />
     </>
   );
 }

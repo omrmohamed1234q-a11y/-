@@ -493,38 +493,6 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* User Stats */}
-      <section className="px-4 max-w-6xl mx-auto mb-20">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: 'نقاط البونص', value: user?.bountyPoints || 0, icon: Star, color: 'yellow' },
-            { label: 'المستوى', value: user?.level || 1, icon: Award, color: 'blue' },
-            { label: 'مجموع الطباعة', value: user?.totalPrints || 0, icon: Printer, color: 'green' },
-            { label: 'إجمالي المشتريات', value: user?.totalPurchases || 0, icon: TrendingUp, color: 'purple' }
-          ].map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 2.2 + index * 0.1 }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <Card className="text-center p-4 hover:shadow-lg transition-shadow">
-                <CardContent className="space-y-3">
-                  <div className={`w-12 h-12 rounded-full bg-${stat.color}-100 flex items-center justify-center mx-auto`}>
-                    {(() => {
-                      const IconComponent = stat.icon;
-                      return <IconComponent className={`w-6 h-6 text-${stat.color}-600`} />;
-                    })()}
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                  <div className="text-sm text-gray-600">{stat.label}</div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </section>
 
       <BottomNav />
     </div>
