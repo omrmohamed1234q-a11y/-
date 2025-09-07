@@ -26,6 +26,9 @@ const productFormSchema = z.object({
   nameEn: z.string().optional(),
   description: z.string().min(10, 'وصف المنتج يجب أن يكون 10 أحرف على الأقل'),
   descriptionEn: z.string().optional(),
+  productMainType: z.enum(['book', 'habshetnak'], {
+    errorMap: () => ({ message: 'نوع المنتج مطلوب' })
+  }),
   category: z.string().min(1, 'الفئة مطلوبة'),
   price: z.string().min(1, 'السعر مطلوب'),
   originalPrice: z.string().optional(),
@@ -56,6 +59,12 @@ const productFormSchema = z.object({
   
   // Image
   imageUrl: z.string().optional(),
+  
+  // Habshetnak-specific fields
+  usageInstructions: z.string().optional(),
+  targetAge: z.string().optional(),
+  difficultyLevel: z.string().optional(),
+  benefits: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productFormSchema>;
@@ -74,6 +83,25 @@ export default function ProductForm({ initialData, onSubmit, isLoading, isEdit =
   );
   const [coverImageUrl, setCoverImageUrl] = useState(initialData?.imageUrl || '');
 
+  const bookCategories = [
+    { value: 'teacher-books', label: 'كتب المعلمين' },
+    { value: 'student-books', label: 'كتب الطلاب' },
+    { value: 'digital-books', label: 'كتب رقمية' },
+  ];
+
+  const habshetnakCategories = [
+    { value: 'time-organization', label: 'تنظيم الوقت' },
+    { value: 'focus-tools', label: 'أدوات التركيز' },
+    { value: 'planning', label: 'التخطيط والجداول' },
+    { value: 'mind-maps', label: 'الخرائط الذهنية' },
+    { value: 'study-tools', label: 'أدوات الدراسة' },
+    { value: 'motivation', label: 'أدوات التحفيز' },
+  ];
+
+  const getCurrentCategories = () => {
+    return form.watch('productMainType') === 'book' ? bookCategories : habshetnakCategories;
+  };
+
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
@@ -81,6 +109,7 @@ export default function ProductForm({ initialData, onSubmit, isLoading, isEdit =
       nameEn: initialData?.nameEn || '',
       description: initialData?.description || '',
       descriptionEn: initialData?.descriptionEn || '',
+      productMainType: initialData?.productMainType || 'book',
       category: initialData?.category || '',
       price: initialData?.price || '',
       originalPrice: initialData?.originalPrice || '',
@@ -99,6 +128,10 @@ export default function ProductForm({ initialData, onSubmit, isLoading, isEdit =
       teacherOnly: initialData?.teacherOnly || false,
       vip: initialData?.vip || false,
       imageUrl: initialData?.imageUrl || '',
+      usageInstructions: initialData?.usageInstructions || '',
+      targetAge: initialData?.targetAge || '',
+      difficultyLevel: initialData?.difficultyLevel || '',
+      benefits: initialData?.benefits || '',
     },
   });
 
@@ -190,24 +223,45 @@ export default function ProductForm({ initialData, onSubmit, isLoading, isEdit =
             )}
           </div>
 
+          {/* Product Main Type */}
           <div>
-            <Label htmlFor="category">الفئة *</Label>
+            <Label htmlFor="productMainType">نوع المنتج الرئيسي *</Label>
+            <Select 
+              value={form.watch('productMainType')} 
+              onValueChange={(value) => {
+                form.setValue('productMainType', value as 'book' | 'habshetnak');
+                form.setValue('category', ''); // Reset category when changing main type
+              }}
+            >
+              <SelectTrigger data-testid="select-product-main-type">
+                <SelectValue placeholder="اختر نوع المنتج" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="book">📚 كتاب</SelectItem>
+                <SelectItem value="habshetnak">🎯 حبشتكنات اطبعلي</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.formState.errors.productMainType && (
+              <p className="text-sm text-red-500 mt-1">{form.formState.errors.productMainType.message}</p>
+            )}
+          </div>
+
+          {/* Category Selection */}
+          <div>
+            <Label htmlFor="category">الفئة الفرعية *</Label>
             <Select 
               value={form.watch('category')} 
               onValueChange={(value) => form.setValue('category', value)}
             >
               <SelectTrigger data-testid="select-category">
-                <SelectValue placeholder="اختر الفئة" />
+                <SelectValue placeholder={`اختر ${form.watch('productMainType') === 'book' ? 'نوع الكتاب' : 'نوع الحبشتكنات'}`} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="books">كتب دراسية</SelectItem>
-                <SelectItem value="notebooks">كراسات وملازم</SelectItem>
-                <SelectItem value="exams">امتحانات ونماذج</SelectItem>
-                <SelectItem value="worksheets">أوراق عمل</SelectItem>
-                <SelectItem value="presentations">عروض تقديمية</SelectItem>
-                <SelectItem value="educational_games">ألعاب تعليمية</SelectItem>
-                <SelectItem value="teacher_resources">موارد المعلمين</SelectItem>
-                <SelectItem value="digital_content">محتوى رقمي</SelectItem>
+                {getCurrentCategories().map((category) => (
+                  <SelectItem key={category.value} value={category.value}>
+                    {category.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             {form.formState.errors.category && (
@@ -246,12 +300,13 @@ export default function ProductForm({ initialData, onSubmit, isLoading, isEdit =
         </CardContent>
       </Card>
 
-      {/* Educational Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>المعلومات التعليمية</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      {/* Educational Information - Only for Books */}
+      {form.watch('productMainType') === 'book' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>المعلومات التعليمية</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="curriculumType">نوع المنهج</Label>
@@ -322,8 +377,78 @@ export default function ProductForm({ initialData, onSubmit, isLoading, isEdit =
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Habshetnak Details - Only for Habshetnak */}
+      {form.watch('productMainType') === 'habshetnak' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>تفاصيل حبشتكنات اطبعلي</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Usage Instructions */}
+            <div>
+              <Label htmlFor="usageInstructions">تعليمات الاستخدام</Label>
+              <Textarea
+                {...form.register('usageInstructions')}
+                placeholder="كيفية استخدام هذا المنتج لتحسين الإنتاجية..."
+                rows={3}
+                data-testid="textarea-usage-instructions"
+              />
+            </div>
+
+            {/* Target Age Group */}
+            <div>
+              <Label htmlFor="targetAge">الفئة العمرية المناسبة</Label>
+              <Select 
+                value={form.watch('targetAge')} 
+                onValueChange={(value) => form.setValue('targetAge', value)}
+              >
+                <SelectTrigger data-testid="select-target-age">
+                  <SelectValue placeholder="اختر الفئة العمرية" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="kids">الأطفال (6-12 سنة)</SelectItem>
+                  <SelectItem value="teens">المراهقون (13-18 سنة)</SelectItem>
+                  <SelectItem value="adults">البالغون (18+ سنة)</SelectItem>
+                  <SelectItem value="all">جميع الأعمار</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Difficulty Level */}
+            <div>
+              <Label htmlFor="difficultyLevel">مستوى الصعوبة</Label>
+              <Select 
+                value={form.watch('difficultyLevel')} 
+                onValueChange={(value) => form.setValue('difficultyLevel', value)}
+              >
+                <SelectTrigger data-testid="select-difficulty-level">
+                  <SelectValue placeholder="اختر مستوى الصعوبة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beginner">مبتدئ</SelectItem>
+                  <SelectItem value="intermediate">متوسط</SelectItem>
+                  <SelectItem value="advanced">متقدم</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Benefits */}
+            <div>
+              <Label htmlFor="benefits">الفوائد والمميزات</Label>
+              <Textarea
+                {...form.register('benefits')}
+                placeholder="الفوائد التي سيحصل عليها المستخدم من هذا المنتج..."
+                rows={3}
+                data-testid="textarea-benefits"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Product Types */}
       <Card>

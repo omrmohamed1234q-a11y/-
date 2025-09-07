@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
 interface Product {
@@ -31,7 +32,7 @@ interface Product {
   createdAt?: string;
 }
 
-const categories = [
+const bookCategories = [
   {
     id: 'teachers',
     name: 'كتب المعلمين',
@@ -47,25 +48,42 @@ const categories = [
     iconColor: 'text-green-600',
   },
   {
-    id: 'supplies',
-    name: 'مستلزمات الطباعة',
-    icon: 'fas fa-print',
-    color: 'from-purple-50 to-purple-100',
-    iconColor: 'text-purple-600',
-  },
-  {
     id: 'digital',
-    name: 'تحميلات رقمية',
+    name: 'كتب رقمية',
     icon: 'fas fa-download',
     color: 'from-orange-50 to-orange-100',
     iconColor: 'text-orange-600',
   },
+];
+
+const habshetnakCategories = [
   {
-    id: 'tools',
-    name: 'أدوات مدرسية',
-    icon: 'fas fa-pencil-ruler',
+    id: 'time-organization',
+    name: 'تنظيم الوقت',
+    icon: 'fas fa-clock',
+    color: 'from-purple-50 to-purple-100',
+    iconColor: 'text-purple-600',
+  },
+  {
+    id: 'focus-tools',
+    name: 'أدوات التركيز',
+    icon: 'fas fa-target',
     color: 'from-red-50 to-red-100',
     iconColor: 'text-red-600',
+  },
+  {
+    id: 'planning',
+    name: 'التخطيط والجداول',
+    icon: 'fas fa-calendar-alt',
+    color: 'from-blue-50 to-blue-100',
+    iconColor: 'text-blue-600',
+  },
+  {
+    id: 'mind-maps',
+    name: 'الخرائط الذهنية',
+    icon: 'fas fa-project-diagram',
+    color: 'from-green-50 to-green-100',
+    iconColor: 'text-green-600',
   },
 ];
 
@@ -74,6 +92,7 @@ export default function Store() {
   const { toast } = useToast();
   const { addToCart, isAddingToCart } = useCart();
   
+  const [activeTab, setActiveTab] = useState<string>('books');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('featured');
@@ -98,23 +117,51 @@ export default function Store() {
       );
     }
 
+    // Tab filter (books vs habshetnak)
+    filtered = filtered.filter(product => {
+      if (activeTab === 'books') {
+        return product.category === 'book' || product.category.includes('book') || 
+               product.category.includes('teacher') || product.category.includes('student') || 
+               product.isDigital;
+      } else if (activeTab === 'habshetnak') {
+        return product.category === 'habshetnak' || product.category === 'tools' || 
+               product.category === 'supplies' || product.category === 'planning';
+      }
+      return true;
+    });
+
     // Category filter
     if (selectedCategory) {
       filtered = filtered.filter(product => {
-        switch (selectedCategory) {
-          case 'teachers':
-            return product.teacherOnly || product.category.includes('teacher');
-          case 'students':
-            return !product.teacherOnly && product.category.includes('student');
-          case 'supplies':
-            return product.category === 'supplies' || product.category === 'stationery';
-          case 'digital':
-            return product.isDigital;
-          case 'tools':
-            return product.category === 'tools' || product.category === 'equipment';
-          default:
-            return true;
+        // Book categories
+        if (activeTab === 'books') {
+          switch (selectedCategory) {
+            case 'teachers':
+              return product.teacherOnly || product.category.includes('teacher');
+            case 'students':
+              return !product.teacherOnly && product.category.includes('student');
+            case 'digital':
+              return product.isDigital;
+            default:
+              return true;
+          }
         }
+        // Habshetnak categories  
+        else if (activeTab === 'habshetnak') {
+          switch (selectedCategory) {
+            case 'time-organization':
+              return product.category.includes('time') || product.category.includes('organization');
+            case 'focus-tools':
+              return product.category.includes('focus') || product.category.includes('concentration');
+            case 'planning':
+              return product.category.includes('planning') || product.category.includes('schedule');
+            case 'mind-maps':
+              return product.category.includes('mind-map') || product.category.includes('diagram');
+            default:
+              return true;
+          }
+        }
+        return true;
       });
     }
 
@@ -164,6 +211,15 @@ export default function Store() {
     setSelectedCategory(selectedCategory === category ? '' : category);
   };
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSelectedCategory(''); // Reset category when switching tabs
+  };
+
+  const getCurrentCategories = () => {
+    return activeTab === 'books' ? bookCategories : habshetnakCategories;
+  };
+
   const formatPrice = (price: string) => {
     return parseFloat(price).toLocaleString('ar-EG');
   };
@@ -200,8 +256,21 @@ export default function Store() {
       <main className="max-w-6xl mx-auto px-4 py-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-2">متجر اطبعلي</h1>
-          <p className="text-muted-foreground">تسوق من أفضل المنتجات التعليمية ومستلزمات الطباعة</p>
+          <p className="text-muted-foreground">تسوق من أفضل الكتب التعليمية وحبشتكنات اطبعلي المميزة</p>
         </div>
+
+        {/* Main Tabs */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="books" className="text-lg font-semibold">
+              📚 الكتب
+            </TabsTrigger>
+            <TabsTrigger value="habshetnak" className="text-lg font-semibold">
+              🎯 حبشتكنات اطبعلي
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value={activeTab} className="mt-6">
 
         {/* Search and Filters */}
         <Card className="mb-6">
@@ -246,7 +315,7 @@ export default function Store() {
 
             {/* Category Filters */}
             <div className="flex flex-wrap gap-3">
-              {categories.map((category) => (
+              {getCurrentCategories().map((category) => (
                 <Button
                   key={category.id}
                   variant={selectedCategory === category.id ? "default" : "outline"}
@@ -262,60 +331,71 @@ export default function Store() {
           </CardContent>
         </Card>
 
-        {/* Results Summary */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-muted-foreground">
-            {isLoading ? 'جاري التحميل...' : `تم العثور على ${products.length} منتج`}
-            {searchQuery && ` عن "${searchQuery}"`}
-          </p>
-          {(searchQuery || selectedCategory || (priceRange && priceRange !== 'all')) && (
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('');
-                setPriceRange('all');
-              }}
-              className="text-sm"
-            >
-              مسح الفلاتر
-            </Button>
-          )}
-        </div>
+            {/* Results Summary */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-muted-foreground">
+                {isLoading ? 'جاري التحميل...' : 
+                  `تم العثور على ${products.length} ${activeTab === 'books' ? 'كتاب' : 'منتج من حبشتكنات اطبعلي'}`
+                }
+                {searchQuery && ` عن "${searchQuery}"`}
+              </p>
+              {(searchQuery || selectedCategory || (priceRange && priceRange !== 'all')) && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('');
+                    setPriceRange('all');
+                  }}
+                  className="text-sm"
+                >
+                  مسح الفلاتر
+                </Button>
+              )}
+            </div>
 
-        {/* Products Grid */}
-        {products.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <i className="fas fa-search text-4xl text-muted-foreground mb-4"></i>
-              <h3 className="text-lg font-semibold mb-2">لا توجد منتجات</h3>
-              <p className="text-muted-foreground">جرب تعديل معايير البحث أو الفلترة</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product: Product) => (
-              <ProductCard
-                key={product.id}
-                product={{
-                  id: product.id,
-                  name: product.name,
-                  description: product.description,
-                  price: product.price,
-                  originalPrice: product.originalPrice || undefined,
-                  imageUrl: product.imageUrl || undefined,
-                  category: product.category,
-                  rating: product.rating,
-                  ratingCount: product.ratingCount,
-                  featured: product.featured,
-                  gradeLevel: product.grade || undefined,
-                  subject: product.subject || undefined,
-                  stock: product.availableCopies,
-                }}
-              />
-            ))}
-          </div>
-        )}
+            {/* Products Grid */}
+            {products.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <i className={`fas ${activeTab === 'books' ? 'fa-book' : 'fa-lightbulb'} text-4xl text-muted-foreground mb-4`}></i>
+                  <h3 className="text-lg font-semibold mb-2">
+                    {activeTab === 'books' ? 'لا توجد كتب' : 'لا توجد حبشتكنات'}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {activeTab === 'books' ? 
+                      'جرب البحث عن كتب أخرى أو تعديل الفلاتر' :
+                      'جرب البحث عن منتجات أخرى من حبشتكنات اطبعلي'
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {products.map((product: Product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={{
+                      id: product.id,
+                      name: product.name,
+                      description: product.description,
+                      price: product.price,
+                      originalPrice: product.originalPrice || undefined,
+                      imageUrl: product.imageUrl || undefined,
+                      category: product.category,
+                      rating: product.rating,
+                      ratingCount: product.ratingCount,
+                      featured: product.featured,
+                      gradeLevel: product.grade || undefined,
+                      subject: product.subject || undefined,
+                      stock: product.availableCopies,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
       
       <BottomNav />
