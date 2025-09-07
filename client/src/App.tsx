@@ -38,7 +38,7 @@ import AdminAnnouncements from "@/pages/admin/announcements";
 import SimpleAnalytics from "@/pages/admin/simple-analytics";
 import OrdersManagement from "@/pages/admin/orders-management";
 import OrdersManagementEnhanced from '@/pages/admin/orders-management-enhanced';
-import ModernOrdersManagement from '@/pages/admin/modern-orders-management';
+import AdminOrders from '@/pages/admin/orders';
 import EnhancedDriverDashboard from '@/pages/driver/enhanced-driver-dashboard';
 import OrderTrackingEnhanced from '@/pages/order-tracking-enhanced';
 import OrderTrackingTalabatStyle from '@/pages/order-tracking-talabat-style';
@@ -133,7 +133,7 @@ function Router() {
         <Route path="/admin/inquiries" component={() => <AdminProtectedRoute><AdminInquiries /></AdminProtectedRoute>} />
         <Route path="/admin/announcements" component={() => <AdminProtectedRoute><AdminAnnouncements /></AdminProtectedRoute>} />
         <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
-        <Route path="/admin/orders" component={() => <AdminProtectedRoute><ModernOrdersManagement /></AdminProtectedRoute>} />
+        <Route path="/admin/orders" component={() => <AdminProtectedRoute><AdminOrders /></AdminProtectedRoute>} />
         <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
         <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
         <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
@@ -199,7 +199,7 @@ function Router() {
         <Route path="/admin/inquiries" component={() => <AdminProtectedRoute><AdminInquiries /></AdminProtectedRoute>} />
         <Route path="/admin/announcements" component={() => <AdminProtectedRoute><AdminAnnouncements /></AdminProtectedRoute>} />
         <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
-        <Route path="/admin/orders" component={() => <AdminProtectedRoute><ModernOrdersManagement /></AdminProtectedRoute>} />
+        <Route path="/admin/orders" component={() => <AdminProtectedRoute><AdminOrders /></AdminProtectedRoute>} />
         <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
         <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
         <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
