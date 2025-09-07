@@ -161,7 +161,7 @@ export default function AdminOrders() {
         if (!oldOrders) return oldOrders;
         return oldOrders.map(order => 
           order.id === selectedOrder?.id 
-            ? { ...order, status: data.order.status, statusText: data.order.statusText }
+            ? { ...order, status: (data as any)?.status || selectedOrder?.status }
             : order
         );
       });

@@ -594,8 +594,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // User Profile endpoint - returns authenticated user's profile data
   app.get('/api/profile', requireAuth, async (req: any, res) => {
+    const userId = req.user.id;
     try {
-      const userId = req.user.id;
       console.log(`📋 Fetching profile for user: ${userId}`);
       
       // Check if this is a demo/test user ID with fallback to memory storage
