@@ -338,16 +338,6 @@ export default function DonationsPage() {
                       ساهم في توفير المواد التعليمية والدعم الأكاديمي للطلاب الذين يواجهون صعوبات مالية.
                     </p>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">500+</div>
-                        <div className="text-sm text-gray-600">طالب مستفيد</div>
-                      </div>
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">15,000</div>
-                        <div className="text-sm text-gray-600">جنيه تم توفيرها</div>
-                      </div>
-                    </div>
 
                     <div className="space-y-3">
                       <h4 className="font-semibold text-gray-800">كيف تساعد؟</h4>
@@ -383,16 +373,6 @@ export default function DonationsPage() {
                       قدم يد العون للأطفال الفلسطينيين وساهم في توفير احتياجاتهم الأساسية والتعليمية.
                     </p>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: '#CE112610' }}>
-                        <div className="text-2xl font-bold" style={{ color: '#CE1126' }}>1,200+</div>
-                        <div className="text-sm text-gray-600">طفل مستفيد</div>
-                      </div>
-                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: '#CE112610' }}>
-                        <div className="text-2xl font-bold" style={{ color: '#CE1126' }}>50,000</div>
-                        <div className="text-sm text-gray-600">جنيه تم جمعها</div>
-                      </div>
-                    </div>
 
                     <div className="space-y-3">
                       <h4 className="font-semibold text-gray-800">كيف تساعد؟</h4>
@@ -416,35 +396,6 @@ export default function DonationsPage() {
               </Card>
             )}
 
-            {/* Recent Donations */}
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-700">
-                  <Gift className="h-5 w-5" />
-                  آخر التبرعات
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { name: 'أحمد محمد', amount: 100, type: selectedTab === 'students' ? 'للطلاب' : 'لفلسطين', time: 'منذ 5 دقائق' },
-                    { name: 'سارة أحمد', amount: 50, type: selectedTab === 'students' ? 'للطلاب' : 'لفلسطين', time: 'منذ 15 دقيقة' },
-                    { name: 'محمد علي', amount: 200, type: selectedTab === 'students' ? 'للطلاب' : 'لفلسطين', time: 'منذ 30 دقيقة' },
-                  ].map((donation, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-medium text-gray-900">{donation.name}</p>
-                        <p className="text-sm text-gray-600">{donation.type}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-green-600">{donation.amount} جنيه</p>
-                        <p className="text-xs text-gray-500">{donation.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
