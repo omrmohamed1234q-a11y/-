@@ -1201,7 +1201,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all available drivers (online and available)
       const allDrivers = await storage.getAllDrivers();
-      const availableDrivers = allDrivers.filter(driver => 
+      console.log('🔍 All drivers:', allDrivers.length);
+      
+      // For demo, create some test drivers if none exist
+      if (allDrivers.length === 0) {
+        console.log('🚀 Creating demo drivers...');
+        await storage.createDriver({
+          name: 'محمد عبدالله',
+          phone: '01001234567',
+          email: 'driver1@example.com',
+          status: 'online',
+          isAvailable: true,
+          vehicleType: 'motorcycle',
+          rating: 4.8
+        });
+        await storage.createDriver({
+          name: 'أحمد محمود',
+          phone: '01009876543',
+          email: 'driver2@example.com',
+          status: 'online',
+          isAvailable: true,
+          vehicleType: 'car',
+          rating: 4.9
+        });
+        console.log('✅ Demo drivers created');
+      }
+      
+      const updatedDrivers = await storage.getAllDrivers();
+      const availableDrivers = updatedDrivers.filter(driver => 
         driver.status === 'online' && 
         driver.isAvailable === true
       );
