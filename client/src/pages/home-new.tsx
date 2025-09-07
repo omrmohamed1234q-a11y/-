@@ -120,18 +120,20 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-green-50" dir="rtl">
+      {/* Palestinian Flag Colors Strip */}
+      <div className="w-full h-2 bg-gradient-to-r from-red-600 via-white via-black to-green-600" />
       <Header />
       
       {/* Hero Section with Advanced Printing Animation */}
       <section className="relative pt-20 pb-20 px-6 overflow-hidden">
-        {/* Background Elements */}
+        {/* Background Elements - Palestinian Colors */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-10 w-40 h-40 bg-red-100 rounded-full opacity-20 animate-pulse"></div>
-          <div className="absolute top-1/3 right-16 w-32 h-32 bg-blue-100 rounded-full opacity-20 animate-bounce"></div>
-          <div className="absolute bottom-1/4 left-1/3 w-28 h-28 bg-green-100 rounded-full opacity-20"></div>
-          <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-purple-100 rounded-full opacity-15 animate-pulse" style={{animationDelay: '1s'}}></div>
-          <div className="absolute bottom-1/3 right-10 w-36 h-36 bg-yellow-100 rounded-full opacity-15"></div>
+          <div className="absolute top-1/4 left-10 w-40 h-40 bg-red-100 rounded-full opacity-20 animate-pulse" style={{background: 'radial-gradient(circle, #CE1126, #CE112650)'}}></div>
+          <div className="absolute top-1/3 right-16 w-32 h-32 bg-green-100 rounded-full opacity-20 animate-bounce" style={{background: 'radial-gradient(circle, #007A3D, #007A3D50)'}}></div>
+          <div className="absolute bottom-1/4 left-1/3 w-28 h-28 bg-black rounded-full opacity-15"></div>
+          <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-red-100 rounded-full opacity-15 animate-pulse" style={{animationDelay: '1s', background: 'radial-gradient(circle, #CE1126, #CE112640)'}}></div>
+          <div className="absolute bottom-1/3 right-10 w-36 h-36 bg-green-100 rounded-full opacity-15" style={{background: 'radial-gradient(circle, #007A3D, #007A3D40)'}}></div>
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto text-center">
@@ -143,12 +145,12 @@ export default function Home() {
           >
             <h1 className="text-6xl md:text-8xl font-bold mb-8 leading-tight">
               <motion.span 
-                className="bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent"
-                style={{ backgroundSize: '200% 200%' }}
+                className="bg-gradient-to-r from-red-600 via-black via-green-600 to-red-600 bg-clip-text text-transparent"
+                style={{ backgroundSize: '300% 300%', background: 'linear-gradient(45deg, #CE1126 0%, #000000 25%, #007A3D 50%, #CE1126 75%, #000000 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
                 animate={{ 
                   backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
                 }}
-                transition={{ duration: 4, repeat: Infinity }}
+                transition={{ duration: 5, repeat: Infinity }}
               >
                 اطبعلي
               </motion.span>
@@ -285,7 +287,8 @@ export default function Home() {
 
               {/* Floating Action Icons */}
               <motion.div
-                className="absolute -top-6 -right-6 bg-red-500 text-white p-3 rounded-full shadow-xl"
+                className="text-white p-3 rounded-full shadow-xl absolute -top-6 -right-6"
+                style={{ backgroundColor: '#CE1126' }}
                 animate={{ 
                   y: [0, -10, 0],
                   rotate: [0, 15, -15, 0]
@@ -296,7 +299,8 @@ export default function Home() {
               </motion.div>
               
               <motion.div
-                className="absolute -bottom-6 -left-6 bg-blue-500 text-white p-3 rounded-full shadow-xl"
+                className="text-white p-3 rounded-full shadow-xl absolute -bottom-6 -left-6"
+                style={{ backgroundColor: '#007A3D' }}
                 animate={{ 
                   y: [0, 10, 0],
                   rotate: [0, -15, 15, 0]
@@ -307,7 +311,8 @@ export default function Home() {
               </motion.div>
 
               <motion.div
-                className="absolute top-1/2 -left-8 bg-green-500 text-white p-2 rounded-full shadow-lg"
+                className="text-white p-2 rounded-full shadow-lg absolute top-1/2 -left-8"
+                style={{ backgroundColor: '#000000' }}
                 animate={{ 
                   x: [0, -5, 0],
                   scale: [1, 1.1, 1]
@@ -330,7 +335,8 @@ export default function Home() {
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-10 py-5 rounded-full shadow-2xl text-lg font-semibold"
+                  className="text-white px-10 py-5 rounded-full shadow-2xl text-lg font-semibold"
+                  style={{ background: 'linear-gradient(135deg, #CE1126, #007A3D)' }}
                 >
                   <motion.div
                     animate={{ rotate: [0, 10, -10, 0] }}
@@ -349,7 +355,8 @@ export default function Home() {
                 <Button 
                   variant="outline" 
                   size="lg"
-                  className="border-2 border-blue-500 text-blue-600 hover:bg-blue-50 px-10 py-5 rounded-full shadow-xl text-lg font-semibold"
+                  className="border-2 px-10 py-5 rounded-full shadow-xl text-lg font-semibold"
+                  style={{ borderColor: '#007A3D', color: '#007A3D' }}
                 >
                   <ShoppingBag className="w-6 h-6 mr-3" />
                   تصفح المتجر
