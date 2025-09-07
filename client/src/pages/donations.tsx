@@ -339,22 +339,12 @@ export default function DonationsPage() {
                     </p>
                     
 
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-800">كيف تساعد؟</h4>
-                      <div className="space-y-2 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Star className="h-4 w-4 text-yellow-500" />
-                          <span>10 جنيه = كتاب واحد</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Star className="h-4 w-4 text-yellow-500" />
-                          <span>25 جنيه = أدوات مكتبية</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Star className="h-4 w-4 text-yellow-500" />
-                          <span>50 جنيه = مجموعة مواد تعليمية</span>
-                        </div>
-                      </div>
+                    <div className="flex justify-center">
+                      <img 
+                        src="/atbaali-logo.png" 
+                        alt="اطبعلي" 
+                        className="w-32 h-32 object-contain" 
+                      />
                     </div>
                   </div>
                 </CardContent>
@@ -374,22 +364,12 @@ export default function DonationsPage() {
                     </p>
                     
 
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-800">كيف تساعد؟</h4>
-                      <div className="space-y-2 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Heart className="h-4 w-4" style={{ color: '#CE1126' }} />
-                          <span>15 جنيه = وجبة غذائية</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Heart className="h-4 w-4" style={{ color: '#CE1126' }} />
-                          <span>30 جنيه = مستلزمات طبية</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Heart className="h-4 w-4" style={{ color: '#CE1126' }} />
-                          <span>75 جنيه = حقيبة إغاثة كاملة</span>
-                        </div>
-                      </div>
+                    <div className="flex justify-center">
+                      <img 
+                        src="/atbaali-logo.png" 
+                        alt="اطبعلي" 
+                        className="w-32 h-32 object-contain" 
+                      />
                     </div>
                   </div>
                 </CardContent>
