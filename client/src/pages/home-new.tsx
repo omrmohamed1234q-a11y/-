@@ -165,14 +165,18 @@ export default function Home() {
               </motion.span>
             </h1>
             
-            <motion.p 
-              className="text-2xl md:text-3xl text-gray-600 mb-6 font-medium"
+            <motion.div 
+              className="flex justify-center mb-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              {greeting()} {user?.fullName || 'عزيزي'}! 👋
-            </motion.p>
+              <img 
+                src="/atbaali-logo.png" 
+                alt="اطبعلي" 
+                className="w-24 h-24 object-contain" 
+              />
+            </motion.div>
             
             <motion.p 
               className="text-xl md:text-2xl text-gray-500 mb-16 max-w-3xl mx-auto leading-relaxed"
