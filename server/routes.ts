@@ -373,409 +373,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ==================== ORDER MANAGEMENT APIS ====================
+  // ==================== NEW CLEAN ORDER SYSTEM ====================
   
-  // Get all orders for admin (with filtering)
+  // Get all orders for admin - Clean & Simple
   app.get("/api/admin/orders", async (req, res) => {
     try {
-      const { status, search } = req.query;
-      const cacheKey = `orders_${status || 'all'}_${search || ''}`;
+      console.log('🔍 Admin requesting orders list');
       
-      // Try to get from cache first (30 seconds TTL)
-      let cachedOrders = cacheGet(cacheKey);
-      if (cachedOrders) {
-        console.log(`📦 Cache hit for orders: ${cacheKey}`);
-        return res.json(cachedOrders);
-      }
+      // Get all orders from storage
+      const orders = await storage.getAllOrders();
       
-      // Get real orders from storage
-      let orders = await storage.getAllOrders();
+      // Transform to display format with Google Drive links
+      const transformedOrders = orders.map(order => ({
+        id: order.id,
+        orderNumber: order.orderNumber || order.id,
+        customerName: order.customerName || 'عميل مجهول',
+        customerPhone: order.customerPhone || 'غير محدد',
+        totalAmount: order.totalAmount || 0,
+        status: order.status || 'new',
+        statusText: getOrderStatusText(order.status || 'new'),
+        createdAt: order.createdAt || new Date().toISOString(),
+        items: order.items || [],
+        // Extract Google Drive info from print jobs
+        printFiles: order.items?.filter(item => item.isPrintJob).map(item => ({
+          filename: item.printJobData?.filename || 'ملف غير محدد',
+          fileUrl: item.printJobData?.fileUrl || '',
+          fileSize: item.printJobData?.fileSize || 0,
+          fileType: item.printJobData?.fileType || 'unknown',
+          copies: item.printJobData?.copies || 1,
+          paperSize: item.printJobData?.paperSize || 'A4',
+          paperType: item.printJobData?.paperType || 'plain',
+          colorMode: item.printJobData?.colorMode || 'grayscale'
+        })) || []
+      }));
       
-      // Apply filters
-      if (status && status !== 'all') {
-        orders = orders.filter(order => order.status === status);
-      }
+      console.log(`📋 Returning ${transformedOrders.length} orders`);
+      res.json(transformedOrders);
       
-      if (search) {
-        const searchLower = (search as string).toLowerCase();
-        orders = orders.filter(order => 
-          order.orderNumber.toLowerCase().includes(searchLower) ||
-          order.customerName.toLowerCase().includes(searchLower) ||
-          order.customerPhone.includes(searchLower)
-        );
-      }
-      
-      // Cache the result for 30 seconds
-      cacheSet(cacheKey, orders, 30);
-      console.log(`💾 Cached orders: ${cacheKey}`);
-      
-      res.json(orders);
     } catch (error: any) {
       console.error('❌ Error fetching orders:', error);
-      res.status(500).json({ error: 'Failed to fetch orders' });
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch orders' 
+      });
     }
   });
 
-  // Function to send order completion notification
-  async function sendOrderCompletionNotification(order: any, orderId: string) {
-    try {
-      if (!order.userId) {
-        console.log(`⚠️ No userId found for order ${orderId}, using fallback user`);
-        return;
-      }
-
-      // Create completion notification
-      const notification = {
-        userId: order.userId,
-        title: '🎉 تم تسليم طلبك بنجاح!',
-        message: `طلبك رقم ${order.orderNumber || orderId} تم تسليمه بنجاح. نشكرك لثقتك بنا!`,
-        type: 'order',
-        relatedId: orderId,
-        actionUrl: `/orders/${orderId}`,
-        iconType: 'success',
-        priority: 'normal',
-        isRead: false,
-        isClicked: false,
-        isPinned: false,
-        sentAt: new Date().toISOString(),
-        metadata: {
-          orderNumber: order.orderNumber || orderId,
-          customerName: order.customerName,
-          completedAt: new Date().toISOString()
-        }
-      };
-
-      // Store notification using existing system
-      const createdNotification = await storage.createNotification(notification);
-      
-      // Add to global storage for immediate availability
-      globalNotificationStorage.push({
-        id: createdNotification.id || `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        ...notification,
-        createdAt: new Date().toISOString()
-      });
-
-      console.log(`✅ Order completion notification sent to user ${order.userId} for order ${orderId}`);
-      
-      // Try to send WebSocket notification for real-time update
-      try {
-        sendToUser(order.userId, {
-          type: 'order_completed',
-          notification: createdNotification,
-          orderId: orderId,
-          orderNumber: order.orderNumber || orderId
-        });
-      } catch (wsError) {
-        console.log('📡 WebSocket notification failed, but notification stored successfully');
-      }
-
-    } catch (error) {
-      console.error(`❌ Failed to send order completion notification for order ${orderId}:`, error);
-    }
-  }
-  
-  // Update order status
+  // Update order status - Simplified
   app.patch("/api/admin/orders/:orderId/status", async (req, res) => {
     try {
       const { orderId } = req.params;
-      const { status, staffNotes, staffId, staffName } = req.body;
+      const { status } = req.body;
       
       console.log(`🔄 Updating order ${orderId} status to: ${status}`);
       
-      // Get order details to access customer information
-      const existingOrder = await storage.getOrder(orderId);
+      // Update in storage
+      const updatedOrder = await storage.updateOrderStatus(orderId, status);
       
-      // Simulated update - replace with real database update
-      const updatedOrder = {
-        id: orderId,
-        status: status,
-        statusText: getStatusText(status),
-        staffId: staffId,
-        staffName: staffName,
-        updatedAt: new Date().toISOString(),
-        // Add timestamp fields based on status
-        ...(status === 'staff_received' && { receivedAt: new Date().toISOString() }),
-        ...(status === 'printing' && { printingStartedAt: new Date().toISOString() }),
-        ...(status === 'ready_pickup' && { printingCompletedAt: new Date().toISOString(), readyAt: new Date().toISOString() }),
-        ...(status === 'ready_delivery' && { printingCompletedAt: new Date().toISOString(), readyAt: new Date().toISOString() }),
-        ...(status === 'out_for_delivery' && { outForDeliveryAt: new Date().toISOString() }),
-        ...(status === 'delivered' && { deliveredAt: new Date().toISOString() }),
-        ...(status === 'cancelled' && { cancelledAt: new Date().toISOString() }),
-        timeline: [
-          {
-            event: `تم تحديث الحالة إلى: ${getStatusText(status)}`,
-            timestamp: new Date().toISOString(),
-            note: staffNotes || undefined
-          }
-        ]
-      };
-
-      // Send notification when order is completed (delivered)
-      if (status === 'delivered' && existingOrder) {
-        await sendOrderCompletionNotification(existingOrder, orderId);
+      if (!updatedOrder) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'Order not found' 
+        });
       }
-
-      // Clear orders cache when status changes
-      cacheClear('orders_');
       
-      res.json(updatedOrder);
-    } catch (error: any) {
-      console.error('❌ Error updating order:', error);
-      res.status(500).json({ error: 'Failed to update order' });
-    }
-  });
-  
-  // Create new order from payment success
-  app.post("/api/orders/create-from-payment", async (req, res) => {
-    try {
-      const { 
-        paymentId,
-        amount,
-        paymentMethod,
-        customerName,
-        customerPhone,
-        deliveryAddress,
-        deliveryMethod,
-        items 
-      } = req.body;
-      
-      // Generate order number
-      const orderNumber = `ORD-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-      
-      const newOrder = {
-        id: `order-${Date.now()}`,
-        orderNumber,
-        userId: req.body.userId || 'anonymous',
-        customerName,
-        customerPhone,
-        items: items || [],
-        subtotal: amount - 2, // Subtract delivery fee
-        deliveryFee: deliveryMethod === 'delivery' ? 2 : 0,
-        totalAmount: amount,
-        status: 'new',
-        statusText: 'مش مستلمة من الموظف',
-        deliveryMethod,
-        deliveryAddress,
-        paymentMethod,
-        paymentStatus: 'completed',
-        paymentId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        timeline: [
-          {
-            event: 'تم إنشاء الطلب وتأكيد الدفع',
-            timestamp: new Date().toISOString(),
-            note: `Payment ID: ${paymentId}`
-          }
-        ]
-      };
-      
-      console.log('✅ New order created:', newOrder);
-      
-      res.json({ 
-        success: true, 
-        order: newOrder,
-        message: 'تم إنشاء الطلب بنجاح' 
+      res.json({
+        success: true,
+        order: {
+          ...updatedOrder,
+          statusText: getOrderStatusText(status)
+        }
       });
       
     } catch (error: any) {
-      console.error('❌ Error creating order:', error);
-      res.status(500).json({ error: 'Failed to create order' });
-    }
-  });
-  
-  // Get order by tracking number for customer
-  app.get("/api/orders/track/:orderNumber", async (req, res) => {
-    try {
-      const { orderNumber } = req.params;
-      
-      // Get real order from storage
-      const order = await storage.getOrderByOrderNumber(orderNumber);
-      
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-      
-      res.json(order);
-    } catch (error: any) {
-      console.error('❌ Error tracking order:', error);
-      res.status(500).json({ error: 'Order not found' });
-    }
-  });
-  
-  // ==================== DRIVER APIS ====================
-  
-  // Get driver statistics
-  app.get("/api/driver/stats", async (req, res) => {
-    try {
-      // Get real driver stats from storage
-      const stats = await storage.getDriverStats(req.user?.id);
-      
-      res.json(stats);
-    } catch (error: any) {
-      console.error('❌ Error fetching driver stats:', error);
-      res.status(500).json({ error: 'Failed to fetch driver stats' });
-    }
-  });
-  
-  // Get available orders for driver
-  app.get("/api/driver/available-orders", async (req, res) => {
-    try {
-      // Get real available orders from storage
-      const availableOrders = await storage.getAvailableOrders();
-      
-      res.json(availableOrders);
-    } catch (error: any) {
-      console.error('❌ Error fetching available orders:', error);
-      res.status(500).json({ error: 'Failed to fetch available orders' });
-    }
-  });
-  
-  // Get assigned orders for driver
-  app.get("/api/driver/assigned-orders", async (req, res) => {
-    try {
-      // Simulated assigned orders - replace with real database query
-      const assignedOrders = [
-        {
-          id: 'order-assigned-1',
-          orderNumber: 'ORD-2024-002',
-          customerName: 'فاطمة أحمد',
-          customerPhone: '01555666777',
-          deliveryAddress: '789 شارع الهرم، الجيزة',
-          totalAmount: 30,
-          createdAt: new Date(Date.now() - 1200000).toISOString(), // 20 minutes ago
-          status: 'driver_assigned'
-        }
-      ];
-      
-      res.json(assignedOrders);
-    } catch (error: any) {
-      console.error('❌ Error fetching assigned orders:', error);
-      res.status(500).json({ error: 'Failed to fetch assigned orders' });
-    }
-  });
-  
-  // Accept order (driver accepts an available order)
-  app.post("/api/driver/accept-order/:orderId", async (req, res) => {
-    try {
-      const { orderId } = req.params;
-      const { driverId, driverName, driverPhone } = req.body;
-      
-      console.log(`🚗 Driver ${driverName} accepting order ${orderId}`);
-      
-      // Simulated order acceptance - replace with real database update
-      const updatedOrder = {
-        id: orderId,
-        status: 'driver_assigned',
-        statusText: 'راح للكابتن',
-        driverId: driverId,
-        driverName: driverName,
-        driverPhone: driverPhone,
-        driverAssignedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        timeline: [
-          {
-            event: `تم تعيين السائق: ${driverName}`,
-            timestamp: new Date().toISOString()
-          }
-        ]
-      };
-      
-      res.json(updatedOrder);
-    } catch (error: any) {
-      console.error('❌ Error accepting order:', error);
-      res.status(500).json({ error: 'Failed to accept order' });
-    }
-  });
-  
-  // Update order status by driver
-  app.patch("/api/driver/orders/:orderId/status", async (req, res) => {
-    try {
-      const { orderId } = req.params;
-      const { status, driverId, location } = req.body;
-      
-      console.log(`🔄 Driver updating order ${orderId} to status: ${status}`);
-      
-      // Simulated status update - replace with real database update
-      const updatedOrder = {
-        id: orderId,
-        status: status,
-        statusText: getStatusText(status),
-        updatedAt: new Date().toISOString(),
-        // Add timestamp fields and location tracking based on status
-        ...(status === 'out_for_delivery' && { 
-          outForDeliveryAt: new Date().toISOString(),
-          driverLocation: location || { lat: 30.0444, lng: 31.2357 } // Cairo coordinates as fallback
-        }),
-        ...(status === 'delivered' && { 
-          deliveredAt: new Date().toISOString(),
-          finalLocation: location || { lat: 30.0444, lng: 31.2357 }
-        }),
-        ...(status === 'cancelled' && { cancelledAt: new Date().toISOString() }),
-        // Always update driver location for active deliveries
-        ...(location && (status === 'out_for_delivery' || status === 'delivered') && {
-          currentDriverLocation: location,
-          lastLocationUpdate: new Date().toISOString()
-        }),
-        timeline: [
-          {
-            event: `تم تحديث الحالة إلى: ${getStatusText(status)}`,
-            timestamp: new Date().toISOString(),
-            ...(location && { location: location })
-          }
-        ]
-      };
-      
-      res.json(updatedOrder);
-    } catch (error: any) {
       console.error('❌ Error updating order status:', error);
-      res.status(500).json({ error: 'Failed to update order status' });
-    }
-  });
-  
-  // Get live driver location for tracking
-  app.get("/api/orders/:orderId/driver-location", async (req, res) => {
-    try {
-      const { orderId } = req.params;
-      
-      // Simulated driver location - replace with real tracking
-      const driverLocation = {
-        orderId: orderId,
-        driverName: 'أحمد السائق',
-        currentLocation: {
-          lat: 30.0444 + (Math.random() - 0.5) * 0.01, // Simulate movement around Cairo
-          lng: 31.2357 + (Math.random() - 0.5) * 0.01
-        },
-        status: 'out_for_delivery',
-        estimatedArrival: 8, // minutes
-        lastUpdate: new Date().toISOString(),
-        distance: '2.3 كم',
-        route: [
-          { lat: 30.0444, lng: 31.2357 },
-          { lat: 30.0454, lng: 31.2367 },
-          { lat: 30.0464, lng: 31.2377 }
-        ]
-      };
-      
-      res.json(driverLocation);
-    } catch (error: any) {
-      console.error('❌ Error fetching driver location:', error);
-      res.status(500).json({ error: 'Failed to fetch driver location' });
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to update order status' 
+      });
     }
   });
 
   // Helper function for status text
-  function getStatusText(status: string): string {
+  function getOrderStatusText(status: string): string {
     const statusMap: Record<string, string> = {
-      new: "مش مستلمة من الموظف",
-      staff_received: "استلمها الموظف",
-      printing: "جاري الطباعة دلوقتي",
-      ready_pickup: "جاهزة في الفرع - تعالى خدها",
-      ready_delivery: "جاهزة للتوصيل",
-      driver_assigned: "راح للكابتن",
-      out_for_delivery: "الكابتن في الطريق إليك",
-      arrived: "الكابتن وصل - استلم طلبك",
-      delivered: "وصلت خلاص - تم التسليم",
+      pending: "في انتظار المراجعة",
+      processing: "جاري المعالجة", 
+      printing: "جاري الطباعة",
+      ready: "جاهز للاستلام",
+      delivered: "تم التسليم",
       cancelled: "تم الإلغاء"
     };
     return statusMap[status] || "حالة غير معروفة";
