@@ -284,7 +284,7 @@ export default function ScanPage() {
     reader.readAsDataURL(file)
   }, [toast])
 
-  // ✅ معالجة ورفع الصورة
+  // ✅ معالجة ورفع الصورة مبسطة بدون Canvas معقد
   const processAndUpload = useCallback(async () => {
     if (!capturedImage) {
       toast({
@@ -300,87 +300,55 @@ export default function ScanPage() {
     setCurrentStep('processing')
 
     try {
-      console.log('🎨 Processing image...')
+      console.log('🎨 Processing image...', { mode: selectedMode })
       
-      // إنشاء كانفاس للمعالجة
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      
-      if (!ctx) {
-        throw new Error('لا يمكن إنشاء Canvas للمعالجة')
+      // تحويل Data URL إلى Blob مباشرة
+      const response = await fetch(capturedImage)
+      if (!response.ok) {
+        throw new Error('فشل في معالجة الصورة')
       }
+      
+      const blob = await response.blob()
+      console.log('📁 File created:', { size: blob.size, type: blob.type })
+      
+      const file = new File([blob], `scan_${selectedMode}_${Date.now()}.jpg`, { type: 'image/jpeg' })
 
-      // تحميل الصورة
-      const img = new Image()
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = () => reject(new Error('فشل في تحميل الصورة'))
-        img.src = capturedImage
+      // التحقق من بيانات Cloudinary
+      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+      
+      console.log('🔧 Cloudinary config check:', { 
+        hasCloudName: !!cloudName, 
+        hasUploadPreset: !!uploadPreset,
+        cloudName: cloudName?.substring(0, 3) + '...' // عرض أول 3 أحرف فقط للأمان
       })
 
-      // تعيين حجم الكانفاس
-      canvas.width = img.width
-      canvas.height = img.height
-      
-      // رسم الصورة
-      ctx.drawImage(img, 0, 0)
-      
-      // تطبيق المرشحات حسب النوع المحدد
-      if (selectedMode === 'grayscale') {
-        console.log('🎨 Applying grayscale filter...')
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        const data = imageData.data
-        
-        for (let i = 0; i < data.length; i += 4) {
-          const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
-          data[i] = gray     // red
-          data[i + 1] = gray // green  
-          data[i + 2] = gray // blue
-        }
-        
-        ctx.putImageData(imageData, 0, 0)
-      } else if (selectedMode === 'blackwhite') {
-        console.log('🎨 Applying black & white filter...')
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        const data = imageData.data
-        
-        for (let i = 0; i < data.length; i += 4) {
-          const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
-          const threshold = gray > 128 ? 255 : 0
-          data[i] = threshold     // red
-          data[i + 1] = threshold // green  
-          data[i + 2] = threshold // blue
-        }
-        
-        ctx.putImageData(imageData, 0, 0)
+      if (!cloudName || !uploadPreset) {
+        throw new Error('إعدادات Cloudinary غير مكتملة. تأكد من وجود CLOUD_NAME و UPLOAD_PRESET')
       }
-
-      // تحويل إلى Blob
-      const processedImageDataUrl = canvas.toDataURL('image/jpeg', 0.9)
-      
-      const response = await fetch(processedImageDataUrl)
-      const blob = await response.blob()
-      const file = new File([blob], `scan_${selectedMode}_${Date.now()}.jpg`, { type: 'image/jpeg' })
 
       console.log('📤 Uploading to Cloudinary...')
 
-      // رفع إلى Cloudinary مع الحذف التلقائي
+      // رفع إلى Cloudinary مع إعدادات مبسطة
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET)
+      formData.append('upload_preset', uploadPreset)
       formData.append('folder', 'temp-scans')
-      formData.append('tags', `temp-scan,${selectedMode},auto-delete-1h`)
-      formData.append('transformation', 'c_scale,w_1200,q_auto')
 
-      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`
+      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`
+      console.log('🌐 Uploading to:', cloudinaryUrl)
+      
       const uploadResponse = await fetch(cloudinaryUrl, {
         method: 'POST',
         body: formData
       })
 
+      console.log('📡 Upload response status:', uploadResponse.status)
+
       if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json().catch(() => ({}))
-        throw new Error(errorData.error?.message || 'فشل في رفع الصورة إلى Cloudinary')
+        const errorText = await uploadResponse.text()
+        console.error('❌ Cloudinary error response:', errorText)
+        throw new Error(`فشل الرفع: ${uploadResponse.status} - ${errorText}`)
       }
 
       const uploadResult = await uploadResponse.json()
@@ -390,7 +358,7 @@ export default function ScanPage() {
       const newDocument: ScannedDocument = {
         id: uploadResult.public_id || `scan_${Date.now()}`,
         originalImage: capturedImage,
-        processedImage: processedImageDataUrl,
+        processedImage: capturedImage, // استخدام نفس الصورة للبساطة
         mode: selectedMode,
         uploadUrl: uploadResult.secure_url,
         timestamp: new Date()
@@ -401,14 +369,23 @@ export default function ScanPage() {
 
       toast({
         title: "تم المسح بنجاح!",
-        description: "تم مسح المستند ورفعه على Cloudinary (سيُحذف تلقائياً بعد ساعة)",
+        description: "تم مسح المستند ورفعه بنجاح",
       })
 
     } catch (error: any) {
       console.error('❌ Processing error:', error)
+      
+      // رسالة خطأ مفصلة
+      let errorMessage = "حدث خطأ أثناء معالجة الصورة"
+      if (error?.message) {
+        errorMessage = error.message
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      }
+      
       toast({
         title: "خطأ في المعالجة",
-        description: error?.message || "حدث خطأ أثناء معالجة الصورة",
+        description: errorMessage,
         variant: "destructive",
       })
       setCurrentStep('preview')
