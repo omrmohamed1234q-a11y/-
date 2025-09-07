@@ -7,6 +7,7 @@ export interface HybridUploadResult {
     webViewLink?: string;
     directDownloadLink?: string;
     folderLink?: string;
+    folderHierarchy?: string;
     error?: string;
   };
   primaryUrl: string;
@@ -19,6 +20,8 @@ export interface UploadOptions {
   fileName?: string;
   folder?: string;
   googleDriveFolder?: string;
+  customerName?: string;
+  uploadDate?: string;
   resourceType?: 'image' | 'video' | 'raw' | 'auto';
   useGoogleDriveAsBackup?: boolean;
   useCloudinaryAsPrimary?: boolean;
@@ -118,7 +121,7 @@ export class HybridUploadService {
   }
 
   /**
-   * Upload buffer to Google Drive
+   * Upload buffer to Google Drive with organized folder structure
    */
   async uploadBuffer(
     buffer: Buffer,
@@ -126,10 +129,17 @@ export class HybridUploadService {
     mimeType: string,
     options: UploadOptions = {}
   ): Promise<HybridUploadResult> {
-    const { googleDriveFolder } = options;
+    const { 
+      customerName = 'عميل غير محدد',
+      uploadDate = new Date().toISOString().split('T')[0],
+      googleDriveFolder 
+    } = options;
 
     const uploadId = `buffer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     console.log(`🔄 Starting Google Drive buffer upload: ${uploadId}`);
+    console.log(`   Customer: ${customerName}`);
+    console.log(`   Date: ${uploadDate}`);
+    console.log(`   File: ${fileName}`);
 
     const result: HybridUploadResult = {
       primaryUrl: '',
@@ -141,12 +151,21 @@ export class HybridUploadService {
     // Upload to Google Drive
     if (googleDriveService.isEnabled()) {
       try {
-        console.log('📤 Uploading buffer to Google Drive...');
+        console.log('📤 Uploading buffer to Google Drive with organized structure...');
 
-        // Create folder if specified
         let folderId = undefined;
-        if (googleDriveFolder) {
+        let folderHierarchy = '';
+
+        // Use new nested folder structure if customer name is provided
+        if (customerName && customerName !== 'عميل غير محدد') {
+          console.log(`📁 Creating nested folder structure for: ${customerName}`);
+          folderId = await googleDriveService.createNestedFolderStructure(customerName, uploadDate);
+          folderHierarchy = googleDriveService.getFolderHierarchy(customerName, uploadDate);
+        } 
+        // Fallback to old system if specified
+        else if (googleDriveFolder) {
           folderId = await googleDriveService.createFolder(googleDriveFolder);
+          folderHierarchy = googleDriveFolder;
         }
 
         const googleDriveResult = await googleDriveService.uploadBuffer(
@@ -160,6 +179,7 @@ export class HybridUploadService {
           success: googleDriveResult.success,
           fileId: googleDriveResult.fileId,
           webViewLink: googleDriveResult.webViewLink,
+          folderHierarchy,
           error: googleDriveResult.error
         };
 
@@ -174,10 +194,11 @@ export class HybridUploadService {
           
           result.backupUrls.push(directLink);
           result.primaryUrl = directLink;
-          result.message = 'تم رفع الملف بنجاح إلى Google Drive';
+          result.message = `تم رفع الملف بنجاح إلى Google Drive في: ${folderHierarchy}`;
         }
 
-        console.log('✅ Google Drive buffer upload successful');
+        console.log(`✅ Google Drive buffer upload successful`);
+        console.log(`   Folder structure: ${folderHierarchy}`);
 
       } catch (error: any) {
         console.error('❌ Google Drive buffer upload failed:', error.message);

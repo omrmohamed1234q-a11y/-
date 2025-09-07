@@ -299,6 +299,58 @@ export class GoogleDriveService {
   }
 
   /**
+   * Create nested folder structure: اطبعلي/العميل [customerName]/[date]
+   */
+  async createNestedFolderStructure(
+    customerName: string, 
+    date: string = new Date().toISOString().split('T')[0]
+  ): Promise<string | null> {
+    if (!this.isConfigured) {
+      return null;
+    }
+
+    try {
+      console.log(`📁 Creating nested folder structure for customer: ${customerName}, date: ${date}`);
+
+      // Step 1: Create or get main "اطبعلي" folder
+      const mainFolderId = await this.createFolder('اطبعلي');
+      if (!mainFolderId) {
+        throw new Error('Failed to create main اطبعلي folder');
+      }
+
+      // Step 2: Create or get customer folder inside main folder
+      const customerFolderName = `العميل ${customerName}`;
+      const customerFolderId = await this.createFolder(customerFolderName, mainFolderId);
+      if (!customerFolderId) {
+        throw new Error(`Failed to create customer folder: ${customerFolderName}`);
+      }
+
+      // Step 3: Create or get date folder inside customer folder
+      const dateFolderId = await this.createFolder(date, customerFolderId);
+      if (!dateFolderId) {
+        throw new Error(`Failed to create date folder: ${date}`);
+      }
+
+      console.log(`✅ Nested folder structure created successfully:`);
+      console.log(`   اطبعلي/${customerFolderName}/${date}/`);
+      console.log(`   Final folder ID: ${dateFolderId}`);
+
+      return dateFolderId;
+
+    } catch (error: any) {
+      console.error('❌ Failed to create nested folder structure:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get folder hierarchy path for display
+   */
+  getFolderHierarchy(customerName: string, date: string): string {
+    return `اطبعلي/العميل ${customerName}/${date}/`;
+  }
+
+  /**
    * Test connection to Google Drive
    */
   async testConnection(): Promise<{ success: boolean; error?: string }> {
