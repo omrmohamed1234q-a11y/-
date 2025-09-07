@@ -89,7 +89,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
   const subtotal = calculateSubtotal();
   const delivery = subtotal > 100 ? 0 : 15;
-  const total = subtotal + delivery;
+  const palestineDonation = 2; // Automatic donation to Palestine
+  const total = subtotal + delivery + palestineDonation;
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -354,6 +355,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   <span data-testid="cart-delivery">
                     {delivery === 0 ? 'مجاني' : `${delivery} جنيه`}
                   </span>
+                </div>
+                <div className="flex justify-between text-sm" style={{color: '#CE1126'}}>
+                  <span className="flex items-center gap-1">
+                    🇵🇸 تبرع لفلسطين
+                  </span>
+                  <span data-testid="palestine-donation">{palestineDonation} جنيه</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-bold">

@@ -137,8 +137,9 @@ export default function CheckoutPage() {
 
   const subtotal = cart.subtotal || 0;
   const delivery = formData.deliveryMethod === 'delivery' ? (subtotal > 100 ? 0 : 15) : 0;
+  const palestineDonation = 2; // Automatic donation to Palestine
   const pointsDiscount = formData.usePoints ? Math.min(50, Math.floor(subtotal * 0.05)) : 0;
-  const total = subtotal + delivery - pointsDiscount;
+  const total = subtotal + delivery + palestineDonation - pointsDiscount;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -393,6 +394,12 @@ export default function CheckoutPage() {
                     <span data-testid="checkout-delivery">
                       {delivery === 0 ? 'مجاني' : `${delivery} جنيه`}
                     </span>
+                  </div>
+                  <div className="flex justify-between text-sm" style={{color: '#CE1126'}}>
+                    <span className="flex items-center gap-1">
+                      🇵🇸 تبرع لفلسطين
+                    </span>
+                    <span data-testid="palestine-donation">{palestineDonation} جنيه</span>
                   </div>
                   {pointsDiscount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
