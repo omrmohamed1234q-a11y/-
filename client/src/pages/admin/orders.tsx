@@ -215,7 +215,7 @@ export default function AdminOrders() {
                   <th className="p-4 font-medium">المبلغ</th>
                   <th className="p-4 font-medium">الحالة</th>
                   <th className="p-4 font-medium">الدفع</th>
-                  <th className="p-4 font-medium">ملفات العميل</th>
+                  <th className="p-4 font-medium">المنتجات المطلوبة</th>
                   <th className="p-4 font-medium">التاريخ</th>
                   <th className="p-4 font-medium">الإجراءات</th>
                 </tr>
@@ -249,62 +249,61 @@ export default function AdminOrders() {
                       </Badge>
                     </td>
                     <td className="p-4">
-                      {/* Google Drive Files for Customer */}
-                      <div className="flex flex-col space-y-2">
-                        {console.log('Order items:', order.items) || order.items && Array.isArray(order.items) && order.items.filter((item: any) => item.fileUrl || item.googleDriveLink || (item.printJob?.files && item.printJob.files.length > 0)).length > 0 ? (
-                          order.items.filter((item: any) => item.fileUrl || item.googleDriveLink || (item.printJob?.files && item.printJob.files.length > 0)).map((item: any, index: number) => (
-                            <div key={index} className="space-y-1">
-                              {/* Display Print Job Files if Available */}
-                              {item.printJob?.files && item.printJob.files.map((file: any, fileIndex: number) => (
-                                <div key={fileIndex} className="border rounded-lg p-2 bg-blue-50">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-2 space-x-reverse">
-                                      <FileText className="w-4 h-4 text-blue-600" />
-                                      <div>
-                                        <div className="text-xs font-medium text-blue-900">{file.displayName || 'ملف مرفوع'}</div>
-                                        <div className="text-xs text-blue-700">{item.printJob?.settings || 'إعدادات الطباعة'}</div>
+                      {/* عرض جميع المنتجات في الطلب */}
+                      <div className="space-y-2 max-w-sm">
+                        {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
+                          <>
+                            {order.items.map((item: any, index: number) => (
+                              <div key={`item-${index}`} className="text-sm">
+                                {/* إذا كان منتج طباعة */}
+                                {item.productId === 'print-service' && item.printJob ? (
+                                  <div className="border border-blue-200 rounded-lg p-2 bg-blue-50">
+                                    <div className="flex items-start space-x-2 space-x-reverse">
+                                      <FileText className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-blue-900 text-xs truncate">
+                                          📄 {item.printJob.originalFilename || item.filename || 'ملف للطباعة'}
+                                        </div>
+                                        <div className="text-xs text-blue-700 mt-1">
+                                          {item.printJob.settings || 'إعدادات الطباعة'}
+                                        </div>
+                                        {/* رابط Google Drive إن وجد */}
+                                        {(item.printJob.googleDriveLink || item.googleDriveLink) && (
+                                          <a
+                                            href={item.printJob.googleDriveLink || item.googleDriveLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center text-green-600 hover:text-green-800 text-xs mt-1 px-2 py-1 bg-green-100 rounded"
+                                            title="فتح الملف"
+                                          >
+                                            <ExternalLink className="w-3 h-3 ml-1" />
+                                            تحميل الملف
+                                          </a>
+                                        )}
                                       </div>
                                     </div>
-                                    {file.googleDriveLink && (
-                                      <a
-                                        href={file.googleDriveLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-green-600 hover:text-green-800 text-xs flex items-center px-2 py-1 bg-green-100 rounded"
-                                        title="فتح في Google Drive"
-                                      >
-                                        <ExternalLink className="w-3 h-3 mr-1" />
-                                        Drive
-                                      </a>
-                                    )}
                                   </div>
-                                </div>
-                              ))}
-                              
-                              {/* Fallback for Direct Links */}
-                              {item.googleDriveLink && !item.printJob?.files && (
-                                <a
-                                  href={item.googleDriveLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-green-600 hover:text-green-800 text-xs flex items-center bg-green-100 px-2 py-1 rounded"
-                                >
-                                  📁 {item.filename || `ملف ${index + 1}`}
-                                </a>
-                              ) : item.fileUrl ? (
-                                <a
-                                  href={item.fileUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 text-xs flex items-center"
-                                >
-                                  ☁️ {item.filename || `ملف ${index + 1}`}
-                                </a>
-                              ) : null}
-                            </div>
-                          ))
+                                ) : (
+                                  /* منتج عادي من المتجر */
+                                  <div className="border border-gray-200 rounded-lg p-2 bg-gray-50">
+                                    <div className="flex items-center space-x-2 space-x-reverse">
+                                      <div className="w-4 h-4 bg-gray-400 rounded flex-shrink-0"></div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-gray-900 text-xs truncate">
+                                          {item.name || item.productName || `منتج #${item.productId}`}
+                                        </div>
+                                        <div className="text-xs text-gray-600">
+                                          الكمية: {item.quantity || 1}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </>
                         ) : (
-                          <span className="text-gray-400 text-xs">لا توجد ملفات</span>
+                          <span className="text-gray-400 text-xs">لا توجد منتجات</span>
                         )}
                       </div>
                     </td>
