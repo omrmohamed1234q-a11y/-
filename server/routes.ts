@@ -384,30 +384,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orders = await storage.getAllOrders();
       
       // Transform to display format with Google Drive links
-      const transformedOrders = orders.map(order => ({
-        id: order.id,
-        orderNumber: order.orderNumber || order.id,
-        customerName: order.customerName || 'عميل مجهول',
-        customerPhone: order.customerPhone || 'غير محدد',
-        totalAmount: order.totalAmount || 0,
-        status: order.status || 'new',
-        statusText: getOrderStatusText(order.status || 'new'),
-        createdAt: order.createdAt || new Date().toISOString(),
-        items: order.items || [],
-        // Extract Google Drive info from print jobs
-        printFiles: order.items?.filter(item => item.isPrintJob).map(item => ({
-          filename: item.printJobData?.filename || 'ملف غير محدد',
-          fileUrl: item.printJobData?.fileUrl || '',
-          fileSize: item.printJobData?.fileSize || 0,
-          fileType: item.printJobData?.fileType || 'unknown',
-          copies: item.printJobData?.copies || 1,
-          paperSize: item.printJobData?.paperSize || 'A4',
-          paperType: item.printJobData?.paperType || 'plain',
-          colorMode: item.printJobData?.colorMode || 'grayscale'
-        })) || []
+      const transformedOrders = await Promise.all(orders.map(async order => {
+        // Get customer info if user ID exists
+        let customerInfo = { name: 'عميل مجهول', phone: 'غير محدد' };
+        
+        if (order.userId) {
+          try {
+            const user = await storage.getUser(order.userId);
+            if (user) {
+              customerInfo = {
+                name: user.fullName || user.displayName || user.name || order.customerName || 'عميل مجهول',
+                phone: user.phone || order.customerPhone || 'غير محدد'
+              };
+            }
+          } catch (error) {
+            console.log(`⚠️ Could not fetch user ${order.userId}:`, error.message);
+          }
+        }
+        
+        // Extract print files with better data handling
+        let printFiles = [];
+        
+        if (order.items && Array.isArray(order.items)) {
+          // Try to get from items first
+          printFiles = order.items
+            .filter(item => item.isPrintJob && item.printJobData)
+            .map(item => ({
+              filename: item.printJobData.filename || 'ملف غير محدد',
+              fileUrl: item.printJobData.fileUrl || '',
+              fileSize: item.printJobData.fileSize || 0,
+              fileType: item.printJobData.fileType || 'unknown',
+              copies: item.printJobData.copies || 1,
+              paperSize: item.printJobData.paperSize || 'A4',
+              paperType: item.printJobData.paperType || 'plain',
+              colorMode: item.printJobData.colorMode || 'grayscale'
+            }));
+        }
+        
+        // If no print files found in items, try to get from print jobs
+        if (printFiles.length === 0 && order.userId) {
+          try {
+            const printJobs = await storage.getPrintJobsByUser(order.userId);
+            const orderPrintJobs = printJobs.filter(job => 
+              job.createdAt && order.createdAt && 
+              Math.abs(new Date(job.createdAt).getTime() - new Date(order.createdAt).getTime()) < 300000 // 5 minutes
+            );
+            
+            printFiles = orderPrintJobs.map(job => ({
+              filename: job.filename || 'ملف غير محدد',
+              fileUrl: job.fileUrl || '',
+              fileSize: job.fileSize || 0,
+              fileType: job.fileType || 'unknown',
+              copies: job.copies || 1,
+              paperSize: job.paperSize || 'A4',
+              paperType: job.paperType || 'plain',
+              colorMode: job.colorMode || 'grayscale'
+            }));
+          } catch (error) {
+            console.log(`⚠️ Could not fetch print jobs for user ${order.userId}:`, error.message);
+          }
+        }
+        
+        console.log(`📋 Order ${order.id}: Customer: ${customerInfo.name}, Files: ${printFiles.length}`);
+        
+        return {
+          id: order.id,
+          orderNumber: order.orderNumber || order.id,
+          customerName: customerInfo.name,
+          customerPhone: customerInfo.phone,
+          totalAmount: parseFloat(order.totalAmount) || 0,
+          status: order.status || 'pending',
+          statusText: getOrderStatusText(order.status || 'pending'),
+          createdAt: order.createdAt || new Date().toISOString(),
+          items: order.items || [],
+          printFiles: printFiles,
+          userId: order.userId // Keep for reference
+        };
       }));
       
-      console.log(`📋 Returning ${transformedOrders.length} orders`);
+      console.log(`📋 Returning ${transformedOrders.length} orders with proper customer data`);
       res.json(transformedOrders);
       
     } catch (error: any) {

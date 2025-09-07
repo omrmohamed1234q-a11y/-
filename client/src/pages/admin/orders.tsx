@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { InvoicePrintable } from '@/components/InvoicePrintable';
 import { 
   Eye, 
   ExternalLink, 
@@ -28,7 +29,8 @@ import {
   ArrowUpDown,
   Users,
   TrendingUp,
-  Activity
+  Activity,
+  Receipt
 } from 'lucide-react';
 
 interface PrintFile {
@@ -64,6 +66,7 @@ interface Order {
 export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [invoicePrintOpen, setInvoicePrintOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
@@ -152,9 +155,21 @@ export default function AdminOrders() {
       const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, { status });
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // تحديث البيانات المحلية فوراً
+      queryClient.setQueryData(['/api/admin/orders'], (oldOrders: Order[] | undefined) => {
+        if (!oldOrders) return oldOrders;
+        return oldOrders.map(order => 
+          order.id === selectedOrder?.id 
+            ? { ...order, status: data.order.status, statusText: data.order.statusText }
+            : order
+        );
+      });
+      
+      // إعادة جلب البيانات للتأكد
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
       setDetailsOpen(false);
+      
       toast({
         title: '✅ تم التحديث بنجاح',
         description: 'تم تحديث حالة الطلب بنجاح'
@@ -440,10 +455,8 @@ export default function AdminOrders() {
             const statusStyle = statusConfig[order.status as keyof typeof statusConfig] || statusConfig.pending;
             const StatusIcon = statusStyle.icon;
             
-            // استخراج ملفات الطباعة من العناصر
-            const printFiles = order.items
-              ?.filter(item => item.isPrintJob && item.printJobData)
-              .map(item => item.printJobData) || [];
+            // استخراج ملفات الطباعة من الطلب
+            const printFiles = order.printFiles || [];
             
             return (
               <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow">
@@ -536,6 +549,32 @@ export default function AdminOrders() {
 
                     {/* أزرار التحكم */}
                     <div className="flex flex-col gap-2 ml-6">
+                      {/* زر طباعة الفاتورة */}
+                      <Dialog open={invoicePrintOpen && selectedOrder?.id === order.id} onOpenChange={setInvoicePrintOpen}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            size="sm"
+                            onClick={() => setSelectedOrder(order)}
+                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Receipt className="w-4 h-4" />
+                            طباعة الفاتورة
+                          </Button>
+                        </DialogTrigger>
+                        
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl">
+                              فاتورة الطلب #{selectedOrder?.orderNumber}
+                            </DialogTitle>
+                          </DialogHeader>
+                          
+                          {selectedOrder && (
+                            <InvoicePrintable order={selectedOrder} />
+                          )}
+                        </DialogContent>
+                      </Dialog>
+
                       <Dialog open={detailsOpen && selectedOrder?.id === order.id} onOpenChange={setDetailsOpen}>
                         <DialogTrigger asChild>
                           <Button 
