@@ -297,6 +297,5 @@ export const InvoicePrintable: React.FC<InvoicePrintableProps> = ({ order }) => 
           </div>
         </div>
       </div>
-    </div>
   );
 };
