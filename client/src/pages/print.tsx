@@ -379,7 +379,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
 
             toast({
               title: "تم المسح بنجاح!",
-              description: `تم تطبيق مرشح "${selectedMode === 'color' ? 'الألوان الأصلية' : selectedMode === 'grayscale' ? 'الرمادي' : 'الأبيض والأسود'}" وإضافة الملف للطباعة`,
+              description: `تم تطبيق مرشح "${selectedMode === 'color' ? 'الألوان الأصلية' : selectedMode === 'grayscale' ? 'الرمادي' : 'الأبيض والأسود'}" وإضافة الملف للمسح`,
             })
 
           }, 'image/jpeg', 0.8)
@@ -535,7 +535,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
           <div className="space-y-4">
             <div className="text-center mb-4">
               <h3 className="text-lg font-semibold text-green-600 mb-2">✅ تم تحميل الصورة بنجاح!</h3>
-              <p className="text-gray-600">اختر المرشح المطلوب ثم اضغط "إضافة للطباعة"</p>
+              <p className="text-gray-600">اختر المرشح المطلوب ثم اضغط "إضافة للمسح"</p>
             </div>
             
             <div className="relative bg-gray-100 rounded-xl overflow-hidden border-2 border-green-200">
@@ -581,7 +581,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
                 ) : (
                   <>
                     <CheckIcon className="w-4 h-4 ml-2" />
-                    إضافة للطباعة
+                    إضافة للمسح
                   </>
                 )}
               </Button>
@@ -603,7 +603,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
               <CheckIcon className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-lg font-semibold mb-2">تم بنجاح!</h3>
-            <p className="text-gray-600 mb-4">تم إضافة الملف للطباعة</p>
+            <p className="text-gray-600 mb-4">تم إضافة الملف للمسح</p>
             
             <Button
               onClick={resetScan}
