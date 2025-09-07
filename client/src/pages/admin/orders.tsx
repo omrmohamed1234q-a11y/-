@@ -254,7 +254,7 @@ export default function AdminOrders() {
                         {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
                           <>
                             {order.items.map((item: any, index: number) => (
-                              <div key={`item-${index}`} className="text-sm">
+                              <div key={`${order.id}-item-${index}`} className="text-sm">
                                 {/* إذا كان منتج طباعة */}
                                 {item.productId === 'print-service' && item.printJob ? (
                                   <div className="border border-blue-200 rounded-lg p-2 bg-blue-50">
