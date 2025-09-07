@@ -14,7 +14,7 @@ import {
   TrendingUp, Clock, Star, Search, GraduationCap,
   ShoppingBag, Coins, UserCircle, ArrowRight,
   Download, Upload, Sparkles, Layers, Target,
-  Settings, Package, Users, Zap
+  Settings, Package, Users, Zap, Lock, FileX
 } from 'lucide-react';
 import { PartnersSection } from '@/components/PartnersSection';
 import { AnnouncementGrid } from '@/components/AnnouncementGrid';
@@ -379,41 +379,101 @@ export default function Home() {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 1.6 + index * 0.1 }}
-              whileHover={{ scale: 1.03, y: -5 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: action.id === 'teachers' ? 1 : 1.03, y: action.id === 'teachers' ? 0 : -5 }}
+              whileTap={{ scale: action.id === 'teachers' ? 1 : 0.98 }}
             >
-              <Link href={action.link}>
-                <Card className="h-48 border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden group">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
+              {action.id === 'teachers' ? (
+                <Card className="h-48 border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-not-allowed overflow-hidden group relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-400 to-gray-600 opacity-5" />
+                  
+                  <div className="absolute inset-0 opacity-5" style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.1'%3E%3Cpath d='m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                  }} />
                   
                   <CardContent className="relative h-full p-8 flex flex-col justify-between">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
+                        <h3 className="text-lg font-bold text-gray-600 mb-2 flex items-center">
                           {action.title}
+                          <Lock className="w-4 h-4 mr-2 text-amber-600" />
                         </h3>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-500">
                           {action.description}
                         </p>
                       </div>
                       <motion.div
-                        className={`p-3 rounded-full bg-${action.color}-100`}
-                        whileHover={{ rotate: 15 }}
+                        className="p-3 rounded-full bg-amber-50 border-2 border-amber-200"
+                        animate={{ 
+                          scale: [1, 1.1, 1],
+                          rotate: [0, 5, -5, 0]
+                        }}
+                        transition={{ 
+                          duration: 2, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
                       >
-                        {(() => {
-                          const IconComponent = action.icon;
-                          return <IconComponent className={`w-6 h-6 text-${action.color}-600`} />;
-                        })()}
+                        <FileX className="w-6 h-6 text-amber-600" />
                       </motion.div>
                     </div>
                     
-                    <div className="flex items-center text-blue-600 text-sm font-medium">
-                      <span>ابدأ الآن</span>
-                      <ArrowRight className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform" />
+                    <div className="flex items-center justify-center">
+                      <motion.div
+                        className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-full shadow-lg"
+                        animate={{
+                          boxShadow: [
+                            '0 4px 15px rgba(245, 158, 11, 0.3)',
+                            '0 6px 25px rgba(245, 158, 11, 0.5)',
+                            '0 4px 15px rgba(245, 158, 11, 0.3)'
+                          ]
+                        }}
+                        transition={{ 
+                          duration: 2, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <span className="text-sm font-bold flex items-center">
+                          ✨ قريباً جداً ✨
+                        </span>
+                      </motion.div>
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
+              ) : (
+                <Link href={action.link}>
+                  <Card className="h-48 border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden group">
+                    <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
+                    
+                    <CardContent className="relative h-full p-8 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900 mb-2">
+                            {action.title}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {action.description}
+                          </p>
+                        </div>
+                        <motion.div
+                          className={`p-3 rounded-full bg-${action.color}-100`}
+                          whileHover={{ rotate: 15 }}
+                        >
+                          {(() => {
+                            const IconComponent = action.icon;
+                            return <IconComponent className={`w-6 h-6 text-${action.color}-600`} />;
+                          })()}
+                        </motion.div>
+                      </div>
+                      
+                      <div className="flex items-center text-blue-600 text-sm font-medium">
+                        <span>ابدأ الآن</span>
+                        <ArrowRight className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )}
             </motion.div>
           ))}
         </div>
