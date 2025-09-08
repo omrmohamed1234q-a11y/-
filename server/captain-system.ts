@@ -1,6 +1,9 @@
 // نظام الكباتن المتكامل - مثل أمازون
 import { Express } from 'express';
 import { WebSocket } from 'ws';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { MemorySecurityStorage } from './memory-security-storage';
 
 // تعريف أنواع البيانات
 interface CaptainOrder {
@@ -82,6 +85,9 @@ const orderAssignments = new Map<string, string>(); // orderId -> captainId
 
 export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<string, WebSocket>) {
   
+  // Initialize security storage
+  const memorySecurityStorage = new MemorySecurityStorage();
+  
   console.log('🚛 تهيئة نظام الكباتن المتكامل...');
 
   // إضافة كبتن تجريبي للنظام العادي إذا لم يكن موجود
@@ -116,7 +122,254 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
 
   // === API للكباتن ===
 
-  // تسجيل دخول الكبتن
+  // تسجيل دخول آمن للكبتن - Secure Authentication
+  app.post('/api/captain/secure-login', async (req, res) => {
+    try {
+      const { username, password, driverCode } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المستخدم وكلمة المرور مطلوبان'
+        });
+      }
+
+      // البحث عن الكبتن في النظام الآمن
+      const captain = await memorySecurityStorage.getSecureCaptainByCredentials(username, username, driverCode);
+      
+      if (!captain) {
+        // تسجيل محاولة دخول فاشلة
+        await memorySecurityStorage.createSecurityLog({
+          user_id: username,
+          action: 'محاولة دخول فاشلة - كبتن غير موجود',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          success: false,
+          timestamp: new Date(),
+          details: `Username: ${username}, DriverCode: ${driverCode || 'N/A'}`
+        });
+
+        return res.status(401).json({
+          success: false,
+          error: 'بيانات تسجيل الدخول غير صحيحة'
+        });
+      }
+
+      // التحقق من حالة الحساب
+      if (!captain.is_active) {
+        return res.status(403).json({
+          success: false,
+          error: 'حسابك غير مفعل. تواصل مع الإدارة'
+        });
+      }
+
+      // التحقق من كلمة المرور
+      const isValidPassword = await bcrypt.compare(password, captain.password);
+      if (!isValidPassword) {
+        // تحديث عدد المحاولات الفاشلة
+        captain.failed_attempts = (captain.failed_attempts || 0) + 1;
+        await memorySecurityStorage.updateSecureCaptain(captain.id, { failed_attempts: captain.failed_attempts });
+
+        // تسجيل محاولة دخول فاشلة
+        await memorySecurityStorage.createSecurityLog({
+          user_id: captain.id,
+          action: 'محاولة دخول فاشلة - كلمة مرور خاطئة',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          success: false,
+          timestamp: new Date(),
+          details: `Attempts: ${captain.failed_attempts}`
+        });
+
+        return res.status(401).json({
+          success: false,
+          error: 'بيانات تسجيل الدخول غير صحيحة'
+        });
+      }
+
+      // إعادة تصفير المحاولات الفاشلة عند النجاح
+      if (captain.failed_attempts > 0) {
+        await memorySecurityStorage.updateSecureCaptain(captain.id, { failed_attempts: 0 });
+      }
+
+      // إنتاج JWT token آمن
+      const payload = {
+        captainId: captain.id,
+        username: captain.username,
+        email: captain.email,
+        fullName: captain.full_name,
+        driverCode: captain.driver_code,
+        role: 'captain',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+      };
+
+      const secretKey = process.env.JWT_SECRET || 'atbaali-captain-secret-key-2025';
+      const captainToken = jwt.sign(payload, secretKey);
+
+      // تحديث آخر دخول
+      await memorySecurityStorage.updateSecureCaptain(captain.id, { 
+        last_login: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // تسجيل دخول ناجح
+      await memorySecurityStorage.createSecurityLog({
+        user_id: captain.id,
+        action: 'تسجيل دخول ناجح - كبتن',
+        ip_address: req.ip || 'unknown',
+        user_agent: req.get('User-Agent') || 'unknown',
+        success: true,
+        timestamp: new Date(),
+        details: `Full name: ${captain.full_name}`
+      });
+      
+      console.log(`✅ كبتن ${captain.full_name} سجل دخول آمن بنجاح`);
+
+      res.json({
+        success: true,
+        message: 'تم تسجيل الدخول بنجاح',
+        user: {
+          id: captain.id,
+          username: captain.username,
+          fullName: captain.full_name,
+          email: captain.email,
+          phone: captain.phone,
+          driverCode: captain.driver_code,
+          vehicleType: captain.vehicle_type,
+          vehiclePlate: captain.vehicle_plate,
+          role: 'captain'
+        },
+        token: captainToken,
+        sessionToken: captainToken,
+        expiresAt: payload.exp
+      });
+
+    } catch (error) {
+      console.error('❌ خطأ في تسجيل دخول الكبتن الآمن:', error);
+      
+      // تسجيل الخطأ
+      try {
+        await memorySecurityStorage.createSecurityLog({
+          user_id: req.body.username || 'unknown',
+          action: 'خطأ في تسجيل الدخول',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          success: false,
+          timestamp: new Date(),
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      } catch (logError) {
+        console.error('❌ خطأ في تسجيل السجل:', logError);
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'خطأ داخلي في الخادم'
+      });
+    }
+  });
+
+  // API for /api/driver/secure-auth (backward compatibility)
+  app.post('/api/driver/secure-auth', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المستخدم وكلمة المرور مطلوبان'
+        });
+      }
+
+      // Try secure captain login first
+      const captain = await memorySecurityStorage.getSecureCaptainByCredentials(username, username);
+      
+      if (captain && captain.is_active) {
+        const isValidPassword = await bcrypt.compare(password, captain.password);
+        if (isValidPassword) {
+          const payload = {
+            captainId: captain.id,
+            username: captain.username,
+            email: captain.email,
+            fullName: captain.full_name,
+            driverCode: captain.driver_code,
+            role: 'captain',
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60)
+          };
+
+          const secretKey = process.env.JWT_SECRET || 'atbaali-captain-secret-key-2025';
+          const captainToken = jwt.sign(payload, secretKey);
+
+          await memorySecurityStorage.createSecurityLog({
+            user_id: captain.id,
+            action: 'تسجيل دخول ناجح - driver/secure-auth',
+            ip_address: req.ip || 'unknown',
+            user_agent: req.get('User-Agent') || 'unknown',
+            success: true,
+            timestamp: new Date(),
+            details: `Backward compatibility login`
+          });
+
+          return res.json({
+            success: true,
+            user: {
+              id: captain.id,
+              username: captain.username,
+              fullName: captain.full_name,
+              email: captain.email,
+              phone: captain.phone,
+              driverCode: captain.driver_code,
+              role: 'captain'
+            },
+            token: captainToken,
+            sessionToken: captainToken
+          });
+        }
+      }
+
+      // Fallback to regular system
+      const captains = await storage.getAllDrivers();
+      const regularCaptain = captains.find((c: any) => 
+        c.username === username || c.email === username
+      );
+
+      if (!regularCaptain || regularCaptain.password !== password) {
+        return res.status(401).json({
+          success: false,
+          error: 'بيانات تسجيل الدخول غير صحيحة'
+        });
+      }
+
+      const sessionToken = `captain_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      console.log(`✅ كبتن ${regularCaptain.name} سجل دخول عبر النظام القديم`);
+
+      res.json({
+        success: true,
+        user: {
+          id: regularCaptain.id,
+          username: regularCaptain.username || regularCaptain.name,
+          fullName: regularCaptain.name,
+          email: regularCaptain.email,
+          phone: regularCaptain.phone,
+          role: 'captain'
+        },
+        token: sessionToken,
+        sessionToken
+      });
+
+    } catch (error) {
+      console.error('❌ خطأ في driver/secure-auth:', error);
+      res.status(500).json({
+        success: false,
+        error: 'خطأ داخلي في الخادم'
+      });
+    }
+  });
+
+  // تسجيل دخول الكبتن - Regular (Backward Compatibility)
   app.post('/api/captain/login', async (req, res) => {
     try {
       const { username, password } = req.body;

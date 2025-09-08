@@ -33,7 +33,7 @@ export default function DriverSecureLogin() {
     try {
       console.log('🔐 Driver login attempt:', formData.username);
       
-      const response = await fetch('/api/driver/secure-auth', {
+      const response = await fetch('/api/captain/secure-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
