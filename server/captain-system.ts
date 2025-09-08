@@ -79,76 +79,6 @@ const connectedCaptains = new Map<string, WebSocket>();
 const captainOrders = new Map<string, CaptainOrder[]>(); // captainId -> orders
 const orderAssignments = new Map<string, string>(); // orderId -> captainId
 
-// إنشاء طلبات تجريبية
-const createSampleOrders = async (storage: any) => {
-  const sampleOrders = [
-    {
-      id: `order-sample-${Date.now()}-1`,
-      customerName: 'أحمد محمد',
-      customerPhone: '01012345678',
-      items: ['طباعة مستندات', 'تصوير ضوئي'],
-      totalAmount: 45.50,
-      pickupLocation: {
-        address: 'شارع التحرير، وسط البلد، القاهرة',
-        lat: 30.0444,
-        lng: 31.2357
-      },
-      deliveryLocation: {
-        address: 'مدينة نصر، حي السفارات، القاهرة',
-        lat: 30.0626,
-        lng: 31.3219
-      },
-      status: 'ready',
-      priority: 'high',
-      estimatedTime: 25,
-      createdAt: new Date(Date.now() - 15 * 60 * 1000)
-    },
-    {
-      id: `order-sample-${Date.now()}-2`,
-      customerName: 'فاطمة علي',
-      customerPhone: '01087654321',
-      items: ['طباعة كتب دراسية', 'تجليد'],
-      totalAmount: 120.00,
-      pickupLocation: {
-        address: 'المعادي، القاهرة',
-        lat: 29.9597,
-        lng: 31.2083
-      },
-      deliveryLocation: {
-        address: 'جامعة القاهرة، الجيزة',
-        lat: 30.0258,
-        lng: 31.2112
-      },
-      status: 'ready',
-      priority: 'medium',
-      estimatedTime: 35,
-      createdAt: new Date(Date.now() - 30 * 60 * 1000)
-    },
-    {
-      id: `order-sample-${Date.now()}-3`,
-      customerName: 'محمد حسن',
-      customerPhone: '01156789012',
-      items: ['طباعة ملونة', 'تصميم بروشور'],
-      totalAmount: 85.75,
-      pickupLocation: {
-        address: 'الزمالك، القاهرة',
-        lat: 30.0618,
-        lng: 31.2194
-      },
-      deliveryLocation: {
-        address: 'مول سيتي ستارز، مدينة نصر',
-        lat: 30.0765,
-        lng: 31.3406
-      },
-      status: 'ready',
-      priority: 'low',
-      estimatedTime: 40,
-      createdAt: new Date(Date.now() - 45 * 60 * 1000)
-    }
-  ];
-  
-  return sampleOrders;
-};
 
 export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<string, WebSocket>) {
   
@@ -263,15 +193,9 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       
       // جلب جميع الطلبات الجاهزة للتوصيل
       const allOrders = await storage.getAllOrders();
-      let availableOrders = allOrders.filter((order: any) => 
+      const availableOrders = allOrders.filter((order: any) => 
         order.status === 'ready' || order.status === 'assigned_to_driver'
       );
-      
-      // إضافة طلبات تجريبية إذا لم توجد طلبات
-      if (availableOrders.length === 0) {
-        const sampleOrders = await createSampleOrders(storage);
-        availableOrders = sampleOrders;
-      }
 
       // تحويل الطلبات إلى تنسيق الكبتن
       const captainOrders: CaptainOrder[] = availableOrders.map((order: any) => ({

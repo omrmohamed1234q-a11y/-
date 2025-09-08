@@ -207,7 +207,6 @@ export default function CaptainDashboard() {
       }
       
       const data = await response.json();
-      console.log('📦 Orders response:', data);
       
       // التأكد من إرجاع array
       if (data.success && data.orders) {
