@@ -2921,22 +2921,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get driver location (mock for now)
-  app.get('/api/driver-location/:driverId', async (req, res) => {
+  // Get captain location (redirects to captain system)
+  app.get('/api/captain-location/:captainId', async (req, res) => {
     try {
-      // In production, this would fetch real-time driver location
+      const { captainId } = req.params;
+      
+      // Use the new captain location API
       const mockLocation = {
         lat: 30.0444 + (Math.random() - 0.5) * 0.01,
         lng: 31.2357 + (Math.random() - 0.5) * 0.01,
         heading: Math.floor(Math.random() * 360),
         speed: 20 + Math.floor(Math.random() * 30),
-        updatedAt: new Date().toISOString()
+        accuracy: 10,
+        timestamp: new Date().toISOString()
       };
       
-      res.json(mockLocation);
+      res.json({
+        success: true,
+        location: mockLocation
+      });
     } catch (error) {
-      console.error('Error fetching driver location:', error);
-      res.status(500).json({ message: 'Failed to fetch driver location' });
+      console.error('Error fetching captain location:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch captain location' 
+      });
     }
   });
 

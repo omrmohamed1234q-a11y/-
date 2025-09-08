@@ -28,7 +28,7 @@ interface OrderStatus {
   completed: boolean;
 }
 
-interface DeliveryDriver {
+interface DeliveryCaptain {
   id: string;
   name: string;
   photo: string;
@@ -95,7 +95,7 @@ export default function OrderTracking() {
 
   // Fetch driver location for live tracking
   const { data: driverLocation } = useQuery({
-    queryKey: ['/api/driver-location', order?.driverId],
+    queryKey: ['/api/captain-location', order?.driverId],
     enabled: !!order?.driverId && order?.status === 'out_for_delivery',
     refetchInterval: 3000, // Poll every 3 seconds for location
   });
@@ -140,7 +140,7 @@ export default function OrderTracking() {
     onSuccess: () => {
       toast({
         title: 'تم إرسال الرسالة',
-        description: 'تم إرسال رسالتك للسائق',
+        description: 'تم إرسال رسالتك للكبتن',
       });
       setDriverNote('');
       setShowDriverChat(false);
@@ -238,7 +238,7 @@ export default function OrderTracking() {
     return statusMap[order.status] || 0;
   };
 
-  const mockDriver: DeliveryDriver = {
+  const mockCaptain: DeliveryCaptain = {
     id: '1',
     name: 'أحمد محمد',
     photo: '/driver-avatar.jpg',
@@ -321,26 +321,26 @@ export default function OrderTracking() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
                 <Navigation className="w-12 h-12 text-green-600 mx-auto mb-2 animate-pulse" />
-                <p className="text-gray-600">السائق في الطريق إليك</p>
+                <p className="text-gray-600">الكبتن في الطريق إليك</p>
                 <p className="text-2xl font-bold text-green-600 mt-2">
                   {order.estimatedDelivery ? `${order.estimatedDelivery} دقيقة` : '30-45 دقيقة'}
                 </p>
               </div>
             </div>
             
-            {/* Driver marker */}
+            {/* Captain marker */}
             <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-3">
               <div className="flex items-center gap-3">
                 <Avatar className="w-10 h-10">
-                  <AvatarImage src={mockDriver.photo} />
-                  <AvatarFallback>{mockDriver.name[0]}</AvatarFallback>
+                  <AvatarImage src={mockCaptain.photo} />
+                  <AvatarFallback>{mockCaptain.name[0]}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold">{mockDriver.name}</p>
+                  <p className="font-semibold">{mockCaptain.name}</p>
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                    <span className="text-sm">{mockDriver.rating}</span>
-                    <span className="text-sm text-gray-500">({mockDriver.deliveries} توصيلة)</span>
+                    <span className="text-sm">{mockCaptain.rating}</span>
+                    <span className="text-sm text-gray-500">({mockCaptain.deliveries} توصيلة)</span>
                   </div>
                 </div>
               </div>
@@ -425,30 +425,30 @@ export default function OrderTracking() {
           </CardContent>
         </Card>
 
-        {/* Driver Info (when assigned) */}
+        {/* Captain Info (when assigned) */}
         {order.driverId && ['out_for_delivery', 'delivered'].includes(order.status) && (
           <Card>
             <CardHeader>
-              <CardTitle>معلومات السائق</CardTitle>
+              <CardTitle>معلومات الكبتن</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-12 h-12">
-                    <AvatarImage src={mockDriver.photo} />
-                    <AvatarFallback>{mockDriver.name[0]}</AvatarFallback>
+                    <AvatarImage src={mockCaptain.photo} />
+                    <AvatarFallback>{mockCaptain.name[0]}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-semibold">{mockDriver.name}</p>
+                    <p className="font-semibold">{mockCaptain.name}</p>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <span>{mockDriver.vehicle}</span>
+                      <span>{mockCaptain.vehicle}</span>
                       <span>•</span>
-                      <span>{mockDriver.plateNumber}</span>
+                      <span>{mockCaptain.plateNumber}</span>
                     </div>
                     <div className="flex items-center gap-1 mt-1">
                       <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                      <span className="text-sm">{mockDriver.rating}</span>
-                      <span className="text-sm text-gray-500">({mockDriver.deliveries} توصيلة)</span>
+                      <span className="text-sm">{mockCaptain.rating}</span>
+                      <span className="text-sm text-gray-500">({mockCaptain.deliveries} توصيلة)</span>
                     </div>
                   </div>
                 </div>
@@ -456,7 +456,7 @@ export default function OrderTracking() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => window.location.href = `tel:${mockDriver.phone}`}
+                    onClick={() => window.location.href = `tel:${mockCaptain.phone}`}
                   >
                     <Phone className="w-4 h-4" />
                   </Button>
@@ -470,10 +470,10 @@ export default function OrderTracking() {
                 </div>
               </div>
 
-              {/* Driver Notes */}
+              {/* Captain Notes */}
               {order.driverNotes && (
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-semibold text-blue-900 mb-1">ملاحظات السائق:</p>
+                  <p className="text-sm font-semibold text-blue-900 mb-1">ملاحظات الكبتن:</p>
                   <p className="text-sm text-blue-800">{order.driverNotes}</p>
                 </div>
               )}
@@ -669,9 +669,9 @@ export default function OrderTracking() {
       <Dialog open={showDriverChat} onOpenChange={setShowDriverChat}>
         <DialogContent className="sm:max-w-md" dir="rtl">
           <DialogHeader>
-            <DialogTitle>إرسال رسالة للسائق</DialogTitle>
+            <DialogTitle>إرسال رسالة للكبتن</DialogTitle>
             <DialogDescription>
-              اكتب رسالتك للسائق {mockDriver.name}
+              اكتب رسالتك للكبتن {mockCaptain.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
