@@ -141,8 +141,6 @@ function Router() {
         <Route path="/admin/two-factor-settings" component={() => <AdminProtectedRoute><TwoFactorSettings /></AdminProtectedRoute>} />
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
-
-        <Route path="/driver/dashboard" component={SecureDriverControl} />
         <Route path="/quick-access" component={QuickAccess} />
 
         <Route path="/test-signup" component={TestSignup} />
@@ -215,7 +213,7 @@ function Router() {
         {/* Driver routes - New Professional System */}
         <Route path="/driver" component={lazy(() => import('./pages/driver/secure-login'))} />
         <Route path="/driver/secure-login" component={lazy(() => import('./pages/driver/secure-login'))} />
-        <Route path="/driver/dashboard" component={lazy(() => import('./pages/driver/dashboard'))} />
+        <Route path="/driver/dashboard" component={DriverDashboard} />
         
         {/* Secure login routes - available always */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
