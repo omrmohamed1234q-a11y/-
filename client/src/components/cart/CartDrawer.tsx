@@ -207,27 +207,58 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleQuantityChange(item.id, item.quantity, -1)}
-                                  disabled={isUpdatingQuantity}
-                                  data-testid={`decrease-quantity-${item.id}`}
-                                >
-                                  <Minus className="h-3 w-3" />
-                                </Button>
-                                <span className="w-8 text-center" data-testid={`quantity-${item.id}`}>
-                                  {item.quantity}
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleQuantityChange(item.id, item.quantity, 1)}
-                                  disabled={isUpdatingQuantity}
-                                  data-testid={`increase-quantity-${item.id}`}
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
+                                {/* Check if this is a print job - disable quantity controls for print jobs */}
+                                {item.variant?.isPrintJob || item.productSource === 'print_service' ? (
+                                  // For print jobs - show quantity but disable controls
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={true}
+                                      data-testid={`decrease-quantity-${item.id}`}
+                                      className="opacity-50 cursor-not-allowed"
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                    <span className="w-8 text-center" data-testid={`quantity-${item.id}`}>
+                                      {item.quantity}
+                                    </span>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={true}
+                                      data-testid={`increase-quantity-${item.id}`}
+                                      className="opacity-50 cursor-not-allowed"
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  // For regular store products - enable controls as normal
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleQuantityChange(item.id, item.quantity, -1)}
+                                      disabled={isUpdatingQuantity}
+                                      data-testid={`decrease-quantity-${item.id}`}
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                    <span className="w-8 text-center" data-testid={`quantity-${item.id}`}>
+                                      {item.quantity}
+                                    </span>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleQuantityChange(item.id, item.quantity, 1)}
+                                      disabled={isUpdatingQuantity}
+                                      data-testid={`increase-quantity-${item.id}`}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
                               </div>
 
                               <div className="text-left">
