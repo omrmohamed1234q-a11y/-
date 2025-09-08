@@ -206,7 +206,15 @@ export default function CaptainDashboard() {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      return response.json();
+      const data = await response.json();
+      console.log('📦 Orders response:', data);
+      
+      // التأكد من إرجاع array
+      if (data.success && data.orders) {
+        return data.orders;
+      }
+      
+      return [];
     },
     enabled: !!captainData?.id,
     refetchInterval: 10000 // تحديث كل 10 ثواني
