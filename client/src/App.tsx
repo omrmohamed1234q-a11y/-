@@ -71,6 +71,8 @@ import DriverLocationTest from '@/pages/driver-location-test';
 import PaymentSuccess from '@/pages/payment-success';
 import DonationsPage from '@/pages/donations';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
+import CaptainLogin from '@/pages/captain/login';
+import CaptainDashboard from '@/pages/captain/dashboard';
 
 
 function Router() {
@@ -155,6 +157,11 @@ function Router() {
 
         <Route path="/article/:id" component={ArticlePage} />
         <Route path="/donations" component={DonationsPage} />
+        
+        {/* Captain routes - accessible without authentication */}
+        <Route path="/captain/login" component={CaptainLogin} />
+        <Route path="/captain/dashboard" component={CaptainDashboard} />
+        
         <Route path="/" component={EnhancedLanding} />
         <Route component={NotFound} />
       </Switch>
@@ -224,6 +231,11 @@ function Router() {
         <Route path="/paymob-setup" component={PaymobSetupPage} />
         <Route path="/location-test" component={LocationTest} />
         <Route path="/article/:id" component={ArticlePage} />
+        
+        {/* Captain routes - also accessible with regular authentication */}
+        <Route path="/captain/login" component={CaptainLogin} />
+        <Route path="/captain/dashboard" component={CaptainDashboard} />
+        
         <Route component={NotFound} />
       </Switch>
     </>
