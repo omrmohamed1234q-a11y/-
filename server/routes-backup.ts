@@ -6763,5 +6763,13 @@ function generateTeacherMaterialsData(products: any[]) {
   }));
 }
 
+  // Load Professional Driver System
+  try {
+    const { addDriverRoutes } = await import('./driver-routes.js');
+    addDriverRoutes(app, storage, orderAssignments, driverTimers, securityManager);
+  } catch (error) {
+    console.error('❌ Failed to load Professional Driver System:', error);
+  }
+
   return app;
 }
