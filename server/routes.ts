@@ -1601,7 +1601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get driver orders (TEST VERSION - No Auth Required)
+  // Get driver orders (MAIN VERSION - No Auth Required for testing)
   app.get('/api/driver/orders', async (req: any, res) => {
     try {
       // For demo purposes, get orders for first available driver or return demo orders
@@ -4119,40 +4119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get available orders for driver
-  app.get('/api/driver/orders', requireDriverAuth, async (req, res) => {
-    try {
-      const driverId = req.driver.id;
-      console.log(`📦 Fetching orders for driver: ${driverId}`);
-
-      // Get both assigned orders and available orders for pickup
-      const [assignedOrders, availableOrders] = await Promise.all([
-        storage.getDriverOrders(driverId),
-        storage.getOrdersByStatus('ready') // Orders ready for delivery
-      ]);
-
-      // Combine and format orders for driver
-      const formattedOrders = [
-        ...assignedOrders.map(order => ({
-          ...order,
-          type: 'assigned',
-          canAccept: false,
-          canUpdate: true
-        })),
-        ...availableOrders.filter(order => !order.driverId).map(order => ({
-          ...order,
-          type: 'available',
-          canAccept: true,
-          canUpdate: false
-        }))
-      ];
-
-      res.json(formattedOrders);
-    } catch (error) {
-      console.error('Error fetching driver orders:', error);
-      res.status(500).json({ success: false, error: 'Failed to fetch orders' });
-    }
-  });
+  // REMOVED - Using main version above without auth
 
   // Update driver status (online/offline)
   app.put('/api/driver/status', requireDriverAuth, async (req, res) => {

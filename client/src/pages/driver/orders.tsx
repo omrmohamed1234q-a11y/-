@@ -25,17 +25,21 @@ export default function DriverOrders() {
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
 
   // جلب الطلبات الجديدة المرسلة للسائق
-  const { data: notifications = [], isLoading } = useQuery({
+  const { data: notifications = [], isLoading: notificationsLoading, error: notificationsError } = useQuery({
     queryKey: ['/api/driver/notifications'],
-    refetchInterval: 2000, // تحديث كل ثانيتين
-    retry: 1
+    refetchInterval: 3000,
+    retry: 2,
+    staleTime: 1000,
+    refetchOnWindowFocus: false
   });
 
-  // جلب الطلبات المقبولة
-  const { data: assignedOrders = [] } = useQuery({
+  // جلب الطلبات المقبولة  
+  const { data: assignedOrders = [], isLoading: ordersLoading, error: ordersError } = useQuery({
     queryKey: ['/api/driver/orders'],
     refetchInterval: 5000,
-    retry: 1
+    retry: 2,
+    staleTime: 2000,
+    refetchOnWindowFocus: false
   });
 
   // قبول الطلب
