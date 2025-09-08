@@ -135,7 +135,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       }
 
       // البحث عن الكبتن في النظام الآمن
-      const captain = await memorySecurityStorage.getSecureCaptainByCredentials(username, username, driverCode);
+      const captain = await memorySecurityStorage.getSecurityUserByCredentials(username, username);
       
       if (!captain) {
         // تسجيل محاولة دخول فاشلة
@@ -145,7 +145,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
           ip_address: req.ip || 'unknown',
           user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
           details: `Username: ${username}, DriverCode: ${driverCode || 'N/A'}`
         });
 
@@ -168,7 +168,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       if (!isValidPassword) {
         // تحديث عدد المحاولات الفاشلة
         captain.failed_attempts = (captain.failed_attempts || 0) + 1;
-        await memorySecurityStorage.updateSecureCaptain(captain.id, { failed_attempts: captain.failed_attempts });
+        await memorySecurityStorage.updateUser(captain.id, { failed_attempts: captain.failed_attempts });
 
         // تسجيل محاولة دخول فاشلة
         await memorySecurityStorage.createSecurityLog({
@@ -177,7 +177,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
           ip_address: req.ip || 'unknown',
           user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
           details: `Attempts: ${captain.failed_attempts}`
         });
 
@@ -189,7 +189,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
 
       // إعادة تصفير المحاولات الفاشلة عند النجاح
       if (captain.failed_attempts > 0) {
-        await memorySecurityStorage.updateSecureCaptain(captain.id, { failed_attempts: 0 });
+        await memorySecurityStorage.updateUser(captain.id, { failed_attempts: 0 });
       }
 
       // إنتاج JWT token آمن
@@ -208,7 +208,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       const captainToken = jwt.sign(payload, secretKey);
 
       // تحديث آخر دخول
-      await memorySecurityStorage.updateSecureCaptain(captain.id, { 
+      await memorySecurityStorage.updateUser(captain.id, { 
         last_login: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
@@ -256,7 +256,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
           ip_address: req.ip || 'unknown',
           user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
           details: error instanceof Error ? error.message : 'Unknown error'
         });
       } catch (logError) {
@@ -308,7 +308,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
             ip_address: req.ip || 'unknown',
             user_agent: req.get('User-Agent') || 'unknown',
             success: true,
-            timestamp: new Date(),
+            timestamp: new Date().toISOString(),
             details: `Backward compatibility login`
           });
 
