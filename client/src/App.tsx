@@ -38,15 +38,12 @@ import SimpleAnalytics from "@/pages/admin/simple-analytics";
 import OrdersManagement from "@/pages/admin/orders-management";
 import OrdersManagementEnhanced from '@/pages/admin/orders-management-enhanced';
 import AdminOrders from '@/pages/admin/orders';
-import EnhancedDriverDashboard from '@/pages/driver/enhanced-driver-dashboard';
 import OrderTrackingEnhanced from '@/pages/order-tracking-enhanced';
 import OrderTrackingTalabatStyle from '@/pages/order-tracking-talabat-style';
 import OrdersPage from "@/pages/orders";
 import TestSignup from "@/pages/test-signup";
 import Checkout from "@/pages/checkout";
 import OrderTracking from "@/pages/order-tracking";
-import DriverLogin from "@/pages/driver/driver-login";
-import DriverDashboard from "@/pages/driver/driver-dashboard";
 import DriversManagement from "@/pages/admin/drivers";
 import AdminPartners from "@/pages/admin/partners";
 import SecurityManagement from "@/pages/admin/security-management";
@@ -211,9 +208,6 @@ function Router() {
 
         
         {/* Driver routes - New Professional System */}
-        <Route path="/driver" component={lazy(() => import('./pages/driver/secure-login'))} />
-        <Route path="/driver/secure-login" component={lazy(() => import('./pages/driver/secure-login'))} />
-        <Route path="/driver/dashboard" component={DriverDashboard} />
         
         {/* Secure login routes - available always */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />

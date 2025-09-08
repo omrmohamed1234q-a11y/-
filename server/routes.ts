@@ -16,6 +16,7 @@ import { MemorySecurityStorage } from './memory-security-storage';
 import { registerInventoryRoutes } from "./inventory-routes";
 import { hybridUploadService } from './hybrid-upload-service';
 import { googleDriveService } from './google-drive-service';
+import { setupCaptainSystem } from './captain-system';
 
 // Initialize memory security storage
 const memorySecurityStorage = new MemorySecurityStorage();
@@ -6224,6 +6225,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     userType?: 'customer' | 'admin' | 'driver',
     lastSeen: Date
   }>();
+
+  // تهيئة نظام الكباتن المتكامل
+  setupCaptainSystem(app, storage, activeConnections);
 
   // معالج اتصالات WebSocket
   wss.on('connection', (ws, request) => {
