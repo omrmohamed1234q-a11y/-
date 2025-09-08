@@ -22,7 +22,7 @@ interface SecureAdmin {
   createdAt: string;
 }
 
-interface SecureDriver {
+interface SecureCaptain {
   id: string;
   username: string;
   email: string;
@@ -42,7 +42,7 @@ interface SecureDriver {
 interface SecurityLog {
   id: string;
   userId: string;
-  userType: 'admin' | 'driver';
+  userType: 'admin' | 'captain';
   action: string;
   ipAddress: string;
   userAgent: string;
@@ -53,10 +53,10 @@ interface SecurityLog {
 
 export default function SecurityManagement() {
   const [secureAdmins, setSecureAdmins] = useState<SecureAdmin[]>([]);
-  const [secureDrivers, setSecureDrivers] = useState<SecureDriver[]>([]);
+  const [secureCaptains, setSecureCaptains] = useState<SecureCaptain[]>([]);
   const [securityLogs, setSecurityLogs] = useState<SecurityLog[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'admins' | 'drivers' | 'logs'>('admins');
+  const [activeTab, setActiveTab] = useState<'admins' | 'captains' | 'logs'>('admins');
   const { toast } = useToast();
 
   // Admin Form State
@@ -69,8 +69,8 @@ export default function SecurityManagement() {
     permissions: ['read', 'write']
   });
 
-  // Driver Form State
-  const [driverForm, setDriverForm] = useState({
+  // Captain Form State
+  const [captainForm, setCaptainForm] = useState({
     username: '',
     email: '',
     password: '',
@@ -91,12 +91,12 @@ export default function SecurityManagement() {
     try {
       const [adminsRes, driversRes, logsRes] = await Promise.all([
         apiRequest('GET', '/api/admin/secure-admins'),
-        apiRequest('GET', '/api/admin/secure-drivers'),
+        apiRequest('GET', '/api/admin/secure-captains'),
         apiRequest('GET', '/api/admin/security-logs?limit=50')
       ]);
 
       setSecureAdmins(await adminsRes.json());
-      setSecureDrivers(await driversRes.json());
+      setSecureCaptains(await driversRes.json());
       setSecurityLogs(await logsRes.json());
     } catch (error) {
       toast({
@@ -156,10 +156,10 @@ export default function SecurityManagement() {
     }
   };
 
-  const handleCreateDriver = async () => {
-    if (!driverForm.username || !driverForm.email || !driverForm.password || 
-        !driverForm.driverCode || !driverForm.fullName || !driverForm.phone ||
-        !driverForm.licenseNumber || !driverForm.vehiclePlate) {
+  const handleCreateCaptain = async () => {
+    if (!captainForm.username || !captainForm.email || !captainForm.password || 
+        !captainForm.driverCode || !captainForm.fullName || !captainForm.phone ||
+        !captainForm.licenseNumber || !captainForm.vehiclePlate) {
       toast({
         title: 'خطأ في النموذج',
         description: 'جميع الحقول مطلوبة',
@@ -170,15 +170,15 @@ export default function SecurityManagement() {
 
     try {
       setLoading(true);
-      const response = await apiRequest('POST', '/api/admin/secure-drivers', driverForm);
+      const response = await apiRequest('POST', '/api/admin/secure-captains', captainForm);
       const result = await response.json();
 
       if (result.success) {
         toast({
-          title: 'تم إنشاء حساب السائق',
-          description: `تم إنشاء حساب ${result.driver.username} بنجاح`
+          title: 'تم إنشاء حساب الكبتن',
+          description: `تم إنشاء حساب ${result.captain.username} بنجاح`
         });
-        setDriverForm({
+        setCaptainForm({
           username: '',
           email: '',
           password: '',
@@ -200,7 +200,7 @@ export default function SecurityManagement() {
     } catch (error) {
       toast({
         title: 'خطأ في الشبكة',
-        description: 'فشل في إنشاء حساب السائق',
+        description: 'فشل في إنشاء حساب الكبتن',
         variant: 'destructive'
       });
     } finally {
