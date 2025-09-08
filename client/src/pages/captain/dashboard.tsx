@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
+import { useWebSocket, useWebSocketEvent } from '@/hooks/use-websocket';
+import { useGPS } from '@/hooks/use-gps';
 import {
   Truck,
   MapPin,
@@ -97,10 +99,32 @@ export default function CaptainDashboard() {
   const [captainData, setCaptainData] = useState<CaptainProfile | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<CaptainOrder | null>(null);
   const [isOnline, setIsOnline] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [activeOrders, setActiveOrders] = useState<CaptainOrder[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+
+  // WebSocket للتحديثات المباشرة
+  const { state: wsState, updateDriverLocation, subscribeToOrderUpdates } = useWebSocket();
+
+  // GPS للموقع الجغرافي
+  const {
+    currentLocation,
+    isTracking,
+    accuracy,
+    startTracking,
+    stopTracking,
+    getDistanceToDestination,
+    openNavigation
+  } = useGPS({
+    trackingInterval: 15000, // كل 15 ثانية
+    onLocationUpdate: (location) => {
+      // إرسال الموقع عبر WebSocket إذا كان الكبتن متصل
+      if (captainData?.id && wsState.isConnected && isOnline) {
+        updateDriverLocation(location.lat, location.lng);
+      }
+    }
+  });
 
   // تحقق من تسجيل الدخول
   useEffect(() => {
@@ -120,44 +144,47 @@ export default function CaptainDashboard() {
     }
   }, [setLocation]);
 
-  // تحديث الموقع الجغرافي
+  // بدء/إيقاف تتبع الموقع حسب حالة الكبتن
   useEffect(() => {
-    if (!captainData?.id) return;
-
-    const updateLocation = () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            setCurrentLocation({ lat: latitude, lng: longitude });
-            
-            // إرسال الموقع للسيرفر
-            if (isOnline) {
-              apiRequest('POST', `/api/captain/${captainData.id}/location`, {
-                lat: latitude,
-                lng: longitude,
-                heading: position.coords.heading,
-                speed: position.coords.speed,
-                accuracy: position.coords.accuracy
-              }).catch(error => {
-                console.error('خطأ في إرسال الموقع:', error);
-              });
-            }
-          },
-          (error) => {
-            console.error('خطأ في الحصول على الموقع:', error);
-          },
-          { enableHighAccuracy: true }
-        );
+    if (captainData?.id && isOnline && wsState.isConnected) {
+      if (!isTracking) {
+        startTracking();
       }
-    };
+    } else {
+      if (isTracking) {
+        stopTracking();
+      }
+    }
+  }, [captainData?.id, isOnline, wsState.isConnected, isTracking, startTracking, stopTracking]);
 
-    // تحديث الموقع كل 30 ثانية
-    const locationInterval = setInterval(updateLocation, 30000);
-    updateLocation(); // تحديث فوري
+  // الاستماع للطلبات الجديدة عبر WebSocket
+  useWebSocketEvent('new_order_available', (orderData: any) => {
+    toast({
+      title: '🚚 طلب جديد متاح!',
+      description: `طلب رقم ${orderData.orderNumber} بقيمة ${orderData.totalAmount} جنيه`,
+      duration: 0, // بدون انتهاء تلقائي
+      action: (
+        <Button 
+          size="sm"
+          onClick={() => {
+            // فتح تفاصيل الطلب
+            queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+          }}
+        >
+          عرض
+        </Button>
+      )
+    });
 
-    return () => clearInterval(locationInterval);
-  }, [captainData?.id, isOnline]);
+    // تحديث قائمة الطلبات
+    queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+  });
+
+  // الاستماع لتحديثات حالة الطلبات
+  useWebSocketEvent('order_status_update', (updateData: any) => {
+    console.log('📱 تحديث حالة الطلب:', updateData);
+    queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+  });
 
   // جلب الطلبات المتاحة
   const { data: availableOrders = [], isLoading: ordersLoading } = useQuery<CaptainOrder[]>({
@@ -230,10 +257,18 @@ export default function CaptainDashboard() {
 
   // تبديل حالة متصل/غير متصل
   const toggleOnlineStatus = () => {
-    setIsOnline(!isOnline);
+    const newStatus = !isOnline;
+    setIsOnline(newStatus);
+    
+    if (newStatus) {
+      startTracking();
+    } else {
+      stopTracking();
+    }
+
     toast({
-      title: isOnline ? '⏸️ أنت الآن غير متصل' : '▶️ أنت الآن متصل',
-      description: isOnline ? 'لن تستقبل طلبات جديدة' : 'ستستقبل طلبات جديدة'
+      title: newStatus ? '▶️ أنت الآن متصل' : '⏸️ أنت الآن غير متصل',
+      description: newStatus ? 'ستستقبل طلبات جديدة ويتم تتبع موقعك' : 'لن تستقبل طلبات جديدة'
     });
   };
 
@@ -263,6 +298,14 @@ export default function CaptainDashboard() {
             </div>
             
             <div className="flex items-center gap-2">
+              {/* حالة WebSocket */}
+              <Badge 
+                variant={wsState.isConnected ? "default" : "destructive"}
+                className="text-xs"
+              >
+                {wsState.isConnected ? '🔗 متصل' : '❌ منقطع'}
+              </Badge>
+              
               <Button
                 variant={isOnline ? "destructive" : "default"}
                 size="sm"
@@ -327,7 +370,12 @@ export default function CaptainDashboard() {
               <div className="text-2xl font-bold text-gray-900">
                 {currentLocation ? '✓' : '✗'}
               </div>
-              <div className="text-xs text-gray-600">GPS</div>
+              <div className="text-xs text-gray-600">
+                GPS {accuracy && `(${Math.round(accuracy)}م)`}
+              </div>
+              {isTracking && (
+                <div className="text-xs text-green-600 mt-1">🟢 نشط</div>
+              )}
             </CardContent>
           </Card>
         </div>
