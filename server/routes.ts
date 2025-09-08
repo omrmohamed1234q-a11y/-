@@ -168,6 +168,195 @@ import crypto from 'crypto';
 // Google Pay configuration
 const GOOGLE_PAY_MERCHANT_ID = process.env.GOOGLE_PAY_MERCHANT_ID || 'merchant.com.atbaalee';
 
+// Helper functions for analytics data generation
+function generateUserActivityData(users: any[]) {
+  const hours = ['00:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
+  return hours.map(hour => ({
+    hour,
+    users: Math.floor(Math.random() * 200) + 10 // Based on user registration patterns
+  }));
+}
+
+function generateGeographicData(orders: any[]) {
+  const regions = [
+    { region: 'القاهرة', percentage: 36.6 },
+    { region: 'الجيزة', percentage: 23.9 },
+    { region: 'الإسكندرية', percentage: 15.0 },
+    { region: 'الشرقية', percentage: 12.5 },
+    { region: 'أخرى', percentage: 12.0 }
+  ];
+  
+  const totalOrders = orders.length || 100;
+  return regions.map(({ region, percentage }) => ({
+    region,
+    orders: Math.floor((totalOrders * percentage) / 100),
+    percentage
+  }));
+}
+
+function generatePrintJobTypesData(printJobs: any[]) {
+  const typeCount = printJobs.reduce((acc, job) => {
+    const type = job.fileType || 'أخرى';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const avgTimeMapping = {
+    'pdf': 15,
+    'image': 8,
+    'document': 25,
+    'أخرى': 20
+  };
+
+  if (Object.keys(typeCount).length === 0) {
+    return [
+      { type: 'مستندات', count: 856, avgTime: 15 },
+      { type: 'صور', count: 453, avgTime: 8 },
+      { type: 'كتب', count: 298, avgTime: 45 },
+      { type: 'مخططات', count: 187, avgTime: 25 },
+      { type: 'أخرى', count: 362, avgTime: 20 }
+    ];
+  }
+
+  return Object.entries(typeCount).map(([type, count]) => ({
+    type: type === 'pdf' ? 'مستندات' :
+          type === 'image' ? 'صور' :
+          type === 'document' ? 'وثائق' : type,
+    count,
+    avgTime: avgTimeMapping[type as keyof typeof avgTimeMapping] || 20
+  }));
+}
+
+function generateTeacherMaterialsData(products: any[]) {
+  const subjectCount = products.reduce((acc, product) => {
+    const subject = product.subject || 'أخرى';
+    acc[subject] = (acc[subject] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  if (Object.keys(subjectCount).length === 0) {
+    return [
+      { subject: 'الرياضيات', downloads: 234, rating: 4.8 },
+      { subject: 'العلوم', downloads: 198, rating: 4.6 },
+      { subject: 'اللغة العربية', downloads: 187, rating: 4.7 },
+      { subject: 'التاريخ', downloads: 156, rating: 4.4 },
+      { subject: 'الجغرافيا', downloads: 134, rating: 4.5 }
+    ];
+  }
+  
+  return Object.entries(subjectCount).map(([subject, downloads]) => ({
+    subject,
+    downloads,
+    rating: 4.2 + Math.random() * 0.6
+  }));
+}
+
+function generateTopProductsData(orders: any[], products: any[]) {
+  const productStats = products.map(product => {
+    const productOrders = orders.filter(order => 
+      order.items?.some((item: any) => item.productId === product.id)
+    );
+    
+    const revenue = productOrders.reduce((sum, order) => {
+      const amount = typeof order.totalAmount === 'string' ? 
+        parseFloat(order.totalAmount) : (order.totalAmount || 0);
+      return sum + amount;
+    }, 0);
+
+    return {
+      name: product.name || 'منتج غير محدد',
+      orders: productOrders.length,
+      revenue
+    };
+  });
+
+  return productStats
+    .sort((a, b) => b.orders - a.orders)
+    .slice(0, 5);
+}
+
+function generateDailyOrdersData(orders: any[]) {
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    return date.toISOString().split('T')[0];
+  });
+
+  return last7Days.map(date => {
+    const dayOrders = orders.filter(order => {
+      const orderDate = new Date(order.createdAt || Date.now()).toISOString().split('T')[0];
+      return orderDate === date;
+    });
+    
+    const revenue = dayOrders.reduce((sum, order) => {
+      const amount = typeof order.totalAmount === 'string' ? 
+        parseFloat(order.totalAmount) : (order.totalAmount || 0);
+      return sum + amount;
+    }, 0);
+
+    return {
+      date,
+      orders: dayOrders.length,
+      revenue: Math.round(revenue * 100) / 100
+    };
+  });
+}
+
+function generateOrdersByStatusData(orders: any[]) {
+  const statusCount = orders.reduce((acc, order) => {
+    const status = order.status || 'pending';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const statusMapping = {
+    'delivered': { label: 'مكتمل', color: '#00C49F' },
+    'processing': { label: 'قيد التنفيذ', color: '#FFBB28' },
+    'cancelled': { label: 'ملغي', color: '#FF8042' },
+    'pending': { label: 'معلق', color: '#8884D8' },
+    'shipped': { label: 'في الطريق', color: '#82ca9d' }
+  };
+
+  return Object.entries(statusCount).map(([status, count]) => ({
+    status: statusMapping[status as keyof typeof statusMapping]?.label || status,
+    count,
+    color: statusMapping[status as keyof typeof statusMapping]?.color || '#999999'
+  }));
+}
+
+function generateRevenueByCategoryData(orders: any[], products: any[]) {
+  const categoryRevenue = products.reduce((acc, product) => {
+    const category = product.category || 'أخرى';
+    const productOrders = orders.filter(order => 
+      order.items?.some((item: any) => item.productId === product.id)
+    );
+    
+    const revenue = productOrders.reduce((sum, order) => {
+      const amount = typeof order.totalAmount === 'string' ? 
+        parseFloat(order.totalAmount) : (order.totalAmount || 0);
+      return sum + amount;
+    }, 0);
+    
+    acc[category] = (acc[category] || 0) + revenue;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Fallback to demo categories if no real data
+  if (Object.keys(categoryRevenue).length === 0) {
+    return [
+      { category: 'طباعة المستندات', revenue: 18500 },
+      { category: 'المواد التعليمية', revenue: 12300 },
+      { category: 'التصوير والمسح', revenue: 8900 },
+      { category: 'الطباعة الملونة', revenue: 6050 }
+    ];
+  }
+
+  return Object.entries(categoryRevenue).map(([category, revenue]) => ({
+    category,
+    revenue
+  }));
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // ==================== SECURITY MIDDLEWARE ====================
@@ -6574,194 +6763,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
-// Helper functions for analytics data generation
-function generateDailyOrdersData(orders: any[]) {
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    return date.toISOString().split('T')[0];
-  });
-
-  return last7Days.map(date => {
-    const dayOrders = orders.filter(order => {
-      const orderDate = new Date(order.createdAt || Date.now()).toISOString().split('T')[0];
-      return orderDate === date;
-    });
-    
-    const revenue = dayOrders.reduce((sum, order) => {
-      const amount = typeof order.totalAmount === 'string' ? 
-        parseFloat(order.totalAmount) : (order.totalAmount || 0);
-      return sum + amount;
-    }, 0);
-
-    return {
-      date,
-      orders: dayOrders.length,
-      revenue: Math.round(revenue * 100) / 100
-    };
-  });
-}
-
-function generateOrdersByStatusData(orders: any[]) {
-  const statusCount = orders.reduce((acc, order) => {
-    const status = order.status || 'pending';
-    acc[status] = (acc[status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const statusMapping = {
-    'delivered': { label: 'مكتمل', color: '#00C49F' },
-    'processing': { label: 'قيد التنفيذ', color: '#FFBB28' },
-    'cancelled': { label: 'ملغي', color: '#FF8042' },
-    'pending': { label: 'معلق', color: '#8884D8' },
-    'shipped': { label: 'في الطريق', color: '#82ca9d' }
-  };
-
-  return Object.entries(statusCount).map(([status, count]) => ({
-    status: statusMapping[status as keyof typeof statusMapping]?.label || status,
-    count,
-    color: statusMapping[status as keyof typeof statusMapping]?.color || '#999999'
-  }));
-}
-
-function generateRevenueByCategoryData(orders: any[], products: any[]) {
-  const categoryRevenue = products.reduce((acc, product) => {
-    const category = product.category || 'أخرى';
-    const productOrders = orders.filter(order => 
-      order.items?.some((item: any) => item.productId === product.id)
-    );
-    
-    const revenue = productOrders.reduce((sum, order) => {
-      const amount = typeof order.totalAmount === 'string' ? 
-        parseFloat(order.totalAmount) : (order.totalAmount || 0);
-      return sum + amount;
-    }, 0);
-    
-    acc[category] = (acc[category] || 0) + revenue;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Fallback to demo categories if no real data
-  if (Object.keys(categoryRevenue).length === 0) {
-    return [
-      { category: 'طباعة المستندات', revenue: 18500 },
-      { category: 'المواد التعليمية', revenue: 12300 },
-      { category: 'التصوير والمسح', revenue: 8900 },
-      { category: 'الطباعة الملونة', revenue: 6050 }
-    ];
-  }
-
-  return Object.entries(categoryRevenue).map(([category, revenue]) => ({
-    category,
-    revenue
-  }));
-}
-
-function generateTopProductsData(orders: any[], products: any[]) {
-  const productStats = products.map(product => {
-    const productOrders = orders.filter(order => 
-      order.items?.some((item: any) => item.productId === product.id)
-    );
-    
-    const revenue = productOrders.reduce((sum, order) => {
-      const amount = typeof order.totalAmount === 'string' ? 
-        parseFloat(order.totalAmount) : (order.totalAmount || 0);
-      return sum + amount;
-    }, 0);
-
-    return {
-      name: product.name || 'منتج غير محدد',
-      orders: productOrders.length,
-      revenue
-    };
-  });
-
-  return productStats
-    .sort((a, b) => b.orders - a.orders)
-    .slice(0, 5);
-}
-
-function generateUserActivityData(users: any[]) {
-  const hours = ['00:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
-  return hours.map(hour => ({
-    hour,
-    users: Math.floor(Math.random() * 200) + 10 // Based on user registration patterns
-  }));
-}
-
-function generateGeographicData(orders: any[]) {
-  const regions = [
-    { region: 'القاهرة', percentage: 36.6 },
-    { region: 'الجيزة', percentage: 23.9 },
-    { region: 'الإسكندرية', percentage: 15.0 },
-    { region: 'الشرقية', percentage: 12.5 },
-    { region: 'أخرى', percentage: 12.0 }
-  ];
-  
-  const totalOrders = orders.length || 100;
-  return regions.map(({ region, percentage }) => ({
-    region,
-    orders: Math.floor((totalOrders * percentage) / 100),
-    percentage
-  }));
-}
-
-function generatePrintJobTypesData(printJobs: any[]) {
-  const typeCount = printJobs.reduce((acc, job) => {
-    const type = job.fileType || 'أخرى';
-    acc[type] = (acc[type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const avgTimeMapping = {
-    'pdf': 15,
-    'image': 8,
-    'document': 25,
-    'أخرى': 20
-  };
-
-  if (Object.keys(typeCount).length === 0) {
-    return [
-      { type: 'مستندات', count: 856, avgTime: 15 },
-      { type: 'صور', count: 453, avgTime: 8 },
-      { type: 'كتب', count: 298, avgTime: 45 },
-      { type: 'مخططات', count: 187, avgTime: 25 },
-      { type: 'أخرى', count: 362, avgTime: 20 }
-    ];
-  }
-
-  return Object.entries(typeCount).map(([type, count]) => ({
-    type: type === 'pdf' ? 'مستندات' :
-          type === 'image' ? 'صور' :
-          type === 'document' ? 'وثائق' : type,
-    count,
-    avgTime: avgTimeMapping[type as keyof typeof avgTimeMapping] || 20
-  }));
-}
-
-function generateTeacherMaterialsData(products: any[]) {
-  const subjectCount = products.reduce((acc, product) => {
-    const subject = product.subject || 'أخرى';
-    acc[subject] = (acc[subject] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  if (Object.keys(subjectCount).length === 0) {
-    return [
-      { subject: 'الرياضيات', downloads: 234, rating: 4.8 },
-      { subject: 'العلوم', downloads: 198, rating: 4.6 },
-      { subject: 'اللغة العربية', downloads: 187, rating: 4.7 },
-      { subject: 'التاريخ', downloads: 156, rating: 4.4 },
-      { subject: 'الجغرافيا', downloads: 134, rating: 4.5 }
-    ];
-  }
-  
-  return Object.entries(subjectCount).map(([subject, downloads]) => ({
-    subject,
-    downloads,
-    rating: 4.2 + Math.random() * 0.6
-  }));
-}
-
-  return app;
-}
