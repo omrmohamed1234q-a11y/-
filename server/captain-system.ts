@@ -83,6 +83,36 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
   
   console.log('🚛 تهيئة نظام الكباتن المتكامل...');
 
+  // إضافة كبتن تجريبي للنظام العادي إذا لم يكن موجود
+  const initTestCaptain = async () => {
+    try {
+      const existingDrivers = await storage.getAllDrivers();
+      const testDriverExists = existingDrivers.find((d: any) => d.username === 'testdriver');
+      
+      if (!testDriverExists) {
+        await storage.createDriver({
+          name: 'كبتن تجريبي',
+          username: 'testdriver',
+          password: 'Driver123!',
+          email: 'testdriver@atbaali.com',
+          phone: '01001234567',
+          vehicleType: 'motorcycle',
+          vehicleNumber: '123456',
+          rating: 4.8,
+          totalDeliveries: 0,
+          status: 'online',
+          isAvailable: true
+        });
+        console.log('✅ تم إنشاء كبتن تجريبي في النظام العادي');
+      }
+    } catch (error) {
+      console.error('❌ خطأ في إنشاء الكبتن التجريبي:', error);
+    }
+  };
+  
+  // تهيئة الكبتن التجريبي
+  initTestCaptain();
+
   // === API للكباتن ===
 
   // تسجيل دخول الكبتن
