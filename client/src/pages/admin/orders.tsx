@@ -153,22 +153,22 @@ export default function AdminOrders() {
   };
 
   // إرسال الطلب للسائقين
-  const assignToDriversMutation = useMutation({
+  const assignToCaptainsMutation = useMutation({
     mutationFn: async (orderId: string) => {
-      const response = await apiRequest('POST', `/api/admin/orders/${orderId}/assign-to-drivers`, {});
+      const response = await apiRequest('POST', `/api/admin/orders/${orderId}/assign-to-captains`, {});
       return response;
     },
     onSuccess: () => {
       toast({
-        title: '🚚 تم الإرسال بنجاح',
-        description: 'تم إرسال الطلب للسائقين المتاحين'
+        title: '🚛 تم الإرسال بنجاح',
+        description: 'تم إرسال الطلب للكباتن المتاحين'
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
     },
     onError: (error: any) => {
       toast({
         title: '❌ خطأ في الإرسال',
-        description: 'فشل في إرسال الطلب للسائقين',
+        description: 'فشل في إرسال الطلب للكباتن',
         variant: 'destructive'
       });
     }
@@ -574,20 +574,20 @@ export default function AdminOrders() {
 
                     {/* أزرار التحكم */}
                     <div className="flex flex-col gap-2 ml-6">
-                      {/* زر إرسال للسائقين */}
+                      {/* زر إرسال للكباتن */}
                       {(order.status === 'ready' || order.status === 'processing' || order.status === 'printing') && (
                         <Button 
                           size="sm"
-                          onClick={() => assignToDriversMutation.mutate(order.id)}
-                          disabled={assignToDriversMutation.isPending}
+                          onClick={() => assignToCaptainsMutation.mutate(order.id)}
+                          disabled={assignToCaptainsMutation.isPending}
                           className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
                         >
-                          {assignToDriversMutation.isPending ? (
+                          {assignToCaptainsMutation.isPending ? (
                             <Clock className="w-4 h-4 animate-spin" />
                           ) : (
-                            <Send className="w-4 h-4" />
+                            <Truck className="w-4 h-4" />
                           )}
-                          إرسال للسائقين
+                          إرسال للكباتن
                         </Button>
                       )}
 
