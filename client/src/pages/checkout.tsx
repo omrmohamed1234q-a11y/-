@@ -136,10 +136,26 @@ export default function CheckoutPage() {
   }
 
   const subtotal = cart.subtotal || 0;
-  const delivery = formData.deliveryMethod === 'delivery' ? (subtotal > 100 ? 0 : 15) : 0;
-  const palestineDonation = 2; // Automatic donation to Palestine
+  
+  // New payment system calculations
+  const baseFare = 5; // Fixed fee
+  const costPerKm = 1.5; // Cost per kilometer
+  const estimatedDistance = 5; // Default distance estimate for Suez area (can be dynamic later)
+  const minimumOrderAmount = 45; // Minimum order amount for delivery
+  
+  // Service Fee: (Order Value × 5%) + Fixed Fee
+  const serviceFee = (subtotal * 0.05) + baseFare;
+  
+  // Delivery Fee: Base Fare + (Distance × Cost per km) 
+  const deliveryFee = formData.deliveryMethod === 'delivery' ? baseFare + (estimatedDistance * costPerKm) : 0;
+  
   const pointsDiscount = formData.usePoints ? Math.min(50, Math.floor(subtotal * 0.05)) : 0;
-  const total = subtotal + delivery + palestineDonation - pointsDiscount;
+  
+  // New Total: Order Value + Delivery Fee + Service Fee
+  const total = subtotal + deliveryFee + serviceFee - pointsDiscount;
+  
+  // Check minimum order amount for delivery
+  const canDeliver = formData.deliveryMethod !== 'delivery' || subtotal >= minimumOrderAmount;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -389,17 +405,25 @@ export default function CheckoutPage() {
                     <span>المجموع الفرعي</span>
                     <span data-testid="checkout-subtotal">{subtotal.toFixed(0)} جنيه</span>
                   </div>
+                  {formData.deliveryMethod === 'delivery' && (
+                    <div className="flex justify-between text-sm">
+                      <span>رسوم التوصيل</span>
+                      <span data-testid="checkout-delivery">
+                        {deliveryFee.toFixed(0)} جنيه
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
-                    <span>رسوم التوصيل</span>
-                    <span data-testid="checkout-delivery">
-                      {delivery === 0 ? 'مجاني' : `${delivery} جنيه`}
+                    <span>رسوم الخدمة (5% + 5 ج.م)</span>
+                    <span data-testid="service-fee">
+                      {serviceFee.toFixed(0)} جنيه
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm" style={{color: '#CE1126'}}>
-                    <span className="flex items-center gap-1">
-                      🇵🇸 تبرع لفلسطين
-                    </span>
-                    <span data-testid="palestine-donation">{palestineDonation} جنيه</span>
+                  <div className="bg-green-50 p-2 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-green-700">
+                      <span>🇵🇸</span>
+                      <span className="font-medium">بطلبك انت بتدعم فلسطين</span>
+                    </div>
                   </div>
                   {pointsDiscount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
