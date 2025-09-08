@@ -272,13 +272,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   </Card>
 
                   {/* Suggested Products */}
-                  {suggestedProducts && suggestedProducts.length > 0 && (
+                  {suggestedProducts && Array.isArray(suggestedProducts) && suggestedProducts.length > 0 && (
                     <>
                       <Separator className="my-4" />
                       <div className="space-y-3">
                         <h4 className="font-medium">منتجات مقترحة</h4>
                         <div className="grid grid-cols-2 gap-3">
-                          {suggestedProducts.slice(0, 2).map((product: any) => (
+                          {Array.isArray(suggestedProducts) ? suggestedProducts.slice(0, 2).map((product: any) => (
                             <Card key={product.id} className="p-2">
                               <div className="aspect-square bg-gray-100 rounded mb-2 flex items-center justify-center">
                                 {product.imageUrl ? (
@@ -298,7 +298,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 {parseFloat(product.price).toFixed(0)} جنيه
                               </p>
                             </Card>
-                          ))}
+                          )) : null}
                         </div>
                       </div>
                     </>
@@ -309,7 +309,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           ) : (
             // Active Orders View
             <>
-              {!activeOrders || activeOrders.length === 0 ? (
+              {!activeOrders || !Array.isArray(activeOrders) || activeOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Truck className="h-16 w-16 text-gray-300 mb-4" />
                   <p className="text-gray-500 mb-2">لا توجد طلبات نشطة</p>
@@ -317,7 +317,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {activeOrders.map((order: any) => (
+                  {Array.isArray(activeOrders) ? activeOrders.map((order: any) => (
                     <Card key={order.id} className="p-3">
                       <div className="flex justify-between items-start mb-2">
                         <div>
@@ -345,7 +345,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         </Button>
                       </div>
                     </Card>
-                  ))}
+                  )) : null}
                 </div>
               )}
             </>

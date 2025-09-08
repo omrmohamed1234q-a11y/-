@@ -13,6 +13,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ShoppingBag, MapPin, CreditCard, Truck, Gift, Star, Package } from 'lucide-react';
 import PaymentMethods from '@/components/PaymentMethods';
+import LocationPicker from '@/components/LocationPicker';
+import type { LocationData, DeliveryValidation } from '@/utils/locationUtils';
 
 export default function CheckoutPage() {
   const [, setLocation] = useLocation();
@@ -34,6 +36,10 @@ export default function CheckoutPage() {
     usePoints: false,
   });
 
+  // Location-based delivery states
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
+  const [locationValidation, setLocationValidation] = useState<DeliveryValidation | null>(null);
+
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
   const [orderCreated, setOrderCreated] = useState(false);
 
@@ -51,6 +57,24 @@ export default function CheckoutPage() {
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle location selection
+  const handleLocationSelect = (location: LocationData, validation: DeliveryValidation) => {
+    setSelectedLocation(location);
+    setLocationValidation(validation);
+    
+    // Auto-fill delivery address if available
+    if (location.address && validation.isValid) {
+      handleInputChange('deliveryAddress', location.address);
+    }
+  };
+
+  // Handle location clear
+  const handleLocationClear = () => {
+    setSelectedLocation(null);
+    setLocationValidation(null);
+    handleInputChange('deliveryAddress', '');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,6 +113,16 @@ export default function CheckoutPage() {
       toast({
         title: "خطأ",
         description: `الحد الأدنى للطلب بالتوصيل ${minimumOrderAmount} جنيه (السويس فقط)`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check location validity for delivery
+    if (formData.deliveryMethod === 'delivery' && (!locationValidation || !locationValidation.isValid)) {
+      toast({
+        title: "خطأ",
+        description: "يرجى تحديد موقع توصيل صالح في نطاق السويس",
         variant: "destructive",
       });
       return;
@@ -149,23 +183,26 @@ export default function CheckoutPage() {
   
   // New payment system calculations
   const baseFare = 5; // Fixed fee
-  const costPerKm = 1.5; // Cost per kilometer
-  const estimatedDistance = 5; // Default distance estimate for Suez area (can be dynamic later)
   const minimumOrderAmount = 45; // Minimum order amount for delivery
   
   // Service Fee: (Order Value × 5%) + Fixed Fee
   const serviceFee = (subtotal * 0.05) + baseFare;
   
-  // Delivery Fee: Base Fare + (Distance × Cost per km) 
-  const deliveryFee = formData.deliveryMethod === 'delivery' ? baseFare + (estimatedDistance * costPerKm) : 0;
+  // Dynamic Delivery Fee based on actual location
+  const deliveryFee = formData.deliveryMethod === 'delivery' 
+    ? (locationValidation && locationValidation.isValid 
+        ? locationValidation.deliveryFee 
+        : baseFare + (5 * 1.5)) // Default fallback: 5km × 1.5 + 5 base
+    : 0;
   
   const pointsDiscount = formData.usePoints ? Math.min(50, Math.floor(subtotal * 0.05)) : 0;
   
   // New Total: Order Value + Delivery Fee + Service Fee
   const total = subtotal + deliveryFee + serviceFee - pointsDiscount;
   
-  // Check minimum order amount for delivery
-  const canDeliver = formData.deliveryMethod !== 'delivery' || subtotal >= minimumOrderAmount;
+  // Check minimum order amount and location validity for delivery
+  const canDeliver = formData.deliveryMethod !== 'delivery' || 
+    (subtotal >= minimumOrderAmount && (!selectedLocation || (locationValidation && locationValidation.isValid)));
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -259,6 +296,16 @@ export default function CheckoutPage() {
                   </RadioGroup>
                 </CardContent>
               </Card>
+
+              {/* Location Picker - Only show if delivery is selected */}
+              {formData.deliveryMethod === 'delivery' && (
+                <LocationPicker
+                  onLocationSelect={handleLocationSelect}
+                  onLocationClear={handleLocationClear}
+                  currentLocation={selectedLocation || undefined}
+                  className="mb-6"
+                />
+              )}
 
               {/* Delivery Address - Only show if delivery is selected */}
               {formData.deliveryMethod === 'delivery' && (
@@ -467,8 +514,8 @@ export default function CheckoutPage() {
                 {/* Submit Button */}
                 <Button
                   onClick={handleSubmit}
-                  disabled={isCheckingOut}
-                  className="w-full bg-green-600 hover:bg-green-700"
+                  disabled={isCheckingOut || !canDeliver}
+                  className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
                   data-testid="submit-order-button"
                 >
                   {isCheckingOut ? (
@@ -483,6 +530,23 @@ export default function CheckoutPage() {
                     </>
                   )}
                 </Button>
+
+                {/* Validation Messages */}
+                {formData.deliveryMethod === 'delivery' && subtotal < minimumOrderAmount && (
+                  <div className="text-center p-2 bg-red-50 rounded-lg">
+                    <p className="text-sm text-red-600">
+                      الحد الأدنى للطلب بالتوصيل: {minimumOrderAmount} جنيه (السويس فقط)
+                    </p>
+                  </div>
+                )}
+                
+                {formData.deliveryMethod === 'delivery' && (!locationValidation || !locationValidation.isValid) && (
+                  <div className="text-center p-2 bg-orange-50 rounded-lg">
+                    <p className="text-sm text-orange-600">
+                      يرجى تحديد موقع توصيل صالح في نطاق السويس
+                    </p>
+                  </div>
+                )}
 
                 <p className="text-xs text-gray-500 text-center">
                   بتأكيد الطلب، توافق على شروط وأحكام الخدمة
