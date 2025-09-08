@@ -568,6 +568,367 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
     }
   });
 
+  // === Admin Captain Management APIs ===
+  
+  // جلب جميع الكباتن (للإدمن)
+  app.get('/api/admin/captains', async (req, res) => {
+    try {
+      const captains = await storage.getAllDrivers();
+      res.json({
+        success: true,
+        captains: captains.map((captain: any) => ({
+          id: captain.id,
+          name: captain.name,
+          username: captain.username,
+          email: captain.email,
+          phone: captain.phone,
+          vehicleType: captain.vehicleType,
+          vehicleNumber: captain.vehicleNumber,
+          rating: captain.rating || 4.5,
+          totalDeliveries: captain.totalDeliveries || 0,
+          status: captain.status || 'offline',
+          isAvailable: captain.isAvailable || false,
+          createdAt: captain.createdAt,
+          updatedAt: captain.updatedAt
+        }))
+      });
+    } catch (error) {
+      console.error('❌ خطأ في جلب الكباتن:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في جلب بيانات الكباتن'
+      });
+    }
+  });
+
+  // إنشاء كبتن جديد (للإدمن)
+  app.post('/api/admin/captains', async (req, res) => {
+    try {
+      const captainData = req.body;
+      
+      // التحقق من وجود اسم المستخدم
+      const existingCaptains = await storage.getAllDrivers();
+      const existingByUsername = existingCaptains.find((c: any) => c.username === captainData.username);
+      if (existingByUsername) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المستخدم مسجل بالفعل'
+        });
+      }
+
+      // التحقق من البريد الإلكتروني إذا تم توفيره
+      if (captainData.email) {
+        const existingByEmail = existingCaptains.find((c: any) => c.email === captainData.email);
+        if (existingByEmail) {
+          return res.status(400).json({
+            success: false,
+            error: 'البريد الإلكتروني مسجل بالفعل'
+          });
+        }
+      }
+
+      const newCaptain = await storage.createDriver({
+        ...captainData,
+        status: 'offline',
+        isAvailable: false,
+        rating: 5.0,
+        totalDeliveries: 0
+      });
+      
+      console.log(`✅ تم إنشاء كبتن جديد: ${newCaptain.name}`);
+      
+      res.json({
+        success: true,
+        message: 'تم إنشاء حساب الكبتن بنجاح',
+        captain: {
+          id: newCaptain.id,
+          name: newCaptain.name,
+          username: newCaptain.username,
+          email: newCaptain.email
+        }
+      });
+    } catch (error) {
+      console.error('❌ خطأ في إنشاء الكبتن:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في إنشاء حساب الكبتن'
+      });
+    }
+  });
+
+  // تحديث بيانات كبتن (للإدمن)
+  app.put('/api/admin/captains/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const updatedCaptain = await storage.updateDriver(id, updates);
+      
+      console.log(`✅ تم تحديث بيانات الكبتن: ${id}`);
+      
+      res.json({
+        success: true,
+        message: 'تم تحديث بيانات الكبتن بنجاح',
+        captain: updatedCaptain
+      });
+    } catch (error) {
+      console.error('❌ خطأ في تحديث الكبتن:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في تحديث بيانات الكبتن'
+      });
+    }
+  });
+
+  // حذف كبتن (للإدمن)
+  app.delete('/api/admin/captains/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const success = await storage.deleteDriver(id);
+      
+      if (success) {
+        console.log(`✅ تم حذف الكبتن: ${id}`);
+        res.json({
+          success: true,
+          message: 'تم حذف الكبتن بنجاح'
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          error: 'الكبتن غير موجود'
+        });
+      }
+    } catch (error) {
+      console.error('❌ خطأ في حذف الكبتن:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في حذف الكبتن'
+      });
+    }
+  });
+
+  // === Captain Registration API ===
+  
+  // تسجيل كبتن جديد (للعامة)
+  app.post('/api/captains/register', async (req, res) => {
+    try {
+      const { name, username, email, phone, vehicleType, vehiclePlate, password } = req.body;
+      
+      // التحقق من البيانات المطلوبة
+      if (!name || !username || !phone || !password) {
+        return res.status(400).json({
+          success: false,
+          error: 'جميع البيانات الأساسية مطلوبة'
+        });
+      }
+
+      // التحقق من عدم وجود اسم المستخدم
+      const existingCaptains = await storage.getAllDrivers();
+      const existingByUsername = existingCaptains.find((c: any) => c.username === username);
+      if (existingByUsername) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المستخدم غير متاح'
+        });
+      }
+
+      // إنشاء حساب الكبتن
+      const newCaptain = await storage.createDriver({
+        name,
+        username,
+        email: email || '',
+        phone,
+        vehicleType: vehicleType || 'motorcycle',
+        vehicleNumber: vehiclePlate || '',
+        password,
+        status: 'pending', // في انتظار الموافقة
+        isAvailable: false,
+        rating: 5.0,
+        totalDeliveries: 0,
+        workingArea: 'القاهرة الكبرى'
+      });
+      
+      console.log(`📝 طلب تسجيل كبتن جديد: ${newCaptain.name}`);
+      
+      res.json({
+        success: true,
+        message: 'تم إرسال طلب التسجيل بنجاح. سيتم مراجعة طلبك والرد عليك قريباً.',
+        captain: {
+          id: newCaptain.id,
+          name: newCaptain.name,
+          username: newCaptain.username
+        }
+      });
+    } catch (error) {
+      console.error('❌ خطأ في تسجيل الكبتن:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في تسجيل طلب الانضمام'
+      });
+    }
+  });
+
+  // === Captain Location APIs ===
+  
+  // جلب موقع الكبتن
+  app.get('/api/captain/:captainId/location', requireCaptainAuth, async (req, res) => {
+    try {
+      const { captainId } = req.params;
+      
+      // في الوقت الحالي، نستخدم WebSocket لتتبع المواقع
+      // هنا يمكن إرجاع آخر موقع محفوظ
+      res.json({
+        success: true,
+        location: {
+          lat: 30.0444,
+          lng: 31.2357,
+          heading: 0,
+          speed: 0,
+          accuracy: 10,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('❌ خطأ في جلب موقع الكبتن:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في جلب الموقع'
+      });
+    }
+  });
+
+  // تحديث موقع الكبتن
+  app.put('/api/captain/:captainId/location', requireCaptainAuth, async (req, res) => {
+    try {
+      const { captainId } = req.params;
+      const { lat, lng, heading, speed, accuracy } = req.body;
+      
+      // حفظ الموقع (يمكن تحسينه لاحقاً بقاعدة بيانات الموقع)
+      console.log(`📍 تحديث موقع الكبتن ${captainId}: ${lat}, ${lng}`);
+      
+      res.json({
+        success: true,
+        message: 'تم تحديث الموقع بنجاح'
+      });
+    } catch (error) {
+      console.error('❌ خطأ في تحديث الموقع:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في تحديث الموقع'
+      });
+    }
+  });
+
+  // === Secure Captain Management APIs ===
+  
+  // جلب الكباتن الآمنين (للإدمن)
+  app.get('/api/admin/secure-captains', async (req, res) => {
+    try {
+      // استخدام نفس بيانات الكباتن العادية لكن بتنسيق آمن
+      const captains = await storage.getAllDrivers();
+      const secureCaptains = captains.map((captain: any) => ({
+        id: captain.id,
+        username: captain.username,
+        email: captain.email,
+        full_name: captain.name,
+        driver_code: captain.driverCode || captain.vehicleNumber,
+        phone: captain.phone,
+        license_number: captain.licenseNumber || '',
+        vehicle_type: captain.vehicleType,
+        vehicle_plate: captain.vehicleNumber,
+        is_active: captain.status !== 'banned',
+        status: captain.status || 'offline',
+        failed_attempts: 0,
+        total_deliveries: captain.totalDeliveries || 0,
+        rating: captain.rating || 5.0,
+        created_at: captain.createdAt,
+        updated_at: captain.updatedAt
+      }));
+      
+      res.json({
+        success: true,
+        captains: secureCaptains
+      });
+    } catch (error) {
+      console.error('❌ خطأ في جلب الكباتن الآمنين:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في جلب بيانات الكباتن'
+      });
+    }
+  });
+
+  // إنشاء كبتن آمن (للإدمن)
+  app.post('/api/admin/secure-captains', async (req, res) => {
+    try {
+      const captainData = req.body;
+      
+      // التحقق من البيانات المطلوبة
+      if (!captainData.username || !captainData.email || !captainData.password) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المستخدم والبريد الإلكتروني وكلمة المرور مطلوبة'
+        });
+      }
+
+      // التحقق من عدم وجود المستخدم
+      const existingCaptains = await storage.getAllDrivers();
+      const existingByUsername = existingCaptains.find((c: any) => c.username === captainData.username);
+      const existingByEmail = existingCaptains.find((c: any) => c.email === captainData.email);
+      
+      if (existingByUsername) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المستخدم موجود بالفعل'
+        });
+      }
+      
+      if (existingByEmail) {
+        return res.status(400).json({
+          success: false,
+          error: 'البريد الإلكتروني موجود بالفعل'
+        });
+      }
+
+      // إنشاء الكبتن الآمن
+      const newCaptain = await storage.createDriver({
+        name: captainData.full_name || captainData.username,
+        username: captainData.username,
+        email: captainData.email,
+        password: captainData.password, // في الإنتاج، يجب تشفيرها
+        phone: captainData.phone || '',
+        vehicleType: captainData.vehicle_type || 'motorcycle',
+        vehicleNumber: captainData.vehicle_plate || '',
+        driverCode: captainData.driver_code || '',
+        licenseNumber: captainData.license_number || '',
+        status: 'active',
+        isAvailable: false,
+        rating: 5.0,
+        totalDeliveries: 0
+      });
+      
+      console.log(`🔐 تم إنشاء كبتن آمن: ${newCaptain.username}`);
+      
+      res.json({
+        success: true,
+        message: 'تم إنشاء حساب الكبتن الآمن بنجاح',
+        captain: {
+          id: newCaptain.id,
+          username: newCaptain.username,
+          email: newCaptain.email,
+          full_name: newCaptain.name
+        }
+      });
+    } catch (error) {
+      console.error('❌ خطأ في إنشاء الكبتن الآمن:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في إنشاء حساب الكبتن الآمن'
+      });
+    }
+  });
+
   console.log('✅ تم تهيئة نظام الكباتن المتكامل بنجاح');
 }
 

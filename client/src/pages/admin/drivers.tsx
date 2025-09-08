@@ -81,19 +81,19 @@ export default function DriversManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch drivers
+  // Fetch captains
   const { data: drivers = [], isLoading } = useQuery<Driver[]>({
-    queryKey: ['/api/admin/drivers'],
+    queryKey: ['/api/admin/captains'],
     retry: false
   });
 
-  // Create driver mutation
+  // Create captain mutation
   const createDriverMutation = useMutation({
     mutationFn: async (driverData: NewDriverForm) => {
-      return apiRequest('POST', '/api/admin/drivers', driverData);
+      return apiRequest('POST', '/api/admin/captains', driverData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/drivers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/captains'] });
       setShowAddDialog(false);
       setNewDriver({
         name: '',
@@ -106,35 +106,35 @@ export default function DriversManagement() {
         password: ''
       });
       toast({
-        title: "تم إنشاء حساب السائق",
-        description: "تم إضافة السائق الجديد بنجاح",
+        title: "تم إنشاء حساب الكبتن",
+        description: "تم إضافة الكبتن الجديد بنجاح",
       });
     },
     onError: (error: any) => {
       toast({
         title: "خطأ في إنشاء الحساب",
-        description: error.message || "فشل في إنشاء حساب السائق",
+        description: error.message || "فشل في إنشاء حساب الكبتن",
         variant: "destructive",
       });
     }
   });
 
-  // Delete driver mutation
+  // Delete captain mutation
   const deleteDriverMutation = useMutation({
     mutationFn: async (driverId: string) => {
-      return apiRequest('DELETE', `/api/admin/drivers/${driverId}`);
+      return apiRequest('DELETE', `/api/admin/captains/${driverId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/drivers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/captains'] });
       toast({
-        title: "تم حذف السائق",
-        description: "تم حذف السائق بنجاح",
+        title: "تم حذف الكبتن",
+        description: "تم حذف الكبتن بنجاح",
       });
     },
     onError: (error: any) => {
       toast({
         title: "خطأ في الحذف",
-        description: error.message || "فشل في حذف السائق",
+        description: error.message || "فشل في حذف الكبتن",
         variant: "destructive",
       });
     }
@@ -189,7 +189,7 @@ export default function DriversManagement() {
       <div className="h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل بيانات السائقين...</p>
+          <p className="text-gray-600">جاري تحميل بيانات الكباتن...</p>
         </div>
       </div>
     );
@@ -211,7 +211,7 @@ export default function DriversManagement() {
               <Truck className="w-6 h-6 text-cyan-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">إدارة السائقين والمديرين</h1>
+              <h1 className="text-3xl font-bold text-gray-900">إدارة الكباتن والمديرين</h1>
               <p className="text-gray-600">نظام الأمان المتقدم لإدارة الحسابات الآمنة</p>
             </div>
           </div>
