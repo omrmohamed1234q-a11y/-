@@ -27,13 +27,15 @@ export default function DriverOrders() {
   // جلب الطلبات الجديدة المرسلة للسائق
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['/api/driver/notifications'],
-    refetchInterval: 5000 // تحديث كل 5 ثوان
+    refetchInterval: 2000, // تحديث كل ثانيتين
+    retry: 1
   });
 
   // جلب الطلبات المقبولة
   const { data: assignedOrders = [] } = useQuery({
     queryKey: ['/api/driver/orders'],
-    refetchInterval: 10000
+    refetchInterval: 5000,
+    retry: 1
   });
 
   // قبول الطلب

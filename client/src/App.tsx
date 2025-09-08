@@ -215,6 +215,7 @@ function Router() {
         {/* Driver routes */}
         <Route path="/driver" component={EnhancedDriverDashboard} />
         <Route path="/driver/orders" component={lazy(() => import('./pages/driver/orders'))} />
+        <Route path="/driver/test" component={lazy(() => import('./pages/driver/test-orders'))} />
         
         {/* Secure login routes - available always */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
