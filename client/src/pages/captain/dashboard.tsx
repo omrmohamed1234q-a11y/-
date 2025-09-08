@@ -189,6 +189,25 @@ export default function CaptainDashboard() {
   // جلب الطلبات المتاحة
   const { data: availableOrders = [], isLoading: ordersLoading } = useQuery<CaptainOrder[]>({
     queryKey: ['/api/captain/available-orders', captainData?.id],
+    queryFn: async () => {
+      const captainSession = localStorage.getItem('captain_session');
+      const headers: Record<string, string> = {};
+      
+      if (captainSession) {
+        headers['X-Captain-Session'] = captainSession;
+      }
+      
+      const response = await fetch(`/api/captain/${captainData?.id}/available-orders`, {
+        headers,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
     enabled: !!captainData?.id,
     refetchInterval: 10000 // تحديث كل 10 ثواني
   });
