@@ -134,8 +134,19 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
         });
       }
 
-      // البحث عن الكبتن في النظام الآمن
-      const captain = await memorySecurityStorage.getSecurityUserByCredentials(username, username);
+      // البحث عن الكبتن في النظام الآمن - استخدام getUserByUsernameOrEmail للبحث بالاسم فقط
+      const captain = await memorySecurityStorage.getUserByUsernameOrEmail(username, username);
+      
+      // Debug logging
+      console.log('🔍 Login attempt for:', username);
+      console.log('🧑‍💼 Captain found:', captain ? 'YES' : 'NO');
+      if (captain) {
+        console.log('👤 Captain details:', { 
+          username: captain.username, 
+          role: captain.role, 
+          is_active: captain.is_active 
+        });
+      }
       
       if (!captain) {
         // تسجيل محاولة دخول فاشلة
@@ -164,7 +175,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       }
 
       // التحقق من كلمة المرور
-      const isValidPassword = await bcrypt.compare(password, captain.password);
+      const isValidPassword = await bcrypt.compare(password, captain.password_hash);
       if (!isValidPassword) {
         // تحديث عدد المحاولات الفاشلة
         captain.failed_attempts = (captain.failed_attempts || 0) + 1;
