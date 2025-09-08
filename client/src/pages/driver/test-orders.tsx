@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,7 @@ export default function DriverTestOrders() {
   const [notifications, setNotifications] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // جلب البيانات بشكل مبسط
   const fetchData = async () => {
@@ -31,7 +31,7 @@ export default function DriverTestOrders() {
       setError(null);
     } catch (err) {
       console.error('❌ Error fetching data:', err);
-      setError(err.message);
+      setError((err as Error).message);
       setLoading(false);
     }
   };
@@ -46,7 +46,7 @@ export default function DriverTestOrders() {
   }, []);
 
   // قبول الطلب
-  const acceptOrder = async (orderId) => {
+  const acceptOrder = async (orderId: string) => {
     try {
       console.log('✅ Accepting order:', orderId);
       const response = await fetch(`/api/driver/orders/${orderId}/accept`, {
@@ -69,7 +69,7 @@ export default function DriverTestOrders() {
   };
 
   // رفض الطلب
-  const rejectOrder = async (orderId) => {
+  const rejectOrder = async (orderId: string) => {
     try {
       console.log('❌ Rejecting order:', orderId);
       const response = await fetch(`/api/driver/orders/${orderId}/reject`, {
@@ -142,7 +142,7 @@ export default function DriverTestOrders() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {notifications.map((notification) => (
+              {notifications.map((notification: any) => (
                 <Card key={notification.id} className="border-orange-200 bg-orange-50">
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
@@ -186,7 +186,7 @@ export default function DriverTestOrders() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {orders.map((order) => (
+              {orders.map((order: any) => (
                 <Card key={order.id}>
                   <CardHeader>
                     <CardTitle>طلب رقم {order.orderNumber || order.id}</CardTitle>
