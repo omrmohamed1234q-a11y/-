@@ -212,11 +212,10 @@ function Router() {
         <Route path="/admin/rewards-management" component={() => <AdminProtectedRoute><RewardsManagement /></AdminProtectedRoute>} />
 
         
-        {/* Driver routes */}
-        <Route path="/driver" component={EnhancedDriverDashboard} />
-        <Route path="/driver/orders" component={lazy(() => import('./pages/driver/orders-simple'))} />
-        <Route path="/driver/orders-old" component={lazy(() => import('./pages/driver/orders'))} />
-        <Route path="/driver/test" component={lazy(() => import('./pages/driver/test-orders'))} />
+        {/* Driver routes - New Professional System */}
+        <Route path="/driver" component={lazy(() => import('./pages/driver/secure-login'))} />
+        <Route path="/driver/secure-login" component={lazy(() => import('./pages/driver/secure-login'))} />
+        <Route path="/driver/dashboard" component={lazy(() => import('./pages/driver/dashboard'))} />
         
         {/* Secure login routes - available always */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
