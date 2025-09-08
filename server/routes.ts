@@ -3537,24 +3537,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No file URL provided for printing' });
       }
       
-      // Calculate print job cost with safe defaults
+      // Calculate print job cost with safe defaults using advanced pricing system
       const pages = printJobData.pages || 1;
       const copies = printJobData.copies || 1;
       const colorMode = printJobData.colorMode || 'grayscale';
       const paperSize = printJobData.paperSize || 'A4';
       const doubleSided = printJobData.doubleSided || false;
+      const paperType = printJobData.paperType || 'plain';
       
-      const baseCostPerPage = colorMode === 'color' ? 2 : 1; // جنيه per page
-      const paperSizeMultiplier = paperSize === 'A4' ? 1 : 1.2;
-      const doubleSidedDiscount = doubleSided ? 0.8 : 1;
+      // Import the advanced pricing calculation (simple fallback for server-side)
+      // Convert to pricing system format
+      const paper_size_typed = paperSize === 'A3' ? 'A3' : 'A4';
+      const paper_type_typed = ['plain', 'glossy', 'matte', 'sticker'].includes(paperType) ? paperType : 'plain';
+      const print_type = doubleSided ? 'face_back' : 'face';
+      const is_black_white = colorMode === 'grayscale';
       
-      const totalCost = Math.ceil(
-        pages * 
-        copies * 
-        baseCostPerPage * 
-        paperSizeMultiplier * 
-        doubleSidedDiscount
-      );
+      // Calculate price per page using advanced pricing rules
+      let pricePerPage = 1.0; // Default fallback
+      
+      // A4 Pricing Rules (simplified server-side version)
+      if (paper_size_typed === 'A4') {
+        if (paper_type_typed === 'plain') {
+          if (print_type === 'face') {
+            pricePerPage = pages <= 20 ? 1.00 : pages <= 1000 ? 0.70 : 0.60;
+          } else {
+            pricePerPage = pages <= 20 ? 1.50 : pages <= 1000 ? 0.95 : 0.35;
+          }
+        } else if (paper_type_typed === 'glossy' || paper_type_typed === 'matte') {
+          pricePerPage = pages <= 20 ? 8.00 : pages <= 1000 ? 7.00 : 6.00;
+        } else if (paper_type_typed === 'sticker') {
+          pricePerPage = pages <= 20 ? 10.00 : pages <= 1000 ? 9.00 : 8.00;
+        }
+      } else { // A3
+        if (paper_type_typed === 'plain') {
+          if (print_type === 'face') {
+            pricePerPage = pages <= 30 ? 5.00 : 3.00;
+          } else {
+            pricePerPage = pages <= 30 ? 6.00 : 5.00;
+          }
+        } else if (paper_type_typed === 'glossy' || paper_type_typed === 'matte') {
+          pricePerPage = pages <= 50 ? 14.00 : 12.00;
+        } else if (paper_type_typed === 'sticker') {
+          pricePerPage = pages <= 50 ? 20.00 : 18.00;
+        }
+      }
+      
+      // Calculate base total
+      const baseTotal = pricePerPage * pages * copies;
+      
+      // Apply 10% discount for black and white printing
+      const discount = is_black_white ? baseTotal * 0.10 : 0;
+      const totalCost = Math.ceil(baseTotal - discount);
 
       // Create print job record with actual user ID
       const printJobRecord = {
@@ -3593,7 +3626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paperSize: printJobData.paperSize,
           doubleSided: printJobData.doubleSided,
           pageRange: printJobData.pageRange,
-          cost: totalCost
+          cost: totalCost.toString()
         },
         productName: `طباعة: ${printJobData.filename}`,
         productImage: '/print-icon.png',

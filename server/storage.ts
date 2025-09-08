@@ -2429,7 +2429,7 @@ class MemStorage implements IStorage {
     
     if (productId === 'print-service') {
       productSource = 'print_service';
-      product = { name: 'خدمة طباعة', price: variant?.printJob?.cost || '10.00' };
+      product = { name: 'خدمة طباعة', price: variant?.printJob?.cost?.toString() || '1.00' };
     } else if (variant?.partnerId) {
       productSource = 'partner';
       partnerId = variant.partnerId;
