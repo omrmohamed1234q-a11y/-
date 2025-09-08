@@ -2432,7 +2432,11 @@ class MemStorage implements IStorage {
       // Use the correctly calculated totalCost from printJob.calculatedPrice, printJob.cost, or fallback to '1.00'
       const calculatedCost = variant?.printJob?.calculatedPrice || variant?.printJob?.cost || '1.00';
       product = { name: 'خدمة طباعة', price: calculatedCost.toString() };
-      console.log(`💰 Print service cart price set to: ${calculatedCost} EGP`);
+      console.log(`💰 Print service cart price set to: ${calculatedCost} EGP from variant data:`, {
+        calculatedPrice: variant?.printJob?.calculatedPrice,
+        cost: variant?.printJob?.cost,
+        filename: variant?.printJob?.filename
+      });
     } else if (variant?.partnerId) {
       productSource = 'partner';
       partnerId = variant.partnerId;
@@ -2520,6 +2524,7 @@ class MemStorage implements IStorage {
         } else if (item.productSource === 'print_service') {
           productName = item.variant?.printJob?.filename || 'خدمة طباعة';
           productImage = '';
+          console.log(`🔍 Print service item price debug: stored=${item.price}, variant.cost=${item.variant?.printJob?.cost}, variant.calculatedPrice=${item.variant?.printJob?.calculatedPrice}`);
         } else {
           product = this.products.find(p => p.id === item.productId);
           productName = product?.name || 'منتج';
@@ -2533,7 +2538,7 @@ class MemStorage implements IStorage {
           partnerId: item.partnerId,
           partnerName: item.partnerName,
           quantity: item.quantity,
-          price: item.price,
+          price: item.price, // This should be the correct calculated price from variant.printJob
           variant: item.variant,
           notes: item.notes,
           productName: productName,

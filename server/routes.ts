@@ -3640,6 +3640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('✅ Print job added to cart successfully:', cartItem.id);
       console.log('📋 Print job also saved to admin panel:', createdPrintJob.id);
       console.log('💰 Calculated price:', totalCost, 'EGP for', pages, 'pages,', copies, 'copies, color:', colorMode);
+      console.log('🛒 Cart item price check:', cartItem.price, 'vs calculated:', totalCost);
       
       res.json({ 
         success: true, 

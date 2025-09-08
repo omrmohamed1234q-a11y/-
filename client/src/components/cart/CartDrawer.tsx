@@ -264,14 +264,20 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                               <div className="text-left">
                                 <div className="font-bold text-green-600" data-testid={`item-total-${item.id}`}>
                                   <span className="currency-display">
-                                    <span className="arabic-nums">{(parseFloat(item.price) * item.quantity).toFixed(0)}</span> جنيه
+                                    <span className="arabic-nums">{(parseFloat(item.price) * item.quantity).toFixed(2)}</span> جنيه
                                   </span>
                                 </div>
                                 <div className="text-xs text-gray-500">
                                   <span className="currency-display">
-                                    <span className="arabic-nums">{parseFloat(item.price).toFixed(0)}</span> جنيه للقطعة
+                                    <span className="arabic-nums">{parseFloat(item.price).toFixed(2)}</span> جنيه للقطعة
                                   </span>
                                 </div>
+                                {/* Debug info for print services */}
+                                {(item.variant?.isPrintJob || item.productSource === 'print_service') && (
+                                  <div className="text-xs text-blue-500 mt-1">
+                                    Debug: price={item.price}, copies={item.variant?.printJob?.copies}, pages={item.variant?.printJob?.pages}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
