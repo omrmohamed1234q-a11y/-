@@ -13,7 +13,7 @@ import Signup from "@/pages/auth/signup";
 import AdminSignup from "@/pages/auth/admin-signup";
 import AuthCallback from "@/pages/auth-callback";
 import SecureAdminLogin from "@/pages/auth/secure-admin-login";
-import SecureDriverLogin from "@/pages/auth/secure-driver-login";
+import CaptainSecureLogin from "@/pages/captain/secure-login";
 import Home from "@/pages/home-new";
 import Print from "@/pages/print";
 import Store from "@/pages/store";
@@ -71,8 +71,6 @@ import DriverLocationTest from '@/pages/driver-location-test';
 import PaymentSuccess from '@/pages/payment-success';
 import DonationsPage from '@/pages/donations';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
-import CaptainLogin from '@/pages/captain/login';
-import CaptainDashboard from '@/pages/captain/dashboard';
 
 
 function Router() {
@@ -118,8 +116,7 @@ function Router() {
         {/* Hidden secure routes - direct access only */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
         <Route path="/secure-admin-login" component={SecureAdminLogin} />
-        <Route path="/driver/secure-login" component={SecureDriverLogin} />
-        <Route path="/secure-driver-login" component={SecureDriverLogin} />
+        <Route path="/captain/secure-login" component={CaptainSecureLogin} />
         <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
         <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
         <Route path="/admin/store" component={() => <AdminProtectedRoute><AdminStore /></AdminProtectedRoute>} />
@@ -139,7 +136,6 @@ function Router() {
         <Route path="/admin/security-dashboard" component={() => <AdminProtectedRoute><SecureSecurityDashboard /></AdminProtectedRoute>} />
         <Route path="/admin/two-factor-settings" component={() => <AdminProtectedRoute><TwoFactorSettings /></AdminProtectedRoute>} />
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
-        <Route path="/driver/secure-dashboard" component={SecureDriverControl} />
         <Route path="/quick-access" component={QuickAccess} />
 
         <Route path="/test-signup" component={TestSignup} />
@@ -157,10 +153,6 @@ function Router() {
 
         <Route path="/article/:id" component={ArticlePage} />
         <Route path="/donations" component={DonationsPage} />
-        
-        {/* Captain routes - accessible without authentication */}
-        <Route path="/captain/login" component={CaptainLogin} />
-        <Route path="/captain/dashboard" component={CaptainDashboard} />
         
         <Route path="/" component={EnhancedLanding} />
         <Route component={NotFound} />
@@ -219,8 +211,7 @@ function Router() {
         {/* Secure login routes - available always */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
         <Route path="/secure-admin-login" component={SecureAdminLogin} />
-        <Route path="/driver/secure-login" component={SecureDriverLogin} />
-        <Route path="/secure-driver-login" component={SecureDriverLogin} />
+        <Route path="/captain/secure-login" component={CaptainSecureLogin} />
         
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
@@ -232,9 +223,6 @@ function Router() {
         <Route path="/location-test" component={LocationTest} />
         <Route path="/article/:id" component={ArticlePage} />
         
-        {/* Captain routes - also accessible with regular authentication */}
-        <Route path="/captain/login" component={CaptainLogin} />
-        <Route path="/captain/dashboard" component={CaptainDashboard} />
         
         <Route component={NotFound} />
       </Switch>
