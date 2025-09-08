@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار نظام السائقين</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #f0fdf4, #fef2f2);
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            background: linear-gradient(45deg, #22c55e, #ef4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .notification-card {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+        }
+        .order-card {
+            background: #dbeafe;
+            border: 2px solid #3b82f6;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn-accept {
+            background: #22c55e;
+            color: white;
+        }
+        .btn-reject {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-refresh {
+            background: #3b82f6;
+            color: white;
+        }
+        .loading {
+            text-align: center;
+            font-size: 18px;
+            color: #6b7280;
+        }
+        .error {
+            background: #fef2f2;
+            color: #ef4444;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #fecaca;
+        }
+        .info {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+            background: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">اختبار نظام السائقين</h1>
+        
+        <div class="card">
+            <button class="btn btn-refresh" onclick="loadData()">تحديث البيانات</button>
+            <div class="status" id="status">جاري التحميل...</div>
+        </div>
+
+        <div class="card">
+            <h2>الإشعارات الجديدة (<span id="notification-count">0</span>)</h2>
+            <div id="notifications-container">
+                <div class="loading">جاري تحميل الإشعارات...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>طلباتي المقبولة (<span id="orders-count">0</span>)</h2>
+            <div id="orders-container">
+                <div class="loading">جاري تحميل الطلبات...</div>
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>معلومات فنية:</h3>
+            <div id="tech-info">
+                <p>آخر تحديث: <span id="last-update">-</span></p>
+                <p>حالة API: <span id="api-status">غير معروف</span></p>
+                <p>عدد الأخطاء: <span id="error-count">0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let errorCount = 0;
+
+        function updateStatus(message, isError = false) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.style.background = isError ? '#fef2f2' : '#f0fdf4';
+            statusEl.style.color = isError ? '#ef4444' : '#22c55e';
+            
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString('ar-EG');
+            document.getElementById('api-status').textContent = isError ? 'خطأ' : 'يعمل';
+        }
+
+        async function loadData() {
+            console.log('🔄 Loading driver data...');
+            updateStatus('جاري تحميل البيانات...');
+
+            try {
+                // جلب الإشعارات
+                console.log('📱 Fetching notifications...');
+                const notificationsResponse = await fetch('/api/driver/notifications');
+                const notifications = await notificationsResponse.json();
+                console.log('📱 Notifications received:', notifications);
+
+                // جلب الطلبات
+                console.log('📦 Fetching orders...');
+                const ordersResponse = await fetch('/api/driver/orders');
+                const orders = await ordersResponse.json();
+                console.log('📦 Orders received:', orders);
+
+                // تحديث الواجهة
+                displayNotifications(notifications);
+                displayOrders(orders);
+                
+                updateStatus(`تم التحديث بنجاح - إشعارات: ${notifications.length}, طلبات: ${orders.length}`);
+                
+            } catch (error) {
+                console.error('❌ Error loading data:', error);
+                errorCount++;
+                document.getElementById('error-count').textContent = errorCount;
+                updateStatus('خطأ في تحميل البيانات: ' + error.message, true);
+                
+                document.getElementById('notifications-container').innerHTML = 
+                    '<div class="error">خطأ في تحميل الإشعارات</div>';
+                document.getElementById('orders-container').innerHTML = 
+                    '<div class="error">خطأ في تحميل الطلبات</div>';
+            }
+        }
+
+        function displayNotifications(notifications) {
+            const container = document.getElementById('notifications-container');
+            const countEl = document.getElementById('notification-count');
+            
+            countEl.textContent = notifications.length;
+            
+            if (notifications.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6b7280;">لا توجد إشعارات جديدة</p>';
+                return;
+            }
+
+            let html = '';
+            notifications.forEach(notification => {
+                html += `
+                    <div class="notification-card">
+                        <h3>${notification.title || 'إشعار جديد'}</h3>
+                        <p>${notification.message || 'لا توجد رسالة'}</p>
+                        ${notification.orderId ? `
+                            <div>
+                                <button class="btn btn-accept" onclick="acceptOrder('${notification.orderId}')">
+                                    قبول الطلب
+                                </button>
+                                <button class="btn btn-reject" onclick="rejectOrder('${notification.orderId}')">
+                                    رفض الطلب
+                                </button>
+                            </div>
+                        ` : ''}
+                        <small>المعرف: ${notification.id || 'غير محدد'}</small>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function displayOrders(orders) {
+            const container = document.getElementById('orders-container');
+            const countEl = document.getElementById('orders-count');
+            
+            countEl.textContent = orders.length;
+            
+            if (orders.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6b7280;">لا توجد طلبات مقبولة</p>';
+                return;
+            }
+
+            let html = '';
+            orders.forEach(order => {
+                html += `
+                    <div class="order-card">
+                        <h3>طلب رقم ${order.orderNumber || order.id}</h3>
+                        <p><strong>الحالة:</strong> ${order.status || 'غير محدد'}</p>
+                        <p><strong>التاريخ:</strong> ${order.createdAt ? new Date(order.createdAt).toLocaleString('ar-EG') : 'غير محدد'}</p>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        async function acceptOrder(orderId) {
+            console.log('✅ Accepting order:', orderId);
+            updateStatus('جاري قبول الطلب...');
+            
+            try {
+                const response = await fetch(`/api/driver/orders/${orderId}/accept`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                console.log('Accept result:', result);
+                
+                if (result.success) {
+                    updateStatus('✅ تم قبول الطلب بنجاح!');
+                    alert('✅ تم قبول الطلب بنجاح!');
+                    loadData(); // إعادة تحميل البيانات
+                } else {
+                    updateStatus('❌ فشل قبول الطلب: ' + result.error, true);
+                    alert('❌ فشل قبول الطلب: ' + result.error);
+                }
+            } catch (error) {
+                console.error('❌ Error accepting order:', error);
+                updateStatus('❌ خطأ في قبول الطلب', true);
+                alert('❌ خطأ في قبول الطلب');
+            }
+        }
+
+        async function rejectOrder(orderId) {
+            console.log('❌ Rejecting order:', orderId);
+            updateStatus('جاري رفض الطلب...');
+            
+            try {
+                const response = await fetch(`/api/driver/orders/${orderId}/reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                console.log('Reject result:', result);
+                
+                if (result.success) {
+                    updateStatus('❌ تم رفض الطلب');
+                    alert('❌ تم رفض الطلب');
+                    loadData(); // إعادة تحميل البيانات
+                } else {
+                    updateStatus('❌ فشل رفض الطلب: ' + result.error, true);
+                    alert('❌ فشل رفض الطلب: ' + result.error);
+                }
+            } catch (error) {
+                console.error('❌ Error rejecting order:', error);
+                updateStatus('❌ خطأ في رفض الطلب', true);
+                alert('❌ خطأ في رفض الطلب');
+            }
+        }
+
+        // تحميل البيانات عند فتح الصفحة
+        window.onload = function() {
+            loadData();
+            
+            // تحديث تلقائي كل 3 ثوان
+            setInterval(loadData, 3000);
+        };
+    </script>
+</body>
+</html>
