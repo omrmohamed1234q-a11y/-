@@ -13,7 +13,6 @@ import Signup from "@/pages/auth/signup";
 import AdminSignup from "@/pages/auth/admin-signup";
 import AuthCallback from "@/pages/auth-callback";
 import SecureAdminLogin from "@/pages/auth/secure-admin-login";
-import CaptainSecureLogin from "@/pages/captain/secure-login";
 import Home from "@/pages/home-new";
 import Print from "@/pages/print";
 import Store from "@/pages/store";
