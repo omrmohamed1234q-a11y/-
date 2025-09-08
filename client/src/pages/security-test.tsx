@@ -268,12 +268,12 @@ export default function SecurityTest() {
             <p>🔐 <strong>مسارات الدخول الآمنة:</strong></p>
             <ul className="list-disc list-inside space-y-1 mr-4">
               <li><code>/secure-admin-login</code> أو <code>/admin/secure-login</code> - للمدراء فقط</li>
-              <li><code>/secure-driver-login</code> أو <code>/driver/secure-login</code> - للسائقين فقط</li>
+              <li><code>/captain/secure-login</code> - للكباتن فقط</li>
             </ul>
             <p>👥 <strong>حسابات التجريب:</strong></p>
             <ul className="list-disc list-inside space-y-1 mr-4">
               <li>مدير: testadmin / admin@test.com / testpass123</li>
-              <li>سائق: testdriver / driver@test.com / driverpass123 / DR001</li>
+              <li>كبتن: testdriver / driver@test.com / driverpass123 / DR001</li>
             </ul>
             <p>🔒 <strong>الميزات الأمنية:</strong></p>
             <ul className="list-disc list-inside space-y-1 mr-4">

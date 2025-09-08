@@ -68,10 +68,10 @@ const apiEndpoints = [
       },
       {
         method: 'POST',
-        path: '/api/auth/driver/secure-login',
+        path: '/api/captain/secure-login',
         description: 'تسجيل دخول آمن للكابتن',
         auth: 'None',
-        response: 'Driver session'
+        response: 'Captain session'
       }
     ]
   },
