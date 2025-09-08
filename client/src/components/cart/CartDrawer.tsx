@@ -208,7 +208,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 {/* Check if this is a print job - disable quantity controls for print jobs */}
-                                {item.variant?.isPrintJob || item.productSource === 'print_service' ? (
+                                {(item.variant?.isPrintJob || item.productSource === 'print_service' || item.printJobData) ? (
                                   // For print jobs - show quantity but disable controls
                                   <>
                                     <Button

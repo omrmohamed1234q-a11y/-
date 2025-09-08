@@ -2429,7 +2429,10 @@ class MemStorage implements IStorage {
     
     if (productId === 'print-service') {
       productSource = 'print_service';
-      product = { name: 'خدمة طباعة', price: variant?.printJob?.cost?.toString() || '1.00' };
+      // Use the correctly calculated totalCost from printJob.calculatedPrice, printJob.cost, or fallback to '1.00'
+      const calculatedCost = variant?.printJob?.calculatedPrice || variant?.printJob?.cost || '1.00';
+      product = { name: 'خدمة طباعة', price: calculatedCost.toString() };
+      console.log(`💰 Print service cart price set to: ${calculatedCost} EGP`);
     } else if (variant?.partnerId) {
       productSource = 'partner';
       partnerId = variant.partnerId;

@@ -65,15 +65,15 @@ export async function uploadFile(file: File): Promise<UploadResult> {
   }
 }
 
-// Google Drive Primary Upload for /print page - Cost Optimization
+// Primary Cloud Upload for /print page - Cost Optimization
 export async function uploadFileToGoogleDrive(file: File, printSettings?: any): Promise<UploadResult> {
-  console.log(`🚀 Google Drive Priority Upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+  console.log(`🚀 Cloud Priority Upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
   
   try {
     // Convert file to base64 for server upload
     const fileBuffer = await fileToBuffer(file);
     
-    console.log('📁 Uploading to Google Drive (Primary)...');
+    console.log('📁 Uploading to Cloud Storage (Primary)...');
     
     // Add customer information from user context if available
     let uploadData = {
@@ -101,7 +101,7 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
     const result = await response.json();
     
     if (result.success) {
-      console.log('✅ Google Drive upload successful! Cost savings activated 💰');
+      console.log('✅ Cloud upload successful! Cost savings activated 💰');
       
       const uploadResult: UploadResult = {
         success: true,
@@ -117,15 +117,15 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
       await notifyServerUpload(file, uploadResult);
       return uploadResult;
     } else {
-      throw new Error(result.error || 'Google Drive upload failed');
+      throw new Error(result.error || 'Cloud upload failed');
     }
   } catch (error) {
-    console.error('❌ Google Drive upload failed:', error);
+    console.error('❌ Cloud upload failed:', error);
     
-    let errorMessage = 'Google Drive upload failed';
+    let errorMessage = 'Cloud upload failed';
     if (error instanceof Error) {
       if (error.message.includes('timeout') || error.message.includes('TimeoutError')) {
-        errorMessage = 'Upload timed out - the file might still be processing. Please check your Google Drive.';
+        errorMessage = 'Upload timed out - the file might still be processing. Please check your cloud storage.';
       } else if (error.message.includes('AbortError')) {
         errorMessage = 'Upload was cancelled due to timeout. Please try with a smaller file.';
       } else {

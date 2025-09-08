@@ -3611,7 +3611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const createdPrintJob = await storage.createPrintJob(printJobRecord);
       console.log('Print job created in admin panel:', createdPrintJob);
 
-      // Add print job to user's cart using storage method
+      // Add print job to user's cart using storage method - pass totalCost as price
       const cartItem = await storage.addToCart(userId, 'print-service', 1, {
         isPrintJob: true,
         printJobId: createdPrintJob.id,
@@ -3626,7 +3626,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paperSize: printJobData.paperSize,
           doubleSided: printJobData.doubleSided,
           pageRange: printJobData.pageRange,
-          cost: totalCost.toString()
+          cost: totalCost.toString(),
+          calculatedPrice: totalCost.toString() // Add this for cart pricing
         },
         productName: `طباعة: ${printJobData.filename}`,
         productImage: '/print-icon.png',
@@ -3638,6 +3639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('✅ Print job added to cart successfully:', cartItem.id);
       console.log('📋 Print job also saved to admin panel:', createdPrintJob.id);
+      console.log('💰 Calculated price:', totalCost, 'EGP for', pages, 'pages,', copies, 'copies, color:', colorMode);
       
       res.json({ 
         success: true, 
