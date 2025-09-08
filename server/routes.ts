@@ -4153,52 +4153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: Get all drivers
-  app.get('/api/admin/drivers', isAdminAuthenticated, async (req: any, res) => {
-    try {
-      const drivers = await storage.getAllDrivers();
-      res.json(drivers);
-    } catch (error) {
-      console.error('Error fetching drivers:', error);
-      res.status(500).json({ message: 'Failed to fetch drivers' });
-    }
-  });
-
-  // Admin: Create new driver
-  app.post('/api/admin/drivers', isAdminAuthenticated, async (req: any, res) => {
-    try {
-      const driverData = req.body;
-      
-      // Check if driver username already exists (required)
-      const existingDriverByUsername = await storage.getDriverByUsername(driverData.username);
-      if (existingDriverByUsername) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'اسم المستخدم مسجل بالفعل' 
-        });
-      }
-
-      // Check if driver email already exists (only if email is provided)
-      if (driverData.email) {
-        const existingDriverByEmail = await storage.getDriverByEmail(driverData.email);
-        if (existingDriverByEmail) {
-          return res.status(400).json({ 
-            success: false, 
-            message: 'البريد الإلكتروني مسجل بالفعل' 
-          });
-        }
-      }
-
-      const newDriver = await storage.createDriver(driverData);
-      res.json({ success: true, driver: newDriver });
-    } catch (error) {
-      console.error('Error creating driver:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'فشل في إنشاء حساب السائق' 
-      });
-    }
-  });
+  // DEPRECATED: Replaced by /api/admin/captains in captain-system.ts
 
   // Admin: Update driver
   app.put('/api/admin/drivers/:id', isAdminAuthenticated, async (req: any, res) => {
@@ -4396,95 +4351,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ====== ADMIN DRIVER MANAGEMENT ROUTES ======
+  // ====== ADMIN DRIVER MANAGEMENT ROUTES (DEPRECATED - Use Captain System) ======
+  // Note: These APIs are replaced by /api/admin/captains in captain-system.ts
 
-  // Get all drivers (admin)
-  app.get('/api/admin/drivers', isAdminAuthenticated, async (req, res) => {
-    try {
-      console.log('📋 Admin fetching all drivers');
-      const drivers = await storage.getAllDrivers();
-      res.json(drivers);
-    } catch (error) {
-      console.error('Error fetching drivers:', error);
-      res.status(500).json({ success: false, error: 'Failed to fetch drivers' });
-    }
-  });
-
-  // Create new driver (admin-only)
-  app.post('/api/admin/drivers', isAdminAuthenticated, async (req, res) => {
-    try {
-      const driverData = req.body;
-      console.log(`👤 Admin creating new driver: ${driverData.name}`);
-
-      // Generate unique driver code
-      const driverCode = `DRV${Date.now().toString().slice(-6)}`;
-      
-      const newDriver = await storage.createDriver({
-        ...driverData,
-        driverCode,
-        status: 'offline',
-        isAvailable: true,
-        totalDeliveries: 0,
-        completedDeliveries: 0,
-        cancelledDeliveries: 0,
-        earnings: '0.00',
-        rating: '0.00',
-        ratingCount: 0,
-        isVerified: false,
-        documentsVerified: false
-      });
-
-      res.json({ success: true, driver: newDriver });
-    } catch (error) {
-      console.error('Error creating driver:', error);
-      res.status(500).json({ success: false, error: 'Failed to create driver' });
-    }
-  });
-
-  // Create new driver (public signup)
-  app.post('/api/drivers/register', async (req, res) => {
-    try {
-      const { name, email, password, phone, vehicleType, workingArea } = req.body;
-      console.log(`👤 Public driver registration: ${name}`);
-
-      // Check if driver email already exists
-      const existingDriver = await storage.getDriverByEmail(email);
-      if (existingDriver) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'البريد الإلكتروني مسجل مسبقاً' 
-        });
-      }
-
-      // Generate unique driver code
-      const driverCode = `DRV${Date.now().toString().slice(-6)}`;
-      
-      const newDriver = await storage.createDriver({
-        name,
-        email,
-        password, // In production, this should be hashed
-        phone,
-        vehicleType,
-        workingArea,
-        driverCode,
-        status: 'offline',
-        isAvailable: true,
-        totalDeliveries: 0,
-        completedDeliveries: 0,
-        cancelledDeliveries: 0,
-        earnings: '0.00',
-        rating: '0.00',
-        ratingCount: 0,
-        isVerified: false,
-        documentsVerified: false
-      });
-
-      res.json({ success: true, driver: newDriver });
-    } catch (error) {
-      console.error('Error registering driver:', error);
-      res.status(500).json({ success: false, error: 'فشل في إنشاء حساب الكابتن' });
-    }
-  });
+  // DEPRECATED: Replaced by /api/captains/register in captain-system.ts
 
   // Update driver status (admin)
   app.put('/api/admin/drivers/:driverId/status', isAdminAuthenticated, async (req, res) => {
