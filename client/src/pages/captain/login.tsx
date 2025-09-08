@@ -35,14 +35,16 @@ export default function CaptainLogin() {
         password
       });
 
-      if (response.success) {
+      const data = await response.json();
+
+      if (data.success) {
         // حفظ بيانات الكبتن
-        localStorage.setItem('captain_session', response.sessionToken);
-        localStorage.setItem('captain_data', JSON.stringify(response.captain));
+        localStorage.setItem('captain_session', data.sessionToken);
+        localStorage.setItem('captain_data', JSON.stringify(data.captain));
         
         toast({
           title: '✅ تم تسجيل الدخول بنجاح',
-          description: `مرحباً ${response.captain.name}`,
+          description: `مرحباً ${data.captain.name}`,
           duration: 3000
         });
 
