@@ -157,6 +157,7 @@ export class MemoryStorage implements IStorage {
   private partners: Partner[] = [];
   private partnerProducts: any[] = [];
   private announcements: Announcement[] = [];
+  private drivers: any[] = [];
   
   // User operations
   async getUser(id: string): Promise<User | undefined> {
@@ -537,20 +538,58 @@ export class MemoryStorage implements IStorage {
   async getInquiryResponses(inquiryId: string): Promise<any[]> { return []; }
   async createInquiryNotifications(notifications: any[]): Promise<void> { }
   
-  async getAllDrivers(): Promise<any[]> { return []; }
-  async getDriver(id: string): Promise<any | undefined> { return undefined; }
+  async getAllDrivers(): Promise<any[]> { return this.drivers; }
+  async getDriver(id: string): Promise<any | undefined> { return this.drivers.find(d => d.id === id); }
   async getDriverByEmail(email: string): Promise<any | undefined> { return undefined; }
   async getDriverByUsername(username: string): Promise<any | undefined> { return undefined; }
-  async createDriver(driver: any): Promise<any> { throw new Error('Not implemented'); }
+  async createDriver(driverData: any): Promise<any> {
+    const driver = {
+      id: `driver-${Date.now()}`,
+      ...driverData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.drivers.push(driver);
+    console.log(`🚚 Driver created: ${driver.name} (${driver.id})`);
+    return driver;
+  }
   async updateDriver(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
-  async updateDriverStatus(id: string, status: string): Promise<any> { throw new Error('Not implemented'); }
+  async updateDriverStatus(id: string, status: string, isAvailable?: boolean): Promise<any> {
+    const driver = this.drivers.find(d => d.id === id);
+    if (driver) {
+      driver.status = status;
+      if (isAvailable !== undefined) {
+        driver.isAvailable = isAvailable;
+      }
+      driver.updatedAt = new Date();
+      console.log(`🚚 Driver ${id} status updated: ${status}`);
+    }
+    return driver;
+  }
   async updateDriverLocation(id: string, location: any): Promise<any> { throw new Error('Not implemented'); }
   async updateDriverLastActive(id: string): Promise<void> { }
   async authenticateDriver(identifier: string, password: string): Promise<any> { return null; }
   async getAvailableDrivers(): Promise<any[]> { return []; }
   async getAvailableOrdersForDriver(driverId: string): Promise<any[]> { return []; }
-  async assignOrderToDriver(orderId: string, driverId: string): Promise<any> { throw new Error('Not implemented'); }
-  async getDriverOrders(driverId: string): Promise<any[]> { return []; }
+  async assignOrderToDriver(orderId: string, driverId: string): Promise<any> {
+    const order = this.orders.find(o => o.id === orderId);
+    if (!order) throw new Error('Order not found');
+    
+    const driver = this.drivers.find(d => d.id === driverId);
+    if (!driver) throw new Error('Driver not found');
+    
+    order.driverId = driverId;
+    order.driverName = driver.name;
+    order.driverPhone = driver.phone;
+    order.status = 'assigned_to_driver';
+    order.updatedAt = new Date();
+    
+    console.log(`🚚 Order ${orderId} assigned to driver ${driver.name}`);
+    return order;
+  }
+  async getDriverOrders(driverId: string): Promise<any[]> { 
+    return this.orders.filter(o => o.driverId === driverId);
+  }
   async deleteDriver(id: string): Promise<boolean> { return false; }
   
   async getCoupon(id: string): Promise<any> { return null; }
