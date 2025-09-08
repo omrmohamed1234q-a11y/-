@@ -88,9 +88,21 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   }
 
   const subtotal = calculateSubtotal();
-  const delivery = subtotal > 100 ? 0 : 15;
-  const palestineDonation = 2; // Automatic donation to Palestine
-  const total = subtotal + delivery + palestineDonation;
+  
+  // New payment system calculations
+  const baseFare = 5; // Fixed fee
+  const costPerKm = 1.5; // Cost per kilometer  
+  const estimatedDistance = 5; // Default distance estimate for Suez area
+  const minimumOrderAmount = 45; // Minimum order amount for delivery
+  
+  // Service Fee: (Order Value × 5%) + Fixed Fee
+  const serviceFee = (subtotal * 0.05) + baseFare;
+  
+  // Delivery Fee: Base Fare + (Distance × Cost per km)
+  const deliveryFee = baseFare + (estimatedDistance * costPerKm);
+  
+  // New Total: Order Value + Delivery Fee + Service Fee
+  const total = subtotal + deliveryFee + serviceFee;
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -351,16 +363,22 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   <span data-testid="cart-subtotal">{subtotal.toFixed(0)} جنيه</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>التوصيل</span>
+                  <span>رسوم التوصيل</span>
                   <span data-testid="cart-delivery">
-                    {delivery === 0 ? 'مجاني' : `${delivery} جنيه`}
+                    {deliveryFee.toFixed(0)} جنيه
                   </span>
                 </div>
-                <div className="flex justify-between text-sm" style={{color: '#CE1126'}}>
-                  <span className="flex items-center gap-1">
-                    🇵🇸 تبرع لفلسطين
+                <div className="flex justify-between text-sm">
+                  <span>رسوم الخدمة</span>
+                  <span data-testid="service-fee">
+                    {serviceFee.toFixed(0)} جنيه
                   </span>
-                  <span data-testid="palestine-donation">{palestineDonation} جنيه</span>
+                </div>
+                <div className="bg-green-50 p-2 rounded-lg mb-2">
+                  <div className="flex items-center gap-2 text-xs text-green-700">
+                    <span>🇵🇸</span>
+                    <span className="font-medium">بطلبك انت بتدعم فلسطين</span>
+                  </div>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-bold">

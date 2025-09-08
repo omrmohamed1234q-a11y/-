@@ -84,6 +84,16 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Check minimum order amount for delivery
+    if (formData.deliveryMethod === 'delivery' && subtotal < minimumOrderAmount) {
+      toast({
+        title: "خطأ",
+        description: `الحد الأدنى للطلب بالتوصيل ${minimumOrderAmount} جنيه (السويس فقط)`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Format address
     const fullAddress = formData.deliveryMethod === 'delivery' 
       ? `${formData.deliveryAddress}${formData.buildingNumber ? `, مبنى رقم ${formData.buildingNumber}` : ''}${formData.floor ? `, الطابق ${formData.floor}` : ''}${formData.apartment ? `, شقة ${formData.apartment}` : ''}${formData.landmarks ? `. علامات مميزة: ${formData.landmarks}` : ''}`
