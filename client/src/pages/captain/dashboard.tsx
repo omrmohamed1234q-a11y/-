@@ -128,19 +128,28 @@ export default function CaptainDashboard() {
 
   // تحقق من تسجيل الدخول
   useEffect(() => {
-    const sessionToken = localStorage.getItem('captain_session');
-    const savedCaptainData = localStorage.getItem('captain_data');
+    const authData = localStorage.getItem('captainAuth');
     
-    if (!sessionToken || !savedCaptainData) {
-      setLocation('/captain/login');
+    if (!authData) {
+      setLocation('/captain/secure-login');
       return;
     }
     
     try {
-      setCaptainData(JSON.parse(savedCaptainData));
+      const parsed = JSON.parse(authData);
+      setCaptainData({
+        id: parsed.user.id,
+        name: parsed.user.fullName,
+        phone: parsed.user.phone,
+        email: parsed.user.email,
+        vehicleType: parsed.user.vehicleType || 'motorcycle',
+        vehicleNumber: parsed.user.driverCode,
+        rating: 4.8,
+        totalDeliveries: 156
+      });
     } catch (error) {
       console.error('خطأ في قراءة بيانات الكبتن:', error);
-      setLocation('/captain/login');
+      setLocation('/captain/secure-login');
     }
   }, [setLocation]);
 
@@ -272,13 +281,12 @@ export default function CaptainDashboard() {
 
   // تسجيل الخروج
   const handleLogout = () => {
-    localStorage.removeItem('captain_session');
-    localStorage.removeItem('captain_data');
+    localStorage.removeItem('captainAuth');
     toast({
       title: '👋 تم تسجيل الخروج',
       description: 'نراك قريباً'
     });
-    setLocation('/captain/login');
+    setLocation('/captain/secure-login');
   };
 
   // تبديل حالة متصل/غير متصل

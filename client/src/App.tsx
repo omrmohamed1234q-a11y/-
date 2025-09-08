@@ -70,6 +70,8 @@ import DriverLocationTest from '@/pages/driver-location-test';
 import PaymentSuccess from '@/pages/payment-success';
 import DonationsPage from '@/pages/donations';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
+import CaptainSecureLogin from '@/pages/captain/secure-login';
+import CaptainDashboard from '@/pages/captain/dashboard';
 
 
 function Router() {
@@ -116,6 +118,7 @@ function Router() {
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
         <Route path="/secure-admin-login" component={SecureAdminLogin} />
         <Route path="/captain/secure-login" component={CaptainSecureLogin} />
+        <Route path="/captain/dashboard" component={CaptainDashboard} />
         <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
         <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
         <Route path="/admin/store" component={() => <AdminProtectedRoute><AdminStore /></AdminProtectedRoute>} />
@@ -211,6 +214,7 @@ function Router() {
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
         <Route path="/secure-admin-login" component={SecureAdminLogin} />
         <Route path="/captain/secure-login" component={CaptainSecureLogin} />
+        <Route path="/captain/dashboard" component={CaptainDashboard} />
         
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
