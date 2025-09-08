@@ -89,13 +89,16 @@ export function validateDeliveryLocation(location: LocationData): DeliveryValida
   
   const isInAinSokhna = distanceFromAinSokhna <= AIN_SOKHNA_AREA.radius;
   
-  // التحقق من أن المسافة لا تزيد عن 30 كيلو من مدينة الأربعين
-  const isWithinMaxDistance = distanceFromCenter <= 30;
+  // التحقق من المسافة للوصول للحد الأقصى 35 جنيه: 35 = 5 + (20 × 1.5)
+  const maxDeliveryDistance = 20; // كيلو متر للوصول للحد الأقصى 35 جنيه
+  const isWithinMaxDistance = distanceFromCenter <= maxDeliveryDistance;
   
-  // حساب رسوم التوصيل: 5 جنيه (رسوم ثابتة) + (المسافة × 1.5 جنيه/كيلو)
+  // حساب رسوم التوصيل: 5 جنيه (رسوم ثابتة) + (المسافة × 1.5 جنيه/كيلو) - أقصى حد 35 جنيه
   const baseFare = 5;
   const costPerKm = 1.5;
-  const deliveryFee = baseFare + (distanceFromCenter * costPerKm);
+  const maxDeliveryFee = 35; // الحد الأقصى لرسوم التوصيل
+  const calculatedFee = baseFare + (distanceFromCenter * costPerKm);
+  const deliveryFee = Math.min(calculatedFee, maxDeliveryFee);
   
   // تحديد صحة الموقع
   let isValid = false;
@@ -109,11 +112,12 @@ export function validateDeliveryLocation(location: LocationData): DeliveryValida
     message = "عذراً، التوصيل غير متاح في منطقة السخنة حالياً";
     area = "السخنة";
   } else if (!isWithinMaxDistance) {
-    message = `عذراً، التوصيل متاح فقط ضمن ${30} كيلو من مدينة الأربعين`;
+    message = `عذراً، التوصيل متاح فقط ضمن ${maxDeliveryDistance} كيلو من مطبعة الجزيرة (الحد الأقصى ${maxDeliveryFee} جنيه)`;
     area = "بعيد جداً";
   } else {
     isValid = true;
-    message = `التوصيل متاح! المسافة: ${distanceFromCenter.toFixed(1)} كم - رسوم التوصيل: ${deliveryFee.toFixed(0)} جنيه`;
+    const feeText = deliveryFee === maxDeliveryFee ? `${maxDeliveryFee} جنيه (أقصى حد)` : `${deliveryFee.toFixed(0)} جنيه`;
+    message = `التوصيل متاح! المسافة: ${distanceFromCenter.toFixed(1)} كم - رسوم التوصيل: ${feeText}`;
     area = "السويس";
   }
   
