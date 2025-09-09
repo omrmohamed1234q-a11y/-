@@ -150,7 +150,6 @@ function Router() {
         <Route path="/api-test" component={ApiConnectionTest} />
         <Route path="/connectivity" component={ConnectivityDashboard} />
         <Route path="/sql-generator" component={SQLGenerator} />
-        <Route path="/storage-dashboard" component={StorageDashboard} />
         <Route path="/paymob-test" component={PaymobTestPage} />
         <Route path="/paymob-setup" component={PaymobSetupPage} />
 
@@ -226,7 +225,6 @@ function Router() {
         <Route path="/paymob-test" component={PaymobTestPage} />
         <Route path="/paymob-setup" component={PaymobSetupPage} />
         <Route path="/location-test" component={LocationTest} />
-        <Route path="/storage-dashboard" component={StorageDashboard} />
         <Route path="/connectivity" component={ConnectivityDashboard} />
         <Route path="/sql-generator" component={SQLGenerator} />
         <Route path="/article/:id" component={ArticlePage} />
