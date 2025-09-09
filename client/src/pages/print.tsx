@@ -1225,11 +1225,48 @@ export default function Print() {
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="plain">عادي</SelectItem>
-                                        <SelectItem value="coated">كوشيه</SelectItem>
-                                        <SelectItem value="sticker">لاصق</SelectItem>
+                                        <SelectItem value="plain">
+                                          <div className="flex items-center space-x-2 space-x-reverse">
+                                            <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                                            <span>عادي - ورق طباعة تقليدي</span>
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="coated">
+                                          <div className="flex items-center space-x-2 space-x-reverse">
+                                            <div className="w-3 h-3 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
+                                            <span>كوشيه - ورق لامع عالي الجودة</span>
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="sticker">
+                                          <div className="flex items-center space-x-2 space-x-reverse">
+                                            <div className="w-3 h-3 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
+                                            <span>لاصق - ورق بطبقة لاصقة</span>
+                                          </div>
+                                        </SelectItem>
                                       </SelectContent>
                                     </Select>
+                                    
+                                    {/* Paper Type Guide */}
+                                    <div className="mt-2 text-xs text-gray-600">
+                                      {currentSettings.paperType === 'plain' && (
+                                        <div className="flex items-center space-x-1 space-x-reverse">
+                                          <div className="w-2 h-2 bg-gray-100 border border-gray-300 rounded"></div>
+                                          <span>مناسب للمستندات العادية والنصوص</span>
+                                        </div>
+                                      )}
+                                      {currentSettings.paperType === 'coated' && (
+                                        <div className="flex items-center space-x-1 space-x-reverse">
+                                          <div className="w-2 h-2 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
+                                          <span>ورق لامع للصور والتصاميم عالية الجودة</span>
+                                        </div>
+                                      )}
+                                      {currentSettings.paperType === 'sticker' && (
+                                        <div className="flex items-center space-x-1 space-x-reverse">
+                                          <div className="w-2 h-2 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
+                                          <span>ورق لاصق للملصقات والتسميات</span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
 
                                   {/* Color Mode */}
@@ -1315,6 +1352,34 @@ export default function Print() {
                     <Printer className="h-5 w-5 text-accent ml-2" />
                     إعدادات الطباعة
                   </h2>
+                  
+                  {/* Paper Types Visual Guide */}
+                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h3 className="text-sm font-bold mb-3 text-blue-800">دليل أنواع الورق:</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                        <div>
+                          <div className="font-medium">عادي</div>
+                          <div className="text-gray-600">للمستندات والنصوص</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <div className="w-4 h-4 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
+                        <div>
+                          <div className="font-medium">كوشيه</div>
+                          <div className="text-gray-600">للصور وجودة عالية</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <div className="w-4 h-4 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
+                        <div>
+                          <div className="font-medium">لاصق</div>
+                          <div className="text-gray-600">للملصقات والتسميات</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
               
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
