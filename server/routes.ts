@@ -537,11 +537,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       switch (timeOption) {
         case 'total-reset':
-          daysToKeep = 0; // Delete everything
+          daysToKeep = -1; // Delete EVERYTHING including today
           description = 'تصفير كامل - حذف كل شيء';
           break;
         case 'partial-reset':
-          daysToKeep = 0.04; // ~1 hour
+          daysToKeep = 0.042; // ~1 hour (slightly more to ensure it works)
           description = 'تصفير جزئي - آخر ساعة فقط';
           break;
         case 'last-day':
