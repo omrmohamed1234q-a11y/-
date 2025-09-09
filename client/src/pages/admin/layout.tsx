@@ -19,7 +19,8 @@ import {
   BookOpen,
   Building2,
   Shield,
-  Smartphone
+  Smartphone,
+  HardDrive
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -39,6 +40,7 @@ const navigation = [
   { name: 'المستخدمين', href: '/admin/users', icon: Users },
   { name: 'التحليلات', href: '/admin/reports', icon: BarChart3 },
   { name: 'الأمان', href: '/admin/security-dashboard', icon: Shield },
+  { name: 'إدارة المساحة', href: '/admin/storage-dashboard', icon: HardDrive },
   { name: 'المصادقة الثنائية', href: '/admin/two-factor-settings', icon: Smartphone },
   { name: 'الإعدادات', href: '/admin/settings', icon: Settings },
 ];

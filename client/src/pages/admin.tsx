@@ -10,7 +10,7 @@ import { apiRequest } from '@/lib/queryClient';
 import {
   BarChart3, Users, Package, Printer, ShoppingCart, TrendingUp,
   Plus, Edit, Trash2, FileText, Settings, Home, LogOut,
-  Eye, Download, Calendar, BookOpen, GraduationCap, Store, X, Tag
+  Eye, Download, Calendar, BookOpen, GraduationCap, Store, X, Tag, HardDrive
 } from 'lucide-react';
 import { Link } from 'wouter';
 import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
@@ -332,6 +332,13 @@ export default function AdminDashboard() {
                 <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-indigo-50">
                   <FileText className="w-6 h-6 text-indigo-600" />
                   <span className="text-xs">الاستعلامات</span>
+                </Button>
+              </Link>
+              
+              <Link href="/admin/storage-dashboard">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-emerald-50">
+                  <HardDrive className="w-6 h-6 text-emerald-600" />
+                  <span className="text-xs">إدارة المساحة</span>
                 </Button>
               </Link>
             </div>
