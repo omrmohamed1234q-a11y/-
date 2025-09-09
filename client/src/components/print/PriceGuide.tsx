@@ -1,87 +1,54 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Info, FileText, Palette, Star, Sticker } from 'lucide-react';
 import { getPricingTiers } from '@/lib/pricing';
+import { FileText, Palette, Star, Sticker, Info } from 'lucide-react';
+
+interface PriceCardProps {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tiers: { range: string; price: string }[];
+  description?: string;
+}
+
+function PriceCard({ title, icon: Icon, tiers, description }: PriceCardProps) {
+  return (
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="h-4 w-4 text-accent" />
+        <h3 className="font-semibold text-sm">{title}</h3>
+      </div>
+      
+      {description && (
+        <p className="text-xs text-muted-foreground mb-3">{description}</p>
+      )}
+      
+      <div className="space-y-1">
+        {tiers && tiers.map((tier, index) => (
+          <div key={index} className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">{tier.range}</span>
+            <Badge variant="secondary" className="text-xs font-medium">
+              {tier.price}
+            </Badge>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface PriceGuideProps {
   compact?: boolean;
 }
 
 export function PriceGuide({ compact = false }: PriceGuideProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const pricingTiers = getPricingTiers();
 
-  const PriceCard = ({ 
-    title, 
-    icon: Icon, 
-    tiers, 
-    color = "default",
-    description 
-  }: { 
-    title: string; 
-    icon: any; 
-    tiers: Array<{ range: string; price: string }>; 
-    color?: string;
-    description?: string;
-  }) => (
-    <Card className="h-full">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Icon className="h-5 w-5" />
-          {title}
-        </CardTitle>
-        {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {tiers.map((tier, index) => (
-          <div key={index} className="flex justify-between items-center p-3 rounded-md bg-muted/50 min-h-[3rem]">
-            <span className="text-sm font-medium flex-1 ml-3">{tier.range}</span>
-            <Badge variant="secondary" className="price-text font-bold shrink-0">
-              {tier.price}
-            </Badge>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-
-  const CompactView = () => (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
-          <Info className="h-4 w-4" />
-          دليل الأسعار
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            دليل أسعار الطباعة الشامل
-          </DialogTitle>
-        </DialogHeader>
-        <FullView />
-      </DialogContent>
-    </Dialog>
-  );
-
-  const FullView = () => (
+  const content = (
     <div className="space-y-6">
-      {/* Discount Notice */}
-      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Star className="h-5 w-5 text-green-600" />
-          <h3 className="font-semibold text-green-800 dark:text-green-200">خصم خاص على الطباعة بالأبيض والأسود</h3>
-        </div>
-        <p className="text-green-700 dark:text-green-300">
-          احصل على <strong>خصم 10%</strong> عند اختيار الطباعة بالأبيض والأسود على جميع أنواع الورق
-        </p>
-      </div>
-
       <Tabs defaultValue="A4" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="A4">A4</TabsTrigger>
@@ -89,7 +56,7 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
           <TabsTrigger value="A0">A0</TabsTrigger>
           <TabsTrigger value="A1">A1</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="A4" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* A4 Plain */}
@@ -116,21 +83,18 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
                 description="جودة عالية للصور والعروض"
               />
               <PriceCard
+                title="ورق جلوسي"
+                icon={Star}
+                tiers={pricingTiers.A4.glossy}
+                description="ورق لامع عالي اللمعة للصور عالية الجودة"
+              />
+              <PriceCard
                 title="ورق استيكر"
                 icon={Sticker}
                 tiers={pricingTiers.A4.sticker}
                 description="مثالي للملصقات واللافتات"
               />
             </div>
-          </div>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            <PriceCard
-              title="ورق جلوسي"
-              icon={Star}
-              tiers={pricingTiers.A4.glossy}
-              description="ورق لامع عالي اللمعة للصور عالية الجودة"
-            />
           </div>
         </TabsContent>
         
@@ -160,21 +124,18 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
                 description="جودة احترافية للعروض الكبيرة"
               />
               <PriceCard
+                title="ورق جلوسي"
+                icon={Star}
+                tiers={pricingTiers.A3.glossy}
+                description="ورق لامع عالي اللمعة للصور عالية الجودة"
+              />
+              <PriceCard
                 title="ورق استيكر"
                 icon={Sticker}
                 tiers={pricingTiers.A3.sticker}
                 description="ملصقات كبيرة الحجم عالية الجودة"
               />
             </div>
-          </div>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            <PriceCard
-              title="ورق جلوسي"
-              icon={Star}
-              tiers={pricingTiers.A4.glossy}
-              description="ورق لامع عالي اللمعة للصور عالية الجودة"
-            />
           </div>
         </TabsContent>
         
@@ -185,15 +146,6 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
               icon={FileText}
               tiers={pricingTiers.A0.plain_bw}
               description="الحجم الأكبر، مناسب للملصقات واللوحات الكبيرة"
-            />
-          </div>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            <PriceCard
-              title="ورق جلوسي"
-              icon={Star}
-              tiers={pricingTiers.A4.glossy}
-              description="ورق لامع عالي اللمعة للصور عالية الجودة"
             />
           </div>
         </TabsContent>
@@ -207,15 +159,6 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
               description="حجم كبير مناسب للعروض والمخططات"
             />
           </div>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            <PriceCard
-              title="ورق جلوسي"
-              icon={Star}
-              tiers={pricingTiers.A4.glossy}
-              description="ورق لامع عالي اللمعة للصور عالية الجودة"
-            />
-          </div>
         </TabsContent>
       </Tabs>
 
@@ -225,7 +168,7 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
           <Palette className="h-5 w-5" />
           دليل أنواع الورق المرئي
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="flex items-center space-x-3 space-x-reverse p-3 bg-white dark:bg-gray-800 rounded-lg border">
             <div className="w-6 h-6 bg-gray-100 border border-gray-300 rounded"></div>
             <div>
@@ -238,8 +181,16 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
             <div className="w-6 h-6 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
             <div>
               <div className="font-medium text-sm">ورق كوشيه</div>
-              <div className="text-xs text-gray-600">ورق لامع عالي الجودة</div>
+              <div className="text-xs text-gray-600">ورق عالي الجودة</div>
               <div className="text-xs text-blue-600 font-medium">للصور والتصاميم الملونة</div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 space-x-reverse p-3 bg-white dark:bg-gray-800 rounded-lg border">
+            <div className="w-6 h-6 bg-gradient-to-r from-purple-100 to-purple-200 border border-purple-400 rounded shadow-lg"></div>
+            <div>
+              <div className="font-medium text-sm">ورق جلوسي</div>
+              <div className="text-xs text-gray-600">ورق لامع عالي اللمعة</div>
+              <div className="text-xs text-purple-600 font-medium">للصور عالية الجودة</div>
             </div>
           </div>
           <div className="flex items-center space-x-3 space-x-reverse p-3 bg-white dark:bg-gray-800 rounded-lg border">
@@ -268,7 +219,35 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
     </div>
   );
 
-  return compact ? <CompactView /> : <FullView />;
-}
+  if (compact) {
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="w-full">
+            <Info className="h-4 w-4 ml-2" />
+            دليل الأسعار والأوراق
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <div className="space-y-4">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-accent">دليل الأسعار الشامل</h2>
+              <p className="text-muted-foreground">أسعار شفافة لجميع أنواع وأحجام الورق</p>
+            </div>
+            {content}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
-export default PriceGuide;
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-accent">دليل الأسعار الشامل</h1>
+        <p className="text-muted-foreground mt-2">أسعار شفافة لجميع أنواع وأحجام الورق</p>
+      </div>
+      {content}
+    </div>
+  );
+}
