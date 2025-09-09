@@ -26,7 +26,7 @@ import {
   ChevronRight,
   Eye,
   ShoppingBag,
-  LogOut
+  Home
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -75,33 +75,15 @@ const ChallengeTypeIcon = ({ type }: { type: string }) => {
 };
 
 export default function RewardsNew() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [showRewardModal, setShowRewardModal] = useState(false);
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      toast({
-        title: '👋 تم تسجيل الخروج بنجاح',
-        description: 'شكراً لاستخدام التطبيق',
-      });
-      
-      // التوجه للصفحة الرئيسية بعد الخروج
-      setTimeout(() => {
-        setLocation('/home');
-      }, 1000);
-      
-    } catch (error) {
-      toast({
-        title: 'خطأ',
-        description: 'فشل في تسجيل الخروج',
-        variant: 'destructive'
-      });
-    }
+  const handleGoHome = () => {
+    setLocation('/home');
   };
 
   // Fetch available rewards
@@ -194,7 +176,7 @@ export default function RewardsNew() {
 
       <div className="relative z-10 container mx-auto px-4 py-8 space-y-8">
         
-        {/* زر الخروج */}
+        {/* زر الرئيسية */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -202,13 +184,13 @@ export default function RewardsNew() {
           className="fixed top-6 left-6 z-50"
         >
           <Button
-            onClick={handleLogout}
+            onClick={handleGoHome}
             variant="outline"
             size="sm"
-            className="bg-white/90 backdrop-blur-sm border-red-200 hover:bg-red-50 hover:border-red-300 shadow-lg transition-all duration-300 group"
+            className="bg-white/90 backdrop-blur-sm border-blue-200 hover:bg-blue-50 hover:border-blue-300 shadow-lg transition-all duration-300 group"
           >
-            <LogOut className="h-4 w-4 mr-2 text-red-500 group-hover:text-red-600 transition-colors" />
-            <span className="text-red-600 font-medium">خروج</span>
+            <Home className="h-4 w-4 mr-2 text-blue-500 group-hover:text-blue-600 transition-colors" />
+            <span className="text-blue-600 font-medium">الرئيسية</span>
           </Button>
         </motion.div>
         {/* Hero Section */}
