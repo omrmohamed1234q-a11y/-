@@ -24,7 +24,10 @@ import {
   Plus,
   Edit,
   Save,
-  RotateCcw
+  RotateCcw,
+  Trash2,
+  Eye,
+  Target
 } from 'lucide-react';
 
 interface RewardSettings {
@@ -46,6 +49,30 @@ interface RewardStats {
   averageEarnedPerUser: number;
 }
 
+interface Reward {
+  id: string;
+  name: string;
+  description: string;
+  points_cost: number;
+  reward_type: string;
+  reward_value: any;
+  available: boolean;
+  limit_per_user: number | null;
+  created_at: string;
+}
+
+interface Challenge {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  target_value: number;
+  points_reward: number;
+  is_daily: boolean;
+  active: boolean;
+  created_at: string;
+}
+
 export default function RewardsManagement() {
   const { toast } = useToast();
   const [settings, setSettings] = useState<RewardSettings>({
@@ -59,6 +86,14 @@ export default function RewardsManagement() {
   const [stats, setStats] = useState<RewardStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // إدارة المكافآت والتحديات
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+  const [rewardDialog, setRewardDialog] = useState(false);
+  const [challengeDialog, setChallengeDialog] = useState(false);
 
   // منح مكافأة يدوية
   const [manualRewardDialog, setManualRewardDialog] = useState(false);
@@ -121,9 +156,143 @@ export default function RewardsManagement() {
     }
   };
 
+  // تحميل المكافآت
+  const loadRewards = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/admin/rewards/all');
+      const data = await response.json();
+      if (data.success) {
+        setRewards(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading rewards:', error);
+    }
+  };
+
+  // تحميل التحديات
+  const loadChallenges = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/admin/challenges/all');
+      const data = await response.json();
+      if (data.success) {
+        setChallenges(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading challenges:', error);
+    }
+  };
+
+  // حفظ/تحديث مكافأة
+  const saveReward = async (rewardData: any) => {
+    try {
+      setLoading(true);
+      const isEdit = selectedReward?.id;
+      const url = isEdit ? `/api/admin/rewards/${selectedReward.id}` : '/api/admin/rewards';
+      const method = isEdit ? 'PUT' : 'POST';
+      
+      const response = await apiRequest(method, url, rewardData);
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: isEdit ? 'تم التحديث' : 'تم الإنشاء',
+          description: data.message
+        });
+        setRewardDialog(false);
+        setSelectedReward(null);
+        loadRewards();
+      }
+    } catch (error: any) {
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في حفظ المكافأة',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // حذف مكافأة
+  const deleteReward = async (id: string) => {
+    try {
+      const response = await apiRequest('DELETE', `/api/admin/rewards/${id}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: 'تم الحذف',
+          description: data.message
+        });
+        loadRewards();
+      }
+    } catch (error: any) {
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في حذف المكافأة',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // حفظ/تحديث تحدي
+  const saveChallenge = async (challengeData: any) => {
+    try {
+      setLoading(true);
+      const isEdit = selectedChallenge?.id;
+      const url = isEdit ? `/api/admin/challenges/${selectedChallenge.id}` : '/api/admin/challenges';
+      const method = isEdit ? 'PUT' : 'POST';
+      
+      const response = await apiRequest(method, url, challengeData);
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: isEdit ? 'تم التحديث' : 'تم الإنشاء',
+          description: data.message
+        });
+        setChallengeDialog(false);
+        setSelectedChallenge(null);
+        loadChallenges();
+      }
+    } catch (error: any) {
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في حفظ التحدي',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // حذف تحدي
+  const deleteChallenge = async (id: string) => {
+    try {
+      const response = await apiRequest('DELETE', `/api/admin/challenges/${id}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: 'تم الحذف',
+          description: data.message
+        });
+        loadChallenges();
+      }
+    } catch (error: any) {
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في حذف التحدي',
+        variant: 'destructive'
+      });
+    }
+  };
+
   useEffect(() => {
     loadSettings();
     loadStats();
+    loadRewards();
+    loadChallenges();
   }, []);
 
   // تتبع التغييرات
@@ -137,7 +306,8 @@ export default function RewardsManagement() {
     try {
       setLoading(true);
       const response = await apiRequest('POST', '/api/admin/rewards/settings', settings);
-      if (response.success) {
+      const data = await response.json();
+      if (data.success) {
         setOriginalSettings({ ...settings });
         setHasChanges(false);
         toast({
@@ -145,7 +315,7 @@ export default function RewardsManagement() {
           description: 'تم تحديث إعدادات المكافآت بنجاح'
         });
       } else {
-        throw new Error(response.message);
+        throw new Error(data.message || 'فشل في حفظ الإعدادات');
       }
     } catch (error: any) {
       console.error('Error saving settings:', error);
@@ -184,16 +354,17 @@ export default function RewardsManagement() {
         reason: manualRewardForm.reason || 'مكافأة إدارية'
       });
 
-      if (response.success) {
+      const data = await response.json();
+      if (data.success) {
         toast({
           title: 'تم المنح',
-          description: response.message
+          description: data.message
         });
         setManualRewardDialog(false);
         setManualRewardForm({ userId: '', pages: '', reason: '' });
         loadStats(); // إعادة تحميل الإحصائيات
       } else {
-        throw new Error(response.message);
+        throw new Error(data.message);
       }
     } catch (error: any) {
       console.error('Error granting manual reward:', error);
@@ -256,11 +427,19 @@ export default function RewardsManagement() {
         </div>
       </div>
 
-      <Tabs defaultValue="settings" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="rewards" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="rewards" className="flex items-center gap-2">
+            <Gift className="h-4 w-4" />
+            المكافآت
+          </TabsTrigger>
+          <TabsTrigger value="challenges" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            التحديات
+          </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
-            إعدادات المكافآت
+            الإعدادات
           </TabsTrigger>
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -271,6 +450,117 @@ export default function RewardsManagement() {
             المكافآت اليدوية
           </TabsTrigger>
         </TabsList>
+
+        {/* إدارة المكافآت */}
+        <TabsContent value="rewards" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">إدارة المكافآت</h2>
+            <Button 
+              onClick={() => {
+                setSelectedReward(null);
+                setRewardDialog(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              إضافة مكافأة جديدة
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {rewards.map((reward) => (
+              <Card key={reward.id} className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="font-semibold">{reward.name}</h3>
+                  <Badge variant={reward.available ? "default" : "secondary"}>
+                    {reward.available ? "متاح" : "غير متاح"}
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">{reward.description}</p>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-lg font-bold text-blue-600">{reward.points_cost} نقطة</span>
+                  <Badge variant="outline">{reward.reward_type}</Badge>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedReward(reward);
+                      setRewardDialog(true);
+                    }}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive"
+                    onClick={() => deleteReward(reward.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* إدارة التحديات */}
+        <TabsContent value="challenges" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">إدارة التحديات</h2>
+            <Button 
+              onClick={() => {
+                setSelectedChallenge(null);
+                setChallengeDialog(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              إضافة تحدي جديد
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {challenges.map((challenge) => (
+              <Card key={challenge.id} className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="font-semibold">{challenge.name}</h3>
+                  <Badge variant={challenge.active ? "default" : "secondary"}>
+                    {challenge.active ? "نشط" : "غير نشط"}
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">{challenge.description}</p>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-lg font-bold text-green-600">{challenge.points_reward} نقطة</span>
+                  <Badge variant="outline">{challenge.is_daily ? "يومي" : "عام"}</Badge>
+                </div>
+                <div className="text-sm text-gray-500 mb-3">
+                  الهدف: {challenge.target_value} {challenge.type}
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedChallenge(challenge);
+                      setChallengeDialog(true);
+                    }}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive"
+                    onClick={() => deleteChallenge(challenge.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
 
         {/* إعدادات المكافآت */}
         <TabsContent value="settings" className="space-y-6">
@@ -688,6 +978,254 @@ export default function RewardsManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog لإضافة/تعديل مكافأة */}
+      <Dialog open={rewardDialog} onOpenChange={setRewardDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{selectedReward ? 'تعديل المكافأة' : 'إضافة مكافأة جديدة'}</DialogTitle>
+          </DialogHeader>
+          <RewardForm 
+            reward={selectedReward}
+            onSave={saveReward}
+            onCancel={() => setRewardDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog لإضافة/تعديل تحدي */}
+      <Dialog open={challengeDialog} onOpenChange={setChallengeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{selectedChallenge ? 'تعديل التحدي' : 'إضافة تحدي جديد'}</DialogTitle>
+          </DialogHeader>
+          <ChallengeForm 
+            challenge={selectedChallenge}
+            onSave={saveChallenge}
+            onCancel={() => setChallengeDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+// مكون نموذج المكافأة
+function RewardForm({ reward, onSave, onCancel }: { 
+  reward: Reward | null; 
+  onSave: (data: any) => void; 
+  onCancel: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: reward?.name || '',
+    description: reward?.description || '',
+    points_cost: reward?.points_cost || 100,
+    reward_type: reward?.reward_type || 'discount',
+    available: reward?.available !== false,
+    limit_per_user: reward?.limit_per_user || null
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="name">اسم المكافأة</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({...formData, name: e.target.value})}
+          required
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="description">الوصف</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({...formData, description: e.target.value})}
+          required
+        />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="points_cost">النقاط المطلوبة</Label>
+          <Input
+            id="points_cost"
+            type="number"
+            value={formData.points_cost}
+            onChange={(e) => setFormData({...formData, points_cost: parseInt(e.target.value)})}
+            required
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="reward_type">نوع المكافأة</Label>
+          <select
+            id="reward_type"
+            value={formData.reward_type}
+            onChange={(e) => setFormData({...formData, reward_type: e.target.value})}
+            className="w-full p-2 border rounded"
+          >
+            <option value="discount">خصم</option>
+            <option value="free_prints">طباعة مجانية</option>
+            <option value="mobile_credit">شحن موبايل</option>
+            <option value="voucher">قسيمة</option>
+          </select>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="limit_per_user">الحد الأقصى للمستخدم</Label>
+          <Input
+            id="limit_per_user"
+            type="number"
+            value={formData.limit_per_user || ''}
+            onChange={(e) => setFormData({...formData, limit_per_user: e.target.value ? parseInt(e.target.value) : null})}
+          />
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="available"
+            checked={formData.available}
+            onChange={(e) => setFormData({...formData, available: e.target.checked})}
+          />
+          <Label htmlFor="available">متاح</Label>
+        </div>
+      </div>
+      
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          إلغاء
+        </Button>
+        <Button type="submit">
+          {reward ? 'تحديث' : 'إنشاء'}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+// مكون نموذج التحدي
+function ChallengeForm({ challenge, onSave, onCancel }: { 
+  challenge: Challenge | null; 
+  onSave: (data: any) => void; 
+  onCancel: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: challenge?.name || '',
+    description: challenge?.description || '',
+    type: challenge?.type || 'daily',
+    target_value: challenge?.target_value || 1,
+    points_reward: challenge?.points_reward || 50,
+    is_daily: challenge?.is_daily !== false,
+    active: challenge?.active !== false
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="name">اسم التحدي</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({...formData, name: e.target.value})}
+          required
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="description">الوصف</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({...formData, description: e.target.value})}
+          required
+        />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="type">نوع التحدي</Label>
+          <select
+            id="type"
+            value={formData.type}
+            onChange={(e) => setFormData({...formData, type: e.target.value})}
+            className="w-full p-2 border rounded"
+          >
+            <option value="daily">يومي</option>
+            <option value="print">طباعة</option>
+            <option value="referral">دعوة صديق</option>
+            <option value="streak">أسبوع نشاط</option>
+          </select>
+        </div>
+        
+        <div>
+          <Label htmlFor="target_value">الهدف المطلوب</Label>
+          <Input
+            id="target_value"
+            type="number"
+            value={formData.target_value}
+            onChange={(e) => setFormData({...formData, target_value: parseInt(e.target.value)})}
+            required
+          />
+        </div>
+      </div>
+      
+      <div>
+        <Label htmlFor="points_reward">النقاط المكتسبة</Label>
+        <Input
+          id="points_reward"
+          type="number"
+          value={formData.points_reward}
+          onChange={(e) => setFormData({...formData, points_reward: parseInt(e.target.value)})}
+          required
+        />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="is_daily"
+            checked={formData.is_daily}
+            onChange={(e) => setFormData({...formData, is_daily: e.target.checked})}
+          />
+          <Label htmlFor="is_daily">تحدي يومي</Label>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="active"
+            checked={formData.active}
+            onChange={(e) => setFormData({...formData, active: e.target.checked})}
+          />
+          <Label htmlFor="active">نشط</Label>
+        </div>
+      </div>
+      
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          إلغاء
+        </Button>
+        <Button type="submit">
+          {challenge ? 'تحديث' : 'إنشاء'}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

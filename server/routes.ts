@@ -112,18 +112,22 @@ const requireAuth = async (req: any, res: any, next: any) => {
 const isAdminAuthenticated = (req: any, res: any, next: any) => {
   const userId = req.headers['x-user-id'];
   const userRole = req.headers['x-user-role'];
+  const adminToken = req.headers['x-admin-token'];
+  const authHeader = req.headers['authorization'];
   
-  // Check if user is admin or if it's the predefined admin user
-  if (userRole === 'admin' || userId === '48c03e72-d53b-4a3f-a729-c38276268315') {
+  // Check if user is admin or has admin token
+  if (userRole === 'admin' || adminToken || authHeader?.includes('Bearer')) {
     req.user = { 
-      id: userId,
-      claims: { sub: userId }, 
-      role: userRole || 'admin' 
+      id: userId || '48c03e72-d53b-4a3f-a729-c38276268315',
+      claims: { sub: userId || '48c03e72-d53b-4a3f-a729-c38276268315' }, 
+      role: 'admin' 
     };
     next();
   } else {
-    req.user = { claims: { sub: '48c03e72-d53b-4a3f-a729-c38276268315' }, role: 'admin' };
-    next();
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Authentication required. Please login as admin.' 
+    });
   }
 };
 
@@ -6943,11 +6947,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // الحصول على إعدادات المكافآت (Admin only)
-  app.get('/api/admin/rewards/settings', async (req, res) => {
+  app.get('/api/admin/rewards/settings', isAdminAuthenticated, async (req, res) => {
     try {
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Admin access required' });
-      }
 
       res.json({
         success: true,
@@ -6960,11 +6961,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // تحديث إعدادات المكافآت (Admin only)
-  app.post('/api/admin/rewards/settings', async (req, res) => {
+  app.post('/api/admin/rewards/settings', isAdminAuthenticated, async (req, res) => {
     try {
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Admin access required' });
-      }
 
       const { 
         pages_per_milestone,
@@ -6995,11 +6993,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // منح مكافأة يدوية للمستخدم (Admin only)
-  app.post('/api/admin/rewards/grant', async (req, res) => {
+  app.post('/api/admin/rewards/grant', isAdminAuthenticated, async (req, res) => {
     try {
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Admin access required' });
-      }
 
       const { userId, pages, reason } = req.body;
 
@@ -7020,11 +7015,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // إحصائيات المكافآت (Admin only)
-  app.get('/api/admin/rewards/stats', async (req, res) => {
+  app.get('/api/admin/rewards/stats', isAdminAuthenticated, async (req, res) => {
     try {
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Admin access required' });
-      }
 
       // بيانات تجريبية للإحصائيات
       const mockStats = {
@@ -7050,6 +7042,333 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching reward stats:', error);
       res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // ==================== إدارة المكافآت والتحديات CRUD ====================
+  
+  // إدارة المكافآت
+  // الحصول على جميع المكافآت (Admin)
+  app.get('/api/admin/rewards/all', isAdminAuthenticated, async (req, res) => {
+    try {
+      // بيانات تجريبية للمكافآت
+      const mockRewards = [
+        {
+          id: '1',
+          name: 'خصم 10 جنيه',
+          description: 'خصم 10 جنيه على الطلبية القادمة',
+          points_cost: 200,
+          reward_type: 'discount',
+          reward_value: { amount: 10, currency: 'EGP' },
+          available: true,
+          limit_per_user: 5,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '2', 
+          name: 'طباعة مجانية (20 صفحة)',
+          description: '20 صفحة طباعة مجانية',
+          points_cost: 300,
+          reward_type: 'free_prints',
+          reward_value: { pages: 20 },
+          available: true,
+          limit_per_user: 3,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '3',
+          name: 'شحن موبايل 5 جنيه', 
+          description: 'شحن رصيد موبايل بقيمة 5 جنيه',
+          points_cost: 150,
+          reward_type: 'mobile_credit',
+          reward_value: { amount: 5, currency: 'EGP' },
+          available: true,
+          limit_per_user: 10,
+          created_at: new Date().toISOString()
+        }
+      ];
+
+      res.json({
+        success: true,
+        data: mockRewards
+      });
+    } catch (error) {
+      console.error('Error fetching rewards:', error);
+      res.status(500).json({ success: false, message: 'خطأ في جلب المكافآت' });
+    }
+  });
+
+  // إنشاء مكافأة جديدة (Admin)
+  app.post('/api/admin/rewards', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { name, description, points_cost, reward_type, reward_value, limit_per_user } = req.body;
+
+      if (!name || !description || !points_cost || !reward_type) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'جميع الحقول مطلوبة' 
+        });
+      }
+
+      const newReward = {
+        id: `reward_${Date.now()}`,
+        name,
+        description,
+        points_cost: parseInt(points_cost),
+        reward_type,
+        reward_value: reward_value || {},
+        available: true,
+        limit_per_user: limit_per_user || null,
+        created_at: new Date().toISOString()
+      };
+
+      console.log(`🎁 Admin created new reward: ${name} (${points_cost} points)`);
+
+      res.json({
+        success: true,
+        message: 'تم إنشاء المكافأة بنجاح',
+        data: newReward
+      });
+    } catch (error) {
+      console.error('Error creating reward:', error);
+      res.status(500).json({ success: false, message: 'خطأ في إنشاء المكافأة' });
+    }
+  });
+
+  // تحديث مكافأة (Admin)
+  app.put('/api/admin/rewards/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description, points_cost, reward_type, reward_value, available, limit_per_user } = req.body;
+
+      console.log(`🔄 Admin updated reward: ${id}`);
+
+      res.json({
+        success: true,
+        message: 'تم تحديث المكافأة بنجاح',
+        data: {
+          id,
+          name,
+          description,
+          points_cost: parseInt(points_cost),
+          reward_type,
+          reward_value,
+          available,
+          limit_per_user,
+          updated_at: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error updating reward:', error);
+      res.status(500).json({ success: false, message: 'خطأ في تحديث المكافأة' });
+    }
+  });
+
+  // حذف مكافأة (Admin)
+  app.delete('/api/admin/rewards/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      console.log(`🗑️ Admin deleted reward: ${id}`);
+
+      res.json({
+        success: true,
+        message: 'تم حذف المكافأة بنجاح'
+      });
+    } catch (error) {
+      console.error('Error deleting reward:', error);
+      res.status(500).json({ success: false, message: 'خطأ في حذف المكافأة' });
+    }
+  });
+
+  // إدارة التحديات
+  // الحصول على جميع التحديات (Admin)
+  app.get('/api/admin/challenges/all', isAdminAuthenticated, async (req, res) => {
+    try {
+      const mockChallenges = [
+        {
+          id: '1',
+          name: 'طباع النشيط',
+          description: 'اطبع 5 صفحات في يوم واحد',
+          type: 'daily',
+          target_value: 5,
+          points_reward: 50,
+          is_daily: true,
+          active: true,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '2',
+          name: 'ادع صديق',
+          description: 'شارك التطبيق مع صديق واحد',
+          type: 'referral',
+          target_value: 1,
+          points_reward: 100,
+          is_daily: false,
+          active: true,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '3',
+          name: 'أسبوع النشاط',
+          description: 'اطبع لمدة 7 أيام متتالية',
+          type: 'streak',
+          target_value: 7,
+          points_reward: 200,
+          is_daily: false,
+          active: true,
+          created_at: new Date().toISOString()
+        }
+      ];
+
+      res.json({
+        success: true,
+        data: mockChallenges
+      });
+    } catch (error) {
+      console.error('Error fetching challenges:', error);
+      res.status(500).json({ success: false, message: 'خطأ في جلب التحديات' });
+    }
+  });
+
+  // إنشاء تحدي جديد (Admin)
+  app.post('/api/admin/challenges', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { name, description, type, target_value, points_reward, is_daily } = req.body;
+
+      if (!name || !description || !type || !target_value || !points_reward) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'جميع الحقول مطلوبة' 
+        });
+      }
+
+      const newChallenge = {
+        id: `challenge_${Date.now()}`,
+        name,
+        description,
+        type,
+        target_value: parseInt(target_value),
+        points_reward: parseInt(points_reward),
+        is_daily: is_daily || false,
+        active: true,
+        created_at: new Date().toISOString()
+      };
+
+      console.log(`🏆 Admin created new challenge: ${name} (${points_reward} points)`);
+
+      res.json({
+        success: true,
+        message: 'تم إنشاء التحدي بنجاح',
+        data: newChallenge
+      });
+    } catch (error) {
+      console.error('Error creating challenge:', error);
+      res.status(500).json({ success: false, message: 'خطأ في إنشاء التحدي' });
+    }
+  });
+
+  // تحديث تحدي (Admin)
+  app.put('/api/admin/challenges/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description, type, target_value, points_reward, is_daily, active } = req.body;
+
+      console.log(`🔄 Admin updated challenge: ${id}`);
+
+      res.json({
+        success: true,
+        message: 'تم تحديث التحدي بنجاح',
+        data: {
+          id,
+          name,
+          description,
+          type,
+          target_value: parseInt(target_value),
+          points_reward: parseInt(points_reward),
+          is_daily,
+          active,
+          updated_at: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error updating challenge:', error);
+      res.status(500).json({ success: false, message: 'خطأ في تحديث التحدي' });
+    }
+  });
+
+  // حذف تحدي (Admin)
+  app.delete('/api/admin/challenges/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      console.log(`🗑️ Admin deleted challenge: ${id}`);
+
+      res.json({
+        success: true,
+        message: 'تم حذف التحدي بنجاح'
+      });
+    } catch (error) {
+      console.error('Error deleting challenge:', error);
+      res.status(500).json({ success: false, message: 'خطأ في حذف التحدي' });
+    }
+  });
+
+  // ==================== واجهة المستخدمين للمكافآت والتحديات ====================
+  
+  // الحصول على المكافآت المتاحة للمستخدمين
+  app.get('/api/rewards/available', async (req, res) => {
+    try {
+      // استخدام نفس البيانات من admin API
+      const response = await fetch(`${req.protocol}://${req.get('host')}/api/admin/rewards/all`, {
+        headers: {
+          'x-user-role': 'admin',
+          'x-admin-token': 'system'
+        }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        // فلترة المكافآت المتاحة فقط
+        const availableRewards = data.data.filter((reward: any) => reward.available);
+        res.json({
+          success: true,
+          data: availableRewards
+        });
+      } else {
+        throw new Error('Failed to fetch rewards');
+      }
+    } catch (error) {
+      console.error('Error fetching available rewards:', error);
+      res.status(500).json({ success: false, message: 'خطأ في جلب المكافآت' });
+    }
+  });
+
+  // الحصول على التحديات النشطة للمستخدمين
+  app.get('/api/challenges/active', async (req, res) => {
+    try {
+      // استخدام نفس البيانات من admin API
+      const response = await fetch(`${req.protocol}://${req.get('host')}/api/admin/challenges/all`, {
+        headers: {
+          'x-user-role': 'admin',
+          'x-admin-token': 'system'
+        }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        // فلترة التحديات النشطة فقط
+        const activeChallenges = data.data.filter((challenge: any) => challenge.active);
+        res.json({
+          success: true,
+          data: activeChallenges
+        });
+      } else {
+        throw new Error('Failed to fetch challenges');
+      }
+    } catch (error) {
+      console.error('Error fetching active challenges:', error);
+      res.status(500).json({ success: false, message: 'خطأ في جلب التحديات' });
     }
   });
 

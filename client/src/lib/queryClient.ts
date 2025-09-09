@@ -10,7 +10,30 @@ async function throwIfResNotOk(res: Response) {
 // Helper to get authentication headers
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
-    // First try localStorage (for admin/manual login)
+    // First try admin authentication (for admin routes)
+    const adminAuth = localStorage.getItem('adminAuth');
+    const adminToken = localStorage.getItem('adminToken');
+    
+    if (adminAuth && adminToken) {
+      try {
+        const adminData = JSON.parse(adminAuth);
+        const token = adminData.token || adminToken;
+        const userId = adminData.user?.id || adminData.admin?.id || adminData.id;
+        
+        return {
+          'Authorization': `Bearer ${token}`,
+          'x-admin-token': token,
+          'x-user-id': userId,
+          'x-user-role': 'admin',
+          'X-User-ID': userId,
+          'X-User-Role': 'admin',
+        };
+      } catch (error) {
+        console.error('Error parsing admin auth:', error);
+      }
+    }
+
+    // Next try localStorage (for regular user login)
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       const user = JSON.parse(storedUser);
