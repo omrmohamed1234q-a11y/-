@@ -107,7 +107,7 @@ export function DragDropUpload({
       // Final progress
       setProgress(100);
       
-      setUploadedFiles(uploads);
+      setUploadedFiles(prev => [...prev, ...uploads]);
       onUpload(uploads.map(u => u.file), uploads.map(u => u.url));
       
       // Count providers

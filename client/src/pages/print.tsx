@@ -919,11 +919,30 @@ export default function Print() {
     return uploadResults.reduce((total, result) => total + (result.fileSize || 0), 0);
   };
 
-  const handleDragDropUpload = (files: File[]) => {
+  const handleDragDropUpload = (files: File[], urls: string[]) => {
     console.log('Files selected via drag & drop:', files.map(f => f.name));
+    console.log('URLs received:', urls);
+    
     // إضافة الملفات للملفات الموجودة بدلاً من استبدالها
     setSelectedFiles(prev => [...prev, ...files]);
-    handleFileUpload(files);
+    setUploadedUrls(prev => [...prev, ...urls]);
+    
+    // إضافة نتائج الرفع
+    const newResults = files.map((file, index) => ({
+      name: file.name,
+      url: urls[index],
+      provider: 'google_drive',
+      fileSize: file.size,
+      fileName: file.name,
+      fileType: file.type
+    }));
+    
+    setUploadResults(prev => [...prev, ...newResults]);
+    
+    toast({
+      title: 'تم رفع الملفات بنجاح',
+      description: `تم رفع ${files.length} ملف`,
+    });
   };
 
   const handleCameraCapture = async (file: File, downloadUrl: string) => {
@@ -941,6 +960,35 @@ export default function Print() {
   };
 
   // دالة لتوليد اسم واضح للملف حسب إعدادات الطباعة
+  // دالة لحذف ملف معين
+  const removeFile = (fileName: string) => {
+    setSelectedFiles(prev => prev.filter(f => f.name !== fileName));
+    setUploadResults(prev => prev.filter(r => r.name !== fileName));
+    setUploadedUrls(prev => {
+      const fileIndex = selectedFiles.findIndex(f => f.name === fileName);
+      return prev.filter((_, index) => index !== fileIndex);
+    });
+    
+    toast({
+      title: 'تم حذف الملف',
+      description: `تم حذف ${fileName}`,
+    });
+  };
+
+  // دالة لمسح جميع الملفات
+  const clearAllFiles = () => {
+    setSelectedFiles([]);
+    setUploadResults([]);
+    setUploadedUrls([]);
+    setUploadProgress([]);
+    setUploadErrors([]);
+    
+    toast({
+      title: 'تم مسح جميع الملفات',
+      description: 'تم مسح جميع الملفات من القائمة',
+    });
+  };
+
   const generatePrintJobFilename = (settings: any, originalName: string) => {
     const paperTypeLabels = {
       'plain': 'ورق عادي',
@@ -1137,10 +1185,21 @@ export default function Print() {
                   {/* Individual File Settings */}
                   {uploadResults.length > 0 && (
                     <div className="mt-6">
-                      <h3 className="text-lg font-bold mb-4 flex items-center">
-                        <Printer className="h-5 w-5 text-accent ml-2" />
-                        إعدادات الطباعة لكل ملف
-                      </h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold flex items-center">
+                          <Printer className="h-5 w-5 text-accent ml-2" />
+                          إعدادات الطباعة لكل ملف ({uploadResults.length})
+                        </h3>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={clearAllFiles}
+                          className="text-red-500 hover:text-red-700 border-red-300 hover:border-red-500"
+                        >
+                          <X className="h-4 w-4 ml-1" />
+                          مسح الكل
+                        </Button>
+                      </div>
                       <div className="space-y-4">
                         {uploadResults.map((result, index) => {
                           const fileName = result.name;
@@ -1168,6 +1227,14 @@ export default function Print() {
                                       </p>
                                     </div>
                                   </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeFile(fileName)}
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
