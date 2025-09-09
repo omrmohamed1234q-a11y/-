@@ -1196,7 +1196,7 @@ export default function Print() {
                           onClick={clearAllFiles}
                           className="text-red-500 hover:text-red-700 border-red-300 hover:border-red-500"
                         >
-                          <X className="h-4 w-4 ml-1" />
+                          <XIcon className="h-4 w-4 ml-1" />
                           مسح الكل
                         </Button>
                       </div>
@@ -1233,7 +1233,7 @@ export default function Print() {
                                     onClick={() => removeFile(fileName)}
                                     className="text-red-500 hover:text-red-700 hover:bg-red-50"
                                   >
-                                    <X className="h-4 w-4" />
+                                    <XIcon className="h-4 w-4" />
                                   </Button>
                                 </div>
 
