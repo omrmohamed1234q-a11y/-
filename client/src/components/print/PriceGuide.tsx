@@ -123,6 +123,15 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
               />
             </div>
           </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <PriceCard
+              title="ورق جلوسي"
+              icon={Star}
+              tiers={pricingTiers.A4.glossy}
+              description="ورق لامع عالي اللمعة للصور عالية الجودة"
+            />
+          </div>
         </TabsContent>
         
         <TabsContent value="A3" className="space-y-4">
@@ -158,6 +167,15 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
               />
             </div>
           </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <PriceCard
+              title="ورق جلوسي"
+              icon={Star}
+              tiers={pricingTiers.A4.glossy}
+              description="ورق لامع عالي اللمعة للصور عالية الجودة"
+            />
+          </div>
         </TabsContent>
         
         <TabsContent value="A0" className="space-y-4">
@@ -169,6 +187,15 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
               description="الحجم الأكبر، مناسب للملصقات واللوحات الكبيرة"
             />
           </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <PriceCard
+              title="ورق جلوسي"
+              icon={Star}
+              tiers={pricingTiers.A4.glossy}
+              description="ورق لامع عالي اللمعة للصور عالية الجودة"
+            />
+          </div>
         </TabsContent>
         
         <TabsContent value="A1" className="space-y-4">
@@ -178,6 +205,15 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
               icon={FileText}
               tiers={pricingTiers.A1.plain_bw}
               description="حجم كبير مناسب للعروض والمخططات"
+            />
+          </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <PriceCard
+              title="ورق جلوسي"
+              icon={Star}
+              tiers={pricingTiers.A4.glossy}
+              description="ورق لامع عالي اللمعة للصور عالية الجودة"
             />
           </div>
         </TabsContent>

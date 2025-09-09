@@ -3,7 +3,7 @@
 
 export interface PricingOptions {
   paper_size: 'A4' | 'A3' | 'A0' | 'A1';
-  paper_type: 'plain' | 'coated' | 'sticker';
+  paper_type: 'plain' | 'coated' | 'glossy' | 'sticker';
   print_type: 'face' | 'face_back';
   pages: number;
   is_black_white?: boolean; // 10% discount for black and white
@@ -24,7 +24,7 @@ export interface PricingResult {
  */
 export function calculate_price(
   paper_size: 'A4' | 'A3' | 'A0' | 'A1',
-  paper_type: 'plain' | 'coated' | 'sticker',
+  paper_type: 'plain' | 'coated' | 'glossy' | 'sticker',
   print_type: 'face' | 'face_back',
   pages: number,
   is_black_white: boolean = false
@@ -56,11 +56,20 @@ export function calculate_price(
     } else if (paper_type === 'coated') {
       // A4 Coated (كوشيه)
       if (pages >= 1 && pages <= 20) {
-        pricePerPage = 8.00;
-      } else if (pages >= 21 && pages <= 1000) {
-        pricePerPage = 7.00;
-      } else if (pages >= 1001) {
         pricePerPage = 6.00;
+      } else if (pages >= 21 && pages <= 1000) {
+        pricePerPage = 5.00;
+      } else if (pages >= 1001) {
+        pricePerPage = 4.50;
+      }
+    } else if (paper_type === 'glossy') {
+      // A4 Glossy (جلوسي)
+      if (pages >= 1 && pages <= 20) {
+        pricePerPage = 10.00;
+      } else if (pages >= 21 && pages <= 1000) {
+        pricePerPage = 9.00;
+      } else if (pages >= 1001) {
+        pricePerPage = 8.00;
       }
     } else if (paper_type === 'sticker') {
       // A4 Sticker
@@ -94,9 +103,16 @@ export function calculate_price(
     } else if (paper_type === 'coated') {
       // A3 Coated (كوشيه)
       if (pages >= 1 && pages <= 50) {
-        pricePerPage = 14.00;
-      } else if (pages >= 51) {
         pricePerPage = 12.00;
+      } else if (pages >= 51) {
+        pricePerPage = 10.00;
+      }
+    } else if (paper_type === 'glossy') {
+      // A3 Glossy (جلوسي)
+      if (pages >= 1 && pages <= 50) {
+        pricePerPage = 16.00;
+      } else if (pages >= 51) {
+        pricePerPage = 14.00;
       }
     } else if (paper_type === 'sticker') {
       // A3 Sticker
@@ -155,9 +171,14 @@ export function getPricingTiers() {
         ]
       },
       coated: [
-        { range: '1-20 صفحة', price: '8 جنيه/صفحة' },
-        { range: '21-1000 صفحة', price: '7 جنيه/صفحة' },
-        { range: '1001+ صفحة', price: '6 جنيه/صفحة' }
+        { range: '1-20 صفحة', price: '6 جنيه/صفحة' },
+        { range: '21-1000 صفحة', price: '5 جنيه/صفحة' },
+        { range: '1001+ صفحة', price: '4.5 جنيه/صفحة' }
+      ],
+      glossy: [
+        { range: '1-20 صفحة', price: '10 جنيه/صفحة' },
+        { range: '21-1000 صفحة', price: '9 جنيه/صفحة' },
+        { range: '1001+ صفحة', price: '8 جنيه/صفحة' }
       ],
       sticker: [
         { range: '1-20 صفحة', price: '10 جنيه/صفحة' },
@@ -177,8 +198,12 @@ export function getPricingTiers() {
         ]
       },
       coated: [
-        { range: '1-50 صفحة', price: '14 جنيه/صفحة' },
-        { range: '51+ صفحة', price: '12 جنيه/صفحة' }
+        { range: '1-50 صفحة', price: '12 جنيه/صفحة' },
+        { range: '51+ صفحة', price: '10 جنيه/صفحة' }
+      ],
+      glossy: [
+        { range: '1-50 صفحة', price: '16 جنيه/صفحة' },
+        { range: '51+ صفحة', price: '14 جنيه/صفحة' }
       ],
       sticker: [
         { range: '1-50 صفحة', price: '20 جنيه/صفحة' },
