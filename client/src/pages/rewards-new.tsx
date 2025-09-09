@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useLocation } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,6 +78,7 @@ export default function RewardsNew() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [showRewardModal, setShowRewardModal] = useState(false);
 
@@ -87,6 +89,12 @@ export default function RewardsNew() {
         title: '👋 تم تسجيل الخروج بنجاح',
         description: 'شكراً لاستخدام التطبيق',
       });
+      
+      // التوجه للصفحة الرئيسية بعد الخروج
+      setTimeout(() => {
+        setLocation('/');
+      }, 1000);
+      
     } catch (error) {
       toast({
         title: 'خطأ',
