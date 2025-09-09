@@ -590,6 +590,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint to move files from temporary to permanent location after successful payment
+  app.post('/api/move-files-to-permanent', async (req, res) => {
+    try {
+      const { tempFolderId, customerName, orderDetails, sessionId } = req.body;
+
+      if (!tempFolderId || !customerName) {
+        return res.status(400).json({
+          success: false,
+          error: 'Required parameters missing: tempFolderId, customerName'
+        });
+      }
+
+      console.log(`🔄 Moving files from temporary to permanent location`);
+      console.log(`   Temp Folder ID: ${tempFolderId}`);
+      console.log(`   Customer: ${customerName}`);
+      console.log(`   Session: ${sessionId || 'unknown'}`);
+
+      // Use current date for permanent folder structure
+      const uploadDate = new Date().toISOString().split('T')[0];
+
+      // Move files to permanent location using Google Drive service
+      const moveResult = await googleDriveService.moveFilesToPermanentLocation(
+        tempFolderId,
+        customerName,
+        uploadDate,
+        orderDetails
+      );
+
+      if (moveResult.success) {
+        console.log('✅ Files moved to permanent location successfully!');
+        console.log(`   New Folder: ${moveResult.newFolderHierarchy}`);
+        console.log(`   Files Moved: ${moveResult.filesMovedCount}`);
+
+        res.json({
+          success: true,
+          message: 'تم نقل الملفات إلى المجلد الدائم بنجاح',
+          newFolderId: moveResult.newFolderId,
+          newFolderHierarchy: moveResult.newFolderHierarchy,
+          newFolderLink: moveResult.newFolderLink,
+          filesMovedCount: moveResult.filesMovedCount,
+          orderNumber: moveResult.orderNumber
+        });
+      } else {
+        console.error('❌ Failed to move files to permanent location:', moveResult.error);
+        res.status(500).json({
+          success: false,
+          error: moveResult.error || 'فشل في نقل الملفات'
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Move files error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // Endpoint to cleanup old temporary files (admin only)
+  app.post('/api/cleanup-temp-files', async (req, res) => {
+    try {
+      const { maxAgeHours = 24 } = req.body; // Default cleanup files older than 24 hours
+
+      console.log(`🗑️ Starting cleanup of temporary files older than ${maxAgeHours} hours`);
+
+      // Cleanup old temporary files using Google Drive service
+      const cleanupResult = await googleDriveService.cleanupOldTempFiles(maxAgeHours);
+
+      if (cleanupResult.success) {
+        console.log('✅ Temporary files cleanup completed successfully!');
+        console.log(`   Folders Deleted: ${cleanupResult.foldersDeleted}`);
+        console.log(`   Files Deleted: ${cleanupResult.filesDeleted}`);
+
+        res.json({
+          success: true,
+          message: `تم حذف ${cleanupResult.foldersDeleted} مجلد مؤقت و ${cleanupResult.filesDeleted} ملف قديم`,
+          foldersDeleted: cleanupResult.foldersDeleted,
+          filesDeleted: cleanupResult.filesDeleted,
+          spaceSaved: cleanupResult.spaceSaved || 'غير محدد'
+        });
+      } else {
+        console.error('❌ Failed to cleanup temporary files:', cleanupResult.error);
+        res.status(500).json({
+          success: false,
+          error: cleanupResult.error || 'فشل في تنظيف الملفات المؤقتة'
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Cleanup error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
   // ==================== NEW CLEAN ORDER SYSTEM ====================
   
   // Get all orders for admin - Clean & Simple
@@ -2200,7 +2296,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deliveryMethod = 'delivery',
         paymentMethod = 'cash',
         notes,
-        usePoints = false 
+        usePoints = false,
+        tempFileInfo // Information about temporary uploaded files
       } = req.body;
 
       // Get cart items
@@ -2319,6 +2416,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const order = await storage.createOrder(orderData);
       console.log('✅ Order created in checkout:', order.id, 'for user:', userId);
+
+      // Move files from temporary to permanent location if temp files exist
+      let moveResult = null;
+      if (tempFileInfo && tempFileInfo.tempFolderId && tempFileInfo.customerName) {
+        console.log('📁 Moving files from temporary to permanent location...');
+        console.log(`   Temp Folder ID: ${tempFileInfo.tempFolderId}`);
+        console.log(`   Customer: ${tempFileInfo.customerName}`);
+        
+        try {
+          const uploadDate = new Date().toISOString().split('T')[0];
+          moveResult = await googleDriveService.moveFilesToPermanentLocation(
+            tempFileInfo.tempFolderId,
+            tempFileInfo.customerName,
+            uploadDate,
+            {
+              orderNumber: order.orderNumber,
+              totalAmount: order.totalAmount,
+              paymentMethod: paymentMethod
+            }
+          );
+
+          if (moveResult.success) {
+            console.log('✅ Files moved to permanent location successfully!');
+            console.log(`   New Folder: ${moveResult.newFolderHierarchy}`);
+            console.log(`   Files Moved: ${moveResult.filesMovedCount}`);
+          } else {
+            console.error('❌ Failed to move files to permanent location:', moveResult.error);
+          }
+        } catch (error: any) {
+          console.error('❌ Error moving files to permanent location:', error);
+        }
+      }
       
       // Update order status to processing for demo
       setTimeout(async () => {
@@ -2332,7 +2461,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         order,
-        message: "Order placed successfully" 
+        message: "Order placed successfully",
+        filesMoved: moveResult ? {
+          success: moveResult.success,
+          newFolderHierarchy: moveResult.newFolderHierarchy,
+          filesMovedCount: moveResult.filesMovedCount
+        } : null
       });
     } catch (error) {
       console.error("Error processing checkout:", error);
