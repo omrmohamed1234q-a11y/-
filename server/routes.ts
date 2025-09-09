@@ -1068,7 +1068,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       '/api/location/update',
       '/api/public',
       '/api/setup',
-      '/api/test'
+      '/api/test',
+      '/api/drive/cleanup-options',
+      '/api/drive/storage-info'
     ];
     
     // Check if current path is a public endpoint
