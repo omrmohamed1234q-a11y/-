@@ -299,6 +299,238 @@ export class GoogleDriveService {
   }
 
   /**
+   * Create temporary folder structure: مؤقت/[userId]/[sessionId]
+   */
+  async createTempFolderStructure(userId: string, sessionId?: string): Promise<string | null> {
+    if (!this.isConfigured) {
+      return null;
+    }
+
+    try {
+      const tempSessionId = sessionId || `session_${Date.now()}`;
+      console.log(`📁 Creating temp folder structure for user: ${userId}, session: ${tempSessionId}`);
+
+      // Step 1: Create or get main "مؤقت" folder
+      const tempMainFolderId = await this.createFolder('مؤقت');
+      if (!tempMainFolderId) {
+        throw new Error('Failed to create main مؤقت folder');
+      }
+
+      // Step 2: Create or get user folder inside temp folder
+      const userFolderId = await this.createFolder(userId, tempMainFolderId);
+      if (!userFolderId) {
+        throw new Error(`Failed to create user folder: ${userId}`);
+      }
+
+      // Step 3: Create session folder inside user folder
+      const sessionFolderId = await this.createFolder(tempSessionId, userFolderId);
+      if (!sessionFolderId) {
+        throw new Error(`Failed to create session folder: ${tempSessionId}`);
+      }
+
+      console.log(`✅ Temp folder structure created successfully:`);
+      console.log(`   مؤقت/${userId}/${tempSessionId}/`);
+      console.log(`   Temp folder ID: ${sessionFolderId}`);
+
+      return sessionFolderId;
+
+    } catch (error: any) {
+      console.error('❌ Failed to create temp folder structure:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Move files from temp folder to permanent order folder
+   */
+  async moveFilesToPermanentLocation(
+    tempFolderId: string,
+    customerName: string,
+    date: string = new Date().toISOString().split('T')[0]
+  ): Promise<{ success: boolean; orderNumber: number; permanentFolderId?: string; error?: string }> {
+    if (!this.isConfigured) {
+      return { success: false, orderNumber: 1, error: 'Google Drive not configured' };
+    }
+
+    try {
+      console.log(`🚀 Moving files from temp folder ${tempFolderId} to permanent location`);
+
+      // Create permanent order folder structure
+      const orderResult = await this.createOrderFolderStructure(customerName, date);
+      if (!orderResult.folderId) {
+        throw new Error('Failed to create permanent order folder');
+      }
+
+      // Get all files in temp folder
+      const filesQuery = `'${tempFolderId}' in parents and trashed=false`;
+      const filesResponse = await this.drive.files.list({
+        q: filesQuery,
+        fields: 'files(id, name)'
+      });
+
+      const files = filesResponse.data.files || [];
+      console.log(`📦 Found ${files.length} files to move from temp to permanent`);
+
+      // Move each file to permanent location
+      for (const file of files) {
+        if (file.id) {
+          await this.moveFileWithinDrive(file.id, orderResult.folderId);
+          console.log(`✅ Moved file: ${file.name}`);
+        }
+      }
+
+      // Clean up temp folder after successful move
+      await this.deleteFolder(tempFolderId);
+      
+      console.log(`✅ Successfully moved ${files.length} files to permanent location`);
+      console.log(`   Permanent folder: ${this.getOrderFolderHierarchy(customerName, date, orderResult.orderNumber)}`);
+
+      return {
+        success: true,
+        orderNumber: orderResult.orderNumber,
+        permanentFolderId: orderResult.folderId
+      };
+
+    } catch (error: any) {
+      console.error('❌ Failed to move files to permanent location:', error.message);
+      return {
+        success: false,
+        orderNumber: 1,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Move a file from one folder to another within Google Drive
+   */
+  async moveFileWithinDrive(fileId: string, newParentFolderId: string): Promise<boolean> {
+    try {
+      // Get current parents
+      const file = await this.drive.files.get({
+        fileId: fileId,
+        fields: 'parents'
+      });
+
+      const previousParents = file.data.parents?.join(',') || '';
+
+      // Move file to new parent
+      await this.drive.files.update({
+        fileId: fileId,
+        addParents: newParentFolderId,
+        removeParents: previousParents,
+        fields: 'id, parents'
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Failed to move file ${fileId}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Delete a folder and all its contents
+   */
+  async deleteFolder(folderId: string): Promise<boolean> {
+    try {
+      await this.drive.files.delete({
+        fileId: folderId
+      });
+      console.log(`🗑️ Deleted folder: ${folderId}`);
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Failed to delete folder ${folderId}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Clean up temporary files older than specified hours
+   */
+  async cleanupOldTempFiles(hoursOld: number = 24): Promise<{ cleaned: number; errors: number }> {
+    if (!this.isConfigured) {
+      return { cleaned: 0, errors: 0 };
+    }
+
+    try {
+      console.log(`🧹 Starting cleanup of temp files older than ${hoursOld} hours`);
+
+      // Find main temp folder
+      const tempFolderId = await this.findFolderByName('مؤقت');
+      if (!tempFolderId) {
+        console.log('ℹ️ No temp folder found, nothing to clean');
+        return { cleaned: 0, errors: 0 };
+      }
+
+      // Get all user folders in temp
+      const userFoldersQuery = `'${tempFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+      const userFoldersResponse = await this.drive.files.list({
+        q: userFoldersQuery,
+        fields: 'files(id, name, createdTime)'
+      });
+
+      let cleaned = 0;
+      let errors = 0;
+      const cutoffTime = new Date(Date.now() - (hoursOld * 60 * 60 * 1000));
+
+      for (const userFolder of userFoldersResponse.data.files || []) {
+        // Get session folders in each user folder
+        const sessionFoldersQuery = `'${userFolder.id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+        const sessionFoldersResponse = await this.drive.files.list({
+          q: sessionFoldersQuery,
+          fields: 'files(id, name, createdTime)'
+        });
+
+        for (const sessionFolder of sessionFoldersResponse.data.files || []) {
+          if (sessionFolder.createdTime) {
+            const createdTime = new Date(sessionFolder.createdTime);
+            if (createdTime < cutoffTime) {
+              console.log(`🗑️ Cleaning up old temp session: ${sessionFolder.name} (created: ${createdTime.toISOString()})`);
+              const deleted = await this.deleteFolder(sessionFolder.id!);
+              if (deleted) {
+                cleaned++;
+              } else {
+                errors++;
+              }
+            }
+          }
+        }
+      }
+
+      console.log(`✅ Temp cleanup completed: ${cleaned} folders cleaned, ${errors} errors`);
+      return { cleaned, errors };
+
+    } catch (error: any) {
+      console.error('❌ Failed to cleanup temp files:', error.message);
+      return { cleaned: 0, errors: 1 };
+    }
+  }
+
+  /**
+   * Find folder by name (helper function)
+   */
+  async findFolderByName(folderName: string, parentId?: string): Promise<string | null> {
+    try {
+      let query = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+      if (parentId) {
+        query += ` and '${parentId}' in parents`;
+      }
+
+      const response = await this.drive.files.list({
+        q: query,
+        fields: 'files(id, name)'
+      });
+
+      const folders = response.data.files || [];
+      return folders.length > 0 ? folders[0].id! : null;
+    } catch (error: any) {
+      console.error(`❌ Failed to find folder ${folderName}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
    * Create new nested folder structure: اطبعلي/[date]/[customerName]/طلب_[orderNumber]
    */
   async createOrderFolderStructure(
