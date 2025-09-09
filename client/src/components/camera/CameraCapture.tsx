@@ -98,15 +98,15 @@ export function CameraCapture({
 
         const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
         
-        // Try Google Drive first, fallback to Cloudinary
+        // Try Cloud Storage first, fallback to Cloudinary
         let result = await uploadFileToGoogleDrive(file);
         if (!result.success) {
-          console.log('🔄 Google Drive failed, trying Cloudinary fallback...');
+          console.log('🔄 Cloud Storage failed, trying Cloudinary fallback...');
           result = await uploadFile(file);
         }
         
         if (!result.success) {
-          throw new Error(result.error || 'Upload failed on both Google Drive and Cloudinary');
+          throw new Error(result.error || 'Upload failed on both Cloud Storage and Cloudinary');
         }
         
         const downloadUrl = result.downloadUrl || result.url;
@@ -118,7 +118,7 @@ export function CameraCapture({
         
         toast({
           title: 'تم الحفظ بنجاح',
-          description: `تم رفع الصورة بنجاح عبر ${result.provider === 'google_drive' ? 'Google Drive' : 'Cloudinary'}`
+          description: `تم رفع الصورة بنجاح عبر ${result.provider === 'google_drive' ? 'التخزين السحابي' : 'Cloudinary'}`
         });
         
         setIsOpen(false);
@@ -154,15 +154,15 @@ export function CameraCapture({
     setIsUploading(true);
     try {
       console.log('Starting upload process...');
-      // Try Google Drive first, fallback to Cloudinary
+      // Try التخزين السحابي first, fallback to Cloudinary
       let result = await uploadFileToGoogleDrive(file);
       if (!result.success) {
-        console.log('🔄 Google Drive failed, trying Cloudinary fallback...');
+        console.log('🔄 التخزين السحابي failed, trying Cloudinary fallback...');
         result = await uploadFile(file);
       }
       
       if (!result.success) {
-        throw new Error(result.error || 'Upload failed on both Google Drive and Cloudinary');
+        throw new Error(result.error || 'Upload failed on both التخزين السحابي and Cloudinary');
       }
       
       const downloadUrl = result.downloadUrl || result.url;
@@ -175,7 +175,7 @@ export function CameraCapture({
       
       toast({
         title: 'تم الرفع بنجاح',
-        description: `تم رفع الملف بنجاح عبر ${result.provider === 'google_drive' ? 'Google Drive' : 'Cloudinary'}`
+        description: `تم رفع الملف بنجاح عبر ${result.provider === 'google_drive' ? 'التخزين السحابي' : 'Cloudinary'}`
       });
       
       setIsOpen(false);

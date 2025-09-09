@@ -2,8 +2,8 @@
 // Implements comprehensive pricing rules for all paper sizes and types
 
 export interface PricingOptions {
-  paper_size: 'A4' | 'A3';
-  paper_type: 'plain' | 'glossy' | 'matte' | 'sticker';
+  paper_size: 'A4' | 'A3' | 'A0' | 'A1';
+  paper_type: 'plain' | 'coated' | 'sticker';
   print_type: 'face' | 'face_back';
   pages: number;
   is_black_white?: boolean; // 10% discount for black and white
@@ -23,8 +23,8 @@ export interface PricingResult {
  * @returns Detailed pricing breakdown with discounts
  */
 export function calculate_price(
-  paper_size: 'A4' | 'A3',
-  paper_type: 'plain' | 'glossy' | 'matte' | 'sticker',
+  paper_size: 'A4' | 'A3' | 'A0' | 'A1',
+  paper_type: 'plain' | 'coated' | 'sticker',
   print_type: 'face' | 'face_back',
   pages: number,
   is_black_white: boolean = false
@@ -53,8 +53,8 @@ export function calculate_price(
           pricePerPage = 0.35;
         }
       }
-    } else if (paper_type === 'glossy' || paper_type === 'matte') {
-      // A4 Glossy / Matte (same pricing for both)
+    } else if (paper_type === 'coated') {
+      // A4 Coated (كوشيه)
       if (pages >= 1 && pages <= 20) {
         pricePerPage = 8.00;
       } else if (pages >= 21 && pages <= 1000) {
@@ -91,8 +91,8 @@ export function calculate_price(
           pricePerPage = 5.00;
         }
       }
-    } else if (paper_type === 'glossy' || paper_type === 'matte') {
-      // A3 Glossy / Matte (same pricing for both)
+    } else if (paper_type === 'coated') {
+      // A3 Coated (كوشيه)
       if (pages >= 1 && pages <= 50) {
         pricePerPage = 14.00;
       } else if (pages >= 51) {
@@ -105,6 +105,18 @@ export function calculate_price(
       } else if (pages >= 51) {
         pricePerPage = 18.00;
       }
+    }
+  }
+  // A0 Pricing Rules (30 جنيه، أبيض وأسود فقط)
+  else if (paper_size === 'A0') {
+    if (paper_type === 'plain' && is_black_white) {
+      pricePerPage = 30.00;
+    }
+  }
+  // A1 Pricing Rules (30 جنيه، أبيض وأسود فقط)
+  else if (paper_size === 'A1') {
+    if (paper_type === 'plain' && is_black_white) {
+      pricePerPage = 30.00;
     }
   }
 
@@ -142,7 +154,7 @@ export function getPricingTiers() {
           { range: '1001+ صفحة', price: '0.35 جنيه/صفحة' }
         ]
       },
-      glossy_matte: [
+      coated: [
         { range: '1-20 صفحة', price: '8 جنيه/صفحة' },
         { range: '21-1000 صفحة', price: '7 جنيه/صفحة' },
         { range: '1001+ صفحة', price: '6 جنيه/صفحة' }
@@ -164,13 +176,23 @@ export function getPricingTiers() {
           { range: '31+ صفحة', price: '5 جنيه/صفحة' }
         ]
       },
-      glossy_matte: [
+      coated: [
         { range: '1-50 صفحة', price: '14 جنيه/صفحة' },
         { range: '51+ صفحة', price: '12 جنيه/صفحة' }
       ],
       sticker: [
         { range: '1-50 صفحة', price: '20 جنيه/صفحة' },
         { range: '51+ صفحة', price: '18 جنيه/صفحة' }
+      ]
+    },
+    A0: {
+      plain_bw: [
+        { range: 'جميع الكميات', price: '30 جنيه/صفحة (أبيض وأسود فقط)' }
+      ]
+    },
+    A1: {
+      plain_bw: [
+        { range: 'جميع الكميات', price: '30 جنيه/صفحة (أبيض وأسود فقط)' }
       ]
     }
   };
@@ -186,7 +208,7 @@ export function convertLegacySettings(settings: {
   copies: number;
 }) {
   return {
-    paper_size: settings.paperSize === 'A3' ? 'A3' : 'A4' as 'A4' | 'A3',
+    paper_size: settings.paperSize === 'A3' ? 'A3' : settings.paperSize === 'A0' ? 'A0' : settings.paperSize === 'A1' ? 'A1' : 'A4' as 'A4' | 'A3' | 'A0' | 'A1',
     paper_type: 'plain' as 'plain',
     print_type: settings.doubleSided ? 'face_back' : 'face' as 'face' | 'face_back',
     is_black_white: settings.colorMode === 'grayscale',
