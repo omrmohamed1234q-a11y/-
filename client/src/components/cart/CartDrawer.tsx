@@ -75,17 +75,25 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     return cart?.items?.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0) || 0;
   };
 
-  if (isLoading) {
-    return (
-      <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent className="w-full sm:max-w-md">
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+  // Skeleton loader for cart items
+  const CartItemSkeleton = () => (
+    <Card className="p-3">
+      <div className="flex gap-3">
+        <div className="w-16 h-16 bg-gray-200 rounded-lg animate-pulse flex-shrink-0"></div>
+        <div className="flex-1 space-y-2">
+          <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+          <div className="flex justify-between items-center">
+            <div className="flex gap-2">
+              <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+              <div className="w-8 h-6 bg-gray-200 rounded animate-pulse"></div>
+              <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div>
           </div>
-        </SheetContent>
-      </Sheet>
-    );
-  }
+        </div>
+      </div>
+    </Card>
+  );
 
   const subtotal = calculateSubtotal();
   
@@ -158,7 +166,14 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           {!showActiveOrders ? (
             // Cart View
             <>
-              {!cart?.items || cart.items.length === 0 ? (
+              {isLoading ? (
+                // Loading skeleton
+                <div className="space-y-4">
+                  <CartItemSkeleton />
+                  <CartItemSkeleton />
+                  <CartItemSkeleton />
+                </div>
+              ) : !cart?.items || cart.items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Package className="h-16 w-16 text-gray-300 mb-4" />
                   <p className="text-gray-500 mb-4">سلة التسوق فارغة</p>
@@ -201,7 +216,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 disabled={isRemovingItem}
                                 data-testid={`remove-item-${item.id}`}
                               >
-                                <Trash2 className="h-4 w-4 text-red-500" />
+                                {isRemovingItem ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500"></div>
+                                ) : (
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                )}
                               </Button>
                             </div>
 
@@ -243,7 +262,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                       disabled={isUpdatingQuantity}
                                       data-testid={`decrease-quantity-${item.id}`}
                                     >
-                                      <Minus className="h-3 w-3" />
+                                      {isUpdatingQuantity ? (
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+                                      ) : (
+                                        <Minus className="h-3 w-3" />
+                                      )}
                                     </Button>
                                     <span className="w-8 text-center" data-testid={`quantity-${item.id}`}>
                                       {item.quantity}
@@ -255,7 +278,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                       disabled={isUpdatingQuantity}
                                       data-testid={`increase-quantity-${item.id}`}
                                     >
-                                      <Plus className="h-3 w-3" />
+                                      {isUpdatingQuantity ? (
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+                                      ) : (
+                                        <Plus className="h-3 w-3" />
+                                      )}
                                     </Button>
                                   </>
                                 )}
@@ -454,8 +481,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 className="w-full text-red-600 hover:text-red-700"
                 data-testid="clear-cart-button"
               >
-                <Trash2 className="h-4 w-4 ml-1" />
-                تفريغ السلة
+                {isClearingCart ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500 ml-1"></div>
+                ) : (
+                  <Trash2 className="h-4 w-4 ml-1" />
+                )}
+                {isClearingCart ? 'جاري التفريغ...' : 'تفريغ السلة'}
               </Button>
             </div>
           </SheetFooter>
