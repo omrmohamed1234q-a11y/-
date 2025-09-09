@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { googleDriveService } from "./google-drive-service";
 
 const app = express();
 // Increase payload size limit to handle large PDF files (50MB limit)
@@ -68,5 +69,37 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Schedule automatic cleanup of temporary files every 6 hours
+    setInterval(async () => {
+      try {
+        console.log('🗑️ Starting scheduled cleanup of temporary files...');
+        const cleanupResult = await googleDriveService.cleanupOldTempFiles(24); // Files older than 24 hours
+        
+        if (cleanupResult.success) {
+          console.log(`✅ Scheduled cleanup completed: ${cleanupResult.foldersDeleted} folders, ${cleanupResult.filesDeleted} files deleted`);
+        } else {
+          console.log('ℹ️ Scheduled cleanup info:', cleanupResult.error);
+        }
+      } catch (error: any) {
+        console.log('ℹ️ Scheduled cleanup info:', error.message);
+      }
+    }, 6 * 60 * 60 * 1000); // Every 6 hours
+
+    // Run cleanup on startup (after 30 seconds)
+    setTimeout(async () => {
+      try {
+        console.log('🗑️ Running startup cleanup of temporary files...');
+        const cleanupResult = await googleDriveService.cleanupOldTempFiles(24);
+        
+        if (cleanupResult.success) {
+          console.log(`✅ Startup cleanup completed: ${cleanupResult.foldersDeleted} folders, ${cleanupResult.filesDeleted} files deleted`);
+        } else {
+          console.log('ℹ️ Startup cleanup info:', cleanupResult.error);
+        }
+      } catch (error: any) {
+        console.log('ℹ️ Startup cleanup info:', error.message);
+      }
+    }, 30000); // 30 seconds after startup
   });
 })();
