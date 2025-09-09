@@ -56,12 +56,12 @@ export function useCart() {
       });
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       queryClient.invalidateQueries({ queryKey: ['/api/cart/count'] });
       toast({
         title: "تمت الإضافة للسلة",
-        description: "تم إضافة المنتج بنجاح",
+        description: data.message || "تم إضافة المنتج بنجاح",
       });
     },
     onError: (error: any) => {
@@ -79,9 +79,13 @@ export function useCart() {
       const response = await apiRequest('PUT', `/api/cart/items/${itemId}`, { quantity });
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       queryClient.invalidateQueries({ queryKey: ['/api/cart/count'] });
+      toast({
+        title: "تم التحديث",
+        description: data.message || "تم تحديث الكمية بنجاح",
+      });
     },
     onError: (error: any) => {
       toast({
@@ -98,12 +102,12 @@ export function useCart() {
       const response = await apiRequest('DELETE', `/api/cart/items/${itemId}`);
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       queryClient.invalidateQueries({ queryKey: ['/api/cart/count'] });
       toast({
         title: "تم الحذف",
-        description: "تم حذف المنتج من السلة",
+        description: data.message || "تم حذف المنتج من السلة",
       });
     },
     onError: (error: any) => {
@@ -121,12 +125,12 @@ export function useCart() {
       const response = await apiRequest('DELETE', '/api/cart/clear');
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       queryClient.invalidateQueries({ queryKey: ['/api/cart/count'] });
       toast({
         title: "تم تفريغ السلة",
-        description: "تم حذف جميع المنتجات من السلة",
+        description: data.message || "تم حذف جميع المنتجات من السلة",
       });
     },
     onError: (error: any) => {
@@ -169,7 +173,7 @@ export function useCart() {
   });
 
   return {
-    cart,
+    cart: cart || { items: [], totalQuantity: 0, subtotal: 0, currency: 'جنيه' },
     cartCount: cartCount?.count || 0,
     isLoading,
     
@@ -186,5 +190,12 @@ export function useCart() {
     isRemovingItem: removeItemMutation.isPending,
     isClearingCart: clearCartMutation.isPending,
     isCheckingOut: checkoutMutation.isPending,
+    
+    // Error states
+    addToCartError: addToCartMutation.error,
+    updateQuantityError: updateQuantityMutation.error,
+    removeItemError: removeItemMutation.error,
+    clearCartError: clearCartMutation.error,
+    checkoutError: checkoutMutation.error,
   };
 }
