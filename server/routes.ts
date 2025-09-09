@@ -2586,14 +2586,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { productId, quantity = 1, variant } = req.body;
 
       if (!productId) {
-        return res.status(400).json({ message: "Product ID is required" });
+        return res.status(400).json({ success: false, message: "Product ID is required" });
       }
 
+      if (quantity < 1 || quantity > 100) {
+        return res.status(400).json({ success: false, message: "Quantity must be between 1 and 100" });
+      }
+
+      console.log(`➕ Adding product ${productId} (qty: ${quantity}) to cart for user ${userId}`);
       const cartItem = await storage.addToCart(userId, productId, quantity, variant);
-      res.json({ success: true, item: cartItem });
+      
+      res.json({ 
+        success: true, 
+        item: cartItem, 
+        message: "Item added to cart successfully" 
+      });
     } catch (error) {
       console.error("Error adding to cart:", error);
-      res.status(400).json({ message: error.message || "Failed to add to cart" });
+      res.status(400).json({ 
+        success: false, 
+        message: error.message || "Failed to add to cart" 
+      });
     }
   });
 
@@ -2621,32 +2634,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { itemId } = req.params;
       const { quantity } = req.body;
+      const userId = req.user.id;
 
       if (!quantity || quantity < 1) {
         return res.status(400).json({ message: "Valid quantity is required" });
       }
 
+      if (!itemId) {
+        return res.status(400).json({ message: "Item ID is required" });
+      }
+
+      console.log(`🔄 Updating cart item ${itemId} to quantity ${quantity} for user ${userId}`);
       const updatedItem = await storage.updateCartItem(itemId, quantity);
-      res.json({ success: true, item: updatedItem });
+      
+      if (!updatedItem) {
+        return res.status(404).json({ message: "Cart item not found" });
+      }
+
+      res.json({ success: true, item: updatedItem, message: "Cart item updated successfully" });
     } catch (error) {
       console.error("Error updating cart item:", error);
-      res.status(500).json({ message: "Failed to update cart item" });
+      res.status(500).json({ message: error.message || "Failed to update cart item" });
     }
   });
 
   app.delete('/api/cart/items/:itemId', requireAuth, async (req: any, res) => {
     try {
       const { itemId } = req.params;
+      const userId = req.user.id;
+
+      if (!itemId) {
+        return res.status(400).json({ message: "Item ID is required" });
+      }
+
+      console.log(`🗑️ Removing cart item ${itemId} for user ${userId}`);
       const success = await storage.removeCartItem(itemId);
       
       if (success) {
-        res.json({ success: true, message: "Item removed from cart" });
+        res.json({ success: true, message: "Item removed from cart successfully" });
       } else {
-        res.status(404).json({ message: "Cart item not found" });
+        res.status(404).json({ success: false, message: "Cart item not found" });
       }
     } catch (error) {
       console.error("Error removing cart item:", error);
-      res.status(500).json({ message: "Failed to remove cart item" });
+      res.status(500).json({ success: false, message: error.message || "Failed to remove cart item" });
     }
   });
 

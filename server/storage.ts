@@ -1610,8 +1610,20 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateCartItem(itemId: string, quantity: number): Promise<CartItem> {
+  async updateCartItem(itemId: string, quantity: number): Promise<CartItem | null> {
     try {
+      // First check if item exists
+      const [existingItem] = await db
+        .select()
+        .from(cartItems)
+        .where(eq(cartItems.id, itemId))
+        .limit(1);
+
+      if (!existingItem) {
+        console.log(`❌ Cart item ${itemId} not found for update`);
+        return null;
+      }
+
       const [updatedItem] = await db
         .update(cartItems)
         .set({ 
@@ -1620,6 +1632,8 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(cartItems.id, itemId))
         .returning();
+      
+      console.log(`✅ Cart item ${itemId} updated to quantity ${quantity}`);
       return updatedItem;
     } catch (error) {
       console.error('Error updating cart item:', error);
@@ -1629,7 +1643,20 @@ export class DatabaseStorage implements IStorage {
 
   async removeCartItem(itemId: string): Promise<boolean> {
     try {
-      await db.delete(cartItems).where(eq(cartItems.id, itemId));
+      // First check if item exists
+      const [existingItem] = await db
+        .select()
+        .from(cartItems)
+        .where(eq(cartItems.id, itemId))
+        .limit(1);
+
+      if (!existingItem) {
+        console.log(`❌ Cart item ${itemId} not found for removal`);
+        return false;
+      }
+
+      const result = await db.delete(cartItems).where(eq(cartItems.id, itemId));
+      console.log(`✅ Cart item ${itemId} removed successfully`);
       return true;
     } catch (error) {
       console.error('Error removing cart item:', error);

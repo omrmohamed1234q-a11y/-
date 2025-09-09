@@ -29,13 +29,17 @@ export function useCart() {
   // Get cart data
   const { data: cart, isLoading } = useQuery<Cart>({
     queryKey: ['/api/cart'],
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // 30 seconds for fresh data
+    retry: 2,
+    refetchOnWindowFocus: false,
   });
 
   // Get cart count
   const { data: cartCount } = useQuery<{ count: number }>({
     queryKey: ['/api/cart/count'],
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 30, // 30 seconds for fresh data
+    retry: 2,
+    refetchOnWindowFocus: false,
   });
 
   // Add to cart mutation
@@ -146,13 +150,13 @@ export function useCart() {
       const response = await apiRequest('POST', '/api/checkout', checkoutData);
       return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       queryClient.invalidateQueries({ queryKey: ['/api/cart/count'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       toast({
         title: "تم إنشاء الطلب",
-        description: `تم إنشاء طلبك رقم ${data.order?.orderNumber} بنجاح`,
+        description: `تم إنشاء طلبك رقم ${data.orderNumber || data.order?.orderNumber} بنجاح`,
       });
     },
     onError: (error: any) => {
