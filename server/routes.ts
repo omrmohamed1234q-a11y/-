@@ -4009,16 +4009,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Calculate print job cost with safe defaults using advanced pricing system
-      const pages = printJobData.pages || 1;
+      // Handle pages - convert "all" to 1 for images, extract number for PDFs
+      let pages = 1; // Default for images
+      if (printJobData.pages && printJobData.pages !== 'all') {
+        pages = parseInt(printJobData.pages) || 1;
+      } else if (printJobData.pages === 'all') {
+        // For images or when pages is "all", assume 1 page
+        pages = 1;
+        console.log('📄 Pages field was "all", assuming 1 page for pricing');
+      }
+      
       const copies = printJobData.copies || 1;
       const colorMode = printJobData.colorMode || 'grayscale';
       const paperSize = printJobData.paperSize || 'A4';
       const doubleSided = printJobData.doubleSided || false;
       const paperType = printJobData.paperType || 'plain';
       
+      console.log(`📊 Pricing calculation: ${pages} pages, ${copies} copies, ${colorMode}, ${paperSize}, ${paperType}`);
+      
       // Import the advanced pricing calculation (simple fallback for server-side)
-      // Convert to pricing system format
-      const paper_size_typed = paperSize === 'A3' ? 'A3' : 'A4';
+      // Convert to pricing system format - handle A0, A1, A2 as A3
+      let paper_size_typed = 'A4';
+      if (['A0', 'A1', 'A2', 'A3'].includes(paperSize)) {
+        paper_size_typed = 'A3'; // Treat large formats as A3 pricing
+      } else if (paperSize === 'A4') {
+        paper_size_typed = 'A4';
+      }
       const paper_type_typed = ['plain', 'glossy', 'matte', 'sticker'].includes(paperType) ? paperType : 'plain';
       const print_type = doubleSided ? 'face_back' : 'face';
       const is_black_white = colorMode === 'grayscale';
@@ -4053,12 +4069,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Calculate base total
+      // Calculate base total with validation
       const baseTotal = pricePerPage * pages * copies;
+      
+      // Validate calculation
+      if (isNaN(baseTotal) || baseTotal <= 0) {
+        console.error(`❌ Invalid pricing calculation: ${pricePerPage} * ${pages} * ${copies} = ${baseTotal}`);
+        return res.status(400).json({ message: 'خطأ في حساب التكلفة' });
+      }
       
       // Apply 10% discount for black and white printing
       const discount = is_black_white ? baseTotal * 0.10 : 0;
       const totalCost = Math.ceil(baseTotal - discount);
+      
+      console.log(`💰 Pricing breakdown: ${pricePerPage}/page * ${pages} pages * ${copies} copies = ${baseTotal} - ${discount} discount = ${totalCost} جنيه`);
 
       // Create print job record with actual user ID
       const printJobRecord = {
