@@ -270,17 +270,40 @@ export class MemoryStorage implements IStorage {
     };
   }
 
-  async addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<CartItem> {
+  async addToCart(userId: string, productId: string, quantity: number, variant?: any, customPrice?: string): Promise<CartItem> {
+    // For print jobs or when custom price is provided, use it directly
+    let finalPrice = customPrice || '10.00';
+    
+    // If it's a print job, extract price from variant
+    if (variant?.isPrintJob && variant?.printJob?.cost) {
+      finalPrice = variant.printJob.cost;
+      console.log(`💰 Print job pricing: Using calculated cost ${finalPrice} جنيه`);
+    } else if (variant?.isPrintJob && variant?.printJob?.calculatedPrice) {
+      finalPrice = variant.printJob.calculatedPrice;
+      console.log(`💰 Print job pricing: Using calculated price ${finalPrice} جنيه`);
+    } else {
+      // Try to get product price for regular products
+      const product = this.products.find(p => p.id === productId);
+      if (product) {
+        finalPrice = product.price.toString();
+        console.log(`💰 Regular product pricing: Using product price ${finalPrice} جنيه`);
+      } else if (!customPrice) {
+        console.log(`⚠️ Product ${productId} not found, using default price ${finalPrice} جنيه`);
+      }
+    }
+
     const cartItem: CartItem = {
       id: `cart-${Date.now()}`,
       userId,
       productId,
       quantity,
-      price: '10.00', // Default price
+      price: finalPrice,
       variant: variant || null,
       notes: null,
       createdAt: new Date()
     };
+    
+    console.log(`🛒 Adding to cart: ${productId} - ${finalPrice} جنيه (quantity: ${quantity})`);
     this.cartItems.push(cartItem);
     return cartItem;
   }
@@ -1559,50 +1582,110 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<CartItem> {
+  async addToCart(userId: string, productId: string, quantity: number, variant?: any, customPrice?: string): Promise<CartItem> {
     try {
-      // Get product to check stock and price
-      const [product] = await db.select().from(products).where(eq(products.id, productId));
-      if (!product) {
-        throw new Error('Product not found');
-      }
+      let finalPrice = customPrice;
+      
+      // Handle print jobs with calculated pricing
+      if (variant?.isPrintJob) {
+        if (variant?.printJob?.cost) {
+          finalPrice = variant.printJob.cost;
+          console.log(`💰 Print job DB pricing: Using calculated cost ${finalPrice} جنيه`);
+        } else if (variant?.printJob?.calculatedPrice) {
+          finalPrice = variant.printJob.calculatedPrice;
+          console.log(`💰 Print job DB pricing: Using calculated price ${finalPrice} جنيه`);
+        }
+        
+        // For print jobs, we don't need to look up a product since it's a service
+        // Check if item already exists in cart by variant (print job)
+        const [existingItem] = await db
+          .select()
+          .from(cartItems)
+          .where(and(
+            eq(cartItems.userId, userId),
+            eq(cartItems.productId, productId),
+            eq(cartItems.variant, JSON.stringify(variant))
+          ));
 
-      // Check if item already exists in cart
-      const [existingItem] = await db
-        .select()
-        .from(cartItems)
-        .where(and(
-          eq(cartItems.userId, userId),
-          eq(cartItems.productId, productId)
-        ));
-
-      if (existingItem) {
-        // Update existing item
-        const newQuantity = existingItem.quantity + quantity;
-        const [updatedItem] = await db
-          .update(cartItems)
-          .set({ 
-            quantity: newQuantity,
-            updatedAt: new Date()
-          })
-          .where(eq(cartItems.id, existingItem.id))
-          .returning();
-        return updatedItem;
+        if (existingItem) {
+          // Update existing print job quantity
+          const newQuantity = existingItem.quantity + quantity;
+          const [updatedItem] = await db
+            .update(cartItems)
+            .set({ 
+              quantity: newQuantity,
+              updatedAt: new Date()
+            })
+            .where(eq(cartItems.id, existingItem.id))
+            .returning();
+          console.log(`🛒 Updated existing print job in cart: ${finalPrice} جنيه (quantity: ${newQuantity})`);
+          return updatedItem;
+        } else {
+          // Add new print job item
+          const [newItem] = await db
+            .insert(cartItems)
+            .values({
+              userId,
+              productId,
+              quantity,
+              price: finalPrice || '10.00',
+              variant,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .returning();
+          console.log(`🛒 Added new print job to cart: ${finalPrice} جنيه (quantity: ${quantity})`);
+          return newItem;
+        }
       } else {
-        // Add new item
-        const [newItem] = await db
-          .insert(cartItems)
-          .values({
-            userId,
-            productId,
-            quantity,
-            price: product.price,
-            variant,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .returning();
-        return newItem;
+        // Handle regular products
+        const [product] = await db.select().from(products).where(eq(products.id, productId));
+        if (!product) {
+          throw new Error('Product not found');
+        }
+
+        finalPrice = customPrice || product.price;
+        console.log(`💰 Regular product DB pricing: Using ${finalPrice} جنيه`);
+
+        // Check if item already exists in cart
+        const [existingItem] = await db
+          .select()
+          .from(cartItems)
+          .where(and(
+            eq(cartItems.userId, userId),
+            eq(cartItems.productId, productId)
+          ));
+
+        if (existingItem) {
+          // Update existing item
+          const newQuantity = existingItem.quantity + quantity;
+          const [updatedItem] = await db
+            .update(cartItems)
+            .set({ 
+              quantity: newQuantity,
+              updatedAt: new Date()
+            })
+            .where(eq(cartItems.id, existingItem.id))
+            .returning();
+          console.log(`🛒 Updated existing item in cart: ${finalPrice} جنيه (quantity: ${newQuantity})`);
+          return updatedItem;
+        } else {
+          // Add new item
+          const [newItem] = await db
+            .insert(cartItems)
+            .values({
+              userId,
+              productId,
+              quantity,
+              price: finalPrice,
+              variant,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .returning();
+          console.log(`🛒 Added new item to cart: ${finalPrice} جنيه (quantity: ${quantity})`);
+          return newItem;
+        }
       }
     } catch (error) {
       console.error('Error adding to cart:', error);

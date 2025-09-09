@@ -4106,7 +4106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         colorMode: printJobData.colorMode === 'color' ? 'ملون' : 'أبيض وأسود',
         paperSize: printJobData.paperSize,
         doubleSided: printJobData.doubleSided ? 'وجهين' : 'وجه واحد'
-      });
+      }, totalCost.toString()); // Pass the calculated price as custom price
 
       console.log('✅ Print job added to cart successfully:', cartItem.id);
       console.log('📋 Print job also saved to admin panel:', createdPrintJob.id);
