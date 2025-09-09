@@ -6783,6 +6783,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== CUSTOM CLEANUP OPTIONS (before auth middleware) ====================
+  
+  // Smart cleanup with custom time period
+  app.post('/api/drive/cleanup-custom', async (req: Request, res: Response) => {
+    try {
+      const { timeOption, customDays } = req.body;
+      
+      let daysToKeep = 1; // Default: keep last day
+      let description = 'يوم واحد';
+      
+      switch (timeOption) {
+        case 'total-reset':
+          daysToKeep = 0; // Delete everything
+          description = 'تصفير كامل - حذف كل شيء';
+          break;
+        case 'partial-reset':
+          daysToKeep = 0.04; // ~1 hour
+          description = 'تصفير جزئي - آخر ساعة فقط';
+          break;
+        case 'last-day':
+          daysToKeep = 1;
+          description = 'آخر يوم';
+          break;
+        case 'last-3-days':
+          daysToKeep = 3;
+          description = 'آخر 3 أيام';
+          break;
+        case 'last-week':
+          daysToKeep = 7;
+          description = 'آخر أسبوع';
+          break;
+        case 'custom':
+          daysToKeep = parseFloat(customDays) || 1;
+          description = `آخر ${customDays} يوم`;
+          break;
+      }
+
+      console.log(`🧹 CUSTOM CLEANUP: Keeping files newer than ${daysToKeep} days (${description})`);
+      
+      // Use the smart cleanup with custom period
+      const result = await googleDriveService.cleanupOldPermanentFiles(daysToKeep);
+      
+      res.json({
+        success: true,
+        message: `تم التنظيف المخصص بنجاح! (${description})`,
+        description,
+        daysKept: daysToKeep,
+        foldersDeleted: result.cleaned,
+        errors: result.errors,
+        estimatedSpaceFreed: result.cleaned * 1000000, // Estimate
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Custom cleanup failed:', error.message);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في التنظيف المخصص',
+        error: error.message
+      });
+    }
+  });
+
   app.use('/api', protectAPI);
   
   // ===== نظام المكافآت والأوراق المجانية =====
@@ -7040,67 +7102,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ==================== CUSTOM CLEANUP OPTIONS ====================
-  
-  // Smart cleanup with custom time period
-  app.post('/api/drive/cleanup-custom', async (req: Request, res: Response) => {
-    try {
-      const { timeOption, customDays } = req.body;
-      
-      let daysToKeep = 1; // Default: keep last day
-      let description = 'يوم واحد';
-      
-      switch (timeOption) {
-        case 'total-reset':
-          daysToKeep = 0; // Delete everything
-          description = 'تصفير كامل - حذف كل شيء';
-          break;
-        case 'partial-reset':
-          daysToKeep = 0.04; // ~1 hour
-          description = 'تصفير جزئي - آخر ساعة فقط';
-          break;
-        case 'last-day':
-          daysToKeep = 1;
-          description = 'آخر يوم';
-          break;
-        case 'last-3-days':
-          daysToKeep = 3;
-          description = 'آخر 3 أيام';
-          break;
-        case 'last-week':
-          daysToKeep = 7;
-          description = 'آخر أسبوع';
-          break;
-        case 'custom':
-          daysToKeep = parseFloat(customDays) || 1;
-          description = `آخر ${customDays} يوم`;
-          break;
-      }
-
-      console.log(`🧹 CUSTOM CLEANUP: Keeping files newer than ${daysToKeep} days (${description})`);
-      
-      // Use the smart cleanup with custom period
-      const result = await googleDriveService.cleanupOldPermanentFiles(daysToKeep);
-      
-      res.json({
-        success: true,
-        message: `تم التنظيف المخصص بنجاح! (${description})`,
-        description,
-        daysKept: daysToKeep,
-        foldersDeleted: result.cleaned,
-        errors: result.errors,
-        estimatedSpaceFreed: result.cleaned * 1000000, // Estimate
-      });
-      
-    } catch (error: any) {
-      console.error('❌ Custom cleanup failed:', error.message);
-      res.status(500).json({
-        success: false,
-        message: 'خطأ في التنظيف المخصص',
-        error: error.message
-      });
-    }
-  });
 
   return httpServer;
 }
