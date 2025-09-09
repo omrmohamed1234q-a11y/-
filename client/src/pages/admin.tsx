@@ -341,6 +341,27 @@ export default function AdminDashboard() {
                   <span className="text-xs">إدارة المساحة</span>
                 </Button>
               </Link>
+              
+              <Link href="/admin/security-dashboard">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-red-50">
+                  <Shield className="w-6 h-6 text-red-600" />
+                  <span className="text-xs">لوحة الأمان</span>
+                </Button>
+              </Link>
+              
+              <Link href="/admin/two-factor-settings">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-blue-50">
+                  <Smartphone className="w-6 h-6 text-blue-600" />
+                  <span className="text-xs">المصادقة النائية</span>
+                </Button>
+              </Link>
+              
+              <Link href="/admin/settings">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-gray-50">
+                  <Settings className="w-6 h-6 text-gray-600" />
+                  <span className="text-xs">الإعدادات</span>
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
