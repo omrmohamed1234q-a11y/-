@@ -322,37 +322,35 @@ export default function Rewards() {
                 تحديات اليوم
               </h3>
               
-              {userChallenges.length === 0 ? (
+              {activeChallenges.length === 0 ? (
                 <div className="text-center py-8">
                   <i className="fas fa-calendar-check text-4xl text-muted-foreground mb-4"></i>
                   <p className="text-muted-foreground">لا توجد تحديات متاحة اليوم</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {userChallenges.map((userChallenge) => (
+                  {activeChallenges.map((challenge) => (
                     <div
-                      key={userChallenge.id}
-                      className={`p-4 rounded-lg border-r-4 ${getChallengeColor(userChallenge)}`}
+                      key={challenge.id}
+                      className="p-4 rounded-lg border-r-4 border-blue-500 bg-blue-50"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-sm">{userChallenge.challenges.name}</h4>
-                        {getChallengeStatus(userChallenge)}
+                        <h4 className="font-medium text-sm">{challenge.name}</h4>
+                        <Badge variant={challenge.is_daily ? "default" : "secondary"}>
+                          {challenge.is_daily ? "يومي" : "عام"}
+                        </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">
-                        {userChallenge.challenges.description}
+                        {challenge.description}
                       </p>
                       <div className="flex items-center justify-between">
                         <div className="flex-1 ml-3">
-                          <Progress 
-                            value={(userChallenge.current_progress / userChallenge.challenges.target_value) * 100} 
-                            className="h-2"
-                          />
-                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                            <span className="arabic-nums">{userChallenge.current_progress}/{userChallenge.challenges.target_value}</span>
+                          <div className="text-xs text-muted-foreground">
+                            الهدف: {challenge.target_value} {challenge.type}
                           </div>
                         </div>
                         <span className="text-sm font-bold text-blue-500">
-                          +{userChallenge.challenges.points_reward} نقطة
+                          +{challenge.points_reward} نقطة
                         </span>
                       </div>
                     </div>

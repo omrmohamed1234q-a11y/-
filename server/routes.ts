@@ -7319,25 +7319,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // الحصول على المكافآت المتاحة للمستخدمين
   app.get('/api/rewards/available', async (req, res) => {
     try {
-      // استخدام نفس البيانات من admin API
-      const response = await fetch(`${req.protocol}://${req.get('host')}/api/admin/rewards/all`, {
-        headers: {
-          'x-user-role': 'admin',
-          'x-admin-token': 'system'
+      // بيانات تجريبية للمكافآت المتاحة
+      const mockRewards = [
+        {
+          id: '1',
+          name: 'خصم 10 جنيه',
+          description: 'خصم 10 جنيه على الطلبية القادمة',
+          points_cost: 200,
+          reward_type: 'discount',
+          reward_value: { amount: 10, currency: 'EGP' },
+          available: true,
+          limit_per_user: 5,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '2', 
+          name: 'طباعة مجانية (20 صفحة)',
+          description: '20 صفحة طباعة مجانية',
+          points_cost: 300,
+          reward_type: 'free_prints',
+          reward_value: { pages: 20 },
+          available: true,
+          limit_per_user: 3,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '3',
+          name: 'شحن موبايل 5 جنيه', 
+          description: 'شحن رصيد موبايل بقيمة 5 جنيه',
+          points_cost: 150,
+          reward_type: 'mobile_credit',
+          reward_value: { amount: 5, currency: 'EGP' },
+          available: true,
+          limit_per_user: 10,
+          created_at: new Date().toISOString()
         }
+      ];
+
+      res.json({
+        success: true,
+        data: mockRewards
       });
-      const data = await response.json();
-      
-      if (data.success) {
-        // فلترة المكافآت المتاحة فقط
-        const availableRewards = data.data.filter((reward: any) => reward.available);
-        res.json({
-          success: true,
-          data: availableRewards
-        });
-      } else {
-        throw new Error('Failed to fetch rewards');
-      }
     } catch (error) {
       console.error('Error fetching available rewards:', error);
       res.status(500).json({ success: false, message: 'خطأ في جلب المكافآت' });
@@ -7347,25 +7369,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // الحصول على التحديات النشطة للمستخدمين
   app.get('/api/challenges/active', async (req, res) => {
     try {
-      // استخدام نفس البيانات من admin API
-      const response = await fetch(`${req.protocol}://${req.get('host')}/api/admin/challenges/all`, {
-        headers: {
-          'x-user-role': 'admin',
-          'x-admin-token': 'system'
+      const mockChallenges = [
+        {
+          id: '1',
+          name: 'طباع النشيط',
+          description: 'اطبع 5 صفحات في يوم واحد',
+          type: 'daily',
+          target_value: 5,
+          points_reward: 50,
+          is_daily: true,
+          active: true,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '2',
+          name: 'ادع صديق',
+          description: 'شارك التطبيق مع صديق واحد',
+          type: 'referral',
+          target_value: 1,
+          points_reward: 100,
+          is_daily: false,
+          active: true,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '3',
+          name: 'أسبوع النشاط',
+          description: 'اطبع لمدة 7 أيام متتالية',
+          type: 'streak',
+          target_value: 7,
+          points_reward: 200,
+          is_daily: false,
+          active: true,
+          created_at: new Date().toISOString()
         }
+      ];
+
+      res.json({
+        success: true,
+        data: mockChallenges
       });
-      const data = await response.json();
-      
-      if (data.success) {
-        // فلترة التحديات النشطة فقط
-        const activeChallenges = data.data.filter((challenge: any) => challenge.active);
-        res.json({
-          success: true,
-          data: activeChallenges
-        });
-      } else {
-        throw new Error('Failed to fetch challenges');
-      }
     } catch (error) {
       console.error('Error fetching active challenges:', error);
       res.status(500).json({ success: false, message: 'خطأ في جلب التحديات' });
