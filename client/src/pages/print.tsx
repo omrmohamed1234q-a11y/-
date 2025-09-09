@@ -713,6 +713,10 @@ export default function Print() {
     paperType: 'plain' | 'coated' | 'glossy' | 'sticker';
     doubleSided: boolean;
   }}>({});
+  
+  // File collapse state - tracks which files are expanded/collapsed
+  const [fileExpandedState, setFileExpandedState] = useState<{[fileName: string]: boolean}>({});
+  
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Array<{
     fileName: string;
@@ -980,11 +984,21 @@ export default function Print() {
     setUploadedUrls([]);
     setUploadProgress([]);
     setUploadErrors([]);
+    setFileSettings({});
+    setFileExpandedState({});
     
     toast({
       title: 'تم مسح جميع الملفات',
       description: 'تم مسح جميع الملفات من القائمة',
     });
+  };
+
+  // دالة للتبديل بين طي وفتح ملف معين
+  const toggleFileExpanded = (fileName: string) => {
+    setFileExpandedState(prev => ({
+      ...prev,
+      [fileName]: !prev[fileName] // إذا كان مفتوح يصبح مطوي والعكس
+    }));
   };
 
   const generatePrintJobFilename = (settings: any, originalName: string) => {
@@ -1243,11 +1257,14 @@ export default function Print() {
                             doubleSided: false,
                           };
 
+                          // تحديد حالة التوسع - افتراضياً مطوي (false)
+                          const isExpanded = fileExpandedState[fileName] ?? false;
+
                           return (
                             <Card key={index} className="border border-gray-200 hover:border-blue-300 transition-colors">
                               <CardContent className="p-0">
-                                {/* Header مع اسم الملف وزر الحذف */}
-                                <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+                                {/* Header مع اسم الملف وأزرار التحكم */}
+                                <div className="flex items-center justify-between p-3 border-b bg-gray-50 cursor-pointer" onClick={() => toggleFileExpanded(fileName)}>
                                   <div className="flex items-center space-x-2 space-x-reverse flex-1 min-w-0">
                                     <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
                                     <div className="min-w-0 flex-1">
@@ -1260,17 +1277,46 @@ export default function Print() {
                                       </p>
                                     </div>
                                   </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeFile(fileName)}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 flex-shrink-0"
-                                  >
-                                    <XIcon className="h-4 w-4" />
-                                  </Button>
+                                  
+                                  <div className="flex items-center space-x-1 space-x-reverse">
+                                    {/* زر الطي/الفتح */}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleFileExpanded(fileName);
+                                      }}
+                                      className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1 flex-shrink-0"
+                                    >
+                                      {isExpanded ? (
+                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                        </svg>
+                                      ) : (
+                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                      )}
+                                    </Button>
+                                    
+                                    {/* زر الحذف */}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeFile(fileName);
+                                      }}
+                                      className="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 flex-shrink-0"
+                                    >
+                                      <XIcon className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </div>
 
-                                {/* إعدادات الطباعة */}
+                                {/* إعدادات الطباعة - تظهر فقط عند التوسع */}
+                                {isExpanded && (
                                 <div className="p-4">
                                   {/* الصف الأول: النسخ وحجم الورق */}
                                   <div className="grid grid-cols-2 gap-3 mb-4">
@@ -1427,6 +1473,7 @@ export default function Print() {
                                     )}
                                   </div>
                                 </div>
+                                )}
                               </CardContent>
                             </Card>
                           );
