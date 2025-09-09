@@ -564,8 +564,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🧹 CUSTOM CLEANUP: Keeping files newer than ${daysToKeep} days (${description})`);
       
-      // Use the smart cleanup with custom period
-      const result = await googleDriveService.cleanupOldPermanentFiles(daysToKeep);
+      // Use total reset for complete cleanup, otherwise use smart cleanup
+      const result = timeOption === 'total-reset' 
+        ? await googleDriveService.totalReset()
+        : await googleDriveService.cleanupOldPermanentFiles(daysToKeep);
       
       res.json({
         success: true,

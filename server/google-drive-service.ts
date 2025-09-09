@@ -944,9 +944,65 @@ export class GoogleDriveService {
   }
 
   /**
+   * TOTAL RESET - Delete everything in the main folder
+   */
+  async totalReset(): Promise<{ cleaned: number; errors: number }> {
+    try {
+      console.log('🔥 TOTAL RESET: Deleting EVERYTHING in Google Drive');
+
+      // Find main folder
+      const mainFolderId = await this.findFolderByName('اطبعلي');
+      if (!mainFolderId) {
+        console.log('ℹ️ No main folder found - nothing to delete');
+        return { cleaned: 0, errors: 0 };
+      }
+
+      let cleaned = 0;
+      let errors = 0;
+
+      // Get ALL folders and files in main folder
+      const query = `'${mainFolderId}' in parents and trashed=false`;
+      
+      try {
+        const response = await this.drive.files.list({
+          q: query,
+          fields: 'files(id, name, mimeType, createdTime)',
+          pageSize: 1000
+        });
+
+        const items = response.data.files || [];
+        console.log(`🔍 Found ${items.length} items to delete`);
+
+        // Delete each item
+        for (const item of items) {
+          try {
+            await this.drive.files.delete({ fileId: item.id });
+            console.log(`🗑️ Deleted: ${item.name}`);
+            cleaned++;
+          } catch (error: any) {
+            console.error(`❌ Failed to delete ${item.name}:`, error.message);
+            errors++;
+          }
+        }
+
+        console.log(`✅ TOTAL RESET COMPLETED: ${cleaned} items deleted, ${errors} errors`);
+        return { cleaned, errors };
+
+      } catch (error: any) {
+        console.error('❌ Error listing files:', error.message);
+        return { cleaned: 0, errors: 1 };
+      }
+
+    } catch (error: any) {
+      console.error('❌ Total reset failed:', error.message);
+      return { cleaned: 0, errors: 1 };
+    }
+  }
+
+  /**
    * Smart cleanup - detects and deletes ALL old files automatically (1+ days old)
    */
-  private async cleanupOldPermanentFiles(daysOld: number = 1): Promise<{ cleaned: number; errors: number }> {
+  async cleanupOldPermanentFiles(daysOld: number = 1): Promise<{ cleaned: number; errors: number }> {
     try {
       console.log(`🗂️ SMART CLEANUP: Auto-detecting all permanent files older than ${daysOld} days`);
 
