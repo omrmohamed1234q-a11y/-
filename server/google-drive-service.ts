@@ -748,6 +748,260 @@ export class GoogleDriveService {
   }
 
   /**
+   * Get storage quota information from Google Drive
+   */
+  async getStorageInfo(): Promise<{
+    success: boolean;
+    totalLimit?: number;
+    totalUsed?: number;
+    available?: number;
+    usagePercentage?: number;
+    usageInDrive?: number;
+    usageInTrash?: number;
+    unlimited?: boolean;
+    formattedLimit?: string;
+    formattedUsed?: string;
+    formattedAvailable?: string;
+    error?: string;
+  }> {
+    if (!this.isConfigured) {
+      return { success: false, error: 'Google Drive not configured' };
+    }
+
+    try {
+      const response = await this.drive.about.get({
+        fields: 'storageQuota,user'
+      });
+
+      const quota = response.data.storageQuota;
+      
+      if (!quota) {
+        return { success: false, error: 'Storage quota information not available' };
+      }
+
+      const totalLimit = quota.limit ? parseInt(quota.limit) : undefined;
+      const totalUsed = parseInt(quota.usage || '0');
+      const usageInDrive = parseInt(quota.usageInDrive || '0');
+      const usageInTrash = parseInt(quota.usageInDriveTrash || '0');
+      
+      const available = totalLimit ? totalLimit - totalUsed : undefined;
+      const usagePercentage = totalLimit ? (totalUsed / totalLimit) * 100 : 0;
+      const unlimited = !totalLimit;
+
+      console.log('📊 Google Drive Storage Info:');
+      console.log(`   Total Limit: ${unlimited ? 'Unlimited' : this.formatBytes(totalLimit!)}`);
+      console.log(`   Total Used: ${this.formatBytes(totalUsed)}`);
+      console.log(`   Available: ${unlimited ? 'Unlimited' : this.formatBytes(available!)}`);
+      console.log(`   Usage %: ${usagePercentage.toFixed(1)}%`);
+
+      return {
+        success: true,
+        totalLimit,
+        totalUsed,
+        available,
+        usagePercentage,
+        usageInDrive,
+        usageInTrash,
+        unlimited,
+        formattedLimit: unlimited ? 'غير محدود' : this.formatBytes(totalLimit!),
+        formattedUsed: this.formatBytes(totalUsed),
+        formattedAvailable: unlimited ? 'غير محدود' : this.formatBytes(available!)
+      };
+
+    } catch (error: any) {
+      console.error('❌ Failed to get storage info:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Check if there's enough space for upload
+   */
+  async checkSpaceAvailable(requiredBytes: number): Promise<{
+    hasSpace: boolean;
+    message: string;
+    remainingSpace?: number;
+    formattedRemaining?: string;
+  }> {
+    const storageInfo = await this.getStorageInfo();
+    
+    if (!storageInfo.success) {
+      return { hasSpace: false, message: `خطأ في فحص المساحة: ${storageInfo.error}` };
+    }
+
+    if (storageInfo.unlimited) {
+      return { 
+        hasSpace: true, 
+        message: 'مساحة غير محدودة متاحة',
+        remainingSpace: Infinity,
+        formattedRemaining: 'غير محدود'
+      };
+    }
+
+    const available = storageInfo.available!;
+    
+    if (available >= requiredBytes) {
+      return { 
+        hasSpace: true, 
+        message: `مساحة كافية متاحة: ${this.formatBytes(available)}`,
+        remainingSpace: available,
+        formattedRemaining: this.formatBytes(available)
+      };
+    }
+
+    return { 
+      hasSpace: false, 
+      message: `مساحة غير كافية. مطلوب: ${this.formatBytes(requiredBytes)}, متاح: ${this.formatBytes(available)}`,
+      remainingSpace: available,
+      formattedRemaining: this.formatBytes(available)
+    };
+  }
+
+  /**
+   * Advanced cleanup to free up space
+   */
+  async freeUpSpace(targetBytes: number = 1000000000): Promise<{
+    success: boolean;
+    spaceFeed: number;
+    beforeUsage: number;
+    afterUsage: number;
+    actionsPerformed: string[];
+    error?: string;
+  }> {
+    const actionsPerformed: string[] = [];
+    
+    try {
+      // Get initial storage info
+      const initialInfo = await this.getStorageInfo();
+      if (!initialInfo.success) {
+        return { 
+          success: false, 
+          spaceFeed: 0, 
+          beforeUsage: 0, 
+          afterUsage: 0, 
+          actionsPerformed,
+          error: initialInfo.error 
+        };
+      }
+
+      const beforeUsage = initialInfo.totalUsed!;
+      console.log(`🧹 Starting cleanup to free ${this.formatBytes(targetBytes)}`);
+      console.log(`📊 Current usage: ${this.formatBytes(beforeUsage)}`);
+
+      // Step 1: Empty trash
+      console.log('🗑️ Step 1: Emptying trash...');
+      try {
+        await this.drive.files.emptyTrash();
+        actionsPerformed.push(`تم تفريغ سلة المحذوفات (${this.formatBytes(initialInfo.usageInTrash!)})`);
+        console.log('✅ Trash emptied successfully');
+      } catch (error: any) {
+        console.log('⚠️ Could not empty trash:', error.message);
+      }
+
+      // Step 2: Clean old temporary files (more aggressive)
+      console.log('🧹 Step 2: Cleaning old temporary files...');
+      const tempCleanup = await this.cleanupOldTempFiles(12); // Files older than 12 hours
+      if (tempCleanup.cleaned > 0) {
+        actionsPerformed.push(`تم حذف ${tempCleanup.cleaned} مجلد مؤقت قديم`);
+      }
+
+      // Step 3: Clean very old permanent files if needed
+      const midInfo = await this.getStorageInfo();
+      if (midInfo.success && midInfo.totalUsed! > (beforeUsage - targetBytes)) {
+        console.log('🗂️ Step 3: Cleaning old permanent files...');
+        const oldFilesCleanup = await this.cleanupOldPermanentFiles(30); // Files older than 30 days
+        if (oldFilesCleanup.cleaned > 0) {
+          actionsPerformed.push(`تم حذف ${oldFilesCleanup.cleaned} ملف قديم (أكثر من 30 يوم)`);
+        }
+      }
+
+      // Get final storage info
+      const finalInfo = await this.getStorageInfo();
+      const afterUsage = finalInfo.success ? finalInfo.totalUsed! : beforeUsage;
+      const spaceFeed = beforeUsage - afterUsage;
+
+      console.log(`✅ Cleanup completed! Freed: ${this.formatBytes(spaceFeed)}`);
+      
+      return {
+        success: true,
+        spaceFeed,
+        beforeUsage,
+        afterUsage,
+        actionsPerformed
+      };
+
+    } catch (error: any) {
+      console.error('❌ Cleanup failed:', error.message);
+      return { 
+        success: false, 
+        spaceFeed: 0, 
+        beforeUsage: 0, 
+        afterUsage: 0, 
+        actionsPerformed,
+        error: error.message 
+      };
+    }
+  }
+
+  /**
+   * Clean old permanent files (30+ days old)
+   */
+  private async cleanupOldPermanentFiles(daysOld: number = 30): Promise<{ cleaned: number; errors: number }> {
+    try {
+      console.log(`🗂️ Cleaning permanent files older than ${daysOld} days`);
+
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+      const cutoffISO = cutoffDate.toISOString();
+
+      // Find old files in the main folder
+      const mainFolderId = await this.findFolderByName('اطبعلي');
+      if (!mainFolderId) {
+        console.log('ℹ️ No main folder found');
+        return { cleaned: 0, errors: 0 };
+      }
+
+      // Get date folders
+      const dateFoldersQuery = `'${mainFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false and createdTime < '${cutoffISO}'`;
+      const dateFoldersResponse = await this.drive.files.list({
+        q: dateFoldersQuery,
+        fields: 'files(id, name, createdTime)'
+      });
+
+      let cleaned = 0;
+      let errors = 0;
+
+      for (const dateFolder of dateFoldersResponse.data.files || []) {
+        console.log(`🗑️ Deleting old date folder: ${dateFolder.name}`);
+        const deleted = await this.deleteFolder(dateFolder.id!);
+        if (deleted) {
+          cleaned++;
+        } else {
+          errors++;
+        }
+      }
+
+      console.log(`✅ Old files cleanup: ${cleaned} folders deleted, ${errors} errors`);
+      return { cleaned, errors };
+
+    } catch (error: any) {
+      console.error('❌ Failed to cleanup old permanent files:', error.message);
+      return { cleaned: 0, errors: 1 };
+    }
+  }
+
+  /**
+   * Format bytes to human readable string
+   */
+  private formatBytes(bytes: number): string {
+    if (!bytes || bytes === 0) return '0 بايت';
+    
+    const sizes = ['بايت', 'كيلوبايت', 'ميجابايت', 'جيجابايت', 'تيرابايت'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  /**
    * Test connection to Google Drive
    */
   async testConnection(): Promise<{ success: boolean; error?: string }> {

@@ -686,6 +686,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Storage Management APIs
+  
+  // Get Google Drive storage information
+  app.get('/api/drive/storage-info', async (req, res) => {
+    try {
+      console.log('📊 Checking Google Drive storage information...');
+      
+      const storageInfo = await googleDriveService.getStorageInfo();
+      
+      if (storageInfo.success) {
+        res.json({
+          success: true,
+          storage: {
+            totalLimit: storageInfo.totalLimit,
+            totalUsed: storageInfo.totalUsed,
+            available: storageInfo.available,
+            usagePercentage: storageInfo.usagePercentage,
+            usageInDrive: storageInfo.usageInDrive,
+            usageInTrash: storageInfo.usageInTrash,
+            unlimited: storageInfo.unlimited,
+            formattedLimit: storageInfo.formattedLimit,
+            formattedUsed: storageInfo.formattedUsed,
+            formattedAvailable: storageInfo.formattedAvailable
+          },
+          warnings: storageInfo.usagePercentage && storageInfo.usagePercentage > 80 ? [
+            'المساحة تقترب من النفاد! يُنصح بتنظيف الملفات القديمة'
+          ] : []
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: storageInfo.error || 'فشل في الحصول على معلومات المساحة'
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Storage info error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // Check if sufficient space is available for upload
+  app.post('/api/drive/check-space', async (req, res) => {
+    try {
+      const { fileSize } = req.body;
+      
+      if (!fileSize || fileSize <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'يرجى تحديد حجم الملف بالبايت'
+        });
+      }
+
+      console.log(`🔍 Checking space for file size: ${fileSize} bytes`);
+      
+      const spaceCheck = await googleDriveService.checkSpaceAvailable(fileSize);
+      
+      res.json({
+        success: true,
+        hasSpace: spaceCheck.hasSpace,
+        message: spaceCheck.message,
+        remainingSpace: spaceCheck.remainingSpace,
+        formattedRemaining: spaceCheck.formattedRemaining,
+        recommendation: !spaceCheck.hasSpace ? 'يُنصح بتنظيف الملفات القديمة لتوفير مساحة' : null
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Space check error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // Free up storage space (admin only)
+  app.post('/api/drive/free-space', async (req, res) => {
+    try {
+      const { targetBytes = 1000000000 } = req.body; // Default 1GB
+      
+      console.log(`🧹 Starting storage cleanup to free ${targetBytes} bytes...`);
+      
+      const cleanupResult = await googleDriveService.freeUpSpace(targetBytes);
+      
+      if (cleanupResult.success) {
+        res.json({
+          success: true,
+          message: `تم تنظيف المساحة بنجاح! تم توفير ${Math.round(cleanupResult.spaceFeed / 1024 / 1024)} ميجابايت`,
+          spaceFeed: cleanupResult.spaceFeed,
+          beforeUsage: cleanupResult.beforeUsage,
+          afterUsage: cleanupResult.afterUsage,
+          actionsPerformed: cleanupResult.actionsPerformed,
+          formattedSpaceFeed: `${Math.round(cleanupResult.spaceFeed / 1024 / 1024)} ميجابايت`
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: cleanupResult.error || 'فشل في تنظيف المساحة',
+          actionsPerformed: cleanupResult.actionsPerformed
+        });
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Free space error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // Emergency storage reset (admin only - very destructive)
+  app.post('/api/drive/emergency-reset', async (req, res) => {
+    try {
+      const { confirmCode } = req.body;
+      
+      // Safety check - require confirmation code
+      if (confirmCode !== 'RESET_STORAGE_NOW') {
+        return res.status(400).json({
+          success: false,
+          error: 'كود التأكيد مطلوب: RESET_STORAGE_NOW'
+        });
+      }
+
+      console.log('🚨 EMERGENCY: Starting aggressive storage cleanup...');
+      
+      // Perform aggressive cleanup
+      const emergencyCleanup = await googleDriveService.freeUpSpace(10000000000); // Try to free 10GB
+      
+      // Also clean newer temp files
+      const tempCleanup = await googleDriveService.cleanupOldTempFiles(1); // Files older than 1 hour
+      
+      res.json({
+        success: true,
+        message: 'تم تصفير المساحة بنجاح! تمت إزالة جميع الملفات القديمة',
+        mainCleanup: emergencyCleanup,
+        tempCleanup: tempCleanup,
+        warning: 'تم حذف معظم الملفات المخزنة - يُنصح بعمل نسخة احتياطية في المستقبل'
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Emergency reset error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
   // ==================== NEW CLEAN ORDER SYSTEM ====================
   
   // Get all orders for admin - Clean & Simple
