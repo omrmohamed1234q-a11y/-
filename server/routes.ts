@@ -1070,6 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       '/api/setup',
       '/api/test',
       '/api/drive/cleanup-options',
+      '/api/drive/cleanup-custom',
       '/api/drive/storage-info'
     ];
     
