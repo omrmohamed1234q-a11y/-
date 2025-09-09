@@ -83,9 +83,11 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
       </div>
 
       <Tabs defaultValue="A4" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="A4">A4</TabsTrigger>
           <TabsTrigger value="A3">A3</TabsTrigger>
+          <TabsTrigger value="A0">A0</TabsTrigger>
+          <TabsTrigger value="A1">A1</TabsTrigger>
         </TabsList>
         
         <TabsContent value="A4" className="space-y-4">
@@ -108,9 +110,9 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
             
             <div className="space-y-4">
               <PriceCard
-                title="ورق لامع/مطفي"
+                title="ورق كوشيه"
                 icon={Palette}
-                tiers={pricingTiers.A4.glossy_matte}
+                tiers={pricingTiers.A4.coated}
                 description="جودة عالية للصور والعروض"
               />
               <PriceCard
@@ -143,9 +145,9 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
             
             <div className="space-y-4">
               <PriceCard
-                title="ورق لامع/مطفي"
+                title="ورق كوشيه"
                 icon={Palette}
-                tiers={pricingTiers.A3.glossy_matte}
+                tiers={pricingTiers.A3.coated}
                 description="جودة احترافية للعروض الكبيرة"
               />
               <PriceCard
@@ -157,14 +159,71 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
             </div>
           </div>
         </TabsContent>
+        
+        <TabsContent value="A0" className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <PriceCard
+              title="A0 - أبيض وأسود فقط"
+              icon={FileText}
+              tiers={pricingTiers.A0.plain_bw}
+              description="الحجم الأكبر، مناسب للملصقات واللوحات الكبيرة"
+            />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="A1" className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <PriceCard
+              title="A1 - أبيض وأسود فقط"
+              icon={FileText}
+              tiers={pricingTiers.A1.plain_bw}
+              description="حجم كبير مناسب للعروض والمخططات"
+            />
+          </div>
+        </TabsContent>
       </Tabs>
 
+      {/* Paper Types Visual Guide */}
+      <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+        <h3 className="font-semibold text-purple-800 dark:text-purple-200 mb-3 flex items-center gap-2">
+          <Palette className="h-5 w-5" />
+          دليل أنواع الورق المرئي
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center space-x-3 space-x-reverse p-3 bg-white dark:bg-gray-800 rounded-lg border">
+            <div className="w-6 h-6 bg-gray-100 border border-gray-300 rounded"></div>
+            <div>
+              <div className="font-medium text-sm">ورق عادي</div>
+              <div className="text-xs text-gray-600">للمستندات والنصوص العادية</div>
+              <div className="text-xs text-green-600 font-medium">الأرخص والأكثر شيوعاً</div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 space-x-reverse p-3 bg-white dark:bg-gray-800 rounded-lg border">
+            <div className="w-6 h-6 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
+            <div>
+              <div className="font-medium text-sm">ورق كوشيه</div>
+              <div className="text-xs text-gray-600">ورق لامع عالي الجودة</div>
+              <div className="text-xs text-blue-600 font-medium">للصور والتصاميم الملونة</div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 space-x-reverse p-3 bg-white dark:bg-gray-800 rounded-lg border">
+            <div className="w-6 h-6 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
+            <div>
+              <div className="font-medium text-sm">ورق لاصق (استيكر)</div>
+              <div className="text-xs text-gray-600">ورق بطبقة لاصقة خلفية</div>
+              <div className="text-xs text-orange-600 font-medium">للملصقات والتسميات</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       {/* Additional Information */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">ملاحظات مهمة:</h3>
         <ul className="text-blue-700 dark:text-blue-300 space-y-1 text-sm">
           <li>• الأسعار شاملة ضريبة القيمة المضافة</li>
           <li>• خصم تلقائي 10% على الطباعة بالأبيض والأسود</li>
+          <li>• <strong>A0 و A1: متوفر بالأبيض والأسود فقط بسعر 30 جنيه</strong></li>
           <li>• خصومات إضافية للكميات الكبيرة (أكثر من 1000 صفحة لـ A4)</li>
           <li>• جودة طباعة عالية بدقة 300 DPI</li>
           <li>• إمكانية التسليم السريع والاستلام من الفرع</li>
