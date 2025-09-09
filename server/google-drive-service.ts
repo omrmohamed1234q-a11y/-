@@ -299,7 +299,99 @@ export class GoogleDriveService {
   }
 
   /**
-   * Create nested folder structure: اطبعلي/العميل [customerName]/[date]
+   * Create new nested folder structure: اطبعلي/[date]/[customerName]/طلب_[orderNumber]
+   */
+  async createOrderFolderStructure(
+    customerName: string, 
+    date: string = new Date().toISOString().split('T')[0]
+  ): Promise<{ folderId: string | null; orderNumber: number }> {
+    if (!this.isConfigured) {
+      return { folderId: null, orderNumber: 1 };
+    }
+
+    try {
+      console.log(`📁 Creating order folder structure for customer: ${customerName}, date: ${date}`);
+
+      // Step 1: Create or get main "اطبعلي" folder
+      const mainFolderId = await this.createFolder('اطبعلي');
+      if (!mainFolderId) {
+        throw new Error('Failed to create main اطبعلي folder');
+      }
+
+      // Step 2: Create or get date folder inside main folder
+      const dateFolderId = await this.createFolder(date, mainFolderId);
+      if (!dateFolderId) {
+        throw new Error(`Failed to create date folder: ${date}`);
+      }
+
+      // Step 3: Create or get customer folder inside date folder
+      const customerFolderId = await this.createFolder(customerName, dateFolderId);
+      if (!customerFolderId) {
+        throw new Error(`Failed to create customer folder: ${customerName}`);
+      }
+
+      // Step 4: Count existing order folders for this customer today
+      const orderNumber = await this.getNextOrderNumber(customerFolderId, customerName);
+
+      // Step 5: Create order folder with number
+      const orderFolderName = `طلب_${orderNumber}`;
+      const orderFolderId = await this.createFolder(orderFolderName, customerFolderId);
+      if (!orderFolderId) {
+        throw new Error(`Failed to create order folder: ${orderFolderName}`);
+      }
+
+      console.log(`✅ Order folder structure created successfully:`);
+      console.log(`   اطبعلي/${date}/${customerName}/${orderFolderName}/`);
+      console.log(`   Final folder ID: ${orderFolderId}`);
+
+      return { folderId: orderFolderId, orderNumber };
+
+    } catch (error: any) {
+      console.error('❌ Failed to create order folder structure:', error.message);
+      return { folderId: null, orderNumber: 1 };
+    }
+  }
+
+  /**
+   * Get next order number for customer on specific date
+   */
+  async getNextOrderNumber(customerFolderId: string, customerName: string): Promise<number> {
+    try {
+      // Search for existing order folders in customer folder
+      const query = `'${customerFolderId}' in parents and name contains 'طلب_' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+      
+      const response = await this.drive.files.list({
+        q: query,
+        fields: 'files(id, name)'
+      });
+
+      const orderFolders = response.data.files || [];
+      
+      // Extract order numbers and find the highest
+      let maxOrderNumber = 0;
+      orderFolders.forEach((folder: any) => {
+        const match = folder.name?.match(/طلب_(\d+)/);
+        if (match) {
+          const orderNum = parseInt(match[1]);
+          if (orderNum > maxOrderNumber) {
+            maxOrderNumber = orderNum;
+          }
+        }
+      });
+
+      const nextOrderNumber = maxOrderNumber + 1;
+      console.log(`📊 Customer ${customerName} - Found ${orderFolders.length} existing orders, next order: ${nextOrderNumber}`);
+      
+      return nextOrderNumber;
+
+    } catch (error: any) {
+      console.error('❌ Failed to get next order number:', error.message);
+      return 1; // Default to order 1 if error
+    }
+  }
+
+  /**
+   * Create nested folder structure: اطبعلي/العميل [customerName]/[date] (OLD VERSION)
    */
   async createNestedFolderStructure(
     customerName: string, 
@@ -320,7 +412,7 @@ export class GoogleDriveService {
 
       // Step 2: Create or get customer folder inside main folder
       const customerFolderName = `العميل ${customerName}`;
-      const customerFolderId = await this.createFolder(customerFolderName, mainFolderId);
+      const customerFolderId = await this.createFolder(customerFolderName, mainFolderId || undefined);
       if (!customerFolderId) {
         throw new Error(`Failed to create customer folder: ${customerFolderName}`);
       }
@@ -390,13 +482,13 @@ export class GoogleDriveService {
 
       // Get customer folder
       const customerFolderName = `العميل ${customerName}`;
-      const customerFolderId = await this.createFolder(customerFolderName, mainFolderId);
+      const customerFolderId = await this.createFolder(customerFolderName, mainFolderId || undefined);
       if (customerFolderId) {
         await this.shareFolderWithUser(customerFolderId, email, 'writer');
       }
 
       // Get date folder
-      const dateFolderId = await this.createFolder(date, customerFolderId);
+      const dateFolderId = await this.createFolder(date, customerFolderId || undefined);
       if (dateFolderId) {
         await this.shareFolderWithUser(dateFolderId, email, 'writer');
       }
@@ -410,7 +502,14 @@ export class GoogleDriveService {
   }
 
   /**
-   * Get folder hierarchy path for display
+   * Get folder hierarchy path for display (NEW VERSION)
+   */
+  getOrderFolderHierarchy(customerName: string, date: string, orderNumber: number): string {
+    return `اطبعلي/${date}/${customerName}/طلب_${orderNumber}/`;
+  }
+
+  /**
+   * Get folder hierarchy path for display (OLD VERSION)
    */
   getFolderHierarchy(customerName: string, date: string): string {
     return `اطبعلي/العميل ${customerName}/${date}/`;

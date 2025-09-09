@@ -14,6 +14,7 @@ export interface HybridUploadResult {
   backupUrls: string[];
   uploadId: string;
   message: string;
+  orderNumber?: number;
 }
 
 export interface UploadOptions {
@@ -158,11 +159,15 @@ export class HybridUploadService {
         let folderId = undefined;
         let folderHierarchy = '';
 
-        // Use new nested folder structure if customer name is provided
+        // Use new order folder structure if customer name is provided  
         if (customerName && customerName !== 'عميل غير محدد') {
-          console.log(`📁 Creating nested folder structure for: ${customerName}`);
-          folderId = await googleDriveService.createNestedFolderStructure(customerName, uploadDate);
-          folderHierarchy = googleDriveService.getFolderHierarchy(customerName, uploadDate);
+          console.log(`📁 Creating order folder structure for: ${customerName}`);
+          const orderResult = await googleDriveService.createOrderFolderStructure(customerName, uploadDate);
+          folderId = orderResult.folderId || undefined;
+          folderHierarchy = googleDriveService.getOrderFolderHierarchy(customerName, uploadDate, orderResult.orderNumber);
+          
+          // Store order number for later use
+          result.orderNumber = orderResult.orderNumber;
         } 
         // Fallback to old system if specified
         else if (googleDriveFolder) {

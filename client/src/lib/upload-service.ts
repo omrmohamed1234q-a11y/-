@@ -87,10 +87,7 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
     try {
       const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
       if (userInfo.id) {
-        uploadData = {
-          ...uploadData,
-          customerName: userInfo.displayName || userInfo.fullName || userInfo.id
-        };
+        (uploadData as any).customerName = userInfo.displayName || userInfo.fullName || userInfo.id;
       }
     } catch (error) {
       console.log('⚠️ Could not get user info for folder naming, using default');
