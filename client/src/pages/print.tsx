@@ -891,12 +891,7 @@ export default function Print() {
       // لا نعيد تعيين selectedFiles هنا لأنها تم تعيينها بالفعل
       setUploadedUrls(prev => [...prev, ...results.map(r => r.url)]);
       
-      if (results.length > 0) {
-        toast({
-          title: 'تم رفع الملفات بنجاح',
-          description: `تم رفع ${results.length} من ${files.length} ملف`,
-        });
-      }
+      // رسالة النجاح محذوفة - الزر الجماعي سيظهر بدلاً منها
       
       if (errors.length > 0) {
         toast({
@@ -941,10 +936,7 @@ export default function Print() {
     
     setUploadResults(prev => [...prev, ...newResults]);
     
-    toast({
-      title: 'تم رفع الملفات بنجاح',
-      description: `تم رفع ${files.length} ملف`,
-    });
+    // رسالة النجاح محذوفة - الزر الجماعي سيظهر بدلاً منها
   };
 
   const handleCameraCapture = async (file: File, downloadUrl: string) => {
@@ -999,6 +991,69 @@ export default function Print() {
       ...prev,
       [fileName]: !prev[fileName] // إذا كان مفتوح يصبح مطوي والعكس
     }));
+  };
+
+  // دالة الإضافة الجماعية للسلة
+  const addAllFilesToCart = async () => {
+    if (!user || uploadResults.length === 0) {
+      toast({
+        title: 'خطأ',
+        description: !user ? 'يرجى تسجيل الدخول أولاً' : 'لا توجد ملفات للإضافة',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    // إنشاء print jobs لكل ملف مع إعداداته
+    for (const result of uploadResults) {
+      const fileName = result.name;
+      const settings = fileSettings[fileName] || {
+        copies: 1,
+        colorMode: 'grayscale' as 'grayscale' | 'color',
+        paperSize: 'A4' as 'A4' | 'A3' | 'A0' | 'A1',
+        paperType: 'plain' as 'plain' | 'coated' | 'glossy' | 'sticker',
+        doubleSided: false,
+      };
+
+      const printJob = {
+        filename: fileName,
+        fileUrl: result.url,
+        pages: 'all',
+        copies: settings.copies,
+        colorMode: settings.colorMode,
+        paperSize: settings.paperSize,
+        paperType: settings.paperType,
+        doubleSided: settings.doubleSided,
+        userId: user.id,
+        displayName: generatePrintJobFilename(settings, fileName)
+      };
+
+      try {
+        await addToCartMutation.mutateAsync(printJob);
+        successCount++;
+      } catch (error) {
+        console.error(`فشل في إضافة ${fileName} للسلة:`, error);
+        failureCount++;
+      }
+    }
+
+    // رسالة النتيجة
+    if (successCount > 0) {
+      toast({
+        title: `تم إضافة ${successCount} ملف للسلة`,
+        description: failureCount > 0 ? `فشل في إضافة ${failureCount} ملف` : 'جميع الملفات أضيفت بنجاح',
+        variant: failureCount > 0 ? 'default' : 'default'
+      });
+    } else {
+      toast({
+        title: 'فشل في الإضافة',
+        description: 'لم يتم إضافة أي ملف للسلة',
+        variant: 'destructive'
+      });
+    }
   };
 
   const generatePrintJobFilename = (settings: any, originalName: string) => {
@@ -1219,7 +1274,7 @@ export default function Print() {
                   <CardContent className="p-0">
                     {/* Files Header */}
                     <div className="p-4 border-b bg-gray-50">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2 space-x-reverse">
                           <Printer className="h-5 w-5 text-accent" />
                           <h3 className="text-lg font-bold">الملفات ({uploadResults.length})</h3>
@@ -1236,6 +1291,29 @@ export default function Print() {
                           </Button>
                         )}
                       </div>
+                      
+                      {/* زر الإضافة الجماعية للسلة */}
+                      {uploadResults.length > 0 && (
+                        <Button
+                          onClick={addAllFilesToCart}
+                          disabled={addToCartMutation.isPending}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium h-11 text-base"
+                        >
+                          {addToCartMutation.isPending ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2"></div>
+                              جاري الإضافة...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="h-5 w-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5h6" />
+                              </svg>
+                              إضافة كل الملفات للسلة ({uploadResults.length})
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
 
                     {/* Files List */}
