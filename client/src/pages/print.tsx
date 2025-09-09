@@ -924,8 +924,8 @@ export default function Print() {
   };
 
   const handleCameraCapture = async (file: File, downloadUrl: string) => {
-    setSelectedFiles([file]);
-    setUploadedUrls([downloadUrl]);
+    setSelectedFiles(prev => [...prev, file]);
+    setUploadedUrls(prev => [...prev, downloadUrl]);
     console.log('File captured:', file.name, 'URL:', downloadUrl);
   };
 
@@ -941,9 +941,9 @@ export default function Print() {
   const generatePrintJobFilename = (settings: any, originalName: string) => {
     const paperTypeLabels = {
       'plain': 'ورق عادي',
-      'glossy': 'ورق لامع',
-      'matte': 'ورق مطفي',
-      'sticker': 'استيكر'
+      'coated': 'ورق كوشيه',
+      'glossy': 'ورق جلوسي',
+      'sticker': 'ورق لاصق'
     };
     
     const colorModeLabels = {
