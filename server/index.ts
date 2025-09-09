@@ -101,5 +101,55 @@ app.use((req, res, next) => {
         console.log('ℹ️ Startup cleanup info:', error.message);
       }
     }, 30000); // 30 seconds after startup
+
+    // Storage monitoring system - check every 2 hours
+    setInterval(async () => {
+      try {
+        console.log('📊 Checking storage quota...');
+        const storageInfo = await googleDriveService.getStorageInfo();
+        
+        if (storageInfo.success && !storageInfo.unlimited) {
+          const usagePercentage = storageInfo.usagePercentage!;
+          
+          // Critical level - trigger automatic cleanup
+          if (usagePercentage >= 90) {
+            console.log('🚨 CRITICAL: Storage usage at ' + usagePercentage.toFixed(1) + '% - performing emergency cleanup!');
+            const cleanupResult = await googleDriveService.freeUpSpace(2000000000); // Free 2GB
+            console.log(`🧹 Emergency cleanup: ${cleanupResult.spaceFeed ? Math.round(cleanupResult.spaceFeed / 1024 / 1024) : 0}MB freed`);
+          }
+          // Warning level
+          else if (usagePercentage >= 80) {
+            console.log('⚠️ WARNING: Storage usage at ' + usagePercentage.toFixed(1) + '% - consider cleanup');
+          }
+          // Info level
+          else if (usagePercentage >= 50) {
+            console.log('ℹ️ INFO: Storage usage at ' + usagePercentage.toFixed(1) + '%');
+          }
+          else {
+            console.log('✅ Storage usage healthy: ' + usagePercentage.toFixed(1) + '%');
+          }
+        }
+      } catch (error: any) {
+        console.log('📊 Storage monitoring info:', error.message);
+      }
+    }, 2 * 60 * 60 * 1000); // Every 2 hours
+
+    // Initial storage check (after 1 minute)
+    setTimeout(async () => {
+      try {
+        console.log('📊 Initial storage check...');
+        const storageInfo = await googleDriveService.getStorageInfo();
+        
+        if (storageInfo.success) {
+          if (storageInfo.unlimited) {
+            console.log('✅ Storage: Unlimited quota detected');
+          } else {
+            console.log(`📊 Storage: ${storageInfo.usagePercentage!.toFixed(1)}% used (${storageInfo.formattedUsed} / ${storageInfo.formattedLimit})`);
+          }
+        }
+      } catch (error: any) {
+        console.log('📊 Initial storage check info:', error.message);
+      }
+    }, 60000); // 1 minute after startup
   });
 })();
