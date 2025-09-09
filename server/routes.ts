@@ -4028,22 +4028,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📊 Pricing calculation: ${pages} pages, ${copies} copies, ${colorMode}, ${paperSize}, ${paperType}`);
       
       // Import the advanced pricing calculation (simple fallback for server-side)
-      // Convert to pricing system format - handle A0, A1, A2 as A3
+      // Convert to pricing system format - handle A0, A1, A2 as large format
       let paper_size_typed = 'A4';
-      if (['A0', 'A1', 'A2', 'A3'].includes(paperSize)) {
-        paper_size_typed = 'A3'; // Treat large formats as A3 pricing
-      } else if (paperSize === 'A4') {
+      let isLargeFormat = false;
+      
+      if (['A0', 'A1', 'A2'].includes(paperSize)) {
+        paper_size_typed = 'large'; // A0, A1, A2 are large formats
+        isLargeFormat = true;
+      } else if (paperSize === 'A3') {
+        paper_size_typed = 'A3';
+      } else {
         paper_size_typed = 'A4';
       }
-      const paper_type_typed = ['plain', 'glossy', 'matte', 'sticker'].includes(paperType) ? paperType : 'plain';
+      
+      // For large formats (A0, A1, A2), only plain paper is available
+      const paper_type_typed = isLargeFormat ? 'plain' : 
+        (['plain', 'glossy', 'matte', 'sticker'].includes(paperType) ? paperType : 'plain');
       const print_type = doubleSided ? 'face_back' : 'face';
       const is_black_white = colorMode === 'grayscale';
       
       // Calculate price per page using advanced pricing rules
       let pricePerPage = 1.0; // Default fallback
       
-      // A4 Pricing Rules (simplified server-side version)
-      if (paper_size_typed === 'A4') {
+      // Pricing Rules (simplified server-side version)
+      if (paper_size_typed === 'large') {
+        // Large formats: A0, A1, A2 - Plain paper only, no black/white discount
+        pricePerPage = print_type === 'face' ? 15.00 : 20.00; // Higher price for large formats
+        console.log(`📏 Large format pricing (${paperSize}): ${pricePerPage} جنيه/صفحة`);
+      } else if (paper_size_typed === 'A4') {
         if (paper_type_typed === 'plain') {
           if (print_type === 'face') {
             pricePerPage = pages <= 20 ? 1.00 : pages <= 1000 ? 0.70 : 0.60;
@@ -4078,9 +4090,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'خطأ في حساب التكلفة' });
       }
       
-      // Apply 10% discount for black and white printing
-      const discount = is_black_white ? baseTotal * 0.10 : 0;
+      // Apply 10% discount for black and white printing (NOT for large formats)
+      const discount = (is_black_white && !isLargeFormat) ? baseTotal * 0.10 : 0;
       const totalCost = Math.ceil(baseTotal - discount);
+      
+      if (isLargeFormat) {
+        console.log(`🚫 No B&W discount for large format ${paperSize}`);
+      }
       
       console.log(`💰 Pricing breakdown: ${pricePerPage}/page * ${pages} pages * ${copies} copies = ${baseTotal} - ${discount} discount = ${totalCost} جنيه`);
 
