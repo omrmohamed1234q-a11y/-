@@ -12,13 +12,17 @@ interface DragDropUploadProps {
   maxFiles?: number;
   maxSize?: number;
   acceptedTypes?: string[];
+  currentCartSize?: number; // Current total cart size in bytes
+  maxCartSize?: number; // Maximum cart size in bytes (50MB)
 }
 
 export function DragDropUpload({
   onUpload,
   maxFiles = 5,
   maxSize = 10 * 1024 * 1024, // 10MB
-  acceptedTypes = ['image/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+  acceptedTypes = ['image/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  currentCartSize = 0,
+  maxCartSize = 50 * 1024 * 1024 // 50MB
 }: DragDropUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -48,8 +52,36 @@ export function DragDropUpload({
     };
   };
 
+  // Calculate total size of files being uploaded
+  const calculateTotalSize = (files: File[]) => {
+    return files.reduce((total, file) => total + file.size, 0);
+  };
+
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  };
+
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
+
+    // Check cart size limit
+    const newFilesSize = calculateTotalSize(acceptedFiles);
+    const totalSizeAfterUpload = currentCartSize + newFilesSize;
+    
+    if (totalSizeAfterUpload > maxCartSize) {
+      const remaining = maxCartSize - currentCartSize;
+      toast({
+        title: '🚫 تجاوز الحد الأقصى للسلة',
+        description: `حجم الملفات ${formatFileSize(newFilesSize)} يتجاوز الحد المتاح ${formatFileSize(remaining)}. الحد الأقصى 50 ميجابايت.`,
+        variant: 'destructive'
+      });
+      return;
+    }
 
     setUploading(true);
     setProgress(0);
@@ -222,6 +254,27 @@ export function DragDropUpload({
           </CardContent>
         </Card>
       )}
+
+      {/* Cart Size Progress Bar */}
+      <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
+        <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+          <span>حجم السلة المستخدم</span>
+          <span>{formatFileSize(currentCartSize)} / {formatFileSize(maxCartSize)}</span>
+        </div>
+        <Progress 
+          value={(currentCartSize / maxCartSize) * 100} 
+          className="h-2"
+        />
+        <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+          <span>متبقي: {formatFileSize(maxCartSize - currentCartSize)}</span>
+          <span className={`font-medium ${
+            currentCartSize / maxCartSize > 0.8 ? 'text-orange-600' : 
+            currentCartSize / maxCartSize > 0.9 ? 'text-red-600' : 'text-green-600'
+          }`}>
+            {((currentCartSize / maxCartSize) * 100).toFixed(1)}%
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

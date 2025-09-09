@@ -902,6 +902,11 @@ export default function Print() {
     }
   };
 
+  // Calculate current cart size from uploaded files
+  const calculateCurrentCartSize = () => {
+    return uploadResults.reduce((total, result) => total + (result.fileSize || 0), 0);
+  };
+
   const handleDragDropUpload = (files: File[]) => {
     console.log('Files selected via drag & drop:', files.map(f => f.name));
     handleFileUpload(files);
@@ -1104,6 +1109,8 @@ export default function Print() {
                     maxFiles={5}
                     maxSize={50 * 1024 * 1024}
                     acceptedTypes={['image/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']}
+                    currentCartSize={calculateCurrentCartSize()}
+                    maxCartSize={50 * 1024 * 1024}
                   />
                   
                   <UploadStatus 
