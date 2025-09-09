@@ -29,7 +29,9 @@ import {
   CheckIcon,
   XIcon,
   RotateCcwIcon,
-  Eye
+  Eye,
+  Info,
+  Palette
 } from 'lucide-react';
 import { DragDropUpload } from '@/components/upload/DragDropUpload';
 import { uploadFile, uploadFileToGoogleDrive, validateFile, checkUploadServiceStatus } from '@/lib/upload-service';
@@ -1345,174 +1347,51 @@ export default function Print() {
                 </CardContent>
               </Card>
 
-              {/* Print Settings */}
+              {/* Printing Guide - Combined Price & Paper Types Guide */}
               <Card>
                 <CardContent className="p-6">
                   <h2 className="text-xl font-bold mb-4 flex items-center">
-                    <Printer className="h-5 w-5 text-accent ml-2" />
-                    إعدادات الطباعة
+                    <Info className="h-5 w-5 text-accent ml-2" />
+                    دليل الطباعة الشامل
                   </h2>
                   
                   {/* Paper Types Visual Guide */}
-                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h3 className="text-sm font-bold mb-3 text-blue-800">دليل أنواع الورق:</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold mb-4 text-purple-800 flex items-center gap-2">
+                      <Palette className="h-5 w-5" />
+                      دليل أنواع الورق
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex items-center space-x-3 space-x-reverse p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="w-8 h-8 bg-gray-100 border border-gray-300 rounded flex-shrink-0"></div>
                         <div>
-                          <div className="font-medium">عادي</div>
-                          <div className="text-gray-600">للمستندات والنصوص</div>
+                          <div className="font-bold text-base text-gray-800">ورق عادي</div>
+                          <div className="text-sm text-gray-600">للمستندات والنصوص العادية</div>
+                          <div className="text-sm text-green-600 font-medium">الأرخص والأكثر شيوعاً</div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <div className="w-4 h-4 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
+                      <div className="flex items-center space-x-3 space-x-reverse p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="w-8 h-8 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm flex-shrink-0"></div>
                         <div>
-                          <div className="font-medium">كوشيه</div>
-                          <div className="text-gray-600">للصور وجودة عالية</div>
+                          <div className="font-bold text-base text-blue-800">ورق كوشيه</div>
+                          <div className="text-sm text-blue-600">ورق لامع عالي الجودة</div>
+                          <div className="text-sm text-blue-600 font-medium">للصور والتصاميم الملونة</div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <div className="w-4 h-4 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
+                      <div className="flex items-center space-x-3 space-x-reverse p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <div className="w-8 h-8 bg-yellow-100 border-2 border-yellow-400 rounded flex-shrink-0"></div>
                         <div>
-                          <div className="font-medium">لاصق</div>
-                          <div className="text-gray-600">للملصقات والتسميات</div>
+                          <div className="font-bold text-base text-yellow-800">ورق لاصق</div>
+                          <div className="text-sm text-yellow-700">ورق بطبقة لاصقة خلفية</div>
+                          <div className="text-sm text-orange-600 font-medium">للملصقات والتسميات</div>
                         </div>
                       </div>
                     </div>
                   </div>
-              
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="copies">عدد النسخ</Label>
-                        <Input
-                          id="copies"
-                          type="number"
-                          min="1"
-                          max="100"
-                          value={printSettings.copies}
-                          onChange={(e) => setPrintSettings({
-                            ...printSettings,
-                            copies: parseInt(e.target.value) || 1
-                          })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="paper-size">حجم الورق</Label>
-                        <Select
-                          value={printSettings.paperSize}
-                          onValueChange={(value) => setPrintSettings({
-                            ...printSettings,
-                            paperSize: value
-                          })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="A4">A4</SelectItem>
-                            <SelectItem value="A3">A3</SelectItem>
-                            <SelectItem value="A0">A0 (30 جنيه - أبيض وأسود فقط)</SelectItem>
-                            <SelectItem value="A1">A1 (30 جنيه - أبيض وأسود فقط)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="paper-type">نوع الورق</Label>
-                      <Select
-                        value={printSettings.paperType}
-                        onValueChange={(value) => setPrintSettings({
-                          ...printSettings,
-                          paperType: value
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="plain">عادي</SelectItem>
-                          <SelectItem value="coated">كوشيه</SelectItem>
-                          <SelectItem value="sticker">لاصق</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="color-mode">وضع الألوان</Label>
-                      <Select
-                        value={printSettings.colorMode}
-                        onValueChange={(value) => setPrintSettings({
-                          ...printSettings,
-                          colorMode: value
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="grayscale">أبيض وأسود</SelectItem>
-                          <SelectItem value="color">ملون</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="double-sided">طباعة على الوجهين</Label>
-                      <Switch
-                        id="double-sided"
-                        checked={printSettings.doubleSided}
-                        onCheckedChange={(checked) => setPrintSettings({
-                          ...printSettings,
-                          doubleSided: checked
-                        })}
-                      />
-                    </div>
-                    
-                    {/* Cost Estimation */}
-                    <div className="border-t border-border pt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">التكلفة المتوقعة:</span>
-                        <span className="text-xl font-bold text-accent number-with-arabic">
-                          <span className="arabic-nums">{calculateCost().toFixed(2)}</span> جنيه
-                        </span>
-                      </div>
-                      {printSettings.colorMode === 'grayscale' && (
-                        <div className="text-sm text-green-600 mb-2">
-                          ✓ خصم 10% للطباعة بالأبيض والأسود
-                        </div>
-                      )}
-                      <div className="text-sm text-muted-foreground">
-                        <div className="flex justify-between">
-                          <span>نقاط المكافآت المحتملة:</span>
-                          <span className="number-with-arabic">+<span className="arabic-nums">{Math.floor(calculateCost() / 2)}</span></span>
-                        </div>
-                      </div>
-                      
-                      {/* Price Guide Button */}
-                      <div className="mt-3">
-                        <PriceGuide compact />
-                      </div>
-                    </div>
-                    
-                    <Button
-                      className="w-full bg-accent hover:bg-accent/90 text-white"
-                      onClick={handlePrint}
-                      disabled={selectedFiles.length === 0 || isUploading || addToCartMutation.isPending}
-                    >
-                      {isUploading || addToCartMutation.isPending ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
-                          {addToCartMutation.isPending ? 'إضافة للسلة...' : 'جاري الرفع...'}
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingCart className="w-4 h-4 ml-2" />
-                          إضافة للسلة - ابدأ الطباعة
-                        </>
-                      )}
-                    </Button>
+
+                  {/* Price Guide Button */}
+                  <div className="text-center">
+                    <PriceGuide compact />
                   </div>
                 </CardContent>
               </Card>
