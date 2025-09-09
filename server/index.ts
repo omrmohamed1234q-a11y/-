@@ -76,10 +76,10 @@ app.use((req, res, next) => {
         console.log('🗑️ Starting scheduled cleanup of temporary files...');
         const cleanupResult = await googleDriveService.cleanupOldTempFiles(24); // Files older than 24 hours
         
-        if (cleanupResult.success) {
-          console.log(`✅ Scheduled cleanup completed: ${cleanupResult.foldersDeleted} folders, ${cleanupResult.filesDeleted} files deleted`);
+        if (cleanupResult.cleaned > 0 || cleanupResult.errors === 0) {
+          console.log(`✅ Scheduled cleanup completed: ${cleanupResult.cleaned} items cleaned, ${cleanupResult.errors} errors`);
         } else {
-          console.log('ℹ️ Scheduled cleanup info:', cleanupResult.error);
+          console.log(`ℹ️ Scheduled cleanup: ${cleanupResult.cleaned} items cleaned, ${cleanupResult.errors} errors`);
         }
       } catch (error: any) {
         console.log('ℹ️ Scheduled cleanup info:', error.message);
@@ -92,10 +92,10 @@ app.use((req, res, next) => {
         console.log('🗑️ Running startup cleanup of temporary files...');
         const cleanupResult = await googleDriveService.cleanupOldTempFiles(24);
         
-        if (cleanupResult.success) {
-          console.log(`✅ Startup cleanup completed: ${cleanupResult.foldersDeleted} folders, ${cleanupResult.filesDeleted} files deleted`);
+        if (cleanupResult.cleaned > 0 || cleanupResult.errors === 0) {
+          console.log(`✅ Startup cleanup completed: ${cleanupResult.cleaned} items cleaned, ${cleanupResult.errors} errors`);
         } else {
-          console.log('ℹ️ Startup cleanup info:', cleanupResult.error);
+          console.log(`ℹ️ Startup cleanup: ${cleanupResult.cleaned} items cleaned, ${cleanupResult.errors} errors`);
         }
       } catch (error: any) {
         console.log('ℹ️ Startup cleanup info:', error.message);
