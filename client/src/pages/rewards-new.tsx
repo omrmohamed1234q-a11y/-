@@ -24,7 +24,8 @@ import {
   Clock,
   ChevronRight,
   Eye,
-  ShoppingBag
+  ShoppingBag,
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -73,11 +74,27 @@ const ChallengeTypeIcon = ({ type }: { type: string }) => {
 };
 
 export default function RewardsNew() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [showRewardModal, setShowRewardModal] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: '👋 تم تسجيل الخروج بنجاح',
+        description: 'شكراً لاستخدام التطبيق',
+      });
+    } catch (error) {
+      toast({
+        title: 'خطأ',
+        description: 'فشل في تسجيل الخروج',
+        variant: 'destructive'
+      });
+    }
+  };
 
   // Fetch available rewards
   const { data: rewards = [], isLoading: rewardsLoading } = useQuery({
@@ -168,6 +185,24 @@ export default function RewardsNew() {
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-8 space-y-8">
+        
+        {/* زر الخروج */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4 }}
+          className="fixed top-6 left-6 z-50"
+        >
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            size="sm"
+            className="bg-white/90 backdrop-blur-sm border-red-200 hover:bg-red-50 hover:border-red-300 shadow-lg transition-all duration-300 group"
+          >
+            <LogOut className="h-4 w-4 mr-2 text-red-500 group-hover:text-red-600 transition-colors" />
+            <span className="text-red-600 font-medium">خروج</span>
+          </Button>
+        </motion.div>
         {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
