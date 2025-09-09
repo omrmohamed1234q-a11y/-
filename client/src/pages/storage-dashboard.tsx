@@ -366,7 +366,7 @@ export default function StorageDashboard() {
               <Alert className="border-red-200 bg-red-50">
                 <AlertTriangle className="h-4 w-4 text-red-600" />
                 <AlertDescription className="text-red-800">
-                  ⚠️ خطر: سيحذف معظم الملفات المخزنة بما في ذلك الملفات الحديثة
+                  ⚠️ خطر: سيحذف الملفات الأقدم من يوم واحد (24 ساعة)
                 </AlertDescription>
               </Alert>
               

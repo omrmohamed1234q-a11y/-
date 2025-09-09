@@ -909,9 +909,9 @@ export class GoogleDriveService {
       const midInfo = await this.getStorageInfo();
       if (midInfo.success && midInfo.totalUsed! > (beforeUsage - targetBytes)) {
         console.log('🗂️ Step 3: Cleaning old permanent files...');
-        const oldFilesCleanup = await this.cleanupOldPermanentFiles(30); // Files older than 30 days
+        const oldFilesCleanup = await this.cleanupOldPermanentFiles(1); // Files older than 1 day
         if (oldFilesCleanup.cleaned > 0) {
-          actionsPerformed.push(`تم حذف ${oldFilesCleanup.cleaned} ملف قديم (أكثر من 30 يوم)`);
+          actionsPerformed.push(`تم حذف ${oldFilesCleanup.cleaned} ملف قديم (أكثر من يوم واحد)`);
         }
       }
 
@@ -944,9 +944,9 @@ export class GoogleDriveService {
   }
 
   /**
-   * Clean old permanent files (30+ days old)
+   * Clean old permanent files (1+ days old)
    */
-  private async cleanupOldPermanentFiles(daysOld: number = 30): Promise<{ cleaned: number; errors: number }> {
+  private async cleanupOldPermanentFiles(daysOld: number = 1): Promise<{ cleaned: number; errors: number }> {
     try {
       console.log(`🗂️ Cleaning permanent files older than ${daysOld} days`);
 
