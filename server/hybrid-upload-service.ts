@@ -15,6 +15,8 @@ export interface HybridUploadResult {
   uploadId: string;
   message: string;
   orderNumber?: number;
+  tempFolderId?: string;
+  isTemporary?: boolean;
 }
 
 export interface UploadOptions {
@@ -27,6 +29,9 @@ export interface UploadOptions {
   resourceType?: 'image' | 'video' | 'raw' | 'auto';
   useGoogleDriveAsBackup?: boolean;
   useCloudinaryAsPrimary?: boolean;
+  useTemporaryStorage?: boolean;
+  userId?: string;
+  sessionId?: string;
 }
 
 export class HybridUploadService {
@@ -135,7 +140,10 @@ export class HybridUploadService {
       customerName = 'عميل غير محدد',
       uploadDate = new Date().toISOString().split('T')[0],
       shareWithEmail,
-      googleDriveFolder 
+      googleDriveFolder,
+      useTemporaryStorage = true, // Default to temporary storage for /print page
+      userId,
+      sessionId
     } = options;
 
     const uploadId = `buffer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -159,15 +167,26 @@ export class HybridUploadService {
         let folderId = undefined;
         let folderHierarchy = '';
 
-        // Use new order folder structure if customer name is provided  
-        if (customerName && customerName !== 'عميل غير محدد') {
-          console.log(`📁 Creating order folder structure for: ${customerName}`);
+        // Check if we should use temporary storage (default for /print page)
+        if (useTemporaryStorage && userId) {
+          console.log(`📁 Creating temporary folder structure for user: ${userId}`);
+          folderId = await googleDriveService.createTempFolderStructure(userId, sessionId);
+          folderHierarchy = `مؤقت/${userId}/${sessionId || 'session'}`;
+          
+          // Mark as temporary upload
+          result.isTemporary = true;
+          result.tempFolderId = folderId || undefined;
+        }
+        // Use permanent order folder structure if not temporary or no userId
+        else if (customerName && customerName !== 'عميل غير محدد') {
+          console.log(`📁 Creating permanent order folder structure for: ${customerName}`);
           const orderResult = await googleDriveService.createOrderFolderStructure(customerName, uploadDate);
           folderId = orderResult.folderId || undefined;
           folderHierarchy = googleDriveService.getOrderFolderHierarchy(customerName, uploadDate, orderResult.orderNumber);
           
           // Store order number for later use
           result.orderNumber = orderResult.orderNumber;
+          result.isTemporary = false;
         } 
         // Fallback to old system if specified
         else if (googleDriveFolder) {

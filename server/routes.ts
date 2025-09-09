@@ -503,7 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert base64 buffer to Buffer
       const buffer = Buffer.from(fileBuffer, 'base64');
       
-      // Upload to Google Drive with organized folder structure and sharing
+      // Upload to Google Drive with temporary storage for /print page
       const driveResult = await hybridUploadService.uploadBuffer(
         buffer,
         fullFileName,
@@ -511,7 +511,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { 
           customerName: finalCustomerName,
           uploadDate: finalUploadDate,
-          shareWithEmail: finalShareEmail
+          shareWithEmail: finalShareEmail,
+          useTemporaryStorage: true, // Always use temp storage for /print uploads
+          userId: finalCustomerName, // Use customer name as user ID for organization
+          sessionId: `upload_${Date.now()}` // Unique session for this upload batch
         }
       );
 
@@ -519,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('✅ Google Drive organized upload successful!');
         console.log(`   Folder: ${driveResult.googleDrive.folderHierarchy}`);
         
-        // Return Google Drive as primary URL with folder information
+        // Return Google Drive as primary URL with temporary storage information
         res.json({
           success: true,
           url: driveResult.googleDrive.directDownloadLink || driveResult.googleDrive.webViewLink,
@@ -532,7 +535,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: driveResult.message,
           customerName: finalCustomerName,
           uploadDate: finalUploadDate,
-          costSavings: true
+          costSavings: true,
+          isTemporary: driveResult.isTemporary,
+          tempFolderId: driveResult.tempFolderId
         });
       } else {
         // Fallback to error
