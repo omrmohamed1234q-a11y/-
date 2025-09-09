@@ -881,10 +881,11 @@ export default function Print() {
       console.log('✅ Successfully uploaded', results.length, 'files');
       console.log('Upload results:', results);
       
-      setUploadResults(results);
-      setUploadErrors(errors);
-      setSelectedFiles(files);
-      setUploadedUrls(results.map(r => r.url));
+      // إضافة النتائج للنتائج الموجودة بدلاً من استبدالها
+      setUploadResults(prev => [...prev, ...results]);
+      setUploadErrors(prev => [...prev, ...errors]);
+      // لا نعيد تعيين selectedFiles هنا لأنها تم تعيينها بالفعل
+      setUploadedUrls(prev => [...prev, ...results.map(r => r.url)]);
       
       if (results.length > 0) {
         toast({
@@ -920,6 +921,8 @@ export default function Print() {
 
   const handleDragDropUpload = (files: File[]) => {
     console.log('Files selected via drag & drop:', files.map(f => f.name));
+    // إضافة الملفات للملفات الموجودة بدلاً من استبدالها
+    setSelectedFiles(prev => [...prev, ...files]);
     handleFileUpload(files);
   };
 
