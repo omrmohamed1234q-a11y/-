@@ -42,7 +42,8 @@ import {
   Building2,
   MoreVertical,
   Smartphone,
-  Shield
+  Shield,
+  HardDrive
 } from 'lucide-react';
 
 interface AdminStats {
@@ -275,11 +276,11 @@ export default function AdminDashboard() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem 
-                  onClick={() => navigate('/admin/two-factor-settings')}
+                  onClick={() => navigate('/admin/storage-dashboard')}
                   className="cursor-pointer gap-2"
                 >
-                  <Smartphone className="w-4 h-4" />
-                  المصادقة الثنائية
+                  <HardDrive className="w-4 h-4" />
+                  إدارة المساحة
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
@@ -288,6 +289,13 @@ export default function AdminDashboard() {
                 >
                   <Shield className="w-4 h-4" />
                   لوحة الأمان
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => navigate('/admin/two-factor-settings')}
+                  className="cursor-pointer gap-2"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  المصادقة النائية
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => navigate('/admin/settings')}
