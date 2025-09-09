@@ -92,7 +92,7 @@ export default function RewardsNew() {
       
       // التوجه للصفحة الرئيسية بعد الخروج
       setTimeout(() => {
-        setLocation('/');
+        setLocation('/home');
       }, 1000);
       
     } catch (error) {
