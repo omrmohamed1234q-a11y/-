@@ -710,7 +710,7 @@ export default function Print() {
     copies: number;
     colorMode: 'grayscale' | 'color';
     paperSize: 'A4' | 'A3' | 'A0' | 'A1';
-    paperType: 'plain' | 'coated' | 'sticker';
+    paperType: 'plain' | 'coated' | 'glossy' | 'sticker';
     doubleSided: boolean;
   }}>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -1239,21 +1239,22 @@ export default function Print() {
                             copies: 1,
                             colorMode: 'grayscale' as 'grayscale' | 'color',
                             paperSize: 'A4' as 'A4' | 'A3' | 'A0' | 'A1',
-                            paperType: 'plain' as 'plain' | 'coated' | 'sticker',
+                            paperType: 'plain' as 'plain' | 'coated' | 'glossy' | 'sticker',
                             doubleSided: false,
                           };
 
                           return (
-                            <Card key={index} className="border-l-4 border-l-blue-500">
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between mb-4">
-                                  <div className="flex items-center space-x-3 space-x-reverse">
-                                    <FileText className="h-5 w-5 text-blue-500" />
-                                    <div>
-                                      <p className="font-medium text-sm">{fileName}</p>
+                            <Card key={index} className="border border-gray-200 hover:border-blue-300 transition-colors">
+                              <CardContent className="p-0">
+                                {/* Header مع اسم الملف وزر الحذف */}
+                                <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+                                  <div className="flex items-center space-x-2 space-x-reverse flex-1 min-w-0">
+                                    <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="font-medium text-sm text-gray-800 truncate">{fileName}</p>
                                       <p className="text-xs text-gray-500">
                                         {(result.fileSize && result.fileSize > 0) ? 
-                                          `${(result.fileSize / 1024 / 1024).toFixed(2)} ميجابايت` : 
+                                          `${(result.fileSize / 1024 / 1024).toFixed(1)} MB` : 
                                           'حجم غير محدد'
                                         }
                                       </p>
@@ -1263,159 +1264,168 @@ export default function Print() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => removeFile(fileName)}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 flex-shrink-0"
                                   >
                                     <XIcon className="h-4 w-4" />
                                   </Button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {/* Copies */}
-                                  <div>
-                                    <Label className="text-xs">عدد النسخ</Label>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max="100"
-                                      value={currentSettings.copies}
-                                      onChange={(e) => {
-                                        const copies = parseInt(e.target.value) || 1;
+                                {/* إعدادات الطباعة */}
+                                <div className="p-4">
+                                  {/* الصف الأول: النسخ وحجم الورق */}
+                                  <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <div>
+                                      <Label className="text-xs font-medium text-gray-700 mb-1 block">عدد النسخ</Label>
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        value={currentSettings.copies}
+                                        onChange={(e) => {
+                                          const copies = parseInt(e.target.value) || 1;
+                                          setFileSettings(prev => ({
+                                            ...prev,
+                                            [fileName]: { ...currentSettings, copies }
+                                          }));
+                                        }}
+                                        className="h-9 text-center"
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <Label className="text-xs font-medium text-gray-700 mb-1 block">حجم الورق</Label>
+                                      <Select
+                                        value={currentSettings.paperSize}
+                                        onValueChange={(value: 'A4' | 'A3' | 'A0' | 'A1') => {
+                                          setFileSettings(prev => ({
+                                            ...prev,
+                                            [fileName]: { ...currentSettings, paperSize: value }
+                                          }));
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-9">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="A4">A4</SelectItem>
+                                          <SelectItem value="A3">A3</SelectItem>
+                                          <SelectItem value="A0">A0</SelectItem>
+                                          <SelectItem value="A1">A1</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+
+                                  {/* الصف الثاني: نوع الورق ووضع الألوان */}
+                                  <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <div>
+                                      <Label className="text-xs font-medium text-gray-700 mb-1 block">نوع الورق</Label>
+                                      <Select
+                                        value={currentSettings.paperType}
+                                        onValueChange={(value: 'plain' | 'coated' | 'glossy' | 'sticker') => {
+                                          setFileSettings(prev => ({
+                                            ...prev,
+                                            [fileName]: { ...currentSettings, paperType: value }
+                                          }));
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-9">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="plain">
+                                            <div className="flex items-center space-x-2 space-x-reverse">
+                                              <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                                              <span>عادي</span>
+                                            </div>
+                                          </SelectItem>
+                                          <SelectItem value="coated">
+                                            <div className="flex items-center space-x-2 space-x-reverse">
+                                              <div className="w-3 h-3 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
+                                              <span>كوشيه</span>
+                                            </div>
+                                          </SelectItem>
+                                          <SelectItem value="glossy">
+                                            <div className="flex items-center space-x-2 space-x-reverse">
+                                              <div className="w-3 h-3 bg-gradient-to-r from-purple-100 to-purple-200 border border-purple-400 rounded shadow-lg"></div>
+                                              <span>جلوسي</span>
+                                            </div>
+                                          </SelectItem>
+                                          <SelectItem value="sticker">
+                                            <div className="flex items-center space-x-2 space-x-reverse">
+                                              <div className="w-3 h-3 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
+                                              <span>لاصق</span>
+                                            </div>
+                                          </SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    <div>
+                                      <Label className="text-xs font-medium text-gray-700 mb-1 block">وضع الألوان</Label>
+                                      <Select
+                                        value={currentSettings.colorMode}
+                                        onValueChange={(value: 'grayscale' | 'color') => {
+                                          setFileSettings(prev => ({
+                                            ...prev,
+                                            [fileName]: { ...currentSettings, colorMode: value }
+                                          }));
+                                        }}
+                                        disabled={currentSettings.paperSize === 'A0' || currentSettings.paperSize === 'A1'}
+                                      >
+                                        <SelectTrigger className="h-9">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="grayscale">أبيض وأسود</SelectItem>
+                                          <SelectItem value="color">ملون</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      {(currentSettings.paperSize === 'A0' || currentSettings.paperSize === 'A1') && (
+                                        <p className="text-xs text-orange-600 mt-1">
+                                          A0/A1 متوفر بالأبيض والأسود فقط
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* طباعة على الوجهين */}
+                                  <div className="flex items-center justify-between py-3 border-t border-gray-100">
+                                    <Label className="text-sm font-medium text-gray-700">طباعة على الوجهين</Label>
+                                    <Switch
+                                      checked={currentSettings.doubleSided}
+                                      onCheckedChange={(checked) => {
                                         setFileSettings(prev => ({
                                           ...prev,
-                                          [fileName]: { ...currentSettings, copies }
+                                          [fileName]: { ...currentSettings, doubleSided: checked }
                                         }));
                                       }}
-                                      className="h-8"
                                     />
                                   </div>
 
-                                  {/* Paper Size */}
-                                  <div>
-                                    <Label className="text-xs">حجم الورق</Label>
-                                    <Select
-                                      value={currentSettings.paperSize}
-                                      onValueChange={(value: 'A4' | 'A3' | 'A0' | 'A1') => {
-                                        setFileSettings(prev => ({
-                                          ...prev,
-                                          [fileName]: { ...currentSettings, paperSize: value }
-                                        }));
-                                      }}
-                                    >
-                                      <SelectTrigger className="h-8">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="A4">A4</SelectItem>
-                                        <SelectItem value="A3">A3</SelectItem>
-                                        <SelectItem value="A0">A0</SelectItem>
-                                        <SelectItem value="A1">A1</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-
-                                  {/* Paper Type */}
-                                  <div>
-                                    <Label className="text-xs">نوع الورق</Label>
-                                    <Select
-                                      value={currentSettings.paperType}
-                                      onValueChange={(value: 'plain' | 'coated' | 'sticker') => {
-                                        setFileSettings(prev => ({
-                                          ...prev,
-                                          [fileName]: { ...currentSettings, paperType: value }
-                                        }));
-                                      }}
-                                    >
-                                      <SelectTrigger className="h-8">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="plain">
-                                          <div className="flex items-center space-x-2 space-x-reverse">
-                                            <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
-                                            <span>عادي</span>
-                                          </div>
-                                        </SelectItem>
-                                        <SelectItem value="coated">
-                                          <div className="flex items-center space-x-2 space-x-reverse">
-                                            <div className="w-3 h-3 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
-                                            <span>كوشيه</span>
-                                          </div>
-                                        </SelectItem>
-                                        <SelectItem value="sticker">
-                                          <div className="flex items-center space-x-2 space-x-reverse">
-                                            <div className="w-3 h-3 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
-                                            <span>لاصق</span>
-                                          </div>
-                                        </SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-
-                                  {/* Color Mode */}
-                                  <div>
-                                    <Label className="text-xs">وضع الألوان</Label>
-                                    <Select
-                                      value={currentSettings.colorMode}
-                                      onValueChange={(value: 'grayscale' | 'color') => {
-                                        setFileSettings(prev => ({
-                                          ...prev,
-                                          [fileName]: { ...currentSettings, colorMode: value }
-                                        }));
-                                      }}
-                                      disabled={currentSettings.paperSize === 'A0' || currentSettings.paperSize === 'A1'}
-                                    >
-                                      <SelectTrigger className="h-8">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="grayscale">أبيض وأسود</SelectItem>
-                                        <SelectItem value="color">ملون</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                    {(currentSettings.paperSize === 'A0' || currentSettings.paperSize === 'A1') && (
-                                      <p className="text-xs text-orange-600 mt-1">
-                                        A0/A1 متوفر بالأبيض والأسود فقط
+                                  {/* عرض السعر */}
+                                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-sm font-medium text-blue-800">تكلفة هذا الملف:</span>
+                                      <span className="text-xl font-bold text-blue-600">
+                                        {(() => {
+                                          const pricing = calculate_price(
+                                            currentSettings.paperSize,
+                                            currentSettings.paperType,
+                                            currentSettings.doubleSided ? 'face_back' : 'face',
+                                            currentSettings.copies,
+                                            currentSettings.colorMode === 'grayscale'
+                                          );
+                                          return pricing.finalPrice.toFixed(2);
+                                        })()} جنيه
+                                      </span>
+                                    </div>
+                                    {currentSettings.colorMode === 'grayscale' && (
+                                      <p className="text-xs text-green-700 mt-2 flex items-center">
+                                        ✓ خصم 10% للطباعة بالأبيض والأسود
                                       </p>
                                     )}
                                   </div>
-                                </div>
-
-                                {/* Double Sided Switch */}
-                                <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                                  <Label className="text-sm">طباعة على الوجهين</Label>
-                                  <Switch
-                                    checked={currentSettings.doubleSided}
-                                    onCheckedChange={(checked) => {
-                                      setFileSettings(prev => ({
-                                        ...prev,
-                                        [fileName]: { ...currentSettings, doubleSided: checked }
-                                      }));
-                                    }}
-                                  />
-                                </div>
-
-                                {/* File Price Display */}
-                                <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-sm font-medium">تكلفة هذا الملف:</span>
-                                    <span className="text-lg font-bold text-blue-600">
-                                      {(() => {
-                                        const pricing = calculate_price(
-                                          currentSettings.paperSize,
-                                          currentSettings.paperType,
-                                          currentSettings.doubleSided ? 'face_back' : 'face',
-                                          currentSettings.copies,
-                                          currentSettings.colorMode === 'grayscale'
-                                        );
-                                        return pricing.finalPrice.toFixed(2);
-                                      })()} جنيه
-                                    </span>
-                                  </div>
-                                  {currentSettings.colorMode === 'grayscale' && (
-                                    <p className="text-xs text-green-600 mt-1">
-                                      ✓ خصم 10% للطباعة بالأبيض والأسود
-                                    </p>
-                                  )}
                                 </div>
                               </CardContent>
                             </Card>
