@@ -89,7 +89,7 @@ export default function StorageDashboard() {
 
   const fetchCleanupOptions = async () => {
     try {
-      const response = await fetch('/api/drive/cleanup-options');
+      const response = await fetch('/cleanup-options');
       const data = await response.json();
       
       if (data.success) {
@@ -103,7 +103,7 @@ export default function StorageDashboard() {
   const performCustomCleanup = async (timeOption: string, customDays?: string) => {
     setCustomLoading(true);
     try {
-      const response = await fetch('/api/drive/cleanup-custom', {
+      const response = await fetch('/cleanup-custom', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ timeOption, customDays })
