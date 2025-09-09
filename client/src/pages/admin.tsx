@@ -10,12 +10,14 @@ import { apiRequest } from '@/lib/queryClient';
 import {
   BarChart3, Users, Package, Printer, ShoppingCart, TrendingUp,
   Plus, Edit, Trash2, FileText, Settings, Home, LogOut,
-  Eye, Download, Calendar, BookOpen, GraduationCap, Store, X, Tag, HardDrive
+  Eye, Download, Calendar, BookOpen, GraduationCap, Store, X, Tag, HardDrive,
+  Shield, Smartphone, MoreVertical, Building2
 } from 'lucide-react';
 import { Link } from 'wouter';
 import AdminActionsMenu from '@/components/admin/AdminActionsMenu';
 import AdminAnalytics from '@/pages/admin/analytics';
 import ProductForm from '@/components/admin/ProductForm';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 export default function AdminDashboard() {
   // All hooks must be at the top level
@@ -247,6 +249,48 @@ export default function AdminDashboard() {
               <div className="text-sm text-gray-600">
                 مرحباً، {user.fullName || user.username || 'مدير النظام'}
               </div>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/partners" className="flex items-center w-full">
+                      <Building2 className="w-4 h-4 ml-2" />
+                      الشركاء
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/storage-dashboard" className="flex items-center w-full">
+                      <HardDrive className="w-4 h-4 ml-2" />
+                      إدارة المساحة
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/security-dashboard" className="flex items-center w-full">
+                      <Shield className="w-4 h-4 ml-2" />
+                      لوحة الأمان
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/two-factor-settings" className="flex items-center w-full">
+                      <Smartphone className="w-4 h-4 ml-2" />
+                      المصادقة النائية
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/settings" className="flex items-center w-full">
+                      <Settings className="w-4 h-4 ml-2" />
+                      الإعدادات
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
               <Link href="/">
                 <Button variant="outline" size="sm">
                   <Home className="w-4 h-4 mr-2" />
