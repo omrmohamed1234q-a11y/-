@@ -1205,8 +1205,8 @@ export default function Print() {
                                       <SelectContent>
                                         <SelectItem value="A4">A4</SelectItem>
                                         <SelectItem value="A3">A3</SelectItem>
-                                        <SelectItem value="A0">A0 (30 جنيه - أبيض وأسود فقط)</SelectItem>
-                                        <SelectItem value="A1">A1 (30 جنيه - أبيض وأسود فقط)</SelectItem>
+                                        <SelectItem value="A0">A0</SelectItem>
+                                        <SelectItem value="A1">A1</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>
@@ -1216,7 +1216,7 @@ export default function Print() {
                                     <Label className="text-xs">نوع الورق</Label>
                                     <Select
                                       value={currentSettings.paperType}
-                                      onValueChange={(value: 'plain' | 'coated' | 'sticker') => {
+                                      onValueChange={(value: 'plain' | 'coated' | 'glossy' | 'sticker') => {
                                         setFileSettings(prev => ({
                                           ...prev,
                                           [fileName]: { ...currentSettings, paperType: value }
@@ -1236,13 +1236,19 @@ export default function Print() {
                                         <SelectItem value="coated">
                                           <div className="flex items-center space-x-2 space-x-reverse">
                                             <div className="w-3 h-3 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
-                                            <span>كوشيه - ورق لامع عالي الجودة</span>
+                                            <span>كوشيه - ورق عالي الجودة</span>
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="glossy">
+                                          <div className="flex items-center space-x-2 space-x-reverse">
+                                            <div className="w-3 h-3 bg-gradient-to-r from-purple-100 to-purple-200 border border-purple-400 rounded shadow-lg"></div>
+                                            <span>جلوسي - ورق لامع عالي اللمعة</span>
                                           </div>
                                         </SelectItem>
                                         <SelectItem value="sticker">
                                           <div className="flex items-center space-x-2 space-x-reverse">
                                             <div className="w-3 h-3 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
-                                            <span>لاصق - ورق بطبقة لاصقة</span>
+                                            <span>لاصق - ورق استيكر</span>
                                           </div>
                                         </SelectItem>
                                       </SelectContent>
