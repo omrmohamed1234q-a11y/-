@@ -3762,46 +3762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cart API endpoints
-  app.get('/api/cart', async (req: any, res) => {
-    try {
-      const userId = req.headers['x-user-id'] || '48c03e72-d53b-4a3f-a729-c38276268315';
-      const cart = await storage.getCart(userId);
-      res.json(cart);
-    } catch (error) {
-      console.error('Error fetching cart:', error);
-      res.json({ items: [], subtotal: 0, discount: 0, total: 0, shipping: 0, availablePoints: 0 });
-    }
-  });
-
-  app.get('/api/cart/suggestions', async (req: any, res) => {
-    try {
-      // Return real product suggestions from the store
-      const products = await storage.getAllProducts();
-      const suggestions = products.slice(0, 3).map(product => ({
-        id: product.id,
-        name: product.name,
-        price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
-        image: product.imageUrl || '/placeholder.jpg'
-      }));
-      res.json(suggestions);
-    } catch (error) {
-      console.error('Error fetching suggestions:', error);
-      res.status(500).json({ message: 'Failed to fetch suggestions' });
-    }
-  });
-
-  app.put('/api/cart/items/:itemId', async (req, res) => {
-    try {
-      const { itemId } = req.params;
-      const { quantity } = req.body;
-      // Update cart item quantity in session/database
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error updating cart item:', error);
-      res.status(500).json({ message: 'Failed to update cart item' });
-    }
-  });
+  // Note: Cart API endpoints are defined above in the main auth-protected section
 
 
 
@@ -4029,64 +3990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/cart/items/:itemId', async (req, res) => {
-    try {
-      const { itemId } = req.params;
-      // Remove item from cart
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error removing cart item:', error);
-      res.status(500).json({ message: 'Failed to remove cart item' });
-    }
-  });
-
-  app.post('/api/cart/apply-coupon', async (req, res) => {
-    try {
-      const { code } = req.body;
-      // Validate coupon and apply discount
-      if (code === 'WELCOME10') {
-        res.json({ discount: 10, success: true });
-      } else {
-        res.status(400).json({ message: 'Invalid coupon code' });
-      }
-    } catch (error) {
-      console.error('Error applying coupon:', error);
-      res.status(500).json({ message: 'Failed to apply coupon' });
-    }
-  });
-
-  // Add item to cart
-  app.post('/api/cart/add', async (req, res) => {
-    try {
-      const { productId, quantity = 1 } = req.body;
-      
-      if (!productId) {
-        return res.status(400).json({ message: 'Product ID is required' });
-      }
-
-      // Use existing admin user for cart operations
-      const adminUserId = '48c03e72-d53b-4a3f-a729-c38276268315';
-      
-      // Create cart item in database
-      const cartItem = await storage.addToCart({
-        userId: adminUserId,
-        productId,
-        quantity
-      });
-      
-      res.json({ 
-        success: true, 
-        cartItem,
-        message: 'تمت إضافة المنتج للسلة بنجاح'
-      });
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      res.status(500).json({ 
-        message: 'Failed to add item to cart',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // Note: Duplicate cart endpoints removed - using auth-protected ones above
 
   // Add print job to cart
   app.post('/api/cart/print-job', requireAuth, async (req: any, res) => {
