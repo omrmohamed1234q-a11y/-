@@ -455,6 +455,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
+  // ========== PUBLIC API ENDPOINTS (قبل الـ authentication middleware) ==========
+  
+  // الحصول على المكافآت المتاحة للمستخدمين (بدون authentication)
+  app.get('/api/rewards/available', async (req, res) => {
+    try {
+      const availableRewards = rewardsStore.filter(reward => reward.available);
+      console.log('📱 User fetching available rewards:', availableRewards.length);
+      
+      res.json({
+        success: true,
+        data: availableRewards,
+        source: 'admin_synced'
+      });
+    } catch (error) {
+      console.error('Error fetching available rewards:', error);
+      res.status(500).json({ success: false, message: 'خطأ في جلب المكافآت' });
+    }
+  });
+
+  // الحصول على التحديات النشطة للمستخدمين (بدون authentication)
+  app.get('/api/challenges/active', async (req, res) => {
+    try {
+      const activeChallenges = challengesStore.filter(challenge => challenge.active);
+      console.log('🎯 User fetching active challenges:', activeChallenges.length);
+
+      res.json({
+        success: true,
+        data: activeChallenges,
+        source: 'admin_synced'
+      });
+    } catch (error) {
+      console.error('Error fetching active challenges:', error);
+      res.status(500).json({ success: false, message: 'خطأ في جلب التحديات' });
+    }
+  });
+
   // Apply security middleware
   app.use('/api/auth', authLimiter);
   app.use('/api/admin/security-access', authLimiter);
@@ -7047,50 +7083,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== إدارة المكافآت والتحديات CRUD ====================
   
+  // نظام تخزين المكافآت والتحديات في الذاكرة (مع ربط admin)
+  let rewardsStore = [
+    {
+      id: '1',
+      name: 'خصم 10 جنيه',
+      description: 'خصم 10 جنيه على الطلبية القادمة',
+      points_cost: 200,
+      reward_type: 'discount',
+      reward_value: { amount: 10, currency: 'EGP' },
+      available: true,
+      limit_per_user: 5,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: '2', 
+      name: 'طباعة مجانية (20 صفحة)',
+      description: '20 صفحة طباعة مجانية',
+      points_cost: 300,
+      reward_type: 'free_prints',
+      reward_value: { pages: 20 },
+      available: true,
+      limit_per_user: 3,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: '3',
+      name: 'شحن موبايل 5 جنيه', 
+      description: 'شحن رصيد موبايل بقيمة 5 جنيه',
+      points_cost: 150,
+      reward_type: 'mobile_credit',
+      reward_value: { amount: 5, currency: 'EGP' },
+      available: true,
+      limit_per_user: 10,
+      created_at: new Date().toISOString()
+    }
+  ];
+
+  let challengesStore = [
+    {
+      id: '1',
+      name: 'طباع النشيط',
+      description: 'اطبع 5 صفحات في يوم واحد',
+      type: 'daily',
+      target_value: 5,
+      points_reward: 50,
+      is_daily: true,
+      active: true,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: '2',
+      name: 'ادع صديق',
+      description: 'شارك التطبيق مع صديق واحد',
+      type: 'referral',
+      target_value: 1,
+      points_reward: 100,
+      is_daily: false,
+      active: true,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: '3',
+      name: 'أسبوع النشاط',
+      description: 'اطبع لمدة 7 أيام متتالية',
+      type: 'streak',
+      target_value: 7,
+      points_reward: 200,
+      is_daily: false,
+      active: true,
+      created_at: new Date().toISOString()
+    }
+  ];
+  
   // إدارة المكافآت
   // الحصول على جميع المكافآت (Admin)
   app.get('/api/admin/rewards/all', isAdminAuthenticated, async (req, res) => {
     try {
-      // بيانات تجريبية للمكافآت
-      const mockRewards = [
-        {
-          id: '1',
-          name: 'خصم 10 جنيه',
-          description: 'خصم 10 جنيه على الطلبية القادمة',
-          points_cost: 200,
-          reward_type: 'discount',
-          reward_value: { amount: 10, currency: 'EGP' },
-          available: true,
-          limit_per_user: 5,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '2', 
-          name: 'طباعة مجانية (20 صفحة)',
-          description: '20 صفحة طباعة مجانية',
-          points_cost: 300,
-          reward_type: 'free_prints',
-          reward_value: { pages: 20 },
-          available: true,
-          limit_per_user: 3,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '3',
-          name: 'شحن موبايل 5 جنيه', 
-          description: 'شحن رصيد موبايل بقيمة 5 جنيه',
-          points_cost: 150,
-          reward_type: 'mobile_credit',
-          reward_value: { amount: 5, currency: 'EGP' },
-          available: true,
-          limit_per_user: 10,
-          created_at: new Date().toISOString()
-        }
-      ];
-
+      console.log('🎁 Admin fetching all rewards:', rewardsStore.length);
       res.json({
         success: true,
-        data: mockRewards
+        data: rewardsStore
       });
     } catch (error) {
       console.error('Error fetching rewards:', error);
@@ -7122,6 +7195,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         created_at: new Date().toISOString()
       };
 
+      // إضافة المكافأة الجديدة للـ store
+      rewardsStore.push(newReward);
       console.log(`🎁 Admin created new reward: ${name} (${points_cost} points)`);
 
       res.json({
@@ -7315,105 +7390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== واجهة المستخدمين للمكافآت والتحديات ====================
-  
-  // الحصول على المكافآت المتاحة للمستخدمين (بدون authentication)
-  app.get('/api/rewards/available', async (req, res) => {
-    try {
-      // بيانات تجريبية للمكافآت المتاحة
-      const mockRewards = [
-        {
-          id: '1',
-          name: 'خصم 10 جنيه',
-          description: 'خصم 10 جنيه على الطلبية القادمة',
-          points_cost: 200,
-          reward_type: 'discount',
-          reward_value: { amount: 10, currency: 'EGP' },
-          available: true,
-          limit_per_user: 5,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '2', 
-          name: 'طباعة مجانية (20 صفحة)',
-          description: '20 صفحة طباعة مجانية',
-          points_cost: 300,
-          reward_type: 'free_prints',
-          reward_value: { pages: 20 },
-          available: true,
-          limit_per_user: 3,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '3',
-          name: 'شحن موبايل 5 جنيه', 
-          description: 'شحن رصيد موبايل بقيمة 5 جنيه',
-          points_cost: 150,
-          reward_type: 'mobile_credit',
-          reward_value: { amount: 5, currency: 'EGP' },
-          available: true,
-          limit_per_user: 10,
-          created_at: new Date().toISOString()
-        }
-      ];
-
-      res.json({
-        success: true,
-        data: mockRewards
-      });
-    } catch (error) {
-      console.error('Error fetching available rewards:', error);
-      res.status(500).json({ success: false, message: 'خطأ في جلب المكافآت' });
-    }
-  });
-
-  // الحصول على التحديات النشطة للمستخدمين (بدون authentication)
-  app.get('/api/challenges/active', async (req, res) => {
-    try {
-      const mockChallenges = [
-        {
-          id: '1',
-          name: 'طباع النشيط',
-          description: 'اطبع 5 صفحات في يوم واحد',
-          type: 'daily',
-          target_value: 5,
-          points_reward: 50,
-          is_daily: true,
-          active: true,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '2',
-          name: 'ادع صديق',
-          description: 'شارك التطبيق مع صديق واحد',
-          type: 'referral',
-          target_value: 1,
-          points_reward: 100,
-          is_daily: false,
-          active: true,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '3',
-          name: 'أسبوع النشاط',
-          description: 'اطبع لمدة 7 أيام متتالية',
-          type: 'streak',
-          target_value: 7,
-          points_reward: 200,
-          is_daily: false,
-          active: true,
-          created_at: new Date().toISOString()
-        }
-      ];
-
-      res.json({
-        success: true,
-        data: mockChallenges
-      });
-    } catch (error) {
-      console.error('Error fetching active challenges:', error);
-      res.status(500).json({ success: false, message: 'خطأ في جلب التحديات' });
-    }
-  });
+  // تم نقل الـ endpoints قبل الـ middleware لتجنب مشاكل الـ authentication
 
   // تطبيق كود دعوة صديق
   app.post('/api/rewards/apply-referral', async (req, res) => {

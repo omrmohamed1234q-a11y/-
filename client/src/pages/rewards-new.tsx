@@ -73,7 +73,7 @@ const ChallengeTypeIcon = ({ type }: { type: string }) => {
 };
 
 export default function RewardsNew() {
-  const { user, updateProfile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
@@ -116,7 +116,7 @@ export default function RewardsNew() {
   });
 
   // Calculate user level and progress
-  const currentPoints = user?.bounty_points || 0;
+  const currentPoints = user?.bountyPoints || 0;
   const currentLevel = Math.floor(currentPoints / 1000) + 1;
   const pointsToNextLevel = (currentLevel * 1000) - currentPoints;
   const progressPercentage = ((currentPoints % 1000) / 1000) * 100;
@@ -147,9 +147,8 @@ export default function RewardsNew() {
         description: `تم استبدال ${reward.name} بنجاح`,
       });
       
-      // Update user points
-      const newPoints = currentPoints - reward.points_cost;
-      updateProfile({ bounty_points: newPoints });
+      // Update user points (في النسخة الحقيقية سيتم عبر API)
+      console.log(`تم استبدال ${reward.name} بـ ${reward.points_cost} نقطة`);
       
     } catch (error) {
       toast({
@@ -262,14 +261,14 @@ export default function RewardsNew() {
                       <Zap className="h-5 w-5 text-yellow-300" />
                       <span className="text-sm">الطباعات</span>
                     </div>
-                    <p className="text-2xl font-bold">{user?.total_prints?.toLocaleString('ar-EG') || '0'}</p>
+                    <p className="text-2xl font-bold">{user?.totalPrints?.toLocaleString('ar-EG') || '0'}</p>
                   </div>
                   <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
                     <div className="flex items-center gap-2 mb-2">
                       <Users className="h-5 w-5 text-green-300" />
                       <span className="text-sm">الإحالات</span>
                     </div>
-                    <p className="text-2xl font-bold">{user?.total_referrals || '0'}</p>
+                    <p className="text-2xl font-bold">{user?.totalReferrals || '0'}</p>
                   </div>
                 </div>
               </div>
