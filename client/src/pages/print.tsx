@@ -931,10 +931,8 @@ export default function Print() {
     const newResults = files.map((file, index) => ({
       name: file.name,
       url: urls[index],
-      provider: 'google_drive',
-      fileSize: file.size,
-      fileName: file.name,
-      fileType: file.type
+      provider: 'google_drive' as 'google_drive',
+      fileSize: file.size
     }));
     
     setUploadResults(prev => [...prev, ...newResults]);
@@ -1157,50 +1155,84 @@ export default function Print() {
           </TabsList>
 
           <TabsContent value="upload">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* File Upload Section */}
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-bold mb-4 flex items-center">
-                    <Upload className="h-5 w-5 text-accent ml-2" />
-                    رفع الملف
-                  </h2>
-                  
-                  <DragDropUpload
-                    onUpload={handleDragDropUpload}
-                    maxFiles={5}
-                    maxSize={50 * 1024 * 1024}
-                    acceptedTypes={['image/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']}
-                    currentCartSize={calculateCurrentCartSize()}
-                    maxCartSize={50 * 1024 * 1024}
-                  />
-                  
-                  <UploadStatus 
-                    isUploading={isUploading}
-                    uploadProgress={uploadProgress}
-                    uploadResults={uploadResults}
-                    uploadErrors={uploadErrors}
-                  />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main Upload Area - Takes 2 columns */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* File Upload Section */}
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-bold mb-4 flex items-center">
+                      <Upload className="h-5 w-5 text-accent ml-2" />
+                      رفع الملف
+                    </h2>
+                    
+                    <DragDropUpload
+                      onUpload={handleDragDropUpload}
+                      maxFiles={5}
+                      maxSize={50 * 1024 * 1024}
+                      acceptedTypes={['image/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']}
+                      currentCartSize={calculateCurrentCartSize()}
+                      maxCartSize={50 * 1024 * 1024}
+                    />
+                    
+                    <UploadStatus 
+                      isUploading={isUploading}
+                      uploadProgress={uploadProgress}
+                      uploadResults={uploadResults}
+                      uploadErrors={uploadErrors}
+                    />
+                  </CardContent>
+                </Card>
 
-                  {/* Individual File Settings */}
-                  {uploadResults.length > 0 && (
-                    <div className="mt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold flex items-center">
-                          <Printer className="h-5 w-5 text-accent ml-2" />
-                          إعدادات الطباعة لكل ملف ({uploadResults.length})
-                        </h3>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={clearAllFiles}
-                          className="text-red-500 hover:text-red-700 border-red-300 hover:border-red-500"
-                        >
-                          <XIcon className="h-4 w-4 ml-1" />
-                          مسح الكل
-                        </Button>
+                {/* Compact Price Guide */}
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-bold mb-4 flex items-center">
+                      <Info className="h-5 w-5 text-accent ml-2" />
+                      دليل الطباعة الشامل
+                    </h2>
+                    
+                    <div className="text-center">
+                      <PriceGuide compact />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Files Sidebar - Takes 1 column */}
+              <div className="lg:col-span-1">
+                <Card className="sticky top-4">
+                  <CardContent className="p-0">
+                    {/* Files Header */}
+                    <div className="p-4 border-b bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Printer className="h-5 w-5 text-accent" />
+                          <h3 className="text-lg font-bold">الملفات ({uploadResults.length})</h3>
+                        </div>
+                        {uploadResults.length > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={clearAllFiles}
+                            className="text-red-500 hover:text-red-700 border-red-300 hover:border-red-500"
+                          >
+                            <XIcon className="h-4 w-4 ml-1" />
+                            مسح الكل
+                          </Button>
+                        )}
                       </div>
-                      <div className="space-y-4">
+                    </div>
+
+                    {/* Files List */}
+                    {uploadResults.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500">
+                        <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                        <p className="text-sm">لا توجد ملفات</p>
+                        <p className="text-xs">ارفع ملفات لتبدأ الطباعة</p>
+                      </div>
+                    ) : (
+                      <div className="max-h-96 overflow-y-auto space-y-4 p-4">
                         {uploadResults.map((result, index) => {
                           const fileName = result.name;
                           const currentSettings = fileSettings[fileName] || {
@@ -1286,7 +1318,7 @@ export default function Print() {
                                     <Label className="text-xs">نوع الورق</Label>
                                     <Select
                                       value={currentSettings.paperType}
-                                      onValueChange={(value: 'plain' | 'coated' | 'glossy' | 'sticker') => {
+                                      onValueChange={(value: 'plain' | 'coated' | 'sticker') => {
                                         setFileSettings(prev => ({
                                           ...prev,
                                           [fileName]: { ...currentSettings, paperType: value }
@@ -1300,51 +1332,23 @@ export default function Print() {
                                         <SelectItem value="plain">
                                           <div className="flex items-center space-x-2 space-x-reverse">
                                             <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
-                                            <span>عادي - ورق طباعة تقليدي</span>
+                                            <span>عادي</span>
                                           </div>
                                         </SelectItem>
                                         <SelectItem value="coated">
                                           <div className="flex items-center space-x-2 space-x-reverse">
                                             <div className="w-3 h-3 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
-                                            <span>كوشيه - ورق عالي الجودة</span>
-                                          </div>
-                                        </SelectItem>
-                                        <SelectItem value="glossy">
-                                          <div className="flex items-center space-x-2 space-x-reverse">
-                                            <div className="w-3 h-3 bg-gradient-to-r from-purple-100 to-purple-200 border border-purple-400 rounded shadow-lg"></div>
-                                            <span>جلوسي - ورق لامع عالي اللمعة</span>
+                                            <span>كوشيه</span>
                                           </div>
                                         </SelectItem>
                                         <SelectItem value="sticker">
                                           <div className="flex items-center space-x-2 space-x-reverse">
                                             <div className="w-3 h-3 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
-                                            <span>لاصق - ورق استيكر</span>
+                                            <span>لاصق</span>
                                           </div>
                                         </SelectItem>
                                       </SelectContent>
                                     </Select>
-                                    
-                                    {/* Paper Type Guide */}
-                                    <div className="mt-2 text-xs text-gray-600">
-                                      {currentSettings.paperType === 'plain' && (
-                                        <div className="flex items-center space-x-1 space-x-reverse">
-                                          <div className="w-2 h-2 bg-gray-100 border border-gray-300 rounded"></div>
-                                          <span>مناسب للمستندات العادية والنصوص</span>
-                                        </div>
-                                      )}
-                                      {currentSettings.paperType === 'coated' && (
-                                        <div className="flex items-center space-x-1 space-x-reverse">
-                                          <div className="w-2 h-2 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
-                                          <span>ورق لامع للصور والتصاميم عالية الجودة</span>
-                                        </div>
-                                      )}
-                                      {currentSettings.paperType === 'sticker' && (
-                                        <div className="flex items-center space-x-1 space-x-reverse">
-                                          <div className="w-2 h-2 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
-                                          <span>ورق لاصق للملصقات والتسميات</span>
-                                        </div>
-                                      )}
-                                    </div>
                                   </div>
 
                                   {/* Color Mode */}
@@ -1418,26 +1422,10 @@ export default function Print() {
                           );
                         })}
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Printing Guide - Combined Price & Paper Types Guide */}
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-bold mb-4 flex items-center">
-                    <Info className="h-5 w-5 text-accent ml-2" />
-                    دليل الطباعة الشامل
-                  </h2>
-                  
-
-                  {/* Price Guide Button */}
-                  <div className="text-center">
-                    <PriceGuide compact />
-                  </div>
-                </CardContent>
-              </Card>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
 
