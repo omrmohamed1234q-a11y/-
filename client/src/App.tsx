@@ -16,7 +16,7 @@ import SecureAdminLogin from "@/pages/auth/secure-admin-login";
 import Home from "@/pages/home-new";
 import Print from "@/pages/print";
 import Store from "@/pages/store";
-import Rewards from "@/pages/rewards";
+import RewardsNew from "@/pages/rewards-new";
 import Profile from "@/pages/profile";
 import Payment from "@/pages/payment";
 import Scan from "@/pages/scan";
@@ -175,7 +175,7 @@ function Router() {
         <Route path="/store" component={Store} />
         <Route path="/checkout" component={CheckoutPage} />
         <Route path="/orders" component={OrdersPage} />
-        <Route path="/rewards" component={Rewards} />
+        <Route path="/rewards" component={RewardsNew} />
         <Route path="/profile" component={Profile} />
         <Route path="/payment" component={Payment} />
         <Route path="/payment-success" component={PaymentSuccess} />

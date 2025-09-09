@@ -7316,7 +7316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== واجهة المستخدمين للمكافآت والتحديات ====================
   
-  // الحصول على المكافآت المتاحة للمستخدمين
+  // الحصول على المكافآت المتاحة للمستخدمين (بدون authentication)
   app.get('/api/rewards/available', async (req, res) => {
     try {
       // بيانات تجريبية للمكافآت المتاحة
@@ -7366,7 +7366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // الحصول على التحديات النشطة للمستخدمين
+  // الحصول على التحديات النشطة للمستخدمين (بدون authentication)
   app.get('/api/challenges/active', async (req, res) => {
     try {
       const mockChallenges = [
