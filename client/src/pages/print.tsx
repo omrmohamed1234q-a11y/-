@@ -1361,39 +1361,6 @@ export default function Print() {
                     دليل الطباعة الشامل
                   </h2>
                   
-                  {/* Paper Types Visual Guide */}
-                  <div className="mb-6">
-                    <h3 className="text-lg font-bold mb-4 text-purple-800 flex items-center gap-2">
-                      <Palette className="h-5 w-5" />
-                      دليل أنواع الورق
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center space-x-3 space-x-reverse p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="w-8 h-8 bg-gray-100 border border-gray-300 rounded flex-shrink-0"></div>
-                        <div>
-                          <div className="font-bold text-base text-gray-800">ورق عادي</div>
-                          <div className="text-sm text-gray-600">للمستندات والنصوص العادية</div>
-                          <div className="text-sm text-green-600 font-medium">الأرخص والأكثر شيوعاً</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3 space-x-reverse p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="w-8 h-8 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm flex-shrink-0"></div>
-                        <div>
-                          <div className="font-bold text-base text-blue-800">ورق كوشيه</div>
-                          <div className="text-sm text-blue-600">ورق لامع عالي الجودة</div>
-                          <div className="text-sm text-blue-600 font-medium">للصور والتصاميم الملونة</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3 space-x-reverse p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                        <div className="w-8 h-8 bg-yellow-100 border-2 border-yellow-400 rounded flex-shrink-0"></div>
-                        <div>
-                          <div className="font-bold text-base text-yellow-800">ورق لاصق</div>
-                          <div className="text-sm text-yellow-700">ورق بطبقة لاصقة خلفية</div>
-                          <div className="text-sm text-orange-600 font-medium">للملصقات والتسميات</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Price Guide Button */}
                   <div className="text-center">
