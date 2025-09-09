@@ -41,13 +41,26 @@ interface CleanupResult {
   error?: string;
 }
 
+interface CleanupOption {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  danger: boolean;
+  daysKept: number | 'custom';
+  requiresInput?: boolean;
+}
+
 export default function StorageDashboard() {
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [cleanupLoading, setCleanupLoading] = useState(false);
   const [emergencyLoading, setEmergencyLoading] = useState(false);
+  const [customLoading, setCustomLoading] = useState(false);
   const [lastCleanup, setLastCleanup] = useState<CleanupResult | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [cleanupOptions, setCleanupOptions] = useState<CleanupOption[]>([]);
+  const [customDays, setCustomDays] = useState('');
   
   const { toast } = useToast();
 
@@ -71,6 +84,53 @@ export default function StorageDashboard() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCleanupOptions = async () => {
+    try {
+      const response = await fetch('/api/drive/cleanup-options');
+      const data = await response.json();
+      
+      if (data.success) {
+        setCleanupOptions(data.options);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch cleanup options:', error);
+    }
+  };
+
+  const performCustomCleanup = async (timeOption: string, customDays?: string) => {
+    setCustomLoading(true);
+    try {
+      const response = await fetch('/api/drive/cleanup-custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timeOption, customDays })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: "تم التنظيف المخصص بنجاح",
+          description: data.message,
+          variant: "default"
+        });
+        
+        // Refresh storage info
+        setTimeout(fetchStorageInfo, 1000);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "خطأ في التنظيف المخصص",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setCustomLoading(false);
     }
   };
 
@@ -166,6 +226,7 @@ export default function StorageDashboard() {
 
   useEffect(() => {
     fetchStorageInfo();
+    fetchCleanupOptions();
     // Auto refresh every 30 seconds
     const interval = setInterval(fetchStorageInfo, 30000);
     return () => clearInterval(interval);
@@ -308,7 +369,7 @@ export default function StorageDashboard() {
         </Card>
 
         {/* Cleanup Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Standard Cleanup */}
           <Card>
             <CardHeader>
@@ -351,6 +412,73 @@ export default function StorageDashboard() {
                   تنظيف متقدم (5 جيجابايت)
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Custom Cleanup Options */}
+          <Card className="border-purple-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-purple-600">
+                <CheckCircle className="h-5 w-5" />
+                خيارات مخصصة
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-gray-600">
+                اختر المدة التي تريد الاحتفاظ بها
+              </p>
+              
+              {cleanupOptions.length > 0 ? (
+                <div className="space-y-2">
+                  {cleanupOptions.map((option) => (
+                    <div key={option.id}>
+                      {option.requiresInput ? (
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              placeholder="عدد الأيام"
+                              value={customDays}
+                              onChange={(e) => setCustomDays(e.target.value)}
+                              className="flex-1 px-3 py-2 border rounded text-sm"
+                              min="0"
+                              step="0.1"
+                            />
+                            <Button
+                              onClick={() => performCustomCleanup('custom', customDays)}
+                              disabled={customLoading || !customDays}
+                              size="sm"
+                              variant="outline"
+                              className="px-3"
+                            >
+                              {option.icon}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => performCustomCleanup(option.id)}
+                          disabled={customLoading}
+                          variant={option.danger ? "destructive" : "outline"}
+                          className="w-full text-sm"
+                          size="sm"
+                        >
+                          {customLoading ? (
+                            <RefreshCw className="h-3 w-3 animate-spin ml-1" />
+                          ) : (
+                            <span className="ml-1">{option.icon}</span>
+                          )}
+                          {option.name}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-sm text-gray-500">
+                  جاري تحميل الخيارات...
+                </div>
+              )}
             </CardContent>
           </Card>
 
