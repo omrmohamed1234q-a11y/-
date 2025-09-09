@@ -944,50 +944,100 @@ export class GoogleDriveService {
   }
 
   /**
-   * Clean old permanent files (1+ days old)
+   * Smart cleanup - detects and deletes ALL old files automatically (1+ days old)
    */
   private async cleanupOldPermanentFiles(daysOld: number = 1): Promise<{ cleaned: number; errors: number }> {
     try {
-      console.log(`🗂️ Cleaning permanent files older than ${daysOld} days`);
+      console.log(`🗂️ SMART CLEANUP: Auto-detecting all permanent files older than ${daysOld} days`);
 
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
       const cutoffISO = cutoffDate.toISOString();
 
-      // Find old files in the main folder
+      // Find main folder
       const mainFolderId = await this.findFolderByName('اطبعلي');
       if (!mainFolderId) {
         console.log('ℹ️ No main folder found');
         return { cleaned: 0, errors: 0 };
       }
 
-      // Get date folders
-      const dateFoldersQuery = `'${mainFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false and createdTime < '${cutoffISO}'`;
-      const dateFoldersResponse = await this.drive.files.list({
-        q: dateFoldersQuery,
-        fields: 'files(id, name, createdTime)'
-      });
-
       let cleaned = 0;
       let errors = 0;
 
-      for (const dateFolder of dateFoldersResponse.data.files || []) {
-        console.log(`🗑️ Deleting old date folder: ${dateFolder.name}`);
-        const deleted = await this.deleteFolder(dateFolder.id!);
-        if (deleted) {
-          cleaned++;
-        } else {
-          errors++;
+      // 1. Clean OLD FORMAT folders (العميل xxx)
+      console.log('🔍 Scanning old format folders (العميل xxx)...');
+      const oldFormatQuery = `'${mainFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false and name contains 'العميل' and createdTime < '${cutoffISO}'`;
+      const oldFormatResponse = await this.drive.files.list({
+        q: oldFormatQuery,
+        fields: 'files(id, name, createdTime)'
+      });
+
+      for (const folder of oldFormatResponse.data.files || []) {
+        console.log(`🗑️ Deleting old format folder: ${folder.name}`);
+        const deleted = await this.deleteFolder(folder.id!);
+        if (deleted) cleaned++; else errors++;
+      }
+
+      // 2. Clean NEW FORMAT folders (date-based like 2025-09-07, 2025-09-08)
+      console.log('🔍 Scanning new format date folders...');
+      const dateFormatQuery = `'${mainFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false and createdTime < '${cutoffISO}'`;
+      const dateFormatResponse = await this.drive.files.list({
+        q: dateFormatQuery,
+        fields: 'files(id, name, createdTime)'
+      });
+
+      for (const folder of dateFormatResponse.data.files || []) {
+        // Skip if already processed (old format)
+        if (folder.name?.includes('العميل')) continue;
+        
+        // Check if it's a date format (YYYY-MM-DD or DD/MM/YYYY or similar)
+        if (this.isDateFolder(folder.name!)) {
+          console.log(`🗑️ Deleting date folder: ${folder.name}`);
+          const deleted = await this.deleteFolder(folder.id!);
+          if (deleted) cleaned++; else errors++;
         }
       }
 
-      console.log(`✅ Old files cleanup: ${cleaned} folders deleted, ${errors} errors`);
+      // 3. Clean ANY remaining old folders (catch-all)
+      console.log('🔍 Final sweep: cleaning any remaining old folders...');
+      const anyOldQuery = `'${mainFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false and createdTime < '${cutoffISO}'`;
+      const anyOldResponse = await this.drive.files.list({
+        q: anyOldQuery,
+        fields: 'files(id, name, createdTime)'
+      });
+
+      for (const folder of anyOldResponse.data.files || []) {
+        // Skip system folders
+        if (folder.name === 'مؤقت' || folder.name === 'temp') continue;
+        
+        console.log(`🗑️ Final cleanup: ${folder.name}`);
+        const deleted = await this.deleteFolder(folder.id!);
+        if (deleted) cleaned++; else errors++;
+      }
+
+      console.log(`✅ SMART CLEANUP COMPLETED: ${cleaned} folders deleted, ${errors} errors`);
       return { cleaned, errors };
 
     } catch (error: any) {
-      console.error('❌ Failed to cleanup old permanent files:', error.message);
+      console.error('❌ Smart cleanup failed:', error.message);
       return { cleaned: 0, errors: 1 };
     }
+  }
+
+  /**
+   * Check if folder name looks like a date
+   */
+  private isDateFolder(name: string): boolean {
+    // Check various date patterns
+    const datePatterns = [
+      /^\d{4}-\d{2}-\d{2}$/, // 2025-09-07
+      /^\d{2}\/\d{2}\/\d{4}$/, // 07/09/2025
+      /^\d{2}-\d{2}-\d{4}$/, // 07-09-2025
+      /^\d{1,2}\/\d{1,2}$/, // 7/9 or 07/09
+      /^\d{1,2}-\d{1,2}$/, // 7-9 or 07-09
+    ];
+    
+    return datePatterns.some(pattern => pattern.test(name));
   }
 
   /**

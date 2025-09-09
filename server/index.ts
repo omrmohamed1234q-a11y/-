@@ -70,21 +70,24 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     
-    // Schedule automatic cleanup of temporary files every 6 hours
+    // AGGRESSIVE AUTO-CLEANUP: Every 2 hours instead of 6
     setInterval(async () => {
       try {
-        console.log('🗑️ Starting scheduled cleanup of temporary files...');
-        const cleanupResult = await googleDriveService.cleanupOldTempFiles(24); // Files older than 24 hours
+        console.log('🔥 AGGRESSIVE AUTO-CLEANUP: Starting comprehensive cleanup...');
         
-        if (cleanupResult.cleaned > 0 || cleanupResult.errors === 0) {
-          console.log(`✅ Scheduled cleanup completed: ${cleanupResult.cleaned} items cleaned, ${cleanupResult.errors} errors`);
-        } else {
-          console.log(`ℹ️ Scheduled cleanup: ${cleanupResult.cleaned} items cleaned, ${cleanupResult.errors} errors`);
-        }
+        // 1. Clean temp files
+        const tempCleanup = await googleDriveService.cleanupOldTempFiles(6); // More aggressive: 6 hours instead of 24
+        console.log(`🗑️ Temp cleanup: ${tempCleanup.cleaned} items cleaned`);
+        
+        // 2. Smart cleanup of all old permanent files
+        const permanentCleanup = await googleDriveService.freeUpSpace(500000000); // Free 500MB regularly
+        console.log(`🧹 Smart cleanup: freed ${Math.round(permanentCleanup.spaceFeed / 1024 / 1024)}MB`);
+        
+        console.log('✅ AGGRESSIVE AUTO-CLEANUP COMPLETED - System stays clean automatically!');
       } catch (error: any) {
-        console.log('ℹ️ Scheduled cleanup info:', error.message);
+        console.log('ℹ️ Auto-cleanup info:', error.message);
       }
-    }, 6 * 60 * 60 * 1000); // Every 6 hours
+    }, 2 * 60 * 60 * 1000); // Every 2 hours instead of 6
 
     // Run cleanup on startup (after 30 seconds)
     setTimeout(async () => {
@@ -102,37 +105,43 @@ app.use((req, res, next) => {
       }
     }, 30000); // 30 seconds after startup
 
-    // Storage monitoring system - check every 2 hours
+    // PROACTIVE MONITORING: More frequent and aggressive
     setInterval(async () => {
       try {
-        console.log('📊 Checking storage quota...');
+        console.log('🔍 PROACTIVE MONITORING: Checking storage...');
         const storageInfo = await googleDriveService.getStorageInfo();
         
         if (storageInfo.success && !storageInfo.unlimited) {
           const usagePercentage = storageInfo.usagePercentage!;
           
-          // Critical level - trigger automatic cleanup
-          if (usagePercentage >= 90) {
-            console.log('🚨 CRITICAL: Storage usage at ' + usagePercentage.toFixed(1) + '% - performing emergency cleanup!');
+          // More aggressive thresholds
+          if (usagePercentage >= 70) { // Lowered from 90% to 70%
+            console.log('🚨 PROACTIVE CLEANUP TRIGGERED: Storage at ' + usagePercentage.toFixed(1) + '% - cleaning now!');
             const cleanupResult = await googleDriveService.freeUpSpace(2000000000); // Free 2GB
-            console.log(`🧹 Emergency cleanup: ${cleanupResult.spaceFeed ? Math.round(cleanupResult.spaceFeed / 1024 / 1024) : 0}MB freed`);
+            console.log(`🧹 Proactive cleanup: ${cleanupResult.spaceFeed ? Math.round(cleanupResult.spaceFeed / 1024 / 1024) : 0}MB freed`);
           }
-          // Warning level
-          else if (usagePercentage >= 80) {
-            console.log('⚠️ WARNING: Storage usage at ' + usagePercentage.toFixed(1) + '% - consider cleanup');
+          // More proactive warning
+          else if (usagePercentage >= 50) { // Lowered from 80% to 50%
+            console.log('⚠️ PROACTIVE WARNING: Storage at ' + usagePercentage.toFixed(1) + '% - scheduling cleanup');
+            // Light cleanup at 50%
+            const lightCleanup = await googleDriveService.freeUpSpace(500000000); // Free 500MB
+            console.log(`🧹 Light cleanup: ${lightCleanup.spaceFeed ? Math.round(lightCleanup.spaceFeed / 1024 / 1024) : 0}MB freed`);
           }
-          // Info level
-          else if (usagePercentage >= 50) {
-            console.log('ℹ️ INFO: Storage usage at ' + usagePercentage.toFixed(1) + '%');
+          // Regular maintenance
+          else if (usagePercentage >= 30) {
+            console.log('🔄 MAINTENANCE: Storage at ' + usagePercentage.toFixed(1) + '% - routine cleanup');
+            // Routine cleanup even at 30%
+            const routineCleanup = await googleDriveService.cleanupOldTempFiles(12);
+            console.log(`🗑️ Routine cleanup: ${routineCleanup.cleaned} temp items cleaned`);
           }
           else {
-            console.log('✅ Storage usage healthy: ' + usagePercentage.toFixed(1) + '%');
+            console.log('✅ Storage excellent: ' + usagePercentage.toFixed(1) + '% - system optimized');
           }
         }
       } catch (error: any) {
-        console.log('📊 Storage monitoring info:', error.message);
+        console.log('🔍 Monitoring info:', error.message);
       }
-    }, 2 * 60 * 60 * 1000); // Every 2 hours
+    }, 1 * 60 * 60 * 1000); // Every 1 hour instead of 2
 
     // Initial storage check (after 1 minute)
     setTimeout(async () => {
