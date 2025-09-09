@@ -71,6 +71,7 @@ import DonationsPage from '@/pages/donations';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 import CaptainSecureLogin from '@/pages/captain/secure-login';
 import CaptainDashboard from '@/pages/captain/dashboard';
+import StorageDashboard from '@/pages/storage-dashboard';
 
 
 function Router() {
@@ -149,6 +150,7 @@ function Router() {
         <Route path="/api-test" component={ApiConnectionTest} />
         <Route path="/connectivity" component={ConnectivityDashboard} />
         <Route path="/sql-generator" component={SQLGenerator} />
+        <Route path="/storage-dashboard" component={StorageDashboard} />
         <Route path="/paymob-test" component={PaymobTestPage} />
         <Route path="/paymob-setup" component={PaymobSetupPage} />
 
@@ -205,6 +207,7 @@ function Router() {
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/apis" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/rewards-management" component={() => <AdminProtectedRoute><RewardsManagement /></AdminProtectedRoute>} />
+        <Route path="/admin/storage-dashboard" component={() => <AdminProtectedRoute><StorageDashboard /></AdminProtectedRoute>} />
 
         
         {/* Driver routes - New Professional System */}
