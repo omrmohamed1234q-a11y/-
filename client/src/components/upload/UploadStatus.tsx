@@ -168,7 +168,7 @@ export function UploadStatus({ isUploading, uploadProgress = [], uploadResults =
                       'secondary'
                     } className="text-xs">
                       {result.provider === 'cloudinary' ? '☁️ Cloudinary' : 
-                       result.provider === 'google_drive' ? '📁 Google Drive' :
+                       result.provider === 'google_drive' ? '☁️ التخزين السحابي' :
                        '🔥 Firebase'}
                     </Badge>
                   )}

@@ -25,15 +25,15 @@ export function DragDropUpload({
   const [uploadedFiles, setUploadedFiles] = useState<{ file: File; url: string; provider?: string }[]>([]);
   const { toast } = useToast();
 
-  // Smart upload function with Google Drive primary and Cloudinary fallback
+  // Smart upload function with Cloud Storage primary and Cloudinary fallback
   const smartUpload = async (file: File, fileIndex: number, totalFiles: number): Promise<{ file: File; url: string; provider: string }> => {
     console.log(`📤 Smart upload ${fileIndex + 1}/${totalFiles}: ${file.name}`);
     
-    // Try Google Drive first
+    // Try Cloud Storage first
     let result = await uploadFileToGoogleDrive(file);
     
     if (!result.success) {
-      console.log('🔄 Google Drive failed, trying Cloudinary fallback...');
+      console.log('🔄 Cloud Storage failed, trying Cloudinary fallback...');
       result = await uploadFile(file);
     }
     
