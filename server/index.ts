@@ -70,73 +70,31 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     
-    // AGGRESSIVE AUTO-CLEANUP: Every 2 hours 
+    // AUTO-CLEANUP DISABLED - Manual control only
+    console.log('🎮 Manual control mode: All cleanup requires manual API calls');
+
+    // MONITORING ONLY - No automatic cleanup
     setInterval(async () => {
       try {
-        console.log('🔥 AGGRESSIVE AUTO-CLEANUP: Starting comprehensive cleanup...');
-        
-        // 1. Clean temp files
-        const tempCleanup = await googleDriveService.cleanupOldTempFiles(6); // More aggressive: 6 hours instead of 24
-        console.log(`🗑️ Temp cleanup: ${tempCleanup.cleaned} items cleaned`);
-        
-        // 2. Smart cleanup of all old permanent files
-        const permanentCleanup = await googleDriveService.freeUpSpace(500000000); // Free 500MB regularly
-        console.log(`🧹 Smart cleanup: freed ${Math.round(permanentCleanup.spaceFeed / 1024 / 1024)}MB`);
-        
-        console.log('✅ AGGRESSIVE AUTO-CLEANUP COMPLETED - System stays clean automatically!');
-      } catch (error: any) {
-        console.log('ℹ️ Auto-cleanup info:', error.message);
-      }
-    }, 2 * 60 * 60 * 1000); // Every 2 hours
-
-    // Run startup cleanup (after 30 seconds)
-    setTimeout(async () => {
-      try {
-        console.log('🗑️ Running startup cleanup of temporary files...');
-        const cleanupResult = await googleDriveService.cleanupOldTempFiles(24); // Files older than 24 hours
-        console.log(`✅ Startup cleanup completed: ${cleanupResult.cleaned} items cleaned, ${cleanupResult.errors} errors`);
-      } catch (error: any) {
-        console.log('ℹ️ Startup cleanup info:', error.message);
-      }
-    }, 30000); // 30 seconds after startup
-
-    // PROACTIVE MONITORING: More frequent and aggressive
-    setInterval(async () => {
-      try {
-        console.log('🔍 PROACTIVE MONITORING: Checking storage...');
+        console.log('📊 Storage monitoring only (manual control mode)...');
         const storageInfo = await googleDriveService.getStorageInfo();
         
         if (storageInfo.success && !storageInfo.unlimited) {
           const usagePercentage = storageInfo.usagePercentage!;
           
-          // More aggressive thresholds
-          if (usagePercentage >= 70) { // Lowered from 90% to 70%
-            console.log('🚨 PROACTIVE CLEANUP TRIGGERED: Storage at ' + usagePercentage.toFixed(1) + '% - cleaning now!');
-            const cleanupResult = await googleDriveService.freeUpSpace(2000000000); // Free 2GB
-            console.log(`🧹 Proactive cleanup: ${cleanupResult.spaceFeed ? Math.round(cleanupResult.spaceFeed / 1024 / 1024) : 0}MB freed`);
-          }
-          // More proactive warning
-          else if (usagePercentage >= 50) { // Lowered from 80% to 50%
-            console.log('⚠️ PROACTIVE WARNING: Storage at ' + usagePercentage.toFixed(1) + '% - scheduling cleanup');
-            // Light cleanup at 50%
-            const lightCleanup = await googleDriveService.freeUpSpace(500000000); // Free 500MB
-            console.log(`🧹 Light cleanup: ${lightCleanup.spaceFeed ? Math.round(lightCleanup.spaceFeed / 1024 / 1024) : 0}MB freed`);
-          }
-          // Regular maintenance
-          else if (usagePercentage >= 30) {
-            console.log('🔄 MAINTENANCE: Storage at ' + usagePercentage.toFixed(1) + '% - routine cleanup');
-            // Routine cleanup even at 30%
-            const routineCleanup = await googleDriveService.cleanupOldTempFiles(12);
-            console.log(`🗑️ Routine cleanup: ${routineCleanup.cleaned} temp items cleaned`);
-          }
-          else {
-            console.log('✅ Storage excellent: ' + usagePercentage.toFixed(1) + '% - system optimized');
+          // Only alerts - no automatic action
+          if (usagePercentage >= 90) {
+            console.log('🚨 CRITICAL: Storage at ' + usagePercentage.toFixed(1) + '% - manual cleanup recommended');
+          } else if (usagePercentage >= 70) {
+            console.log('⚠️ WARNING: Storage at ' + usagePercentage.toFixed(1) + '% - consider cleanup');
+          } else {
+            console.log('✅ Storage healthy: ' + usagePercentage.toFixed(1) + '%');
           }
         }
       } catch (error: any) {
-        console.log('🔍 Monitoring info:', error.message);
+        console.log('📊 Monitoring info:', error.message);
       }
-    }, 1 * 60 * 60 * 1000); // Every 1 hour
+    }, 2 * 60 * 60 * 1000); // Every 2 hours - monitoring only
 
     // Initial storage check (after 1 minute)
     setTimeout(async () => {

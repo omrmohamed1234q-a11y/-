@@ -6984,9 +6984,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           daysToKeep = 0; // Delete everything
           description = 'تصفير كامل - حذف كل شيء';
           break;
-        case 'last-hour':
+        case 'partial-reset':
           daysToKeep = 0.04; // ~1 hour
-          description = 'آخر ساعة فقط';
+          description = 'تصفير جزئي - آخر ساعة فقط';
           break;
         case 'last-day':
           daysToKeep = 1;
@@ -7038,15 +7038,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         {
           id: 'total-reset',
           name: 'تصفير كامل 🔥',
-          description: 'حذف جميع الملفات (بما في ذلك ملفات اليوم)',
+          description: 'مسح كل شيء (حتى اليوم الحالي)',
           icon: '🔥',
           danger: true,
           daysKept: 0
         },
         {
-          id: 'last-hour',
-          name: 'آخر ساعة ⏰',
-          description: 'حذف كل شيء عدا آخر ساعة',
+          id: 'partial-reset',
+          name: 'تصفير جزئي ⏰',
+          description: 'مسح كل شيء عدا آخر ساعة',
           icon: '⏰',
           danger: true,
           daysKept: 0.04
