@@ -688,6 +688,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Storage Management APIs
   
+  // Get cleanup options for UI (no auth required)
+  app.get('/api/drive/cleanup-options', async (req: Request, res: Response) => {
+    try {
+      const options = [
+        {
+          id: 'total-reset',
+          name: 'تصفير كامل 🔥',
+          description: 'مسح كل شيء (حتى اليوم الحالي)',
+          icon: '🔥',
+          danger: true,
+          daysKept: 0
+        },
+        {
+          id: 'partial-reset',
+          name: 'تصفير جزئي ⏰',
+          description: 'مسح كل شيء عدا آخر ساعة',
+          icon: '⏰',
+          danger: true,
+          daysKept: 0.04
+        },
+        {
+          id: 'last-day',
+          name: 'آخر يوم 📅',
+          description: 'حذف كل شيء عدا آخر 24 ساعة (الافتراضي)',
+          icon: '📅',
+          danger: false,
+          daysKept: 1
+        },
+        {
+          id: 'last-3-days',
+          name: 'آخر 3 أيام 🗓️',
+          description: 'حذف كل شيء أقدم من 3 أيام',
+          icon: '🗓️',
+          danger: false,
+          daysKept: 3
+        },
+        {
+          id: 'last-week',
+          name: 'آخر أسبوع 📆',
+          description: 'حذف كل شيء أقدم من أسبوع',
+          icon: '📆',
+          danger: false,
+          daysKept: 7
+        },
+        {
+          id: 'custom',
+          name: 'مخصص ⚙️',
+          description: 'تحديد عدد الأيام بنفسك',
+          icon: '⚙️',
+          danger: false,
+          requiresInput: true,
+          daysKept: 'custom'
+        }
+      ];
+
+      res.json({
+        success: true,
+        options
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب خيارات التنظيف',
+        error: error.message
+      });
+    }
+  });
+
   // Get Google Drive storage information
   app.get('/api/drive/storage-info', async (req, res) => {
     try {
@@ -7026,74 +7094,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: 'خطأ في التنظيف المخصص',
-        error: error.message
-      });
-    }
-  });
-
-  // Get cleanup options for UI
-  app.get('/api/drive/cleanup-options', async (req: Request, res: Response) => {
-    try {
-      const options = [
-        {
-          id: 'total-reset',
-          name: 'تصفير كامل 🔥',
-          description: 'مسح كل شيء (حتى اليوم الحالي)',
-          icon: '🔥',
-          danger: true,
-          daysKept: 0
-        },
-        {
-          id: 'partial-reset',
-          name: 'تصفير جزئي ⏰',
-          description: 'مسح كل شيء عدا آخر ساعة',
-          icon: '⏰',
-          danger: true,
-          daysKept: 0.04
-        },
-        {
-          id: 'last-day',
-          name: 'آخر يوم 📅',
-          description: 'حذف كل شيء عدا آخر 24 ساعة (الافتراضي)',
-          icon: '📅',
-          danger: false,
-          daysKept: 1
-        },
-        {
-          id: 'last-3-days',
-          name: 'آخر 3 أيام 🗓️',
-          description: 'حذف كل شيء أقدم من 3 أيام',
-          icon: '🗓️',
-          danger: false,
-          daysKept: 3
-        },
-        {
-          id: 'last-week',
-          name: 'آخر أسبوع 📆',
-          description: 'حذف كل شيء أقدم من أسبوع',
-          icon: '📆',
-          danger: false,
-          daysKept: 7
-        },
-        {
-          id: 'custom',
-          name: 'مخصص ⚙️',
-          description: 'تحديد عدد الأيام بنفسك',
-          icon: '⚙️',
-          danger: false,
-          requiresInput: true,
-          daysKept: 'custom'
-        }
-      ];
-
-      res.json({
-        success: true,
-        options
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: 'خطأ في جلب خيارات التنظيف',
         error: error.message
       });
     }
