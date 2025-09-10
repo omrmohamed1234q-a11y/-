@@ -23,13 +23,14 @@ export interface PricingResult {
  * @returns Detailed pricing breakdown with discounts
  */
 export function calculate_price(
-  paper_size: 'A4' | 'A3' | 'A0' | 'A1',
+  paper_size: 'A4' | 'A3' | 'A0' | 'A1' | 'A2',
   paper_type: 'plain' | 'coated' | 'glossy' | 'sticker',
   print_type: 'face' | 'face_back',
   pages: number,
   is_black_white: boolean = false
 ): PricingResult {
   let pricePerPage = 0;
+  let isLargeFormat = false;
 
   // A4 Pricing Rules
   if (paper_size === 'A4') {
@@ -123,24 +124,18 @@ export function calculate_price(
       }
     }
   }
-  // A0 Pricing Rules (30 جنيه، أبيض وأسود فقط)
-  else if (paper_size === 'A0') {
-    if (paper_type === 'plain' && is_black_white) {
-      pricePerPage = 30.00;
-    }
-  }
-  // A1 Pricing Rules (30 جنيه، أبيض وأسود فقط)
-  else if (paper_size === 'A1') {
-    if (paper_type === 'plain' && is_black_white) {
-      pricePerPage = 30.00;
-    }
+  // Large Format Pricing Rules: A0, A1, A2 - Plain paper only, no B&W discount
+  else if (['A0', 'A1', 'A2'].includes(paper_size)) {
+    isLargeFormat = true;
+    // Large formats support plain paper only and no B&W discount
+    pricePerPage = print_type === 'face' ? 15.00 : 20.00;
   }
 
   // Calculate base total
   const totalPrice = pricePerPage * pages;
   
-  // Apply 10% discount for black and white printing
-  const discount = is_black_white ? totalPrice * 0.10 : 0;
+  // Apply 10% discount for black and white (but NOT for large formats)
+  const discount = (is_black_white && !isLargeFormat) ? totalPrice * 0.10 : 0;
   const finalPrice = totalPrice - discount;
 
   return {
@@ -212,12 +207,20 @@ export function getPricingTiers() {
     },
     A0: {
       plain_bw: [
-        { range: 'جميع الكميات', price: '30 جنيه/صفحة (أبيض وأسود فقط)' }
+        { range: 'وجه واحد', price: '15 جنيه/صفحة (أبيض وأسود فقط)' },
+        { range: 'وجهين', price: '20 جنيه/صفحة (أبيض وأسود فقط)' }
       ]
     },
     A1: {
       plain_bw: [
-        { range: 'جميع الكميات', price: '30 جنيه/صفحة (أبيض وأسود فقط)' }
+        { range: 'وجه واحد', price: '15 جنيه/صفحة (أبيض وأسود فقط)' },
+        { range: 'وجهين', price: '20 جنيه/صفحة (أبيض وأسود فقط)' }
+      ]
+    },
+    A2: {
+      plain_bw: [
+        { range: 'وجه واحد', price: '15 جنيه/صفحة (أبيض وأسود فقط)' },
+        { range: 'وجهين', price: '20 جنيه/صفحة (أبيض وأسود فقط)' }
       ]
     }
   };
@@ -233,7 +236,10 @@ export function convertLegacySettings(settings: {
   copies: number;
 }) {
   return {
-    paper_size: settings.paperSize === 'A3' ? 'A3' : settings.paperSize === 'A0' ? 'A0' : settings.paperSize === 'A1' ? 'A1' : 'A4' as 'A4' | 'A3' | 'A0' | 'A1',
+    paper_size: settings.paperSize === 'A3' ? 'A3' : 
+                settings.paperSize === 'A0' ? 'A0' : 
+                settings.paperSize === 'A1' ? 'A1' : 
+                settings.paperSize === 'A2' ? 'A2' : 'A4' as 'A4' | 'A3' | 'A0' | 'A1' | 'A2',
     paper_type: 'plain' as 'plain',
     print_type: settings.doubleSided ? 'face_back' : 'face' as 'face' | 'face_back',
     is_black_white: settings.colorMode === 'grayscale',
