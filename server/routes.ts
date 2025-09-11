@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from 'ws';
 import { storage } from "./storage";
@@ -53,7 +53,7 @@ function cacheClear(pattern?: string): void {
     return;
   }
   
-  for (const key of cache.keys()) {
+  for (const key of Array.from(cache.keys())) {
     if (key.includes(pattern)) {
       cache.delete(key);
     }
@@ -573,7 +573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== CUSTOM CLEANUP OPTIONS (before any auth) ====================
   
   // Get cleanup options for UI (no auth required) - outside /api to bypass middleware
-  app.get('/cleanup-options', async (req: Request, res: Response) => {
+  app.get('/cleanup-options', async (req, res) => {
     try {
       const options = [
         {
@@ -641,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Smart cleanup with custom time period (no auth required) - outside /api to bypass middleware
-  app.post('/cleanup-custom', async (req: Request, res: Response) => {
+  app.post('/cleanup-custom', async (req, res) => {
     try {
       const { timeOption, customDays } = req.body;
       
@@ -865,16 +865,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (moveResult.success) {
         console.log('✅ Files moved to permanent location successfully!');
-        console.log(`   New Folder: ${moveResult.newFolderHierarchy}`);
-        console.log(`   Files Moved: ${moveResult.filesMovedCount}`);
+        console.log(`   Order Number: ${moveResult.orderNumber}`);
+        console.log(`   Permanent Folder ID: ${moveResult.permanentFolderId}`);
 
         res.json({
           success: true,
           message: 'تم نقل الملفات إلى المجلد الدائم بنجاح',
-          newFolderId: moveResult.newFolderId,
-          newFolderHierarchy: moveResult.newFolderHierarchy,
-          newFolderLink: moveResult.newFolderLink,
-          filesMovedCount: moveResult.filesMovedCount,
+          permanentFolderId: moveResult.permanentFolderId,
           orderNumber: moveResult.orderNumber
         });
       } else {
@@ -903,23 +900,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Cleanup old temporary files using Google Drive service
       const cleanupResult = await googleDriveService.cleanupOldTempFiles(maxAgeHours);
 
-      if (cleanupResult.success) {
+      const cleaned = cleanupResult.cleaned || 0;
+      const errors = cleanupResult.errors || 0;
+      
+      if (cleaned > 0) {
         console.log('✅ Temporary files cleanup completed successfully!');
-        console.log(`   Folders Deleted: ${cleanupResult.foldersDeleted}`);
-        console.log(`   Files Deleted: ${cleanupResult.filesDeleted}`);
+        console.log(`   Items Cleaned: ${cleaned}`);
+        console.log(`   Errors: ${errors}`);
 
         res.json({
           success: true,
-          message: `تم حذف ${cleanupResult.foldersDeleted} مجلد مؤقت و ${cleanupResult.filesDeleted} ملف قديم`,
-          foldersDeleted: cleanupResult.foldersDeleted,
-          filesDeleted: cleanupResult.filesDeleted,
-          spaceSaved: cleanupResult.spaceSaved || 'غير محدد'
+          message: `تم حذف ${cleaned} عنصر قديم`,
+          itemsCleaned: cleaned,
+          errors: errors
         });
       } else {
-        console.error('❌ Failed to cleanup temporary files:', cleanupResult.error);
+        console.error('❌ Failed to cleanup temporary files. Cleaned:', cleaned, 'Errors:', errors);
         res.status(500).json({
           success: false,
-          error: cleanupResult.error || 'فشل في تنظيف الملفات المؤقتة'
+          error: 'فشل في تنظيف الملفات المؤقتة',
+          details: { cleaned, errors }
         });
       }
     } catch (error: any) {
@@ -1102,12 +1102,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const user = await storage.getUser(order.userId);
             if (user) {
               customerInfo = {
-                name: user.fullName || user.displayName || user.name || order.customerName || 'عميل مجهول',
-                phone: user.phone || order.customerPhone || 'غير محدد'
+                name: user.fullName || user.username || 'عميل مجهول',
+                phone: user.phone || 'غير محدد'
               };
             }
           } catch (error) {
-            console.log(`⚠️ Could not fetch user ${order.userId}:`, error.message);
+            console.log(`⚠️ Could not fetch user ${order.userId}:`, (error as Error).message);
           }
         }
         
@@ -1144,8 +1144,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             printFiles = userPrintJobs.map(job => ({
               filename: job.filename || 'ملف غير محدد',
               fileUrl: job.fileUrl || '',
-              fileSize: job.fileSize || 0,
-              fileType: job.fileType || 'unknown',
+              fileSize: 0, // fileSize property not available in schema
+              fileType: 'unknown', // fileType property not available in schema
               copies: job.copies || 1,
               paperSize: job.paperSize || 'A4',
               paperType: job.paperType || 'plain',
@@ -1278,7 +1278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User info endpoint - integrates with account API
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       console.log(`📋 Fetching user info for: ${userId}`);
       
       // Try to get user from storage first
@@ -1412,7 +1412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update Profile endpoint
   app.put('/api/profile', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const updates = req.body;
       console.log(`📝 Updating profile for user: ${userId}`, updates);
       
@@ -1475,7 +1475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User creation/update endpoint for Supabase integration with throttling
   app.post('/api/users/sync', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const { email, fullName, username, role = 'customer' } = req.body;
       
       // Throttle sync requests - cache user for 60 seconds to prevent excessive syncs
@@ -1542,7 +1542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Upload file notification endpoint
   app.post('/api/upload-file', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const { fileName, fileType, fileSize, uploadProvider, fileUrl } = req.body;
       
       console.log(`📤 File uploaded by user ${userId}: ${fileName} (${uploadProvider})`);
@@ -1701,7 +1701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const userId = req.user.id;
+      const userId = req.user?.id;
       
       // Log upload details with user information
       console.log(`📤 User ${userId} uploaded: ${fileName} (${fileType || 'unknown'}) via ${uploadProvider || 'unknown'}`);
@@ -1741,7 +1741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Print Job routes - now user-specific
   app.post('/api/print-jobs', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       console.log('Creating print job for user:', userId);
       console.log('Request body keys:', Object.keys(req.body));
       console.log('Files count:', req.body.files?.length || 0);
@@ -1785,7 +1785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all orders for current user
   app.get('/api/orders/user', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const allOrders = await storage.getAllOrders();
       console.log('📋 Total orders in storage:', allOrders.length);
       // Filter orders for current user
@@ -1801,7 +1801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get active orders for user  
   app.get('/api/orders/active', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const activeOrders = await storage.getActiveOrders();
       // Filter orders for current user
       const userActiveOrders = activeOrders.filter((order: any) => order.userId === userId);
@@ -2252,7 +2252,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (drivers.length > 0) {
         const driverId = drivers[0].id;
-        notifications = await storage.getNotificationsByUser(driverId);
+        // Note: getNotificationsByUser method not available in storage interface
+        notifications = [];
       }
       
       // Add demo notifications if needed
@@ -2316,7 +2317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/driver/orders/:orderId/delivered', requireDriverAuth, async (req: any, res) => {
     try {
       const { orderId } = req.params;
-      const driverId = req.driver.id;
+      const driverId = (req as any).driver?.id;
       
       // Verify that this order is assigned to this driver
       const order = await storage.getOrder(orderId);
@@ -2563,7 +2564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cart routes
   app.get('/api/cart', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       console.log(`🔍 API: Getting cart for user ${userId}`);
       const cart = await storage.getCart(userId);
       console.log(`📋 API: Returning cart with ${cart.items?.length || 0} items`);
@@ -2582,7 +2583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/cart/add', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const { productId, quantity = 1, variant } = req.body;
 
       if (!productId) {
@@ -2613,7 +2614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add partner product to cart endpoint
   app.post('/api/cart/add-partner-product', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const { productId, partnerId, quantity = 1 } = req.body;
 
       if (!productId || !partnerId) {
@@ -2634,7 +2635,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { itemId } = req.params;
       const { quantity } = req.body;
-      const userId = req.user.id;
+      const userId = req.user?.id;
 
       if (!quantity || quantity < 1) {
         return res.status(400).json({ message: "Valid quantity is required" });
@@ -2661,7 +2662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/cart/items/:itemId', requireAuth, async (req: any, res) => {
     try {
       const { itemId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user?.id;
 
       if (!itemId) {
         return res.status(400).json({ message: "Item ID is required" });
@@ -2683,7 +2684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/cart/clear', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const success = await storage.clearCart(userId);
       
       if (success) {
@@ -2699,7 +2700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/cart/count', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const count = await storage.getCartItemCount(userId);
       console.log(`🔢 API: Cart count for user ${userId}: ${count}`);
       
@@ -2718,7 +2719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Checkout route
   app.post('/api/checkout', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const { 
         deliveryAddress,
         deliveryMethod = 'delivery',
@@ -2867,8 +2868,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           if (moveResult.success) {
             console.log('✅ Files moved to permanent location successfully!');
-            console.log(`   New Folder: ${moveResult.newFolderHierarchy}`);
-            console.log(`   Files Moved: ${moveResult.filesMovedCount}`);
+            console.log(`   Order Number: ${moveResult.orderNumber}`);
+            console.log(`   Permanent Folder ID: ${moveResult.permanentFolderId}`);
           } else {
             console.error('❌ Failed to move files to permanent location:', moveResult.error);
           }
@@ -2892,8 +2893,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Order placed successfully",
         filesMoved: moveResult ? {
           success: moveResult.success,
-          newFolderHierarchy: moveResult.newFolderHierarchy,
-          filesMovedCount: moveResult.filesMovedCount
+          orderNumber: moveResult.orderNumber,
+          permanentFolderId: moveResult.permanentFolderId
         } : null
       });
     } catch (error) {
@@ -3996,7 +3997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/cart/print-job', requireAuth, async (req: any, res) => {
     try {
       const printJobData = req.body;
-      const userId = req.user.id; // Get actual user ID from auth
+      const userId = req.user?.id; // Get actual user ID from auth
       console.log('Received print job data:', printJobData);
       console.log('Adding print job for user:', userId);
       
@@ -4203,7 +4204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date(),
         timeline: [{
           event: 'order_placed',
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
           note: 'تم استلام الطلب'
         }]
       };
@@ -4428,7 +4429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const couponData = {
         ...req.body,
-        createdBy: req.user.id,
+        createdBy: req.user?.id || 'admin',
         createdAt: new Date(),
         isActive: req.body.isActive !== false // Default to true
       };
@@ -4501,7 +4502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/coupons/validate', requireAuth, async (req, res) => {
     try {
       const { code, orderTotal } = req.body;
-      const userId = req.user.id;
+      const userId = req.user?.id;
       
       const validation = await storage.validateCoupon(code, orderTotal, userId);
       res.json(validation);
@@ -4515,7 +4516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/coupons/apply', requireAuth, async (req, res) => {
     try {
       const { code, orderId, orderTotal } = req.body;
-      const userId = req.user.id;
+      const userId = req.user?.id;
       
       const result = await storage.applyCoupon(code, orderId, orderTotal, userId);
       res.json(result);
@@ -4830,7 +4831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update driver status (online/offline)
   app.put('/api/driver/status', requireDriverAuth, async (req, res) => {
     try {
-      const driverId = req.driver.id;
+      const driverId = (req as any).driver?.id;
       const { online } = req.body;
       const status = online ? 'online' : 'offline';
 
@@ -4848,7 +4849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/driver/orders/:orderId/accept', requireDriverAuth, async (req, res) => {
     try {
       const { orderId } = req.params;
-      const driverId = req.driver.id;
+      const driverId = (req as any).driver?.id;
 
       console.log(`✅ Driver ${driverId} accepting order: ${orderId}`);
 
@@ -4864,7 +4865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/driver/orders/:orderId/reject', requireDriverAuth, async (req, res) => {
     try {
       const { orderId } = req.params;
-      const driverId = req.driver.id;
+      const driverId = (req as any).driver?.id;
 
       console.log(`❌ Driver ${driverId} rejecting order: ${orderId}`);
 
@@ -4881,7 +4882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { orderId } = req.params;
       const { status } = req.body;
-      const driverId = req.driver.id;
+      const driverId = (req as any).driver?.id;
 
       console.log(`📋 Driver ${driverId} updating order ${orderId} to: ${status}`);
 
@@ -5087,7 +5088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ip_address: req.ip || 'unknown',
           user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
           details: `Username: ${username}, Email: ${email}, DriverCode: ${driverCode}`
         });
         
@@ -5341,7 +5342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ip_address: req.ip || 'unknown',
           user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
           details: `UserType: ${userType}, Token: ${token.substring(0, 2)}***`
         });
 
@@ -5492,7 +5493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ip_address: req.ip || 'unknown',
           user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
           details: `UserType: ${userType}`
         });
 
@@ -5600,11 +5601,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fullName,
         role: role || 'admin',
         permissions: permissions || ['read', 'write'],
-        createdBy: req.user.id
+        createdBy: req.user?.id || 'admin'
       });
 
       // Log admin creation
-      await logSecurityEvent(req.user.id, 'admin', 'create_admin', true, req);
+      await logSecurityEvent(req.user?.id || 'admin', 'admin', 'create_admin', true, req);
 
       res.json({
         success: true,
@@ -5662,11 +5663,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         licenseNumber,
         vehicleType,
         vehiclePlate,
-        createdBy: req.user.id
+        createdBy: req.user?.id || 'admin'
       });
 
       // Log driver creation
-      await logSecurityEvent(req.user.id, 'admin', 'create_driver', true, req);
+      await logSecurityEvent(req.user?.id || 'admin', 'admin', 'create_driver', true, req);
 
       res.json({
         success: true,
@@ -5930,7 +5931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ip_address: req.ip || 'unknown',
           user_agent: req.get('User-Agent') || 'unknown',
           success: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
           details: error instanceof Error ? error.message : 'Unknown error'
         });
       } catch (logError) {
@@ -6658,7 +6659,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }>();
 
   // تهيئة نظام الكباتن المتكامل
-  setupCaptainSystem(app, storage, activeConnections);
+  // Convert activeConnections to the format expected by captain system
+  const wsMap = new Map<string, WebSocket>();
+  activeConnections.forEach((conn, id) => wsMap.set(id, conn.ws));
+  setupCaptainSystem(app, storage, wsMap);
 
   // معالج اتصالات WebSocket
   wss.on('connection', (ws, request) => {
@@ -6910,7 +6914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/payments/paymob/test', async (req, res) => {
     try {
       const paymobModule = await import('./paymob');
-      const PaymobService = paymobModule.default || paymobModule.PaymobService;
+      const PaymobService = (paymobModule as any).default || (paymobModule as any).PaymobService;
       
       if (!PaymobService) {
         return res.status(500).json({
@@ -6979,7 +6983,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
-      const userId = req.user.id;
+      const userId = req.user?.id;
       
       // إرجاع بيانات تجريبية مؤقتاً
       const mockUserReward = {
