@@ -124,11 +124,16 @@ export function calculate_price(
       }
     }
   }
-  // Large Format Pricing Rules: A0, A1, A2 - Plain paper only, no B&W discount
-  else if (['A0', 'A1', 'A2'].includes(paper_size)) {
+  // Large Format Pricing Rules: Fixed prices, plain paper only, no B&W discount
+  else if (['A0', 'A1'].includes(paper_size)) {
     isLargeFormat = true;
-    // Large formats support plain paper only and no B&W discount
-    pricePerPage = print_type === 'face' ? 15.00 : 20.00;
+    // A0, A1: Fixed 30 EGP regardless of print type
+    pricePerPage = 30.00;
+  }
+  else if (paper_size === 'A2') {
+    isLargeFormat = true;
+    // A2: Fixed 25 EGP regardless of print type
+    pricePerPage = 25.00;
   }
 
   // Calculate base total
@@ -207,20 +212,17 @@ export function getPricingTiers() {
     },
     A0: {
       plain_bw: [
-        { range: 'وجه واحد', price: '15 جنيه/صفحة (أبيض وأسود فقط)' },
-        { range: 'وجهين', price: '20 جنيه/صفحة (أبيض وأسود فقط)' }
+        { range: 'جميع الكميات', price: '30 جنيه/صفحة (أبيض وأسود فقط)' }
       ]
     },
     A1: {
       plain_bw: [
-        { range: 'وجه واحد', price: '15 جنيه/صفحة (أبيض وأسود فقط)' },
-        { range: 'وجهين', price: '20 جنيه/صفحة (أبيض وأسود فقط)' }
+        { range: 'جميع الكميات', price: '30 جنيه/صفحة (أبيض وأسود فقط)' }
       ]
     },
     A2: {
       plain_bw: [
-        { range: 'وجه واحد', price: '15 جنيه/صفحة (أبيض وأسود فقط)' },
-        { range: 'وجهين', price: '20 جنيه/صفحة (أبيض وأسود فقط)' }
+        { range: 'جميع الكميات', price: '25 جنيه/صفحة (أبيض وأسود فقط)' }
       ]
     }
   };

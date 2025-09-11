@@ -4052,8 +4052,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Pricing Rules (simplified server-side version)
       if (paper_size_typed === 'large') {
-        // Large formats: A0, A1, A2 - Plain paper only, no black/white discount
-        pricePerPage = print_type === 'face' ? 15.00 : 20.00; // Higher price for large formats
+        if (['A0', 'A1'].includes(paperSize)) {
+          // A0, A1: Fixed 30 EGP
+          pricePerPage = 30.00;
+        } else if (paperSize === 'A2') {
+          // A2: Fixed 25 EGP  
+          pricePerPage = 25.00;
+        }
         console.log(`📏 Large format pricing (${paperSize}): ${pricePerPage} جنيه/صفحة`);
       } else if (paper_size_typed === 'A4') {
         if (paper_type_typed === 'plain') {
