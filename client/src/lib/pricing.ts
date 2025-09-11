@@ -137,6 +137,6 @@ export function convertLegacySettings(settings: {
     paper_type: 'plain' as 'plain',
     print_type: settings.doubleSided ? 'face_back' : 'face' as 'face' | 'face_back',
     is_black_white: settings.colorMode === 'grayscale',
-    copies: settings.copies
+    pages: settings.copies // Fixed: return pages instead of copies
   };
 }
