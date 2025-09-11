@@ -116,9 +116,9 @@ export function DragDropUpload({
       
       let description = `تم رفع ${uploads.length} ملف بنجاح`;
       if (googleDriveCount > 0 && cloudinaryCount > 0) {
-        description += ` (${googleDriveCount} عبر Google Drive، ${cloudinaryCount} عبر Cloudinary)`;
+        description += ` (${googleDriveCount} عبر التخزين السحابي، ${cloudinaryCount} عبر Cloudinary)`;
       } else if (googleDriveCount > 0) {
-        description += ` عبر Google Drive`;
+        description += ` عبر التخزين السحابي`;
       } else {
         description += ` عبر Cloudinary`;
       }
