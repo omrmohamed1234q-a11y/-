@@ -100,9 +100,9 @@ export class HybridUploadService {
           result.googleDrive.directDownloadLink = directLink;
           result.backupUrls.push(directLink);
           result.primaryUrl = directLink;
-          result.message = 'تم الرفع بنجاح إلى Google Drive كنسخة احتياطية';
+          result.message = 'تم رفع الملف بنجاح إلى التخزين السحابي';
         } else {
-          result.message = 'فشل في الرفع إلى Google Drive';
+          result.message = 'فشل في رفع الملف إلى التخزين السحابي';
         }
 
         console.log('✅ Google Drive upload successful');
@@ -116,7 +116,7 @@ export class HybridUploadService {
         result.message = `فشل في الرفع: ${error.message}`;
       }
     } else {
-      result.message = 'Google Drive غير مكوّن';
+      result.message = 'خدمة التخزين السحابي غير متوفرة حالياً';
     }
 
     // Log final result
@@ -239,7 +239,7 @@ export class HybridUploadService {
               result.message = `تم رفع الملف ولكن فشلت المشاركة مع ${shareWithEmail} في: ${folderHierarchy}`;
             }
           } else {
-            result.message = `تم رفع الملف بنجاح إلى Google Drive في: ${folderHierarchy}`;
+            result.message = `تم رفع الملف بنجاح إلى التخزين السحابي`;
           }
           
           result.backupUrls.push(directLink);
@@ -258,7 +258,7 @@ export class HybridUploadService {
         result.message = `فشل في رفع الملف: ${error.message}`;
       }
     } else {
-      result.message = 'Google Drive غير مكوّن';
+      result.message = 'خدمة التخزين السحابي غير متوفرة حالياً';
     }
 
     console.log(`🎯 Google Drive buffer upload completed: ${uploadId}`);
