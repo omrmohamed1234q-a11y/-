@@ -789,7 +789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('❌ Google Drive upload failed:', driveResult.googleDrive?.error);
         res.status(500).json({
           success: false,
-          error: driveResult.googleDrive?.error || 'Google Drive upload failed',
+          error: driveResult.googleDrive?.error || 'فشل في رفع الملف إلى التخزين السحابي',
           provider: 'none'
         });
       }
@@ -823,7 +823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         success: true,
-        message: 'Cloudinary cleanup completed, file safe on Google Drive',
+        message: 'تم تنظيف الملفات المؤقتة، الملف محفوظ بأمان',
         costSavings: true
       });
     } catch (error: any) {
