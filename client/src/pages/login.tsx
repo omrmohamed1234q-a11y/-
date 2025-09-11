@@ -111,7 +111,7 @@ export default function Login() {
               transition={{ duration: 0.6 }}
               className="cursor-pointer"
             >
-              <LogoPresets preset="animated" size={50} />
+              <LogoPresets.Navigation />
             </motion.div>
           </Link>
           
