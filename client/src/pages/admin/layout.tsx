@@ -20,7 +20,8 @@ import {
   Building2,
   Shield,
   Smartphone,
-  HardDrive
+  HardDrive,
+  FileText
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -38,6 +39,7 @@ const navigation = [
   { name: 'المكافآت', href: '/admin/rewards', icon: Gift },
   { name: 'المواد التعليمية', href: '/admin/teacher-materials', icon: GraduationCap },
   { name: 'المستخدمين', href: '/admin/users', icon: Users },
+  { name: 'الشروط والأحكام', href: '/admin/terms-management', icon: FileText },
   { name: 'التحليلات', href: '/admin/reports', icon: BarChart3 },
   { name: 'الأمان', href: '/admin/security-dashboard', icon: Shield },
   { name: 'إدارة المساحة', href: '/admin/storage-dashboard', icon: HardDrive },
