@@ -88,44 +88,63 @@ export default function TermsAndConditions() {
           </div>
         </div>
 
-        {/* Quick Navigation */}
-        <Card className="mb-8 border-blue-200 dark:border-blue-800">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              فهرس المحتويات
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              <a href="#definitions" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">1</span>
-                التعريفات والبيانات
-              </a>
-              <a href="#acceptance" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">2</span>
-                قبول الشروط
-              </a>
-              <a href="#privacy" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">3</span>
-                حماية البيانات
-              </a>
-              <a href="#copyright" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">4</span>
-                حقوق الملكية الفكرية
-              </a>
-              <a href="#printing" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">5</span>
-                خدمات الطباعة
-              </a>
-              <a href="#refund" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">7</span>
-                سياسة الاسترداد
-              </a>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Dynamic Content from API */}
+        {terms?.content ? (
+          <div className="space-y-6">
+            <Card className="border-blue-200 dark:border-blue-800">
+              <CardContent className="p-8">
+                <div 
+                  className="prose dark:prose-invert max-w-none text-right"
+                  style={{ direction: 'rtl' }}
+                  dangerouslySetInnerHTML={{ __html: terms.content }}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          // Fallback for when no content is available
+          <Card className="mb-8 border-blue-200 dark:border-blue-800">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                فهرس المحتويات
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <a href="#definitions" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                  <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">1</span>
+                  التعريفات والبيانات
+                </a>
+                <a href="#acceptance" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                  <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">2</span>
+                  قبول الشروط
+                </a>
+                <a href="#privacy" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                  <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">3</span>
+                  حماية البيانات
+                </a>
+                <a href="#copyright" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                  <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">4</span>
+                  حقوق الملكية الفكرية
+                </a>
+                <a href="#printing" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                  <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">5</span>
+                  خدمات الطباعة
+                </a>
+                <a href="#refund" className="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                  <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">7</span>
+                  سياسة الاسترداد
+                </a>
+              </div>
+            </CardContent>
+          </Card>
 
+        )}
+
+        {/* Static fallback content when no dynamic content is available */}
+        {!terms?.content && (
+        <div className="space-y-6">
         {/* Section 1: Definitions */}
         <Card id="definitions" className="mb-6">
           <CardHeader>
@@ -460,6 +479,9 @@ export default function TermsAndConditions() {
             </div>
           </CardContent>
         </Card>
+
+        </div>
+        )}
 
         <Separator className="my-8" />
 

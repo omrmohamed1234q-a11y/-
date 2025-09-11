@@ -75,17 +75,22 @@ const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, s
 const requireAuth = async (req: any, res: any, next: any) => {
   const authHeader = req.headers.authorization;
   const userId = req.headers['x-user-id'];
+  const adminToken = req.headers['x-admin-token'];
   
   // Try multiple authentication methods
   let authenticatedUserId = null;
   
-  // Method 1: Direct user ID header (for testing/admin)
-  if (userId) {
-    authenticatedUserId = userId;
+  // Method 1: Direct user ID header (ONLY for development/testing with admin token)
+  if (userId && adminToken && process.env.NODE_ENV !== 'production') {
+    // Verify admin token for test access
+    if (adminToken === process.env.ADMIN_MASTER_TOKEN || adminToken === 'dev-test-token') {
+      authenticatedUserId = userId;
+      console.log(`🧪 DEV MODE: Using test user ID ${userId} with admin token`);
+    }
   }
   
-  // Method 2: Supabase JWT token
-  else if (authHeader && authHeader.startsWith('Bearer ')) {
+  // Method 2: Supabase JWT token (primary production method)
+  if (!authenticatedUserId && authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
     try {
       if (supabase) {
@@ -102,7 +107,7 @@ const requireAuth = async (req: any, res: any, next: any) => {
   if (!authenticatedUserId) {
     return res.status(401).json({ 
       success: false, 
-      error: 'Authentication required - User ID missing' 
+      error: 'Authentication required - Valid JWT token missing' 
     });
   }
 
@@ -114,27 +119,64 @@ const requireAuth = async (req: any, res: any, next: any) => {
   next();
 };
 
-// Admin authentication middleware
-const isAdminAuthenticated = (req: any, res: any, next: any) => {
-  const userId = req.headers['x-user-id'];
-  const userRole = req.headers['x-user-role'];
+// Admin authentication middleware - Secure version
+const isAdminAuthenticated = async (req: any, res: any, next: any) => {
   const adminToken = req.headers['x-admin-token'];
   const authHeader = req.headers['authorization'];
   
-  // Check if user is admin or has admin token
-  if (userRole === 'admin' || adminToken || authHeader?.includes('Bearer')) {
-    req.user = { 
-      id: userId || '48c03e72-d53b-4a3f-a729-c38276268315',
-      claims: { sub: userId || '48c03e72-d53b-4a3f-a729-c38276268315' }, 
-      role: 'admin' 
-    };
-    next();
-  } else {
+  let authenticatedUserId = null;
+  let isValidAdmin = false;
+  
+  // Method 1: Secure admin token verification
+  if (adminToken) {
+    try {
+      // Verify against memory security storage for admin accounts
+      const adminUser = await memorySecurityStorage.verifyAdminToken(adminToken);
+      if (adminUser) {
+        authenticatedUserId = adminUser.id;
+        isValidAdmin = true;
+        console.log(`🔐 Admin authenticated: ${adminUser.username}`);
+      }
+    } catch (error) {
+      console.log('⚠️ Invalid admin token:', adminToken);
+    }
+  }
+  
+  // Method 2: Supabase JWT token for admin users
+  if (!isValidAdmin && authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    try {
+      if (supabase) {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (user && !error) {
+          // Check if user has admin role in our system
+          const adminUser = await memorySecurityStorage.getAdminByEmail(user.email);
+          if (adminUser) {
+            authenticatedUserId = user.id;
+            isValidAdmin = true;
+            console.log(`🔐 Admin authenticated via Supabase: ${user.email}`);
+          }
+        }
+      }
+    } catch (error: any) {
+      console.log('⚠️ Failed to validate admin Supabase token:', error.message);
+    }
+  }
+  
+  if (!isValidAdmin) {
     return res.status(401).json({ 
       success: false, 
-      message: 'Authentication required. Please login as admin.' 
+      message: 'Admin authentication required. Please login as admin with valid credentials.' 
     });
   }
+
+  req.user = { 
+    id: authenticatedUserId,
+    claims: { sub: authenticatedUserId }, 
+    role: 'admin' 
+  };
+  
+  next();
 };
 
 // Driver authentication middleware - Real implementation
