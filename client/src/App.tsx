@@ -8,7 +8,6 @@ import { useState, useEffect, lazy } from "react";
 import { SplashScreen } from "@/components/SplashScreen";
 import NotFound from "@/pages/not-found";
 import EnhancedLanding from "@/pages/enhanced-landing";
-import Login from "@/pages/auth/login";
 import Signup from "@/pages/auth/signup";
 import AdminSignup from "@/pages/auth/admin-signup";
 import AuthCallback from "@/pages/auth-callback";
@@ -112,7 +111,6 @@ function Router() {
   if (!user) {
     return (
       <Switch>
-        <Route path="/auth/login" component={Login} />
         <Route path="/auth/signup" component={Signup} />
         <Route path="/auth/admin-signup" component={AdminSignup} />
         <Route path="/auth/callback" component={AuthCallback} />

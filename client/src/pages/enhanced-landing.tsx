@@ -116,6 +116,7 @@ export default function EnhancedLanding() {
   const [gradeLevel, setGradeLevel] = useState('')
   const [loading, setLoading] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const { toast } = useToast()
 
   const validatePhone = (phone: string, countryCode: string) => {
@@ -151,6 +152,15 @@ export default function EnhancedLanding() {
         toast({
           title: "خطأ",
           description: "يرجى ملء جميع الحقول المطلوبة",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!agreedToTerms) {
+        toast({
+          title: "الموافقة مطلوبة",
+          description: "يجب الموافقة على الشروط والأحكام وسياسة الخصوصية لإنشاء الحساب",
           variant: "destructive",
         })
         return
@@ -205,11 +215,40 @@ export default function EnhancedLanding() {
               age: parseInt(age),
               grade_level: gradeLevel,
               country_code: countryCode,
+              agreed_to_terms: true,
+              terms_version: "1.0",
+              agreed_at: new Date().toISOString(),
             }
           }
         })
         
         if (error) throw error
+
+        // Save terms acceptance record if user is created and session exists
+        if (data.user && data.session) {
+          try {
+            const response = await fetch('/api/terms/accept', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${data.session.access_token}`
+              },
+              body: JSON.stringify({
+                userId: data.user.id,
+                termsVersion: "1.0",
+                consentMethod: "signup",
+                userAgent: navigator.userAgent
+              })
+            });
+
+            if (!response.ok) {
+              console.warn('Failed to save terms acceptance:', await response.text());
+            }
+          } catch (termsError) {
+            console.warn('Error saving terms acceptance:', termsError);
+            // Don't block signup for terms recording failure
+          }
+        }
         
         if (data.user && !data.session) {
           toast({
@@ -493,6 +532,41 @@ export default function EnhancedLanding() {
               </Select>
             </div>
 
+            {/* Terms and Conditions Agreement */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="terms-agreement"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
+                  data-testid="checkbox-terms"
+                />
+                <label htmlFor="terms-agreement" className="text-sm text-blue-800 cursor-pointer">
+                  أوافق على{' '}
+                  <a 
+                    href="/terms-and-conditions" 
+                    target="_blank"
+                    className="text-red-600 hover:text-red-700 underline font-semibold"
+                    data-testid="link-terms-conditions"
+                  >
+                    الشروط والأحكام
+                  </a>
+                  {' '}و{' '}
+                  <a 
+                    href="/privacy-policy" 
+                    target="_blank"
+                    className="text-red-600 hover:text-red-700 underline font-semibold"
+                    data-testid="link-privacy-policy"
+                  >
+                    سياسة الخصوصية
+                  </a>
+                  {' '}الخاصة بمنصة اطبعلي
+                </label>
+              </div>
+            </div>
+
             {/* Summary */}
             <div className="bg-green-50 border border-green-200 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
@@ -643,7 +717,8 @@ export default function EnhancedLanding() {
                       disabled={
                         loading ||
                         (currentStep === 1 && (!fullName || !email || !password)) ||
-                        (currentStep === 2 && (!age || !phone))
+                        (currentStep === 2 && (!age || !phone)) ||
+                        (currentStep === 3 && (!gradeLevel || !agreedToTerms))
                       }
                       className="flex-1 h-12 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
                     >
