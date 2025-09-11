@@ -50,11 +50,12 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
   const content = (
     <div className="space-y-6">
       <Tabs defaultValue="A4" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="A4">A4</TabsTrigger>
           <TabsTrigger value="A3">A3</TabsTrigger>
           <TabsTrigger value="A0">A0</TabsTrigger>
           <TabsTrigger value="A1">A1</TabsTrigger>
+          <TabsTrigger value="A2">A2</TabsTrigger>
         </TabsList>
 
         <TabsContent value="A4" className="space-y-4">
@@ -160,6 +161,17 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
             />
           </div>
         </TabsContent>
+
+        <TabsContent value="A2" className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <PriceCard
+              title="A2 - أبيض وأسود فقط"
+              icon={FileText}
+              tiers={pricingTiers.A2.plain_bw}
+              description="حجم متوسط مناسب للعروض والرسوم البيانية"
+            />
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Paper Types Visual Guide */}
@@ -210,7 +222,7 @@ export function PriceGuide({ compact = false }: PriceGuideProps) {
         <ul className="text-blue-700 dark:text-blue-300 space-y-1 text-sm">
           <li>• الأسعار شاملة ضريبة القيمة المضافة</li>
           <li>• خصم تلقائي 10% على الطباعة بالأبيض والأسود</li>
-          <li>• <strong>A0 و A1: متوفر بالأبيض والأسود فقط بسعر 30 جنيه</strong></li>
+          <li>• <strong>A0 و A1: 30 جنيه، A2: 25 جنيه (أبيض وأسود فقط)</strong></li>
           <li>• خصومات إضافية للكميات الكبيرة (أكثر من 1000 صفحة لـ A4)</li>
           <li>• جودة طباعة عالية بدقة 300 DPI</li>
           <li>• إمكانية التسليم السريع والاستلام من الفرع</li>
