@@ -5,8 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { Link } from 'wouter';
 
 export default function Signup() {
   const [, navigate] = useLocation();
@@ -17,6 +20,7 @@ export default function Signup() {
   const [countryCode, setCountryCode] = useState('+20'); // Default to Egypt
   const [age, setAge] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -48,6 +52,15 @@ export default function Signup() {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!agreeToTerms) {
+      toast({
+        title: "خطأ",
+        description: "يجب الموافقة على الشروط والأحكام وسياسة الخصوصية للمتابعة",
         variant: "destructive",
       });
       return;
@@ -86,12 +99,52 @@ export default function Signup() {
             age: ageNum,
             grade_level: gradeLevel,
             is_teacher: gradeLevel === 'teacher',
-            is_captain: gradeLevel === 'captain'
+            is_captain: gradeLevel === 'captain',
+            agreed_to_terms: true,
+            terms_version: "1.0",
+            agreed_at: new Date().toISOString(),
+            agreed_ip: "unknown" // This would be better handled server-side
           }
         }
       });
 
       if (error) throw error;
+
+      // Save terms acceptance record if user is created and session exists
+      if (data.user && data.session) {
+        try {
+          // First get the current active terms version
+          const termsResponse = await fetch('/api/terms/current');
+          let currentVersion = "1.0"; // fallback
+          
+          if (termsResponse.ok) {
+            const termsData = await termsResponse.json();
+            if (termsData.success && termsData.data?.version) {
+              currentVersion = termsData.data.version;
+            }
+          }
+
+          const response = await fetch('/api/terms/accept', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${data.session.access_token}`
+            },
+            body: JSON.stringify({
+              termsVersion: currentVersion,
+              consentMethod: "signup"
+              // Note: IP address and user agent are captured server-side for security
+            })
+          });
+
+          if (!response.ok) {
+            console.warn('Failed to save terms acceptance:', await response.text());
+          }
+        } catch (termsError) {
+          console.warn('Error saving terms acceptance:', termsError);
+          // Don't block signup for terms recording failure
+        }
+      }
 
       if (data.user && !data.session) {
         toast({
@@ -298,6 +351,28 @@ export default function Signup() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Terms and Conditions Agreement */}
+            <div className="flex items-start space-x-3 space-x-reverse p-4 bg-blue-50 rounded-lg">
+              <Checkbox
+                id="agreeToTerms"
+                checked={agreeToTerms}
+                onCheckedChange={(checked) => setAgreeToTerms(!!checked)}
+                className="mt-1"
+                data-testid="checkbox-terms"
+              />
+              <Label htmlFor="agreeToTerms" className="text-sm leading-relaxed text-gray-700">
+                أوافق على{' '}
+                <Link href="/terms-and-conditions" className="text-blue-600 hover:text-blue-800 underline">
+                  الشروط والأحكام
+                </Link>
+                {' '}و{' '}
+                <Link href="/privacy-policy" className="text-blue-600 hover:text-blue-800 underline">
+                  سياسة الخصوصية
+                </Link>
+                {' '}الخاصة بمنصة اطبعلي
+              </Label>
             </div>
 
             {/* Signup Button */}

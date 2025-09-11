@@ -119,6 +119,81 @@ const requireAuth = async (req: any, res: any, next: any) => {
   next();
 };
 
+// Terms consent validation middleware - ensures users have accepted current terms
+const requireTermsConsent = async (req: any, res: any, next: any) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'User authentication required for consent validation' 
+      });
+    }
+
+    // Check cache first for performance
+    const cacheKey = `user-terms-status-${userId}`;
+    let userTermsStatus = cacheGet(cacheKey);
+    
+    if (!userTermsStatus) {
+      // Get user's terms acceptance status
+      userTermsStatus = await storage.getUserTermsStatus(userId);
+      
+      // Cache for 10 minutes (terms don't change frequently)
+      cacheSet(cacheKey, userTermsStatus, 600);
+    }
+
+    // Get current active terms version
+    const activeTermsCacheKey = 'current-active-terms';
+    let activeTerms = cacheGet(activeTermsCacheKey);
+    
+    if (!activeTerms) {
+      activeTerms = await storage.getCurrentActiveTerms();
+      
+      if (activeTerms) {
+        // Cache active terms for 1 hour
+        cacheSet(activeTermsCacheKey, activeTerms, 3600);
+      }
+    }
+
+    if (!activeTerms) {
+      console.log('⚠️ No active terms found - allowing access for now');
+      return next();
+    }
+
+    // Check if user has accepted current terms version
+    const hasValidConsent = userTermsStatus.hasAcceptedLatestTerms && 
+                            userTermsStatus.acceptedVersion === activeTerms.version &&
+                            userTermsStatus.isActive;
+
+    if (!hasValidConsent) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Terms consent required',
+        message: 'يجب الموافقة على الشروط والأحكام الحالية للمتابعة',
+        requiresConsent: true,
+        currentTermsVersion: activeTerms.version,
+        userAcceptedVersion: userTermsStatus.acceptedVersion || null,
+        termsUrl: '/api/terms/current'
+      });
+    }
+
+    // User has valid consent, continue
+    req.userTermsStatus = userTermsStatus;
+    next();
+    
+  } catch (error) {
+    console.error('❌ Terms consent validation error:', error);
+    
+    // In case of error, allow access but log the issue
+    console.log('⚠️ Terms consent check failed - allowing access due to error');
+    next();
+  }
+};
+
+// Combined middleware for authentication and consent
+const requireAuthAndConsent = [requireAuth, requireTermsConsent];
+
 // Admin authentication middleware - Secure version
 const isAdminAuthenticated = async (req: any, res: any, next: any) => {
   const adminToken = req.headers['x-admin-token'];
@@ -1294,7 +1369,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       '/api/public',
       '/api/setup',
       '/api/test',
-      '/api/drive/storage-info'
+      '/api/drive/storage-info',
+      '/api/terms/current'  // Public access to current terms and conditions
     ];
     
     // Check if current path is a public endpoint
@@ -6990,6 +7066,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ====== PUBLIC TERMS ENDPOINTS (MUST BE BEFORE protectAPI MIDDLEWARE) ======
+  
+  // Public API to get current active terms - no authentication required
+  app.get('/api/terms/current', async (req, res) => {
+    try {
+      const cacheKey = 'terms_current';
+      const cached = cacheGet(cacheKey);
+      
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      // Get current active terms from storage
+      const activeTerms = await storage.getCurrentActiveTerms();
+      
+      if (!activeTerms) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على شروط وأحكام نشطة' 
+        });
+      }
+      
+      const result = {
+        success: true,
+        data: {
+          id: activeTerms.id,
+          version: activeTerms.version,
+          title: activeTerms.title,
+          content: activeTerms.content,
+          effectiveDate: activeTerms.effectiveDate,
+          createdAt: activeTerms.createdAt
+        }
+      };
+      
+      // Cache for 1 hour
+      cacheSet(cacheKey, result, 3600);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching current terms:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب الشروط والأحكام' 
+      });
+    }
+  });
 
   app.use('/api', protectAPI);
   

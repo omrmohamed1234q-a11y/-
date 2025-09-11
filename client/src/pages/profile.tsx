@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { User, Settings, Phone, Mail, MapPin, Calendar, Star, Package, CreditCard, LogOut } from 'lucide-react';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { supabase } from '@/lib/supabase';
 
 interface UserProfile {
@@ -407,6 +407,37 @@ export default function Profile() {
                     <Button variant="outline" size="sm">
                       تمكين
                     </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="font-medium text-gray-900 dark:text-white">الوثائق القانونية</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white">الشروط والأحكام</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">اطلع على شروط استخدام المنصة</p>
+                      </div>
+                      <Link href="/terms-and-conditions">
+                        <Button variant="outline" size="sm" data-testid="link-terms">
+                          عرض
+                        </Button>
+                      </Link>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white">سياسة الخصوصية</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">تعرف على كيفية حماية بياناتك</p>
+                      </div>
+                      <Link href="/privacy-policy">
+                        <Button variant="outline" size="sm" data-testid="link-privacy">
+                          عرض
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
 
