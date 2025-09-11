@@ -68,6 +68,7 @@ import MapsTest from '@/pages/maps-test';
 import DriverLocationTest from '@/pages/driver-location-test';
 import PaymentSuccess from '@/pages/payment-success';
 import DonationsPage from '@/pages/donations';
+import TermsAndConditions from '@/pages/terms-and-conditions';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 import CaptainSecureLogin from '@/pages/captain/secure-login';
 import CaptainDashboard from '@/pages/captain/dashboard';
@@ -155,6 +156,8 @@ function Router() {
 
         <Route path="/article/:id" component={ArticlePage} />
         <Route path="/donations" component={DonationsPage} />
+        <Route path="/terms-and-conditions" component={TermsAndConditions} />
+        <Route path="/terms" component={TermsAndConditions} />
         
         <Route path="/" component={EnhancedLanding} />
         <Route component={NotFound} />

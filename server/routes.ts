@@ -17,6 +17,12 @@ import { registerInventoryRoutes } from "./inventory-routes";
 import { hybridUploadService } from './hybrid-upload-service';
 import { googleDriveService } from './google-drive-service';
 import { setupCaptainSystem } from './captain-system';
+import { 
+  insertTermsAndConditionsSchema, 
+  insertUserTermsAcceptanceSchema,
+  type InsertTermsAndConditions,
+  type InsertUserTermsAcceptance 
+} from '../shared/schema';
 
 // Initialize memory security storage
 const memorySecurityStorage = new MemorySecurityStorage();
@@ -7425,6 +7431,352 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error giving first login bonus:', error);
       res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // ====== TERMS AND CONDITIONS MANAGEMENT ROUTES ======
+  
+  // Public API to get current active terms
+  app.get('/api/terms/current', async (req, res) => {
+    try {
+      const cacheKey = 'terms_current';
+      const cached = cacheGet(cacheKey);
+      
+      if (cached) {
+        return res.json(cached);
+      }
+      
+      // Get current active terms from storage
+      const activeTerms = await storage.getCurrentActiveTerms();
+      
+      if (!activeTerms) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على شروط وأحكام نشطة' 
+        });
+      }
+      
+      const result = {
+        success: true,
+        data: {
+          id: activeTerms.id,
+          version: activeTerms.version,
+          title: activeTerms.title,
+          content: activeTerms.content,
+          effectiveDate: activeTerms.effectiveDate,
+          createdAt: activeTerms.createdAt
+        }
+      };
+      
+      // Cache for 1 hour
+      cacheSet(cacheKey, result, 3600);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching current terms:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب الشروط والأحكام' 
+      });
+    }
+  });
+  
+  // Public API to accept terms (requires authentication)
+  app.post('/api/terms/accept', requireAuth, async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const acceptanceData = insertUserTermsAcceptanceSchema.parse(req.body);
+      
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'يجب تسجيل الدخول أولاً' 
+        });
+      }
+      
+      // Verify that the terms version exists and is currently active
+      const activeTerms = await storage.getCurrentActiveTerms();
+      if (!activeTerms) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لا توجد شروط وأحكام نشطة حالياً' 
+        });
+      }
+      
+      if (acceptanceData.termsVersion !== activeTerms.version) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'رقم إصدار الشروط غير صحيح. يرجى الموافقة على الإصدار الحالي' 
+        });
+      }
+      
+      // Get IP address and user agent
+      const ipAddress = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
+      const userAgent = req.headers['user-agent'];
+      
+      // Accept terms
+      const acceptance = await storage.acceptTerms({
+        userId,
+        termsVersion: acceptanceData.termsVersion,
+        ipAddress,
+        userAgent,
+        consentMethod: acceptanceData.consentMethod || 'manual'
+      });
+      
+      console.log(`✅ User ${userId} accepted terms version ${acceptanceData.termsVersion}`);
+      res.json({ 
+        success: true, 
+        message: 'تم قبول الشروط والأحكام بنجاح',
+        data: acceptance
+      });
+    } catch (error) {
+      console.error('Error accepting terms:', error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'بيانات غير صحيحة',
+          errors: error.errors
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في قبول الشروط والأحكام' 
+      });
+    }
+  });
+  
+  // Check user terms acceptance status
+  app.get('/api/terms/user-status', requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'يجب تسجيل الدخول أولاً' 
+        });
+      }
+      
+      const status = await storage.getUserTermsStatus(userId);
+      res.json({ 
+        success: true, 
+        data: status 
+      });
+    } catch (error) {
+      console.error('Error checking user terms status:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في فحص حالة الموافقة' 
+      });
+    }
+  });
+  
+  // ====== ADMIN TERMS MANAGEMENT ROUTES ======
+  
+  // Get all terms versions (Admin only)
+  app.get('/api/admin/terms', isAdminAuthenticated, async (req, res) => {
+    try {
+      const allTerms = await storage.getAllTermsVersions();
+      res.json({ 
+        success: true, 
+        data: allTerms 
+      });
+    } catch (error) {
+      console.error('Error fetching all terms:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب إصدارات الشروط والأحكام' 
+      });
+    }
+  });
+  
+  // Get specific terms version (Admin only)
+  app.get('/api/admin/terms/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const terms = await storage.getTermsById(id);
+      
+      if (!terms) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على هذا الإصدار' 
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        data: terms 
+      });
+    } catch (error) {
+      console.error('Error fetching terms by ID:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب الشروط والأحكام' 
+      });
+    }
+  });
+  
+  // Create new terms version (Admin only)
+  app.post('/api/admin/terms', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const termsData = insertTermsAndConditionsSchema.parse({
+        ...req.body,
+        createdBy: req.user?.id || 'admin',
+        isActive: false // Created as draft by default
+      });
+      
+      const newTerms = await storage.createTermsVersion(termsData);
+      
+      // Clear cache
+      cacheClear('terms');
+      
+      console.log(`✅ Admin ${termsData.createdBy} created terms version ${termsData.version}`);
+      res.json({ 
+        success: true, 
+        message: 'تم إنشاء إصدار جديد من الشروط والأحكام',
+        data: newTerms 
+      });
+    } catch (error) {
+      console.error('Error creating terms:', error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'بيانات غير صحيحة',
+          errors: error.errors
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في إنشاء الشروط والأحكام' 
+      });
+    }
+  });
+  
+  // Update terms version (Admin only)
+  app.put('/api/admin/terms/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Validate request body with Zod - allow partial updates
+      const updates = insertTermsAndConditionsSchema.partial().parse(req.body);
+      
+      const updatedTerms = await storage.updateTermsVersion(id, updates);
+      
+      if (!updatedTerms) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على هذا الإصدار' 
+        });
+      }
+      
+      // Clear cache
+      cacheClear('terms');
+      
+      console.log(`✅ Admin updated terms version ${id}`);
+      res.json({ 
+        success: true, 
+        message: 'تم تحديث الشروط والأحكام بنجاح',
+        data: updatedTerms 
+      });
+    } catch (error) {
+      console.error('Error updating terms:', error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'بيانات غير صحيحة',
+          errors: error.errors
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في تحديث الشروط والأحكام' 
+      });
+    }
+  });
+  
+  // Activate terms version (Admin only)
+  app.post('/api/admin/terms/:id/activate', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const activatedTerms = await storage.activateTermsVersion(id);
+      
+      if (!activatedTerms) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على هذا الإصدار' 
+        });
+      }
+      
+      // Clear cache
+      cacheClear('terms');
+      
+      console.log(`✅ Admin activated terms version ${id}`);
+      res.json({ 
+        success: true, 
+        message: 'تم تفعيل إصدار الشروط والأحكام بنجاح',
+        data: activatedTerms 
+      });
+    } catch (error) {
+      console.error('Error activating terms:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في تفعيل الشروط والأحكام' 
+      });
+    }
+  });
+  
+  // Delete terms version (Admin only)
+  app.delete('/api/admin/terms/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const deleted = await storage.deleteTermsVersion(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على هذا الإصدار' 
+        });
+      }
+      
+      // Clear cache
+      cacheClear('terms');
+      
+      console.log(`✅ Admin deleted terms version ${id}`);
+      res.json({ 
+        success: true, 
+        message: 'تم حذف إصدار الشروط والأحكام بنجاح' 
+      });
+    } catch (error) {
+      console.error('Error deleting terms:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في حذف الشروط والأحكام' 
+      });
+    }
+  });
+  
+  // Get terms acceptance analytics (Admin only)
+  app.get('/api/admin/terms/analytics', isAdminAuthenticated, async (req, res) => {
+    try {
+      const analytics = await storage.getTermsAnalytics();
+      res.json({ 
+        success: true, 
+        data: analytics 
+      });
+    } catch (error) {
+      console.error('Error fetching terms analytics:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب إحصائيات الشروط والأحكام' 
+      });
     }
   });
 

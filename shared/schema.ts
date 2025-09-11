@@ -123,6 +123,34 @@ export const twoFactorAuth = pgTable("two_factor_auth", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Terms and Conditions management table
+export const termsAndConditions = pgTable("terms_and_conditions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  version: varchar("version", { length: 10 }).notNull().unique(),
+  title: text("title").notNull(),
+  content: text("content").notNull(), // Full terms content in HTML/Markdown
+  summary: text("summary"), // Brief summary of changes
+  createdBy: varchar("created_by").notNull(), // Admin ID who created this version
+  isActive: boolean("is_active").default(false), // Only one active version at a time
+  effectiveDate: timestamp("effective_date"), // When these terms become effective
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User Terms Acceptance tracking table
+export const userTermsAcceptance = pgTable("user_terms_acceptance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // Reference to users table
+  termsVersion: varchar("terms_version", { length: 10 }).notNull(), // Version of terms accepted
+  acceptedAt: timestamp("accepted_at").defaultNow(),
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv4 or IPv6
+  userAgent: text("user_agent"), // Browser/device information
+  consentMethod: text("consent_method").notNull().default("signup"), // "signup", "update", "forced"
+  isActive: boolean("is_active").default(true), // Can be revoked
+  revokedAt: timestamp("revoked_at"),
+  revokedReason: text("revoked_reason"),
+});
+
 // Partners/Print Shops table
 export const partners = pgTable("partners", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1234,3 +1262,19 @@ export const insertPrintHistorySchema = createInsertSchema(printHistory).omit({
 });
 export type InsertPrintHistory = z.infer<typeof insertPrintHistorySchema>;
 export type PrintHistory = typeof printHistory.$inferSelect;
+
+// Terms and Conditions schemas
+export const insertTermsAndConditionsSchema = createInsertSchema(termsAndConditions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+export type InsertTermsAndConditions = z.infer<typeof insertTermsAndConditionsSchema>;
+export type TermsAndConditions = typeof termsAndConditions.$inferSelect;
+
+export const insertUserTermsAcceptanceSchema = createInsertSchema(userTermsAcceptance).omit({
+  id: true,
+  acceptedAt: true
+});
+export type InsertUserTermsAcceptance = z.infer<typeof insertUserTermsAcceptanceSchema>;
+export type UserTermsAcceptance = typeof userTermsAcceptance.$inferSelect;

@@ -142,6 +142,19 @@ export interface IStorage {
   getAllSecureDrivers(): Promise<any[]>;
   createSecurityLog(log: any): Promise<any>;
   getSecurityLogs(options: any): Promise<any[]>;
+
+  // Terms and Conditions operations
+  getCurrentActiveTerms(): Promise<any>;
+  getAllTermsVersions(): Promise<any[]>;
+  getTermsById(id: string): Promise<any>;
+  createTermsVersion(terms: any): Promise<any>;
+  updateTermsVersion(id: string, updates: any): Promise<any>;
+  activateTermsVersion(id: string): Promise<any>;
+  deleteTermsVersion(id: string): Promise<boolean>;
+  acceptTerms(acceptanceData: any): Promise<any>;
+  getUserTermsStatus(userId: string): Promise<any>;
+  getTermsAnalytics(): Promise<any>;
+  getUsersPendingTermsAcceptance(): Promise<any[]>;
 }
 
 // Global storage to persist across application lifecycle
@@ -3834,6 +3847,197 @@ class MemStorage implements IStorage {
     // Limit results
     const limit = options.limit || 100;
     return logs.slice(0, limit);
+  }
+
+  // ===== TERMS AND CONDITIONS IMPLEMENTATION =====
+  
+  private termsVersions: any[] = [];
+  private userTermsAcceptance: any[] = [];
+
+  async getCurrentActiveTerms(): Promise<any> {
+    return this.termsVersions.find(t => t.isActive) || null;
+  }
+
+  async getAllTermsVersions(): Promise<any[]> {
+    return this.termsVersions.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async getTermsById(id: string): Promise<any> {
+    return this.termsVersions.find(t => t.id === id) || null;
+  }
+
+  async createTermsVersion(terms: any): Promise<any> {
+    const newTerms = {
+      id: `terms_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...terms,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.termsVersions.push(newTerms);
+    console.log(`📋 Created terms version: ${newTerms.version} (${newTerms.id})`);
+    return newTerms;
+  }
+
+  async updateTermsVersion(id: string, updates: any): Promise<any> {
+    const index = this.termsVersions.findIndex(t => t.id === id);
+    if (index === -1) return null;
+    
+    this.termsVersions[index] = {
+      ...this.termsVersions[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log(`📋 Updated terms version: ${id}`);
+    return this.termsVersions[index];
+  }
+
+  async activateTermsVersion(id: string): Promise<any> {
+    // Deactivate all existing versions
+    this.termsVersions.forEach(t => t.isActive = false);
+    
+    // Activate the specified version
+    const index = this.termsVersions.findIndex(t => t.id === id);
+    if (index === -1) return null;
+    
+    this.termsVersions[index].isActive = true;
+    this.termsVersions[index].activatedAt = new Date().toISOString();
+    
+    console.log(`📋 Activated terms version: ${this.termsVersions[index].version} (${id})`);
+    return this.termsVersions[index];
+  }
+
+  async deleteTermsVersion(id: string): Promise<boolean> {
+    const index = this.termsVersions.findIndex(t => t.id === id);
+    if (index === -1) return false;
+    
+    // Don't allow deletion of active version
+    if (this.termsVersions[index].isActive) {
+      throw new Error('لا يمكن حذف الإصدار النشط من الشروط والأحكام');
+    }
+    
+    this.termsVersions.splice(index, 1);
+    console.log(`📋 Deleted terms version: ${id}`);
+    return true;
+  }
+
+  async acceptTerms(acceptanceData: any): Promise<any> {
+    const acceptance = {
+      id: `acceptance_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...acceptanceData,
+      acceptedAt: new Date().toISOString()
+    };
+    
+    // Remove any previous acceptance for this user and version
+    this.userTermsAcceptance = this.userTermsAcceptance.filter(
+      a => !(a.userId === acceptanceData.userId && a.termsVersion === acceptanceData.termsVersion)
+    );
+    
+    this.userTermsAcceptance.push(acceptance);
+    console.log(`📋 User ${acceptanceData.userId} accepted terms version ${acceptanceData.termsVersion}`);
+    return acceptance;
+  }
+
+  async getUserTermsStatus(userId: string): Promise<any> {
+    const activeTerms = await this.getCurrentActiveTerms();
+    if (!activeTerms) {
+      return {
+        hasActiveTerms: false,
+        hasAccepted: false,
+        currentVersion: null,
+        lastAcceptance: null
+      };
+    }
+    
+    const userAcceptance = this.userTermsAcceptance.find(
+      a => a.userId === userId && a.termsVersion === activeTerms.version
+    );
+    
+    const lastAcceptance = this.userTermsAcceptance
+      .filter(a => a.userId === userId)
+      .sort((a, b) => new Date(b.acceptedAt).getTime() - new Date(a.acceptedAt).getTime())[0];
+    
+    return {
+      hasActiveTerms: true,
+      hasAccepted: !!userAcceptance,
+      currentVersion: activeTerms.version,
+      currentTermsId: activeTerms.id,
+      lastAcceptance: lastAcceptance || null,
+      requiresAcceptance: !userAcceptance
+    };
+  }
+
+  async getTermsAnalytics(): Promise<any> {
+    const activeTerms = await this.getCurrentActiveTerms();
+    const totalUsers = this.users.length;
+    const totalAcceptances = this.userTermsAcceptance.length;
+    
+    let currentVersionAcceptances = 0;
+    if (activeTerms) {
+      currentVersionAcceptances = this.userTermsAcceptance.filter(
+        a => a.termsVersion === activeTerms.version
+      ).length;
+    }
+    
+    const acceptanceRate = totalUsers > 0 ? (currentVersionAcceptances / totalUsers) * 100 : 0;
+    
+    // Group acceptances by version
+    const acceptancesByVersion = this.userTermsAcceptance.reduce((acc, acceptance) => {
+      acc[acceptance.termsVersion] = (acc[acceptance.termsVersion] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Group acceptances by date (last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentAcceptances = this.userTermsAcceptance.filter(
+      a => new Date(a.acceptedAt) >= thirtyDaysAgo
+    );
+    
+    const acceptancesByDate = recentAcceptances.reduce((acc, acceptance) => {
+      const date = new Date(acceptance.acceptedAt).toISOString().split('T')[0];
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return {
+      totalTermsVersions: this.termsVersions.length,
+      activeVersion: activeTerms?.version || null,
+      totalUsers,
+      totalAcceptances,
+      currentVersionAcceptances,
+      acceptanceRate: Math.round(acceptanceRate * 100) / 100,
+      pendingUsers: totalUsers - currentVersionAcceptances,
+      acceptancesByVersion,
+      acceptancesByDate: Object.entries(acceptancesByDate).map(([date, count]) => ({
+        date,
+        count
+      }))
+    };
+  }
+
+  async getUsersPendingTermsAcceptance(): Promise<any[]> {
+    const activeTerms = await this.getCurrentActiveTerms();
+    if (!activeTerms) return [];
+    
+    const acceptedUserIds = new Set(
+      this.userTermsAcceptance
+        .filter(a => a.termsVersion === activeTerms.version)
+        .map(a => a.userId)
+    );
+    
+    return this.users
+      .filter(user => !acceptedUserIds.has(user.id))
+      .map(user => ({
+        id: user.id,
+        fullName: user.fullName || user.username || 'مستخدم مجهول',
+        email: user.email,
+        role: user.role || 'student',
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin || null
+      }));
   }
 }
 
