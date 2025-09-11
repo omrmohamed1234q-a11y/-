@@ -7,7 +7,7 @@ import { motion } from "framer-motion"
 import { 
   PrinterIcon, 
   FileTextIcon, 
-  ScanIcon,
+  ScanLineIcon as ScanIcon,
   ShoppingCartIcon,
   SparklesIcon,
   RocketIcon,
