@@ -709,7 +709,7 @@ export default function Print() {
   const [fileSettings, setFileSettings] = useState<{[fileName: string]: {
     copies: number;
     colorMode: 'grayscale' | 'color';
-    paperSize: 'A4' | 'A3' | 'A0' | 'A1';
+    paperSize: 'A4' | 'A3' | 'A0' | 'A1' | 'A2';
     paperType: 'plain' | 'coated' | 'glossy' | 'sticker';
     doubleSided: boolean;
   }}>({});
@@ -1013,7 +1013,7 @@ export default function Print() {
       const settings = fileSettings[fileName] || {
         copies: 1,
         colorMode: 'grayscale' as 'grayscale' | 'color',
-        paperSize: 'A4' as 'A4' | 'A3' | 'A0' | 'A1',
+        paperSize: 'A4' as 'A4' | 'A3' | 'A0' | 'A1' | 'A2',
         paperType: 'plain' as 'plain' | 'coated' | 'glossy' | 'sticker',
         doubleSided: false,
       };
@@ -1330,7 +1330,7 @@ export default function Print() {
                           const currentSettings = fileSettings[fileName] || {
                             copies: 1,
                             colorMode: 'grayscale' as 'grayscale' | 'color',
-                            paperSize: 'A4' as 'A4' | 'A3' | 'A0' | 'A1',
+                            paperSize: 'A4' as 'A4' | 'A3' | 'A0' | 'A1' | 'A2',
                             paperType: 'plain' as 'plain' | 'coated' | 'glossy' | 'sticker',
                             doubleSided: false,
                           };
@@ -1420,7 +1420,7 @@ export default function Print() {
                                       <Label className="text-xs font-medium text-gray-700 mb-1 block">حجم الورق</Label>
                                       <Select
                                         value={currentSettings.paperSize}
-                                        onValueChange={(value: 'A4' | 'A3' | 'A0' | 'A1') => {
+                                        onValueChange={(value: 'A4' | 'A3' | 'A0' | 'A1' | 'A2') => {
                                           setFileSettings(prev => ({
                                             ...prev,
                                             [fileName]: { ...currentSettings, paperSize: value }
@@ -1435,6 +1435,7 @@ export default function Print() {
                                           <SelectItem value="A3">A3</SelectItem>
                                           <SelectItem value="A0">A0</SelectItem>
                                           <SelectItem value="A1">A1</SelectItem>
+                                          <SelectItem value="A2">A2</SelectItem>
                                         </SelectContent>
                                       </Select>
                                     </div>
@@ -1442,50 +1443,65 @@ export default function Print() {
 
                                   {/* الصف الثاني: نوع الورق ووضع الألوان */}
                                   <div className="grid grid-cols-2 gap-3 mb-4">
-                                    <div>
-                                      <Label className="text-xs font-medium text-gray-700 mb-1 block">نوع الورق</Label>
-                                      <Select
-                                        value={currentSettings.paperType}
-                                        onValueChange={(value: 'plain' | 'coated' | 'glossy' | 'sticker') => {
-                                          setFileSettings(prev => ({
-                                            ...prev,
-                                            [fileName]: { ...currentSettings, paperType: value }
-                                          }));
-                                        }}
-                                      >
-                                        <SelectTrigger className="h-9">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="plain">
-                                            <div className="flex items-center space-x-2 space-x-reverse">
-                                              <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
-                                              <span>عادي</span>
-                                            </div>
-                                          </SelectItem>
-                                          <SelectItem value="coated">
-                                            <div className="flex items-center space-x-2 space-x-reverse">
-                                              <div className="w-3 h-3 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
-                                              <span>كوشيه</span>
-                                            </div>
-                                          </SelectItem>
-                                          <SelectItem value="glossy">
-                                            <div className="flex items-center space-x-2 space-x-reverse">
-                                              <div className="w-3 h-3 bg-gradient-to-r from-purple-100 to-purple-200 border border-purple-400 rounded shadow-lg"></div>
-                                              <span>جلوسي</span>
-                                            </div>
-                                          </SelectItem>
-                                          <SelectItem value="sticker">
-                                            <div className="flex items-center space-x-2 space-x-reverse">
-                                              <div className="w-3 h-3 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
-                                              <span>لاصق</span>
-                                            </div>
-                                          </SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
+                                    {!['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
+                                      <div>
+                                        <Label className="text-xs font-medium text-gray-700 mb-1 block">نوع الورق</Label>
+                                        <Select
+                                          value={currentSettings.paperType}
+                                          onValueChange={(value: 'plain' | 'coated' | 'glossy' | 'sticker') => {
+                                            setFileSettings(prev => ({
+                                              ...prev,
+                                              [fileName]: { ...currentSettings, paperType: value }
+                                            }));
+                                          }}
+                                        >
+                                          <SelectTrigger className="h-9">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="plain">
+                                              <div className="flex items-center space-x-2 space-x-reverse">
+                                                <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                                                <span>عادي</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="coated">
+                                              <div className="flex items-center space-x-2 space-x-reverse">
+                                                <div className="w-3 h-3 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
+                                                <span>كوشيه</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="glossy">
+                                              <div className="flex items-center space-x-2 space-x-reverse">
+                                                <div className="w-3 h-3 bg-gradient-to-r from-purple-100 to-purple-200 border border-purple-400 rounded shadow-lg"></div>
+                                                <span>جلوسي</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="sticker">
+                                              <div className="flex items-center space-x-2 space-x-reverse">
+                                                <div className="w-3 h-3 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
+                                                <span>لاصق</span>
+                                              </div>
+                                            </SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    )}
+                                    
+                                    {['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
+                                      <div className="col-span-2">
+                                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                                          <p className="text-sm text-amber-700 font-medium">
+                                            📄 ورق عادي فقط متاح للحجم {currentSettings.paperSize}
+                                          </p>
+                                          <p className="text-xs text-amber-600 mt-1">
+                                            ⏳ باقي أنواع الأوراق متوفرة قريباً
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
 
-                                    <div>
+                                    <div className={['A0', 'A1', 'A2'].includes(currentSettings.paperSize) ? 'col-span-2' : ''}>
                                       <Label className="text-xs font-medium text-gray-700 mb-1 block">وضع الألوان</Label>
                                       <Select
                                         value={currentSettings.colorMode}
@@ -1495,7 +1511,7 @@ export default function Print() {
                                             [fileName]: { ...currentSettings, colorMode: value }
                                           }));
                                         }}
-                                        disabled={currentSettings.paperSize === 'A0' || currentSettings.paperSize === 'A1'}
+                                        disabled={['A0', 'A1', 'A2'].includes(currentSettings.paperSize)}
                                       >
                                         <SelectTrigger className="h-9">
                                           <SelectValue />
@@ -1505,27 +1521,29 @@ export default function Print() {
                                           <SelectItem value="color">ملون</SelectItem>
                                         </SelectContent>
                                       </Select>
-                                      {(currentSettings.paperSize === 'A0' || currentSettings.paperSize === 'A1') && (
+                                      {['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
                                         <p className="text-xs text-orange-600 mt-1">
-                                          A0/A1 متوفر بالأبيض والأسود فقط
+                                          {currentSettings.paperSize} متوفر بالأبيض والأسود فقط
                                         </p>
                                       )}
                                     </div>
                                   </div>
 
                                   {/* طباعة على الوجهين */}
-                                  <div className="flex items-center justify-between py-3 border-t border-gray-100">
-                                    <Label className="text-sm font-medium text-gray-700">طباعة على الوجهين</Label>
-                                    <Switch
-                                      checked={currentSettings.doubleSided}
-                                      onCheckedChange={(checked) => {
-                                        setFileSettings(prev => ({
-                                          ...prev,
-                                          [fileName]: { ...currentSettings, doubleSided: checked }
-                                        }));
-                                      }}
-                                    />
-                                  </div>
+                                  {!['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
+                                    <div className="flex items-center justify-between py-3 border-t border-gray-100">
+                                      <Label className="text-sm font-medium text-gray-700">طباعة على الوجهين</Label>
+                                      <Switch
+                                        checked={currentSettings.doubleSided}
+                                        onCheckedChange={(checked) => {
+                                          setFileSettings(prev => ({
+                                            ...prev,
+                                            [fileName]: { ...currentSettings, doubleSided: checked }
+                                          }));
+                                        }}
+                                      />
+                                    </div>
+                                  )}
 
                                   {/* عرض السعر */}
                                   <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
