@@ -7,6 +7,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, lazy } from "react";
 import { SplashScreen } from "@/components/SplashScreen";
 import NotFound from "@/pages/not-found";
+import Welcome from "@/pages/welcome";
+import Login from "@/pages/login";
+import Register from "@/pages/register";
 import EnhancedLanding from "@/pages/enhanced-landing";
 import Signup from "@/pages/auth/signup";
 import AdminSignup from "@/pages/auth/admin-signup";
@@ -111,6 +114,9 @@ function Router() {
   if (!user) {
     return (
       <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+        <Route path="/enhanced-landing" component={EnhancedLanding} />
         <Route path="/auth/signup" component={Signup} />
         <Route path="/auth/admin-signup" component={AdminSignup} />
         <Route path="/auth/callback" component={AuthCallback} />
@@ -161,7 +167,7 @@ function Router() {
         <Route path="/terms" component={TermsAndConditions} />
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         
-        <Route path="/" component={EnhancedLanding} />
+        <Route path="/" component={Welcome} />
         <Route component={NotFound} />
       </Switch>
     );
