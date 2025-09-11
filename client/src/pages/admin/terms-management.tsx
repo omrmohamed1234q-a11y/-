@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import AdminLayout from './layout';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -24,7 +25,7 @@ import {
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import type { TermsAndConditions } from '../../../shared/schema';
 
-export default function TermsManagement() {
+function TermsManagementContent() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -486,5 +487,13 @@ export default function TermsManagement() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function TermsManagement() {
+  return (
+    <AdminLayout>
+      <TermsManagementContent />
+    </AdminLayout>
   );
 }
