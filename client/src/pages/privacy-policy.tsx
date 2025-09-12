@@ -1,14 +1,80 @@
 import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Shield, Eye, Lock, Database, Mail, CreditCard, UserCheck } from 'lucide-react';
+import { ArrowLeft, Shield, Eye, Lock, Database, Mail, CreditCard, UserCheck, Loader2, AlertCircle } from 'lucide-react';
 import { Link } from 'wouter';
 
 export default function PrivacyPolicy() {
   useEffect(() => {
     document.title = 'سياسة الخصوصية - منصة اطبعلي';
   }, []);
+
+  // Fetch current privacy policy from API
+  const { 
+    data: privacyPolicy, 
+    isLoading, 
+    error 
+  } = useQuery({
+    queryKey: ['/api/privacy-policy/current'],
+    retry: 3
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-300">جارِ تحميل سياسة الخصوصية...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 py-8">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
+            <CardContent className="flex items-center gap-4 py-8">
+              <AlertCircle className="w-12 h-12 text-red-600" />
+              <div>
+                <h2 className="text-xl font-semibold text-red-800 dark:text-red-300 mb-2">
+                  خطأ في تحميل سياسة الخصوصية
+                </h2>
+                <p className="text-red-700 dark:text-red-400 mb-4">
+                  عذراً، لم نتمكن من تحميل سياسة الخصوصية. يرجى المحاولة مرة أخرى.
+                </p>
+                <div className="flex gap-4">
+                  <Link href="/">
+                    <Button variant="outline">العودة للصفحة الرئيسية</Button>
+                  </Link>
+                  <Button onClick={() => window.location.reload()}>إعادة المحاولة</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Default privacy policy if none exists in database
+  const defaultPrivacyPolicy = {
+    title: 'سياسة الخصوصية',
+    subtitle: 'نحن نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية',
+    lastUpdated: 'سبتمبر 2025',
+    version: '1.0',
+    dataCollection: 'في منصة "اطبعلي"، نحن ملتزمون بحماية خصوصية مستخدمينا. توضح سياسة الخصوصية هذه كيفية جمع واستخدام وحماية المعلومات الشخصية التي تقدمها لنا عند استخدام خدماتنا.',
+    dataUsage: 'نستخدم بياناتك لتقديم خدمات الطباعة والتوصيل، ومعالجة الطلبات والمدفوعات، والتواصل معك بخصوص طلباتك.',
+    dataSharing: 'نحن لا نبيع أو نؤجر معلوماتك الشخصية لأطراف ثالثة. قد نشارك معلوماتك مع شركاء التوصيل ومعالجات الدفع فقط.',
+    userRights: 'يحق لك الوصول لبياناتك الشخصية، وتصحيح البيانات غير الدقيقة، وطلب حذف بياناتك، ونقل بياناتك لمنصة أخرى.',
+    dataSecurity: 'نتخذ إجراءات أمنية صارمة لحماية معلوماتك الشخصية من الوصول غير المصرح به أو الكشف أو التعديل أو التدمير.',
+    contactInfo: 'privacy@atbaali.com - +20 123 456 789 - القاهرة، مصر'
+  };
+
+  const policy = privacyPolicy?.data || defaultPrivacyPolicy;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 py-8">
@@ -21,15 +87,15 @@ export default function PrivacyPolicy() {
             </div>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            سياسة الخصوصية
+            {policy.title || 'سياسة الخصوصية'}
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            نحن نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية
+            {policy.subtitle || 'نحن نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية'}
           </p>
           <div className="flex items-center justify-center gap-4 mt-4 text-sm text-gray-500">
-            <span>آخر تحديث: سبتمبر 2025</span>
+            <span>آخر تحديث: {policy.lastUpdated || 'سبتمبر 2025'}</span>
             <span>•</span>
-            <span>النسخة 1.0</span>
+            <span>النسخة {policy.version || '1.0'}</span>
           </div>
         </div>
 
@@ -54,12 +120,14 @@ export default function PrivacyPolicy() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-gray-700 dark:text-gray-300">
-              <p className="leading-relaxed">
-                في منصة "اطبعلي"، نحن ملتزمون بحماية خصوصية مستخدمينا. توضح سياسة الخصوصية هذه كيفية جمع واستخدام وحماية المعلومات الشخصية التي تقدمها لنا عند استخدام خدماتنا.
-              </p>
-              <p className="leading-relaxed">
-                باستخدامك لمنصة "اطبعلي"، فإنك توافق على الممارسات الموضحة في هذه السياسة.
-              </p>
+              <div className="leading-relaxed whitespace-pre-line">
+                {policy.dataCollection}
+              </div>
+              {policy.introduction && (
+                <div className="leading-relaxed whitespace-pre-line">
+                  {policy.introduction}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -113,33 +181,10 @@ export default function PrivacyPolicy() {
                 كيف نستخدم بياناتك
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-3 text-gray-700 dark:text-gray-300">
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">•</span>
-                  <span>تقديم خدمات الطباعة والتوصيل</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">•</span>
-                  <span>معالجة الطلبات والمدفوعات</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">•</span>
-                  <span>التواصل معك بخصوص طلباتك</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">•</span>
-                  <span>تحسين خدماتنا وتطوير ميزات جديدة</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">•</span>
-                  <span>إرسال إشعارات مهمة وتحديثات الخدمة</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">•</span>
-                  <span>ضمان الأمان ومنع الاحتيال</span>
-                </li>
-              </ul>
+            <CardContent className="space-y-4 text-gray-700 dark:text-gray-300">
+              <div className="leading-relaxed whitespace-pre-line">
+                {policy.dataUsage}
+              </div>
             </CardContent>
           </Card>
 
@@ -152,9 +197,9 @@ export default function PrivacyPolicy() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-gray-700 dark:text-gray-300">
-              <p className="leading-relaxed">
-                نتخذ إجراءات أمنية صارمة لحماية معلوماتك الشخصية من الوصول غير المصرح به أو الكشف أو التعديل أو التدمير.
-              </p>
+              <div className="leading-relaxed whitespace-pre-line">
+                {policy.dataSecurity}
+              </div>
               
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
@@ -186,18 +231,9 @@ export default function PrivacyPolicy() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-gray-700 dark:text-gray-300">
-              <p className="leading-relaxed font-semibold text-orange-700 dark:text-orange-300">
-                نحن لا نبيع أو نؤجر معلوماتك الشخصية لأطراف ثالثة.
-              </p>
-              <p className="leading-relaxed">
-                قد نشارك معلوماتك في الحالات التالية فقط:
-              </p>
-              <ul className="space-y-2">
-                <li>• مع شركاء التوصيل لتنفيذ طلباتك</li>
-                <li>• مع معالجات الدفع للمعاملات المالية</li>
-                <li>• عند طلب السلطات القانونية المختصة</li>
-                <li>• لحماية حقوقنا وسلامة المستخدمين</li>
-              </ul>
+              <div className="leading-relaxed whitespace-pre-line">
+                {policy.dataSharing}
+              </div>
             </CardContent>
           </Card>
 
@@ -209,29 +245,20 @@ export default function PrivacyPolicy() {
                 حقوقك
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-indigo-800 dark:text-indigo-300 mb-3">يحق لك:</h4>
-                  <ul className="space-y-2 text-gray-700 dark:text-gray-300">
-                    <li>• الوصول لبياناتك الشخصية</li>
-                    <li>• تصحيح البيانات غير الدقيقة</li>
-                    <li>• طلب حذف بياناتك</li>
-                    <li>• نقل بياناتك لمنصة أخرى</li>
-                    <li>• الاعتراض على معالجة بياناتك</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-indigo-800 dark:text-indigo-300 mb-3">كيفية ممارسة حقوقك:</h4>
-                  <p className="text-gray-700 dark:text-gray-300 mb-3">
-                    للحصول على أي من هذه الحقوق، يرجى التواصل معنا:
-                  </p>
-                  <div className="text-sm space-y-1">
-                    <p>📧 البريد الإلكتروني: privacy@atbaali.com</p>
-                    <p>📱 الهاتف: +20 123 456 789</p>
+            <CardContent className="space-y-4 text-gray-700 dark:text-gray-300">
+              <div className="leading-relaxed whitespace-pre-line">
+                {policy.userRights}
+              </div>
+              {policy.contactInfo && (
+                <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                  <h4 className="font-semibold text-indigo-800 dark:text-indigo-300 mb-2">
+                    للتواصل حول حقوقك:
+                  </h4>
+                  <div className="text-sm text-indigo-700 dark:text-indigo-300">
+                    {policy.contactInfo}
                   </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

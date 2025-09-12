@@ -194,11 +194,26 @@ export const usagePolicyAudit = pgTable("usage_policy_audit", {
 // Privacy Policy Management
 export const privacyPolicy = pgTable("privacy_policy", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  version: varchar("version").notNull(),
+  title: text("title").notNull().default('سياسة الخصوصية'),
+  subtitle: text("subtitle").default('نحن نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية'),
+  version: varchar("version").notNull().default('1.0'),
   isActive: boolean("is_active").default(false),
   effectiveDate: timestamp("effective_date").notNull(),
+  lastUpdated: varchar("last_updated").default('سبتمبر 2025'),
+  
+  // Content sections
+  introduction: text("introduction"),
+  dataCollection: text("data_collection").notNull(),
+  dataUsage: text("data_usage").notNull(), 
+  dataSharing: text("data_sharing").notNull(),
+  userRights: text("user_rights").notNull(),
+  dataSecurity: text("data_security").notNull(),
+  contactInfo: text("contact_info").notNull(),
+  cookiePolicy: text("cookie_policy"),
+  policyUpdates: text("policy_updates"),
+  
+  // Metadata
+  createdBy: varchar("created_by"), // Admin ID
   lastUpdatedBy: varchar("last_updated_by"), // Admin ID
   metadata: text("metadata"), // JSON for additional settings
   createdAt: timestamp("created_at").defaultNow(),

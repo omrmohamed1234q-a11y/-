@@ -1437,7 +1437,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       '/api/setup',
       '/api/test',
       '/api/drive/storage-info',
-      '/api/terms/current'  // Public access to current terms and conditions
+      '/api/terms/current',  // Public access to current terms and conditions
+      '/api/privacy-policy/current'  // Public access to current privacy policy
     ];
     
     // Check if current path is a public endpoint
@@ -7128,7 +7129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ====== PUBLIC TERMS ENDPOINTS (MUST BE BEFORE protectAPI MIDDLEWARE) ======
+  // ====== PUBLIC TERMS & PRIVACY ENDPOINTS (MUST BE BEFORE protectAPI MIDDLEWARE) ======
   
   // Public API to get current active terms - no authentication required
   app.get('/api/terms/current', async (req, res) => {
@@ -7170,6 +7171,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         message: 'خطأ في جلب الشروط والأحكام' 
+      });
+    }
+  });
+
+  // Public API to get current active privacy policy - no authentication required
+  app.get('/api/privacy-policy/current', async (req, res) => {
+    try {
+      // Return default privacy policy with comprehensive Arabic content
+      const defaultPolicy = {
+        id: 'privacy-policy-default',
+        title: 'سياسة الخصوصية - اطبعلي',
+        version: '1.0',
+        effectiveDate: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        isActive: true,
+        content: {
+          dataCollection: {
+            title: 'جمع البيانات',
+            content: 'نحن في منصة "اطبعلي" نجمع المعلومات التي تقدمها لنا مباشرة عند التسجيل في الخدمة، مثل الاسم والبريد الإلكتروني ومعلومات الاتصال. كما نجمع معلومات حول استخدامك للمنصة مثل تفضيلات الطباعة والملفات المرفوعة.'
+          },
+          dataUsage: {
+            title: 'استخدام البيانات',
+            content: 'نستخدم المعلومات التي نجمعها لتوفير خدمات الطباعة والمسح الضوئي، معالجة الطلبات، تحسين جودة الخدمة، التواصل معك حول طلباتك، وإرسال إشعارات هامة حول حسابك. كما نستخدمها لأغراض إحصائية لتطوير منصتنا.'
+          },
+          dataSharing: {
+            title: 'مشاركة البيانات',
+            content: 'نحن ملتزمون بحماية خصوصيتك. لا نبيع أو نؤجر أو نتاجر ببياناتك الشخصية لأطراف ثالثة دون موافقتك الصريحة. قد نشارك معلوماتك فقط مع مقدمي الخدمات المعتمدين لتنفيذ طلبات الطباعة، أو عند الضرورة القانونية.'
+          },
+          userRights: {
+            title: 'حقوق المستخدم',
+            content: 'لك الحق الكامل في الوصول إلى بياناتك الشخصية المحفوظة لدينا، تعديلها، أو طلب حذفها نهائياً. يمكنك أيضاً تقييد معالجة بياناتك أو الاعتراض على استخدامها. لممارسة هذه الحقوق، يرجى التواصل معنا عبر قنوات الاتصال المتاحة.'
+          },
+          security: {
+            title: 'الأمان والحماية',
+            content: 'نتخذ تدابير أمنية صارمة ومتقدمة لحماية معلوماتك الشخصية من الوصول غير المصرح به، التلاعب، الكشف غير المشروع أو التدمير. نستخدم تشفير البيانات، جدران الحماية المتقدمة، ونظم المراقبة الأمنية المستمرة لضمان سلامة بياناتك.'
+          },
+          contact: {
+            title: 'تواصل معنا',
+            content: 'إذا كان لديك أي أسئلة أو استفسارات حول سياسة الخصوصية هذه أو ممارسات البيانات لدينا، أو إذا كنت ترغب في ممارسة حقوقك المتعلقة بالخصوصية، يرجى التواصل معنا عبر البريد الإلكتروني: privacy@atbaali.com أو من خلال نموذج الاتصال في المنصة.'
+          }
+        }
+      };
+
+      res.json({
+        success: true,
+        data: defaultPolicy
+      });
+    } catch (error) {
+      console.error('❌ Error fetching current privacy policy:', error);
+      res.status(500).json({
+        success: false,
+        error: 'خطأ في جلب سياسة الخصوصية'
       });
     }
   });
@@ -8231,6 +8284,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         message: 'خطأ في جلب إحصائيات سياسات الاستخدام' 
+      });
+    }
+  });
+
+  // ===== PRIVACY POLICY MANAGEMENT ROUTES =====
+  
+  // Get all privacy policy versions (Admin only)
+  app.get('/api/admin/privacy-policies', isAdminAuthenticated, async (req, res) => {
+    try {
+      const policies = await storage.getAllPrivacyPolicyVersions();
+      res.json({ 
+        success: true, 
+        data: policies 
+      });
+    } catch (error) {
+      console.error('Error fetching privacy policies:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب سياسات الخصوصية' 
+      });
+    }
+  });
+  
+  // Get specific privacy policy version (Admin only)
+  app.get('/api/admin/privacy-policies/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const policy = await storage.getPrivacyPolicyById(id);
+      
+      if (!policy) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على هذا الإصدار' 
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        data: policy 
+      });
+    } catch (error) {
+      console.error('Error fetching privacy policy by ID:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب سياسة الخصوصية' 
+      });
+    }
+  });
+  
+  // Create new privacy policy version (Admin only)
+  app.post('/api/admin/privacy-policies', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Validate request body with privacy policy requirements
+      const policyData = {
+        ...req.body,
+        createdBy: req.user?.id || 'admin',
+        isActive: false, // Created as draft by default
+        dataCollection: req.body.dataCollection || '',
+        dataUsage: req.body.dataUsage || '',
+        dataSharing: req.body.dataSharing || '',
+        userRights: req.body.userRights || '',
+        dataSecurity: req.body.dataSecurity || '',
+        contactInfo: req.body.contactInfo || '',
+        lastUpdated: new Date().toISOString()
+      };
+      
+      const newPolicy = await storage.createPrivacyPolicy(policyData);
+      
+      console.log(`✅ Admin ${policyData.createdBy} created privacy policy version`);
+      res.json({ 
+        success: true, 
+        message: 'تم إنشاء إصدار جديد من سياسة الخصوصية',
+        data: newPolicy 
+      });
+    } catch (error) {
+      console.error('Error creating privacy policy:', error);
+      
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في إنشاء سياسة الخصوصية' 
+      });
+    }
+  });
+  
+  // Update privacy policy version (Admin only)
+  app.put('/api/admin/privacy-policies/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updates = {
+        ...req.body,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      const updatedPolicy = await storage.updatePrivacyPolicy(id, updates);
+      
+      if (!updatedPolicy) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على سياسة الخصوصية المحددة' 
+        });
+      }
+      
+      console.log(`✅ Admin updated privacy policy: ${id}`);
+      res.json({ 
+        success: true, 
+        message: 'تم تحديث سياسة الخصوصية بنجاح',
+        data: updatedPolicy 
+      });
+    } catch (error) {
+      console.error('Error updating privacy policy:', error);
+      
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في تحديث سياسة الخصوصية' 
+      });
+    }
+  });
+  
+  // Activate privacy policy version (Admin only)
+  app.patch('/api/admin/privacy-policies/:id/activate', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const activatedPolicy = await storage.activatePrivacyPolicy(id);
+      
+      if (!activatedPolicy) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على سياسة الخصوصية المحددة' 
+        });
+      }
+      
+      console.log(`✅ Admin activated privacy policy version: ${id}`);
+      res.json({ 
+        success: true, 
+        message: 'تم تفعيل إصدار سياسة الخصوصية بنجاح',
+        data: activatedPolicy 
+      });
+    } catch (error) {
+      console.error('Error activating privacy policy:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في تفعيل سياسة الخصوصية' 
+      });
+    }
+  });
+  
+  // Delete privacy policy version (Admin only)
+  app.delete('/api/admin/privacy-policies/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deletePrivacyPolicy(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على سياسة الخصوصية المحددة' 
+        });
+      }
+      
+      console.log(`✅ Admin deleted privacy policy: ${id}`);
+      res.json({ 
+        success: true, 
+        message: 'تم حذف إصدار سياسة الخصوصية بنجاح' 
+      });
+    } catch (error) {
+      console.error('Error deleting privacy policy:', error);
+      
+      if (error.message && error.message.includes('لا يمكن حذف الإصدار النشط')) {
+        return res.status(400).json({ 
+          success: false, 
+          message: error.message 
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في حذف سياسة الخصوصية' 
+      });
+    }
+  });
+
+  // ===== PUBLIC PRIVACY POLICY ROUTES =====
+  
+  // Get current active privacy policy (Public)
+  app.get('/api/privacy-policy/current', async (req, res) => {
+    try {
+      const currentPolicy = await storage.getCurrentActivePrivacyPolicy();
+      res.json({ 
+        success: true, 
+        data: currentPolicy 
+      });
+    } catch (error) {
+      console.error('Error fetching current privacy policy:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب سياسة الخصوصية الحالية' 
       });
     }
   });
