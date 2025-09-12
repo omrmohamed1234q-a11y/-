@@ -22,9 +22,24 @@ import {
   Lock
 } from 'lucide-react';
 import { queryClient, apiRequest } from '@/lib/queryClient';
-import type { PrivacyPolicy, InsertPrivacyPolicy, insertPrivacyPolicySchema } from '@shared/schema';
+import type { PrivacyPolicy, InsertPrivacyPolicy } from '@shared/schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
+// Privacy Policy form validation schema
+const privacyPolicyFormSchema = z.object({
+  version: z.string().min(1, 'رقم الإصدار مطلوب'),
+  title: z.string().min(1, 'عنوان سياسة الخصوصية مطلوب'),
+  effectiveDate: z.date(),
+  isActive: z.boolean(),
+  dataCollection: z.string().min(1, 'محتوى جمع البيانات مطلوب'),
+  dataUsage: z.string().min(1, 'محتوى استخدام البيانات مطلوب'),
+  dataSharing: z.string().min(1, 'محتوى مشاركة البيانات مطلوب'),
+  userRights: z.string().min(1, 'محتوى حقوق المستخدم مطلوب'),
+  dataSecurity: z.string().min(1, 'محتوى الأمان والحماية مطلوب'),
+  contactInfo: z.string().min(1, 'معلومات التواصل مطلوبة')
+});
 
 function PrivacyPolicyManagementContent() {
   const { toast } = useToast();
@@ -33,7 +48,7 @@ function PrivacyPolicyManagementContent() {
   const [editingPolicy, setEditingPolicy] = useState<PrivacyPolicy | null>(null);
   const [viewingPolicy, setViewingPolicy] = useState<PrivacyPolicy | null>(null);
   const form = useForm<InsertPrivacyPolicy>({
-    resolver: zodResolver(insertPrivacyPolicySchema),
+    resolver: zodResolver(privacyPolicyFormSchema),
     defaultValues: {
       version: '',
       title: 'سياسة الخصوصية - اطبعلي',
