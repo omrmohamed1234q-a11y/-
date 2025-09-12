@@ -33,8 +33,12 @@ import {
   type InsertMessageTemplate,
   type InsertTargetingRule
 } from '../shared/smart-notifications-schema';
+import { AutomaticNotificationService } from './automatic-notifications';
 
 // Using centralized security singleton (no need to create new instance)
+
+// Initialize automatic notification service
+const automaticNotifications = new AutomaticNotificationService(storage);
 
 // Old notification system removed - building smart targeting system
 
@@ -8833,6 +8837,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: 'خطأ في إرسال الرسالة التجريبية'
       });
+    }
+  });
+
+  // ============================================================================
+  // User Notifications API routes
+  // ============================================================================
+
+  // Get user notifications (authenticated)
+  app.get('/api/notifications', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const { limit = 50, offset = 0 } = req.query;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'User authentication required' });
+      }
+
+      const notifications = await storage.getAllNotifications(userId);
+      const limitedNotifications = notifications.slice(Number(offset), Number(offset) + Number(limit));
+      const unreadCount = await storage.getUserUnreadCount(userId as string);
+
+      res.json({
+        notifications: limitedNotifications,
+        unreadCount,
+        total: notifications.length,
+        hasMore: Number(offset) + Number(limit) < notifications.length
+      });
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+  });
+
+  // Mark notification as read (authenticated)
+  app.patch('/api/notifications/:id/read', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id;
+
+      // Verify notification belongs to user
+      const userNotifications = await storage.getAllNotifications(userId);
+      const notification = userNotifications.find(n => n.id === id);
+      
+      if (!notification) {
+        return res.status(404).json({ error: 'Notification not found or access denied' });
+      }
+
+      const updatedNotification = await storage.markNotificationAsRead(id);
+      res.json(updatedNotification);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ error: 'Failed to mark notification as read' });
+    }
+  });
+
+  // Mark notification as clicked (authenticated)
+  app.patch('/api/notifications/:id/click', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id;
+
+      // Verify notification belongs to user
+      const userNotifications = await storage.getAllNotifications(userId);
+      const notification = userNotifications.find(n => n.id === id);
+      
+      if (!notification) {
+        return res.status(404).json({ error: 'Notification not found or access denied' });
+      }
+
+      const updatedNotification = await storage.markNotificationAsClicked(id);
+      res.json(updatedNotification);
+    } catch (error) {
+      console.error('Error marking notification as clicked:', error);
+      res.status(500).json({ error: 'Failed to mark notification as clicked' });
+    }
+  });
+
+  // Delete notification (authenticated)
+  app.delete('/api/notifications/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id;
+
+      // Verify notification belongs to user
+      const userNotifications = await storage.getAllNotifications(userId);
+      const notification = userNotifications.find(n => n.id === id);
+      
+      if (!notification) {
+        return res.status(404).json({ error: 'Notification not found or access denied' });
+      }
+
+      const success = await storage.deleteNotification(id);
+      if (success) {
+        res.json({ message: 'Notification deleted successfully' });
+      } else {
+        res.status(404).json({ error: 'Notification not found' });
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      res.status(500).json({ error: 'Failed to delete notification' });
+    }
+  });
+
+  // Get user notification preferences (authenticated)
+  app.get('/api/notification-preferences', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'User authentication required' });
+      }
+      
+      const preferences = await storage.getUserNotificationPreferences(userId);
+      
+      if (!preferences) {
+        // Return default preferences if none exist
+        res.json({
+          userId,
+          enableEmail: true,
+          enableInApp: true,
+          orderUpdates: true,
+          deliveryNotifications: true,
+          printJobUpdates: true,
+          promotionalOffers: true,
+          systemAlerts: true,
+          quietHoursStart: '22:00',
+          quietHoursEnd: '08:00',
+          maxDailyNotifications: 10,
+          language: 'ar'
+        });
+      } else {
+        res.json(preferences);
+      }
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error);
+      res.status(500).json({ error: 'Failed to fetch notification preferences' });
+    }
+  });
+
+  // Update user notification preferences (authenticated)
+  app.put('/api/notification-preferences', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'User authentication required' });
+      }
+      
+      const preferences = await storage.updateUserNotificationPreferences(userId, req.body);
+      res.json(preferences);
+    } catch (error) {
+      console.error('Error updating notification preferences:', error);
+      res.status(500).json({ error: 'Failed to update notification preferences' });
+    }
+  });
+
+  // Get unread count only (authenticated)
+  app.get('/api/notifications/unread-count', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'User authentication required' });
+      }
+      
+      const unreadCount = await storage.getUserUnreadCount(userId);
+      res.json({ unreadCount });
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+      res.status(500).json({ error: 'Failed to fetch unread count' });
     }
   });
 
