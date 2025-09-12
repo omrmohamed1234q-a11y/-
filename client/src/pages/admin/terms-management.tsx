@@ -22,7 +22,7 @@ import {
   Users
 } from 'lucide-react';
 import { queryClient, apiRequest } from '@/lib/queryClient';
-import type { TermsAndConditions } from '../../../shared/schema';
+import type { TermsAndConditions } from '@shared/schema';
 
 function TermsManagementContent() {
   const { toast } = useToast();
