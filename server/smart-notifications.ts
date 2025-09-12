@@ -3,7 +3,7 @@
 // Implementation using SendGrid blueprint
 // ============================================================================
 
-import { MailService } from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
 import {
   smartCampaigns,
   targetingRules,
@@ -24,9 +24,8 @@ if (!process.env.SENDGRID_API_KEY) {
   console.warn("⚠️ SENDGRID_API_KEY not found. Email notifications will be disabled.");
 }
 
-const mailService = new MailService();
 if (process.env.SENDGRID_API_KEY) {
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
 
 // ============================================================================
@@ -155,7 +154,7 @@ class SmartDeliveryService {
     }
 
     try {
-      await mailService.send({
+      await sgMail.send({
         to: params.to,
         from: params.from || 'no-reply@atbaali.com',
         subject: params.subject,
