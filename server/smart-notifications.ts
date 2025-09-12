@@ -63,20 +63,75 @@ class SmartTargetingEngine {
    * حساب الجمهور المستهدف بناءً على المعايير الذكية
    * Calculate target audience based on smart criteria
    */
-  async calculateTargetAudience(criteria: SmartTargetingCriteria): Promise<string[]> {
-    // In a real implementation, this would query the database
-    // For now, return mock user IDs for testing
+  async calculateTargetAudience(criteria: SmartTargetingCriteria, storage: any): Promise<string[]> {
     console.log('🎯 Calculating target audience with criteria:', criteria);
     
-    // Mock implementation - would be replaced with actual database queries
-    const mockUsers = [
-      'user_1_student_grade_5',
-      'user_2_teacher_high_engagement', 
-      'user_3_parent_low_activity',
-      'user_4_student_grade_10_active'
-    ];
-    
-    return mockUsers;
+    try {
+      let targetUsers: any[] = [];
+
+      // Apply demographic filters
+      if (criteria.demographic?.gradeLevel && criteria.demographic.gradeLevel.length > 0) {
+        const gradeUsers = await storage.getUsersByGradeLevel(criteria.demographic.gradeLevel);
+        targetUsers = targetUsers.length === 0 ? gradeUsers : targetUsers.filter(u => 
+          gradeUsers.some(gu => gu.id === u.id)
+        );
+      }
+
+      // Apply role filters
+      if (criteria.demographic && 'role' in criteria.demographic && criteria.demographic.role && criteria.demographic.role.length > 0) {
+        const roleUsers = await storage.getUsersByRole(criteria.demographic.role);
+        targetUsers = targetUsers.length === 0 ? roleUsers : targetUsers.filter(u => 
+          roleUsers.some(ru => ru.id === u.id)
+        );
+      }
+
+      // Apply behavioral filters
+      if (criteria.behavioral) {
+        const behaviorCriteria: any = {};
+        if (criteria.behavioral.totalOrders?.min) {
+          behaviorCriteria.minPurchases = criteria.behavioral.totalOrders.min;
+        }
+        if (criteria.behavioral.totalSpent?.min) {
+          behaviorCriteria.minPoints = criteria.behavioral.totalSpent.min;
+        }
+        
+        if (Object.keys(behaviorCriteria).length > 0) {
+          const behaviorUsers = await storage.getUsersByBehavior(behaviorCriteria);
+          targetUsers = targetUsers.length === 0 ? behaviorUsers : targetUsers.filter(u => 
+            behaviorUsers.some(bu => bu.id === u.id)
+          );
+        }
+      }
+
+      // Apply activity filters
+      if (criteria.behavioral?.lastOrderDays) {
+        const activityUsers = await storage.getUsersByActivity(criteria.behavioral.lastOrderDays);
+        targetUsers = targetUsers.length === 0 ? activityUsers : targetUsers.filter(u => 
+          activityUsers.some(au => au.id === u.id)
+        );
+      }
+
+      // If no specific criteria, get all users
+      if (targetUsers.length === 0) {
+        targetUsers = await storage.getAllUsers();
+      }
+
+      const userIds = targetUsers.map(user => user.id);
+      console.log(`✅ Found ${userIds.length} users matching criteria:`, userIds.slice(0, 5), userIds.length > 5 ? '...' : '');
+      
+      return userIds;
+    } catch (error) {
+      console.error('❌ Error calculating target audience:', error);
+      
+      // Fallback to getting all users
+      try {
+        const allUsers = await storage.getAllUsers();
+        return allUsers.map((user: any) => user.id);
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError);
+        return [];
+      }
+    }
   }
 
   /**
@@ -176,22 +231,27 @@ class SmartDeliveryService {
    * إرسال حملة ذكية للجمهور المستهدف
    * Send smart campaign to targeted audience
    */
-  async sendSmartCampaign(campaignId: string, targetingCriteria: SmartTargetingCriteria): Promise<{
+  async sendSmartCampaign(campaignId: string, targetingCriteria: SmartTargetingCriteria, storage: any, campaignTemplate?: any): Promise<{
     sent: number;
     failed: number;
     details: any[];
   }> {
     console.log('🚀 Starting smart campaign:', campaignId);
 
-    // Get target audience
-    const targetUsers = await this.targetingEngine.calculateTargetAudience(targetingCriteria);
+    // Get target audience with real data
+    const targetUserIds = await this.targetingEngine.calculateTargetAudience(targetingCriteria, storage);
     
+    if (targetUserIds.length === 0) {
+      console.log('⚠️ No users found matching criteria');
+      return { sent: 0, failed: 0, details: [] };
+    }
+
     let sentCount = 0;
     let failedCount = 0;
     const details: any[] = [];
 
-    // Mock campaign template
-    const campaignTemplate = {
+    // Default campaign template if not provided
+    const defaultTemplate = {
       subject: 'عرض خاص لك في منصة اطبعلي! 🎉',
       html: `
         <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -216,20 +276,38 @@ class SmartDeliveryService {
       `
     };
 
-    // Send to each targeted user
-    for (const userId of targetUsers) {
-      try {
-        // Mock user data - in real implementation, fetch from database
-        const userData = {
-          name: `مستخدم ${userId.split('_')[1]}`,
-          email: `${userId}@example.com`,
-          gradeLevel: userId.includes('grade') ? userId.split('_')[3] : undefined,
-          bountyPoints: Math.floor(Math.random() * 500) + 50,
-        };
+    const template = campaignTemplate || defaultTemplate;
 
-        // Personalize content
-        const personalizedSubject = this.targetingEngine.personalizeContent(campaignTemplate.subject, userData);
-        const personalizedHtml = this.targetingEngine.personalizeContent(campaignTemplate.html, userData);
+    // Send to each targeted user
+    for (const userId of targetUserIds) {
+      try {
+        // Get real user data from storage
+        const userData = await storage.getUser(userId);
+        
+        if (!userData || !userData.email) {
+          console.warn(`⚠️ User ${userId} not found or missing email, skipping...`);
+          failedCount++;
+          details.push({
+            userId,
+            status: 'failed',
+            error: 'User not found or missing email',
+            sentAt: new Date().toISOString(),
+          });
+          continue;
+        }
+
+        // Personalize content using real user data
+        const personalizedSubject = this.targetingEngine.personalizeContent(template.subject, {
+          name: userData.fullName || userData.username || 'عميلنا العزيز',
+          gradeLevel: userData.gradeLevel || '',
+          points: userData.bountyPoints || 0,
+        });
+        
+        const personalizedHtml = this.targetingEngine.personalizeContent(template.html, {
+          name: userData.fullName || userData.username || 'عميلنا العزيز',
+          gradeLevel: userData.gradeLevel || '',
+          points: userData.bountyPoints || 0,
+        });
 
         // Send email
         const emailSent = await this.sendSmartEmail({
@@ -244,6 +322,8 @@ class SmartDeliveryService {
           details.push({
             userId,
             email: userData.email,
+            userName: userData.fullName || userData.username,
+            gradeLevel: userData.gradeLevel,
             status: 'sent',
             personalizedSubject,
             sentAt: new Date().toISOString(),
@@ -253,6 +333,7 @@ class SmartDeliveryService {
           details.push({
             userId,
             email: userData.email,
+            userName: userData.fullName || userData.username,
             status: 'failed',
             error: 'SendGrid delivery failed',
             sentAt: new Date().toISOString(),

@@ -1275,3 +1275,107 @@ export const insertPrivacyPolicySchema = createInsertSchema(privacyPolicy).omit(
 });
 export type InsertPrivacyPolicy = z.infer<typeof insertPrivacyPolicySchema>;
 export type PrivacyPolicy = typeof privacyPolicy.$inferSelect;
+
+// User Notifications System
+// ============================================================================
+
+// Real-time user notifications table (separate from smart campaigns)
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // Reference to users table
+  
+  // Notification content
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: varchar("type", { length: 50 }).notNull().default("general"), // 'order', 'system', 'promotion', 'delivery', 'print', 'general'
+  category: varchar("category", { length: 50 }), // Optional subcategory
+  
+  // Visual & interaction
+  iconType: varchar("icon_type", { length: 50 }), // Icon identifier for frontend
+  actionUrl: text("action_url"), // Optional action URL when clicked
+  actionData: jsonb("action_data"), // Additional data for actions
+  
+  // Status tracking
+  isRead: boolean("is_read").default(false),
+  isClicked: boolean("is_clicked").default(false),
+  isPinned: boolean("is_pinned").default(false), // Important notifications
+  priority: varchar("priority", { length: 20 }).default("normal"), // 'low', 'normal', 'high', 'urgent'
+  
+  // Metadata
+  sourceId: varchar("source_id"), // Reference to related entity (order ID, etc.)
+  sourceType: varchar("source_type", { length: 50 }), // 'order', 'print_job', 'campaign', etc.
+  metadata: jsonb("metadata").default({}),
+  
+  // Scheduling
+  scheduledFor: timestamp("scheduled_for"), // Future delivery time
+  expiresAt: timestamp("expires_at"), // Auto-expire time
+  
+  // Delivery tracking
+  deliveredAt: timestamp("delivered_at"),
+  readAt: timestamp("read_at"),
+  clickedAt: timestamp("clicked_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User notification preferences table
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(), // One record per user
+  
+  // Channel preferences
+  enableEmail: boolean("enable_email").default(true),
+  enableSMS: boolean("enable_sms").default(false),
+  enablePush: boolean("enable_push").default(true),
+  enableInApp: boolean("enable_in_app").default(true),
+  
+  // Notification type preferences
+  orderUpdates: boolean("order_updates").default(true),
+  deliveryNotifications: boolean("delivery_notifications").default(true),
+  printJobUpdates: boolean("print_job_updates").default(true),
+  promotionalOffers: boolean("promotional_offers").default(true),
+  systemAlerts: boolean("system_alerts").default(true),
+  educationalContent: boolean("educational_content").default(false),
+  
+  // Timing preferences
+  quietHoursStart: varchar("quiet_hours_start", { length: 5 }), // "22:00"
+  quietHoursEnd: varchar("quiet_hours_end", { length: 5 }), // "08:00"
+  timezone: varchar("timezone", { length: 50 }).default("Africa/Cairo"),
+  preferredDeliveryTime: varchar("preferred_delivery_time", { length: 5 }), // "14:00"
+  
+  // Frequency controls
+  maxDailyNotifications: integer("max_daily_notifications").default(10),
+  digestMode: boolean("digest_mode").default(false), // Bundle notifications
+  digestFrequency: varchar("digest_frequency", { length: 20 }).default("daily"), // 'hourly', 'daily', 'weekly'
+  
+  // Advanced preferences
+  priorityFilter: varchar("priority_filter", { length: 20 }).default("normal"), // Minimum priority to receive
+  optOutUntil: timestamp("opt_out_until"), // Temporary opt-out
+  language: varchar("language", { length: 10 }).default("ar"), // Notification language
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Create insert schemas for notifications
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  deliveredAt: true,
+  readAt: true,
+  clickedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Export types for notifications
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;

@@ -1,4 +1,5 @@
 import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, partnerProducts, secureAdmins, secureDrivers, securityLogs, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct, type SecureAdmin, type InsertSecureAdmin, type SecureDriver, type InsertSecureDriver, type SecurityLog, type InsertSecurityLog } from "@shared/schema";
+import { type SmartCampaign, type InsertSmartCampaign, type TargetingRule, type InsertTargetingRule, type SentMessage, type InsertSentMessage, type UserBehavior, type InsertUserBehavior, type MessageTemplate, type InsertMessageTemplate, type ScheduledJob, type InsertScheduledJob } from "@shared/smart-notifications-schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
 
@@ -59,7 +60,28 @@ export interface IStorage {
   updateTeacher(id: string, updates: any): Promise<any>;
   deleteTeacher(id: string): Promise<void>;
   
-  // Old notification operations removed - building smart targeting system
+  // Smart targeting operations for notifications
+  getUsersByGradeLevel(gradeLevels: string[]): Promise<User[]>;
+  getUsersByRole(roles: string[]): Promise<User[]>;
+  getUsersByBehavior(criteria: { minPrints?: number; minPurchases?: number; minPoints?: number }): Promise<User[]>;
+  getUsersByActivity(daysInactive?: number): Promise<User[]>;
+  getActiveTeachers(): Promise<User[]>;
+  getHighValueUsers(): Promise<User[]>;
+  
+  // User notifications operations
+  getAllNotifications(userId?: string): Promise<any[]>;
+  getNotification(id: string): Promise<any | undefined>;
+  createNotification(notification: any): Promise<any>;
+  updateNotification(id: string, updates: any): Promise<any>;
+  markNotificationAsRead(id: string): Promise<any>;
+  markNotificationAsClicked(id: string): Promise<any>;
+  deleteNotification(id: string): Promise<boolean>;
+  getUserUnreadCount(userId: string): Promise<number>;
+  
+  // User notification preferences operations
+  getUserNotificationPreferences(userId: string): Promise<any | undefined>;
+  updateUserNotificationPreferences(userId: string, preferences: any): Promise<any>;
+  createUserNotificationPreferences(preferences: any): Promise<any>;
   
   // Coupon operations
   getAllCoupons(): Promise<any[]>;
@@ -96,7 +118,6 @@ export interface IStorage {
   // Additional compatibility methods
   getCoupon(id: string): Promise<any>;
   getCouponUsageAnalytics(couponId: string): Promise<any>;
-  getCart(userId: string): Promise<any>;
 
   // Announcement operations
   getAllAnnouncements(): Promise<Announcement[]>;
@@ -158,35 +179,36 @@ export interface IStorage {
   deletePrivacyPolicy(id: string): Promise<boolean>;
 
   // Smart Notifications operations
-  getAllSmartCampaigns(): Promise<any[]>;
-  getSmartCampaign(id: string): Promise<any | undefined>;
-  createSmartCampaign(campaign: any): Promise<any>;
-  updateSmartCampaign(id: string, updates: any): Promise<any>;
+  getAllSmartCampaigns(): Promise<SmartCampaign[]>;
+  getSmartCampaign(id: string): Promise<SmartCampaign | undefined>;
+  createSmartCampaign(campaign: InsertSmartCampaign): Promise<SmartCampaign>;
+  updateSmartCampaign(id: string, updates: Partial<InsertSmartCampaign>): Promise<SmartCampaign>;
   deleteSmartCampaign(id: string): Promise<boolean>;
-  pauseSmartCampaign(id: string): Promise<any>;
-  resumeSmartCampaign(id: string): Promise<any>;
+  pauseSmartCampaign(id: string): Promise<SmartCampaign>;
+  resumeSmartCampaign(id: string): Promise<SmartCampaign>;
   
   // Message Templates operations
-  getAllMessageTemplates(): Promise<any[]>;
-  getMessageTemplate(id: string): Promise<any | undefined>;
-  createMessageTemplate(template: any): Promise<any>;
-  updateMessageTemplate(id: string, updates: any): Promise<any>;
+  getAllMessageTemplates(): Promise<MessageTemplate[]>;
+  getMessageTemplate(id: string): Promise<MessageTemplate | undefined>;
+  createMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate>;
+  updateMessageTemplate(id: string, updates: Partial<InsertMessageTemplate>): Promise<MessageTemplate>;
   deleteMessageTemplate(id: string): Promise<boolean>;
   
   // Targeting Rules operations
-  getTargetingRules(campaignId: string): Promise<any[]>;
-  createTargetingRule(rule: any): Promise<any>;
-  updateTargetingRule(id: string, updates: any): Promise<any>;
+  getTargetingRules(campaignId: string): Promise<TargetingRule[]>;
+  createTargetingRule(rule: InsertTargetingRule): Promise<TargetingRule>;
+  updateTargetingRule(id: string, updates: Partial<InsertTargetingRule>): Promise<TargetingRule>;
   deleteTargetingRule(id: string): Promise<boolean>;
   
   // User Behavior operations
-  getUserBehavior(userId: string): Promise<any | undefined>;
-  updateUserBehavior(userId: string, updates: any): Promise<any>;
+  getUserBehavior(userId: string): Promise<UserBehavior | undefined>;
+  updateUserBehavior(userId: string, updates: Partial<InsertUserBehavior>): Promise<UserBehavior>;
+  createUserBehavior(behavior: InsertUserBehavior): Promise<UserBehavior>;
   
   // Sent Messages operations
-  getSentMessages(campaignId?: string): Promise<any[]>;
-  createSentMessage(message: any): Promise<any>;
-  updateSentMessage(id: string, updates: any): Promise<any>;
+  getSentMessages(campaignId?: string): Promise<SentMessage[]>;
+  createSentMessage(message: InsertSentMessage): Promise<SentMessage>;
+  updateSentMessage(id: string, updates: Partial<InsertSentMessage>): Promise<SentMessage>;
 }
 
 // Global storage to persist across application lifecycle
@@ -209,6 +231,8 @@ export class MemoryStorage implements IStorage {
   private targetingRules: any[] = [];
   private sentMessages: any[] = [];
   private userBehaviors: any[] = [];
+  private notifications: any[] = [];
+  private notificationPreferences: any[] = [];
   private privacyPolicies: any[] = [
     {
       id: 'privacy_policy_1',
@@ -352,6 +376,165 @@ export class MemoryStorage implements IStorage {
     if (userIndex === -1) return false;
     this.users.splice(userIndex, 1);
     return true;
+  }
+
+  // Smart targeting operations for notifications
+  async getUsersByGradeLevel(gradeLevels: string[]): Promise<User[]> {
+    return this.users.filter(user => 
+      user.gradeLevel && gradeLevels.includes(user.gradeLevel)
+    );
+  }
+
+  async getUsersByRole(roles: string[]): Promise<User[]> {
+    return this.users.filter(user => 
+      roles.includes(user.role)
+    );
+  }
+
+  async getUsersByBehavior(criteria: { minPrints?: number; minPurchases?: number; minPoints?: number }): Promise<User[]> {
+    return this.users.filter(user => {
+      const meetsPrints = !criteria.minPrints || (user.totalPrints || 0) >= criteria.minPrints;
+      const meetsPurchases = !criteria.minPurchases || (user.totalPurchases || 0) >= criteria.minPurchases;
+      const meetsPoints = !criteria.minPoints || (user.bountyPoints || 0) >= criteria.minPoints;
+      return meetsPrints && meetsPurchases && meetsPoints;
+    });
+  }
+
+  async getUsersByActivity(daysInactive?: number): Promise<User[]> {
+    if (!daysInactive) return this.users;
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysInactive);
+    
+    return this.users.filter(user => {
+      const userDate = new Date(user.createdAt);
+      return userDate >= cutoffDate;
+    });
+  }
+
+  async getActiveTeachers(): Promise<User[]> {
+    return this.users.filter(user => 
+      user.isTeacher === true && user.role !== 'admin'
+    );
+  }
+
+  async getHighValueUsers(): Promise<User[]> {
+    return this.users.filter(user => 
+      (user.totalPurchases || 0) > 500 || 
+      (user.bountyPoints || 0) > 1000 ||
+      user.role === 'VIP'
+    );
+  }
+
+  // User notifications operations
+  async getAllNotifications(userId?: string): Promise<any[]> {
+    if (userId) {
+      return this.notifications.filter(n => n.userId === userId).sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    return [...this.notifications].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async getNotification(id: string): Promise<any | undefined> {
+    return this.notifications.find(n => n.id === id);
+  }
+
+  async createNotification(notificationData: any): Promise<any> {
+    const notification = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...notificationData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.notifications.push(notification);
+    return notification;
+  }
+
+  async updateNotification(id: string, updates: any): Promise<any> {
+    const index = this.notifications.findIndex(n => n.id === id);
+    if (index === -1) {
+      throw new Error('Notification not found');
+    }
+    this.notifications[index] = { 
+      ...this.notifications[index], 
+      ...updates, 
+      updatedAt: new Date() 
+    };
+    return this.notifications[index];
+  }
+
+  async markNotificationAsRead(id: string): Promise<any> {
+    const notification = await this.getNotification(id);
+    if (!notification) {
+      throw new Error('Notification not found');
+    }
+    
+    return await this.updateNotification(id, {
+      isRead: true,
+      readAt: new Date()
+    });
+  }
+
+  async markNotificationAsClicked(id: string): Promise<any> {
+    const notification = await this.getNotification(id);
+    if (!notification) {
+      throw new Error('Notification not found');
+    }
+    
+    return await this.updateNotification(id, {
+      isClicked: true,
+      clickedAt: new Date()
+    });
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    const index = this.notifications.findIndex(n => n.id === id);
+    if (index === -1) return false;
+    this.notifications.splice(index, 1);
+    return true;
+  }
+
+  async getUserUnreadCount(userId: string): Promise<number> {
+    return this.notifications.filter(n => 
+      n.userId === userId && !n.isRead
+    ).length;
+  }
+
+  // User notification preferences operations
+  async getUserNotificationPreferences(userId: string): Promise<any | undefined> {
+    return this.notificationPreferences.find(p => p.userId === userId);
+  }
+
+  async updateUserNotificationPreferences(userId: string, preferences: any): Promise<any> {
+    const index = this.notificationPreferences.findIndex(p => p.userId === userId);
+    if (index === -1) {
+      // Create new preferences if not found
+      return this.createUserNotificationPreferences({
+        ...preferences,
+        userId
+      });
+    }
+    
+    this.notificationPreferences[index] = { 
+      ...this.notificationPreferences[index], 
+      ...preferences,
+      updatedAt: new Date() 
+    };
+    return this.notificationPreferences[index];
+  }
+
+  async createUserNotificationPreferences(preferencesData: any): Promise<any> {
+    const preferences = {
+      id: `pref-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...preferencesData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.notificationPreferences.push(preferences);
+    return preferences;
   }
 
   // Product operations
@@ -1116,6 +1299,210 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error deleting user:', error);
       return false;
+    }
+  }
+
+  // Smart targeting operations for notifications
+  async getUsersByGradeLevel(gradeLevels: string[]): Promise<User[]> {
+    return await db.select().from(users).where(
+      sql`${users.gradeLevel} = ANY(${gradeLevels})`
+    );
+  }
+
+  async getUsersByRole(roles: string[]): Promise<User[]> {
+    return await db.select().from(users).where(
+      sql`${users.role} = ANY(${roles})`
+    );
+  }
+
+  async getUsersByBehavior(criteria: { minPrints?: number; minPurchases?: number; minPoints?: number }): Promise<User[]> {
+    let conditions: any[] = [];
+    
+    if (criteria.minPrints) {
+      conditions.push(sql`${users.totalPrints} >= ${criteria.minPrints}`);
+    }
+    if (criteria.minPurchases) {
+      conditions.push(sql`${users.totalPurchases} >= ${criteria.minPurchases}`);
+    }
+    if (criteria.minPoints) {
+      conditions.push(sql`${users.bountyPoints} >= ${criteria.minPoints}`);
+    }
+
+    if (conditions.length === 0) {
+      return await this.getAllUsers();
+    }
+
+    return await db.select().from(users).where(
+      conditions.length === 1 ? conditions[0] : and(...conditions)
+    );
+  }
+
+  async getUsersByActivity(daysInactive?: number): Promise<User[]> {
+    if (!daysInactive) {
+      return await this.getAllUsers();
+    }
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysInactive);
+    
+    return await db.select().from(users).where(
+      sql`${users.createdAt} >= ${cutoffDate.toISOString()}`
+    );
+  }
+
+  async getActiveTeachers(): Promise<User[]> {
+    return await db.select().from(users).where(
+      and(
+        eq(users.isTeacher, true),
+        sql`${users.role} != 'admin'`
+      )
+    );
+  }
+
+  async getHighValueUsers(): Promise<User[]> {
+    return await db.select().from(users).where(
+      sql`${users.totalPurchases} > 500 OR ${users.bountyPoints} > 1000 OR ${users.role} = 'VIP'`
+    );
+  }
+
+  // User notifications operations (DatabaseStorage implementation)
+  async getAllNotifications(userId?: string): Promise<any[]> {
+    try {
+      // Import notifications from schema if not already available
+      const { notifications } = await import("../shared/schema");
+      
+      if (userId) {
+        return await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+      }
+      return await db.select().from(notifications).orderBy(desc(notifications.createdAt));
+    } catch (error) {
+      console.error('Error fetching notifications from database:', error);
+      return [];
+    }
+  }
+
+  async getNotification(id: string): Promise<any | undefined> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      const [notification] = await db.select().from(notifications).where(eq(notifications.id, id));
+      return notification;
+    } catch (error) {
+      console.error('Error fetching notification from database:', error);
+      return undefined;
+    }
+  }
+
+  async createNotification(notificationData: any): Promise<any> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      const [notification] = await db.insert(notifications).values(notificationData).returning();
+      return notification;
+    } catch (error) {
+      console.error('Error creating notification in database:', error);
+      throw error;
+    }
+  }
+
+  async updateNotification(id: string, updates: any): Promise<any> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      const [notification] = await db
+        .update(notifications)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(notifications.id, id))
+        .returning();
+      return notification;
+    } catch (error) {
+      console.error('Error updating notification in database:', error);
+      throw error;
+    }
+  }
+
+  async markNotificationAsRead(id: string): Promise<any> {
+    return await this.updateNotification(id, {
+      isRead: true,
+      readAt: new Date()
+    });
+  }
+
+  async markNotificationAsClicked(id: string): Promise<any> {
+    return await this.updateNotification(id, {
+      isClicked: true,
+      clickedAt: new Date()
+    });
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      const result = await db.delete(notifications).where(eq(notifications.id, id));
+      return (result as any).rowCount > 0;
+    } catch (error) {
+      console.error('Error deleting notification from database:', error);
+      return false;
+    }
+  }
+
+  async getUserUnreadCount(userId: string): Promise<number> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('Error fetching unread count from database:', error);
+      return 0;
+    }
+  }
+
+  // User notification preferences operations (DatabaseStorage implementation)
+  async getUserNotificationPreferences(userId: string): Promise<any | undefined> {
+    try {
+      const { notificationPreferences } = await import("../shared/schema");
+      const [preferences] = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, userId));
+      return preferences;
+    } catch (error) {
+      console.error('Error fetching notification preferences from database:', error);
+      return undefined;
+    }
+  }
+
+  async updateUserNotificationPreferences(userId: string, preferences: any): Promise<any> {
+    try {
+      const { notificationPreferences } = await import("../shared/schema");
+      
+      // Try to update first
+      const [updated] = await db
+        .update(notificationPreferences)
+        .set({ ...preferences, updatedAt: new Date() })
+        .where(eq(notificationPreferences.userId, userId))
+        .returning();
+        
+      if (updated) {
+        return updated;
+      }
+      
+      // If no rows updated, create new preferences
+      return await this.createUserNotificationPreferences({
+        ...preferences,
+        userId
+      });
+    } catch (error) {
+      console.error('Error updating notification preferences in database:', error);
+      throw error;
+    }
+  }
+
+  async createUserNotificationPreferences(preferencesData: any): Promise<any> {
+    try {
+      const { notificationPreferences } = await import("../shared/schema");
+      const [preferences] = await db.insert(notificationPreferences).values(preferencesData).returning();
+      return preferences;
+    } catch (error) {
+      console.error('Error creating notification preferences in database:', error);
+      throw error;
     }
   }
 
@@ -2679,6 +3066,274 @@ class MemStorage implements IStorage {
     }
     this.users.splice(index, 1);
     return true;
+  }
+
+  // Smart targeting operations for notifications
+  async getUsersByGradeLevel(gradeLevels: string[]): Promise<User[]> {
+    try {
+      // Try database first
+      const dbUsers = await db.select().from(users).where(
+        sql`${users.gradeLevel} = ANY(${gradeLevels})`
+      );
+      return dbUsers;
+    } catch (error) {
+      console.error('Database error, fallback to memory:', error);
+      // Fallback to memory
+      return this.users.filter(user => 
+        user.gradeLevel && gradeLevels.includes(user.gradeLevel)
+      );
+    }
+  }
+
+  async getUsersByRole(roles: string[]): Promise<User[]> {
+    try {
+      // Try database first
+      const dbUsers = await db.select().from(users).where(
+        sql`${users.role} = ANY(${roles})`
+      );
+      return dbUsers;
+    } catch (error) {
+      console.error('Database error, fallback to memory:', error);
+      // Fallback to memory
+      return this.users.filter(user => 
+        roles.includes(user.role)
+      );
+    }
+  }
+
+  async getUsersByBehavior(criteria: { minPrints?: number; minPurchases?: number; minPoints?: number }): Promise<User[]> {
+    try {
+      // Try database first
+      let conditions: any[] = [];
+      
+      if (criteria.minPrints) {
+        conditions.push(sql`${users.totalPrints} >= ${criteria.minPrints}`);
+      }
+      if (criteria.minPurchases) {
+        conditions.push(sql`${users.totalPurchases} >= ${criteria.minPurchases}`);
+      }
+      if (criteria.minPoints) {
+        conditions.push(sql`${users.bountyPoints} >= ${criteria.minPoints}`);
+      }
+
+      if (conditions.length === 0) {
+        return await this.getAllUsers();
+      }
+
+      const dbUsers = await db.select().from(users).where(
+        conditions.length === 1 ? conditions[0] : and(...conditions)
+      );
+      return dbUsers;
+    } catch (error) {
+      console.error('Database error, fallback to memory:', error);
+      // Fallback to memory
+      return this.users.filter(user => {
+        const meetsPrints = !criteria.minPrints || (user.totalPrints || 0) >= criteria.minPrints;
+        const meetsPurchases = !criteria.minPurchases || (user.totalPurchases || 0) >= criteria.minPurchases;
+        const meetsPoints = !criteria.minPoints || (user.bountyPoints || 0) >= criteria.minPoints;
+        return meetsPrints && meetsPurchases && meetsPoints;
+      });
+    }
+  }
+
+  async getUsersByActivity(daysInactive?: number): Promise<User[]> {
+    if (!daysInactive) {
+      return await this.getAllUsers();
+    }
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysInactive);
+    
+    try {
+      // Try database first
+      const dbUsers = await db.select().from(users).where(
+        sql`${users.createdAt} >= ${cutoffDate.toISOString()}`
+      );
+      return dbUsers;
+    } catch (error) {
+      console.error('Database error, fallback to memory:', error);
+      // Fallback to memory
+      return this.users.filter(user => {
+        const userDate = new Date(user.createdAt);
+        return userDate >= cutoffDate;
+      });
+    }
+  }
+
+  async getActiveTeachers(): Promise<User[]> {
+    try {
+      // Try database first
+      const dbUsers = await db.select().from(users).where(
+        and(
+          eq(users.isTeacher, true),
+          sql`${users.role} != 'admin'`
+        )
+      );
+      return dbUsers;
+    } catch (error) {
+      console.error('Database error, fallback to memory:', error);
+      // Fallback to memory
+      return this.users.filter(user => 
+        user.isTeacher === true && user.role !== 'admin'
+      );
+    }
+  }
+
+  async getHighValueUsers(): Promise<User[]> {
+    try {
+      // Try database first
+      const dbUsers = await db.select().from(users).where(
+        sql`${users.totalPurchases} > 500 OR ${users.bountyPoints} > 1000 OR ${users.role} = 'VIP'`
+      );
+      return dbUsers;
+    } catch (error) {
+      console.error('Database error, fallback to memory:', error);
+      // Fallback to memory
+      return this.users.filter(user => 
+        (user.totalPurchases || 0) > 500 || 
+        (user.bountyPoints || 0) > 1000 ||
+        user.role === 'VIP'
+      );
+    }
+  }
+
+  // User notifications operations (MemStorage - tries database first, fallback to memory)
+  async getAllNotifications(userId?: string): Promise<any[]> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      if (userId) {
+        return await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+      }
+      return await db.select().from(notifications).orderBy(desc(notifications.createdAt));
+    } catch (error) {
+      console.error('Database error in notifications, fallback to memory (empty):', error);
+      return [];
+    }
+  }
+
+  async getNotification(id: string): Promise<any | undefined> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      const [notification] = await db.select().from(notifications).where(eq(notifications.id, id));
+      return notification;
+    } catch (error) {
+      console.error('Database error in getNotification, fallback to undefined:', error);
+      return undefined;
+    }
+  }
+
+  async createNotification(notificationData: any): Promise<any> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      const [notification] = await db.insert(notifications).values(notificationData).returning();
+      return notification;
+    } catch (error) {
+      console.error('Database error in createNotification:', error);
+      throw error;
+    }
+  }
+
+  async updateNotification(id: string, updates: any): Promise<any> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      const [notification] = await db
+        .update(notifications)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(notifications.id, id))
+        .returning();
+      return notification;
+    } catch (error) {
+      console.error('Database error in updateNotification:', error);
+      throw error;
+    }
+  }
+
+  async markNotificationAsRead(id: string): Promise<any> {
+    return await this.updateNotification(id, {
+      isRead: true,
+      readAt: new Date()
+    });
+  }
+
+  async markNotificationAsClicked(id: string): Promise<any> {
+    return await this.updateNotification(id, {
+      isClicked: true,
+      clickedAt: new Date()
+    });
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      const result = await db.delete(notifications).where(eq(notifications.id, id));
+      return (result as any).rowCount > 0;
+    } catch (error) {
+      console.error('Database error in deleteNotification:', error);
+      return false;
+    }
+  }
+
+  async getUserUnreadCount(userId: string): Promise<number> {
+    try {
+      const { notifications } = await import("../shared/schema");
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('Database error in getUserUnreadCount:', error);
+      return 0;
+    }
+  }
+
+  // User notification preferences operations (MemStorage)
+  async getUserNotificationPreferences(userId: string): Promise<any | undefined> {
+    try {
+      const { notificationPreferences } = await import("../shared/schema");
+      const [preferences] = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, userId));
+      return preferences;
+    } catch (error) {
+      console.error('Database error in getUserNotificationPreferences:', error);
+      return undefined;
+    }
+  }
+
+  async updateUserNotificationPreferences(userId: string, preferences: any): Promise<any> {
+    try {
+      const { notificationPreferences } = await import("../shared/schema");
+      
+      // Try to update first
+      const [updated] = await db
+        .update(notificationPreferences)
+        .set({ ...preferences, updatedAt: new Date() })
+        .where(eq(notificationPreferences.userId, userId))
+        .returning();
+        
+      if (updated) {
+        return updated;
+      }
+      
+      // If no rows updated, create new preferences
+      return await this.createUserNotificationPreferences({
+        ...preferences,
+        userId
+      });
+    } catch (error) {
+      console.error('Database error in updateUserNotificationPreferences:', error);
+      throw error;
+    }
+  }
+
+  async createUserNotificationPreferences(preferencesData: any): Promise<any> {
+    try {
+      const { notificationPreferences } = await import("../shared/schema");
+      const [preferences] = await db.insert(notificationPreferences).values(preferencesData).returning();
+      return preferences;
+    } catch (error) {
+      console.error('Database error in createUserNotificationPreferences:', error);
+      throw error;
+    }
   }
 
   async upsertUser(userData: any): Promise<User> {
@@ -4396,17 +5051,17 @@ class MemStorage implements IStorage {
   }
 
   // Smart Notifications operations
-  async getAllSmartCampaigns(): Promise<any[]> {
+  async getAllSmartCampaigns(): Promise<SmartCampaign[]> {
     return this.smartCampaigns.sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
 
-  async getSmartCampaign(id: string): Promise<any | undefined> {
+  async getSmartCampaign(id: string): Promise<SmartCampaign | undefined> {
     return this.smartCampaigns.find(c => c.id === id);
   }
 
-  async createSmartCampaign(campaign: any): Promise<any> {
+  async createSmartCampaign(campaign: InsertSmartCampaign): Promise<SmartCampaign> {
     const newCampaign = {
       id: `campaign_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...campaign,
@@ -4424,9 +5079,9 @@ class MemStorage implements IStorage {
     return newCampaign;
   }
 
-  async updateSmartCampaign(id: string, updates: any): Promise<any> {
+  async updateSmartCampaign(id: string, updates: Partial<InsertSmartCampaign>): Promise<SmartCampaign> {
     const index = this.smartCampaigns.findIndex(c => c.id === id);
-    if (index === -1) return null;
+    if (index === -1) throw new Error('Smart campaign not found');
     
     this.smartCampaigns[index] = {
       ...this.smartCampaigns[index],
@@ -4450,26 +5105,26 @@ class MemStorage implements IStorage {
     return true;
   }
 
-  async pauseSmartCampaign(id: string): Promise<any> {
+  async pauseSmartCampaign(id: string): Promise<SmartCampaign> {
     return this.updateSmartCampaign(id, { status: 'paused' });
   }
 
-  async resumeSmartCampaign(id: string): Promise<any> {
+  async resumeSmartCampaign(id: string): Promise<SmartCampaign> {
     return this.updateSmartCampaign(id, { status: 'active' });
   }
 
   // Message Templates operations
-  async getAllMessageTemplates(): Promise<any[]> {
+  async getAllMessageTemplates(): Promise<MessageTemplate[]> {
     return this.messageTemplates.sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
 
-  async getMessageTemplate(id: string): Promise<any | undefined> {
+  async getMessageTemplate(id: string): Promise<MessageTemplate | undefined> {
     return this.messageTemplates.find(t => t.id === id);
   }
 
-  async createMessageTemplate(template: any): Promise<any> {
+  async createMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate> {
     const newTemplate = {
       id: `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...template,
@@ -4484,9 +5139,9 @@ class MemStorage implements IStorage {
     return newTemplate;
   }
 
-  async updateMessageTemplate(id: string, updates: any): Promise<any> {
+  async updateMessageTemplate(id: string, updates: Partial<InsertMessageTemplate>): Promise<MessageTemplate> {
     const index = this.messageTemplates.findIndex(t => t.id === id);
-    if (index === -1) return null;
+    if (index === -1) throw new Error('Message template not found');
     
     this.messageTemplates[index] = {
       ...this.messageTemplates[index],
@@ -4511,13 +5166,13 @@ class MemStorage implements IStorage {
   }
 
   // Targeting Rules operations
-  async getTargetingRules(campaignId: string): Promise<any[]> {
+  async getTargetingRules(campaignId: string): Promise<TargetingRule[]> {
     return this.targetingRules
       .filter(r => r.campaignId === campaignId)
       .sort((a, b) => a.priority - b.priority);
   }
 
-  async createTargetingRule(rule: any): Promise<any> {
+  async createTargetingRule(rule: InsertTargetingRule): Promise<TargetingRule> {
     const newRule = {
       id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...rule,
@@ -4528,9 +5183,9 @@ class MemStorage implements IStorage {
     return newRule;
   }
 
-  async updateTargetingRule(id: string, updates: any): Promise<any> {
+  async updateTargetingRule(id: string, updates: Partial<InsertTargetingRule>): Promise<TargetingRule> {
     const index = this.targetingRules.findIndex(r => r.id === id);
-    if (index === -1) return null;
+    if (index === -1) throw new Error('Targeting rule not found');
     
     this.targetingRules[index] = {
       ...this.targetingRules[index],
@@ -4549,11 +5204,22 @@ class MemStorage implements IStorage {
   }
 
   // User Behavior operations
-  async getUserBehavior(userId: string): Promise<any | undefined> {
+  async getUserBehavior(userId: string): Promise<UserBehavior | undefined> {
     return this.userBehaviors.find(b => b.userId === userId);
   }
 
-  async updateUserBehavior(userId: string, updates: any): Promise<any> {
+  async createUserBehavior(behavior: InsertUserBehavior): Promise<UserBehavior> {
+    const newBehavior = {
+      id: `behavior_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...behavior,
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.userBehaviors.push(newBehavior);
+    return newBehavior;
+  }
+
+  async updateUserBehavior(userId: string, updates: Partial<InsertUserBehavior>): Promise<UserBehavior> {
     let behavior = await this.getUserBehavior(userId);
     
     if (!behavior) {
@@ -4589,7 +5255,7 @@ class MemStorage implements IStorage {
   }
 
   // Sent Messages operations
-  async getSentMessages(campaignId?: string): Promise<any[]> {
+  async getSentMessages(campaignId?: string): Promise<SentMessage[]> {
     let messages = this.sentMessages;
     
     if (campaignId) {
@@ -4601,7 +5267,7 @@ class MemStorage implements IStorage {
     );
   }
 
-  async createSentMessage(message: any): Promise<any> {
+  async createSentMessage(message: InsertSentMessage): Promise<SentMessage> {
     const newMessage = {
       id: `message_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...message,
@@ -4616,9 +5282,9 @@ class MemStorage implements IStorage {
     return newMessage;
   }
 
-  async updateSentMessage(id: string, updates: any): Promise<any> {
+  async updateSentMessage(id: string, updates: Partial<InsertSentMessage>): Promise<SentMessage> {
     const index = this.sentMessages.findIndex(m => m.id === id);
-    if (index === -1) return null;
+    if (index === -1) throw new Error('Sent message not found');
     
     this.sentMessages[index] = {
       ...this.sentMessages[index],
