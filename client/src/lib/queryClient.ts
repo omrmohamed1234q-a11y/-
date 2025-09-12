@@ -1,7 +1,11 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
+async function throwIfResNotOk(res: Response, url?: string) {
   if (!res.ok) {
+    // Handle 401 specifically for admin routes
+    if (res.status === 401 && url) {
+      handle401Error(url);
+    }
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
@@ -20,8 +24,8 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
         const token = adminData.token || adminToken;
         const userId = adminData.user?.id || adminData.admin?.id || adminData.id;
         
+        // Use only x-admin-token for admin authentication (avoid conflicts with Supabase JWTs)
         return {
-          'Authorization': `Bearer ${token}`,
           'x-admin-token': token,
           'x-user-id': userId,
           'x-user-role': 'admin',
@@ -43,12 +47,13 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
       };
     }
 
-    // Fallback to Supabase session
+    // Fallback to Supabase session for regular users
     const { supabase } = await import('./supabase');
     const { data: { session } } = await supabase.auth.getSession();
     
-    if (session?.user) {
+    if (session?.access_token) {
       return {
+        'Authorization': `Bearer ${session.access_token}`,
         'X-User-ID': session.user.id,
         'X-User-Role': session.user.user_metadata?.role || 'customer',
       };
@@ -58,6 +63,19 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   }
   
   return {};
+}
+
+// Handle 401 errors and force re-login for admin routes
+function handle401Error(url: string): void {
+  if (url.includes('/api/admin/')) {
+    console.warn('🔐 Admin authentication expired, clearing stored credentials');
+    localStorage.removeItem('adminAuth');
+    localStorage.removeItem('adminToken');
+    // Redirect to secure admin login
+    if (window.location.pathname !== '/auth/secure-admin-login') {
+      window.location.href = '/auth/secure-admin-login';
+    }
+  }
 }
 
 export async function apiRequest(
@@ -84,7 +102,7 @@ export async function apiRequest(
     });
 
     clearTimeout(timeoutId);
-    await throwIfResNotOk(res);
+    await throwIfResNotOk(res, url);
     return res;
   } catch (error) {
     clearTimeout(timeoutId);
@@ -109,10 +127,11 @@ export const getQueryFn: <T>(options: {
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      handle401Error(queryKey.join("/") as string);
       return null;
     }
 
-    await throwIfResNotOk(res);
+    await throwIfResNotOk(res, queryKey.join("/") as string);
     return await res.json();
   };
 

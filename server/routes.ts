@@ -12,7 +12,8 @@ import slowDown from 'express-slow-down';
 import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
-import { MemorySecurityStorage } from './memory-security-storage';
+// Use centralized security singleton to prevent multiple instances
+import { securityStorage, issueAdminToken, verifyAdminToken } from './security';
 import { registerInventoryRoutes } from "./inventory-routes";
 import { hybridUploadService } from './hybrid-upload-service';
 import { googleDriveService } from './google-drive-service';
@@ -24,8 +25,7 @@ import {
   type InsertUserTermsAcceptance 
 } from '../shared/schema';
 
-// Initialize memory security storage
-const memorySecurityStorage = new MemorySecurityStorage();
+// Using centralized security singleton (no need to create new instance)
 
 // Global storage for notifications
 const globalNotificationStorage: any[] = [];
@@ -205,8 +205,8 @@ const isAdminAuthenticated = async (req: any, res: any, next: any) => {
   // Method 1: Secure admin token verification
   if (adminToken) {
     try {
-      // Verify against memory security storage for admin accounts
-      const adminUser = await memorySecurityStorage.verifyAdminToken(adminToken);
+      // Verify against centralized security storage for admin accounts
+      const adminUser = await verifyAdminToken(adminToken);
       if (adminUser) {
         authenticatedUserId = adminUser.id;
         isValidAdmin = true;
@@ -225,7 +225,7 @@ const isAdminAuthenticated = async (req: any, res: any, next: any) => {
         const { data: { user }, error } = await supabase.auth.getUser(token);
         if (user && !error) {
           // Check if user has admin role in our system
-          const adminUser = await memorySecurityStorage.getAdminByEmail(user.email);
+          const adminUser = await securityStorage.getAdminByEmail(user.email);
           if (adminUser) {
             authenticatedUserId = user.id;
             isValidAdmin = true;
@@ -5101,9 +5101,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get admin by username and email using Memory Storage
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const admin = await memorySecurityStorage.getSecureAdminByCredentials(username, email);
+      // Get admin by username and email using centralized storage
+      const admin = await securityStorage.getSecureAdminByCredentials(username, email);
       
       if (!admin) {
         await logSecurityEvent('unknown', 'admin', 'failed_login', false, req, 'Admin not found');
@@ -5150,15 +5149,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Generate secure token
-      const token = generateSecureToken();
+      // Issue new secure admin token with expiry
+      const token = issueAdminToken(admin.id);
       
-      // Save token to admin record for verification
-      admin.currentToken = token;
+      // Update last login
       admin.last_login = new Date().toISOString();
-      
-      // Update token in memory storage
-      await memorySecurityStorage.updateSecurityUserToken(admin.id, token);
       
       // Log successful login
       await logSecurityEvent(admin.id, 'admin', 'successful_login', true, req);
@@ -5201,8 +5196,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get driver from Memory Storage
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const driver = await memorySecurityStorage.validateUserCredentials(username, email, password, driverCode);
+      // Get driver from centralized storage
+      const driver = await securityStorage.validateUserCredentials(username, email, password, driverCode);
       
       if (!driver || driver.role !== 'driver') {
         // Log failed attempt to memory storage
@@ -5309,8 +5304,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validPassword = process.env.SECURITY_ACCESS_PASSWORD || 'S3519680s';
       
       // Log the attempt
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      await memorySecurityStorage.createSecurityLog({
+      // Log the attempt using centralized storage
+      await securityStorage.createSecurityLog({
         user_id: 'security_access',
         action: 'محاولة الوصول لوحة الأمان',
         ip_address: ip,
@@ -5874,8 +5869,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Username and new password are required' });
       }
       
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const success = await memorySecurityStorage.resetUserPassword(username, newPassword);
+      // Reset password using centralized storage
+      const success = await securityStorage.resetUserPassword(username, newPassword);
       
       if (success) {
         res.json({ success: true, message: 'Password reset successfully' });
@@ -5904,11 +5899,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get security logs (admin only) - Using Memory Storage
+  // Get security logs (admin only) - Using centralized storage
   app.get('/api/admin/security-dashboard/logs', async (req, res) => {
     try {
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const logs = await memorySecurityStorage.getAllSecurityLogs();
+      // Get logs from centralized storage
+      const logs = await securityStorage.getAllSecurityLogs();
       res.json(logs);
     } catch (error) {
       console.error('Error fetching security logs:', error);
@@ -5930,8 +5925,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/admin/security-dashboard/logs', async (req, res) => {
     try {
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const logs = await memorySecurityStorage.getAllSecurityLogs();
+      // Get logs from centralized storage (second instance)
+      const logs = await securityStorage.getAllSecurityLogs();
       res.json(logs);
     } catch (error) {
       console.error('Error fetching security logs:', error);
@@ -5944,8 +5939,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { isActive } = req.body;
       
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const updatedUser = await memorySecurityStorage.updateSecurityUserStatus(id, isActive);
+      // Update user status using centralized storage
+      const updatedUser = await securityStorage.updateSecurityUserStatus(id, isActive);
       
       if (updatedUser) {
         res.json({ success: true, user: updatedUser });
@@ -5974,8 +5969,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           last_login: null
         };
         
-        const { memorySecurityStorage } = await import('./memory-security-storage');
-        const newAdmin = await memorySecurityStorage.createSecurityUser({
+        // Create admin using centralized storage
+        const newAdmin = await securityStorage.createSecurityUser({
           role: 'admin',
           username: adminData.username,
           email: adminData.email,
@@ -6013,8 +6008,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           last_login: null
         };
         
-        const { memorySecurityStorage } = await import('./memory-security-storage');
-        const newDriver = await memorySecurityStorage.createSecurityUser({
+        // Create driver using centralized storage
+        const newDriver = await securityStorage.createSecurityUser({
           role: 'driver',
           username: driverData.username,
           email: driverData.email,
