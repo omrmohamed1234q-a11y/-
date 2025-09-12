@@ -56,7 +56,7 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
 
   const redirectToLogin = () => {
     setTimeout(() => {
-      window.location.href = '/admin/secure-login';
+      window.location.href = '/secure-admin-login';
     }, 2000);
   };
 

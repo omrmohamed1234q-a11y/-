@@ -72,8 +72,8 @@ function handle401Error(url: string): void {
     localStorage.removeItem('adminAuth');
     localStorage.removeItem('adminToken');
     // Redirect to secure admin login
-    if (window.location.pathname !== '/auth/secure-admin-login') {
-      window.location.href = '/auth/secure-admin-login';
+    if (window.location.pathname !== '/secure-admin-login') {
+      window.location.href = '/secure-admin-login';
     }
   }
 }
