@@ -1068,54 +1068,11 @@ export const couponUsageTracking = pgTable("coupon_usage_tracking", {
   usedAt: timestamp("used_at").defaultNow(),
 });
 
-// Coupon notifications system
-// General notifications system
-export const notifications = pgTable("notifications", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-  title: varchar("title", { length: 255 }).notNull(),
-  message: text("message").notNull(),
-  type: varchar("type", { length: 50 }).notNull(), // 'order', 'coupon', 'announcement', 'reward', 'system', 'delivery'
-  relatedId: varchar("related_id"), // ID of related entity (order, coupon, etc.)
-  actionUrl: varchar("action_url"), // URL to navigate when clicked
-  iconType: varchar("icon_type", { length: 30 }).default("info"), // 'success', 'warning', 'error', 'info'
-  priority: varchar("priority", { length: 20 }).default("normal"), // 'low', 'normal', 'high', 'urgent'
-  isRead: boolean("is_read").default(false),
-  isClicked: boolean("is_clicked").default(false),
-  isPinned: boolean("is_pinned").default(false), // For important notifications
-  expiresAt: timestamp("expires_at"), // Optional expiration
-  sentAt: timestamp("sent_at").defaultNow(),
-  readAt: timestamp("read_at"),
-  clickedAt: timestamp("clicked_at"),
-  metadata: jsonb("metadata").default({}), // Additional data
-});
+// Old notifications system removed - implementing smart targeting system
 
-export const couponNotifications = pgTable("coupon_notifications", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  couponId: varchar("coupon_id").references(() => adminCoupons.id, { onDelete: "cascade" }).notNull(),
-  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-  title: varchar("title", { length: 255 }).notNull(),
-  message: text("message").notNull(),
-  notificationType: varchar("notification_type", { length: 50 }).default("coupon"), // 'coupon', 'expiry_reminder', 'usage_limit'
-  isRead: boolean("is_read").default(false),
-  isClicked: boolean("is_clicked").default(false),
-  sentAt: timestamp("sent_at").defaultNow(),
-  readAt: timestamp("read_at"),
-  clickedAt: timestamp("clicked_at"),
-});
 
 export type CouponUsageTracking = typeof couponUsageTracking.$inferSelect;
-export type CouponNotification = typeof couponNotifications.$inferSelect;
-
-// Notifications types and schemas
-export type Notification = typeof notifications.$inferSelect;
-export const insertNotificationSchema = createInsertSchema(notifications).omit({
-  id: true,
-  sentAt: true,
-  readAt: true,
-  clickedAt: true,
-});
-export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+// Old notification types removed - building smart targeting system
 
 // Driver types and schemas
 export type Driver = typeof drivers.$inferSelect;

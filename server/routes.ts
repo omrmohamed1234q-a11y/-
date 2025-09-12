@@ -28,8 +28,7 @@ import {
 
 // Using centralized security singleton (no need to create new instance)
 
-// Global storage for notifications
-const globalNotificationStorage: any[] = [];
+// Old notification system removed - building smart targeting system
 
 // Simple cache implementation for performance improvement
 const cache = new Map<string, { data: any, timestamp: number, ttl: number }>();
