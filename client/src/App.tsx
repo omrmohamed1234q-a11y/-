@@ -71,6 +71,7 @@ import PaymentSuccess from '@/pages/payment-success';
 import DonationsPage from '@/pages/donations';
 import TermsAndConditions from '@/pages/terms-and-conditions';
 import PrivacyPolicy from '@/pages/privacy-policy';
+import SmartNotifications from '@/pages/admin/SmartNotifications';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 import CaptainSecureLogin from '@/pages/captain/secure-login';
 import CaptainDashboard from '@/pages/captain/dashboard';
@@ -142,6 +143,7 @@ function Router() {
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/terms-management" component={() => <AdminProtectedRoute><TermsManagement /></AdminProtectedRoute>} />
         <Route path="/admin/privacy-policy-management" component={() => <AdminProtectedRoute><PrivacyPolicyManagement /></AdminProtectedRoute>} />
+        <Route path="/admin/smart-notifications" component={() => <AdminProtectedRoute><SmartNotifications /></AdminProtectedRoute>} />
         <Route path="/quick-access" component={QuickAccess} />
 
         <Route path="/test-signup" component={TestSignup} />

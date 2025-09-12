@@ -282,7 +282,7 @@ function SmartCampaignCreator() {
                 data-testid="textarea-email-body"
               />
               <p className="text-sm text-muted-foreground mt-2">
-                يمكنك استخدام المتغيرات: {{`{name}`}}, {{`{grade}`}}, {{`{points}`}}
+                يمكنك استخدام المتغيرات: {`{{name}}, {{grade}}, {{points}}`}
               </p>
             </div>
           </TabsContent>
