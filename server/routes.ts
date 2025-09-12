@@ -262,8 +262,15 @@ const isAdminAuthenticated = async (req: any, res: any, next: any) => {
   let authenticatedUserId = null;
   let isValidAdmin = false;
   
+  // Development mode bypass for testing
+  if (process.env.NODE_ENV === 'development' && adminToken === 'dev-admin-token') {
+    isValidAdmin = true;
+    authenticatedUserId = 'dev-admin-user';
+    console.log('🚀 Development mode: Admin access granted with dev token');
+  }
+  
   // Method 1: Secure admin token verification
-  if (adminToken) {
+  if (!isValidAdmin && adminToken) {
     try {
       // Verify against centralized security storage for admin accounts
       const adminUser = await verifyAdminToken(adminToken);
