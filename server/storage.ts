@@ -59,10 +59,7 @@ export interface IStorage {
   updateTeacher(id: string, updates: any): Promise<any>;
   deleteTeacher(id: string): Promise<void>;
   
-  // Notification operations
-  createNotification(data: any): any;
-  getUserNotifications(userId: string): any[];
-  markNotificationAsRead(notificationId: string): void;
+  // Old notification operations removed - building smart targeting system
   
   // Coupon operations
   getAllCoupons(): Promise<any[]>;
@@ -78,7 +75,6 @@ export interface IStorage {
   createInquiry(inquiry: any): Promise<any>;
   sendInquiry(inquiryId: string): Promise<any>;
   getInquiryResponses(inquiryId: string): Promise<any[]>;
-  createInquiryNotifications(notifications: any[]): Promise<void>;
 
   // Driver operations
   getAllDrivers(): Promise<any[]>;
@@ -99,12 +95,8 @@ export interface IStorage {
 
   // Additional compatibility methods
   getCoupon(id: string): Promise<any>;
-  createCouponNotifications(notifications: any[]): Promise<void>;
   getCouponUsageAnalytics(couponId: string): Promise<any>;
   getCart(userId: string): Promise<any>;
-  getUserNotifications(userId: string): any[];
-  markNotificationAsRead(notificationId: string): void;
-  createNotification(data: any): any;
 
   // Announcement operations
   getAllAnnouncements(): Promise<Announcement[]>;

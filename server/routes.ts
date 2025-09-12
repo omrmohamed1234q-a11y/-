@@ -2375,52 +2375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get driver notifications (TEST VERSION - No Auth Required)
-  app.get('/api/driver/notifications', async (req: any, res) => {
-    try {
-      // For demo purposes, get notifications for first available driver or return demo notifications
-      const drivers = await storage.getAllDrivers();
-      let notifications = [];
-      
-      if (drivers.length > 0) {
-        const driverId = drivers[0].id;
-        // Note: getNotificationsByUser method not available in storage interface
-        notifications = [];
-      }
-      
-      // Add demo notifications if needed
-      if (notifications.length === 0) {
-        const orderAssignmentNotifications = Array.from(orderAssignments.entries()).map(([orderId, assignment]) => {
-          if (assignment.status === 'pending') {
-            return {
-              id: `notification-${orderId}`,
-              userId: assignment.drivers[assignment.currentDriverIndex],
-              title: '🚚 طلب توصيل جديد',
-              message: `طلب رقم ${orderId} متاح للتوصيل. لديك دقيقة للموافقة.`,
-              type: 'order_assignment',
-              priority: 'urgent',
-              isRead: false,
-              orderId: orderId,
-              expiresAt: new Date(Date.now() + 60000),
-              createdAt: assignment.startTime
-            };
-          }
-          return null;
-        }).filter(Boolean);
-        
-        notifications = orderAssignmentNotifications;
-      }
-      
-      console.log(`📱 Returning ${notifications.length} driver notifications`);
-      res.json(notifications);
-    } catch (error) {
-      console.error('❌ Error getting driver notifications:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Failed to get notifications' 
-      });
-    }
-  });
+  // Old driver notifications API removed - implementing smart targeting system
 
   // Get driver orders (MAIN VERSION - No Auth Required for testing)
   app.get('/api/driver/orders', async (req: any, res) => {
