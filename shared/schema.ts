@@ -191,6 +191,20 @@ export const usagePolicyAudit = pgTable("usage_policy_audit", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Privacy Policy Management
+export const privacyPolicy = pgTable("privacy_policy", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  version: varchar("version").notNull(),
+  isActive: boolean("is_active").default(false),
+  effectiveDate: timestamp("effective_date").notNull(),
+  lastUpdatedBy: varchar("last_updated_by"), // Admin ID
+  metadata: text("metadata"), // JSON for additional settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Partners/Print Shops table
 export const partners = pgTable("partners", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1341,3 +1355,12 @@ export const insertUsagePolicyAuditSchema = createInsertSchema(usagePolicyAudit)
 });
 export type InsertUsagePolicyAudit = z.infer<typeof insertUsagePolicyAuditSchema>;
 export type UsagePolicyAudit = typeof usagePolicyAudit.$inferSelect;
+
+// Privacy Policy schemas
+export const insertPrivacyPolicySchema = createInsertSchema(privacyPolicy).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+export type InsertPrivacyPolicy = z.infer<typeof insertPrivacyPolicySchema>;
+export type PrivacyPolicy = typeof privacyPolicy.$inferSelect;
