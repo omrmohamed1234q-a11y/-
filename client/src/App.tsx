@@ -64,6 +64,7 @@ import MainAdmin from '@/pages/admin/main-admin';
 import ApiDocumentation from '@/pages/admin/api-documentation';
 import TermsManagement from '@/pages/admin/terms-management';
 import UsagePoliciesManagement from '@/pages/admin/usage-policies-management';
+import PrivacyPolicyManagement from '@/pages/admin/privacy-policy-management';
 import WebSocketTest from '@/pages/websocket-test';
 import MapsTest from '@/pages/maps-test';
 import DriverLocationTest from '@/pages/driver-location-test';
@@ -142,6 +143,7 @@ function Router() {
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/terms-management" component={() => <AdminProtectedRoute><TermsManagement /></AdminProtectedRoute>} />
         <Route path="/admin/usage-policies" component={() => <AdminProtectedRoute><UsagePoliciesManagement /></AdminProtectedRoute>} />
+        <Route path="/admin/privacy-policy-management" component={() => <AdminProtectedRoute><PrivacyPolicyManagement /></AdminProtectedRoute>} />
         <Route path="/quick-access" component={QuickAccess} />
 
         <Route path="/test-signup" component={TestSignup} />

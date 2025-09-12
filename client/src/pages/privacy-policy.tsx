@@ -74,7 +74,28 @@ export default function PrivacyPolicy() {
     contactInfo: 'privacy@atbaali.com - +20 123 456 789 - القاهرة، مصر'
   };
 
-  const policy = privacyPolicy?.data || defaultPrivacyPolicy;
+  // Extract and format the policy data from API response
+  const formatPolicyData = (apiData: any) => {
+    if (!apiData?.content) return defaultPrivacyPolicy;
+    
+    return {
+      title: apiData.title || 'سياسة الخصوصية',
+      subtitle: 'نحن نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية',
+      lastUpdated: new Date(apiData.lastModified || apiData.effectiveDate || Date.now()).toLocaleDateString('ar-EG', { 
+        year: 'numeric', 
+        month: 'long' 
+      }),
+      version: apiData.version || '1.0',
+      dataCollection: apiData.content.dataCollection?.content || defaultPrivacyPolicy.dataCollection,
+      dataUsage: apiData.content.dataUsage?.content || defaultPrivacyPolicy.dataUsage,
+      dataSharing: apiData.content.dataSharing?.content || defaultPrivacyPolicy.dataSharing,
+      userRights: apiData.content.userRights?.content || defaultPrivacyPolicy.userRights,
+      dataSecurity: apiData.content.security?.content || defaultPrivacyPolicy.dataSecurity,
+      contactInfo: apiData.content.contact?.content || defaultPrivacyPolicy.contactInfo
+    };
+  };
+
+  const policy = privacyPolicy?.data ? formatPolicyData(privacyPolicy.data) : defaultPrivacyPolicy;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 py-8">
@@ -325,9 +346,9 @@ export default function PrivacyPolicy() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2 text-blue-700 dark:text-blue-300">
                   <h4 className="font-semibold">معلومات التواصل:</h4>
-                  <p>📧 privacy@atbaali.com</p>
-                  <p>📱 +20 123 456 789</p>
-                  <p>📍 القاهرة، مصر</p>
+                  <div className="whitespace-pre-line">
+                    {policy.contactInfo}
+                  </div>
                 </div>
                 <div className="space-y-2 text-blue-700 dark:text-blue-300">
                   <h4 className="font-semibold">أوقات الرد:</h4>
