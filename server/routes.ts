@@ -4498,6 +4498,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // Smart Notifications API - نظام التنبيهات الذكي
+  // ============================================================================
+  
+  // Create smart campaign
+  app.post('/api/smart-notifications/campaigns', async (req: any, res) => {
+    try {
+      const { name, targetingCriteria, template } = req.body;
+      
+      console.log('🚀 Creating smart campaign:', name);
+      
+      // Import smart notifications system dynamically
+      const { default: smartNotifications } = await import('./smart-notifications.js');
+      
+      const campaign = await smartNotifications.createAndSendCampaign(
+        name,
+        targetingCriteria,
+        template
+      );
+      
+      res.json({
+        success: true,
+        message: 'تم إنشاء وإرسال الحملة الذكية بنجاح',
+        campaign
+      });
+    } catch (error) {
+      console.error('Error creating smart campaign:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في إنشاء الحملة الذكية',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Send welcome message to new users
+  app.post('/api/smart-notifications/welcome', async (req: any, res) => {
+    try {
+      const { email, userData } = req.body;
+      
+      const { default: smartNotifications } = await import('./smart-notifications.js');
+      const success = await smartNotifications.delivery.sendWelcomeMessage(email, userData);
+      
+      res.json({
+        success,
+        message: success ? 'تم إرسال رسالة الترحيب بنجاح' : 'فشل في إرسال رسالة الترحيب'
+      });
+    } catch (error) {
+      console.error('Error sending welcome message:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في إرسال رسالة الترحيب',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Send order status notification
+  app.post('/api/smart-notifications/order-status', async (req: any, res) => {
+    try {
+      const { email, orderData } = req.body;
+      
+      const { default: smartNotifications } = await import('./smart-notifications.js');
+      const success = await smartNotifications.delivery.sendOrderStatusNotification(email, orderData);
+      
+      res.json({
+        success,
+        message: success ? 'تم إرسال إشعار حالة الطلب بنجاح' : 'فشل في إرسال إشعار حالة الطلب'
+      });
+    } catch (error) {
+      console.error('Error sending order status notification:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في إرسال إشعار حالة الطلب',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get campaign analytics
+  app.get('/api/smart-notifications/analytics/:campaignId', async (req: any, res) => {
+    try {
+      const { campaignId } = req.params;
+      
+      const { default: smartNotifications } = await import('./smart-notifications.js');
+      const analytics = await smartNotifications.analytics.getCampaignAnalytics(campaignId);
+      
+      res.json({
+        success: true,
+        analytics
+      });
+    } catch (error) {
+      console.error('Error fetching campaign analytics:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في جلب إحصائيات الحملة',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get user behavior analysis
+  app.get('/api/smart-notifications/user-behavior/:userId', async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const { default: smartNotifications } = await import('./smart-notifications.js');
+      const behavior = await smartNotifications.analytics.analyzeUserBehavior(userId);
+      
+      res.json({
+        success: true,
+        behavior
+      });
+    } catch (error) {
+      console.error('Error analyzing user behavior:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في تحليل سلوك المستخدم',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test smart notification system
+  app.post('/api/smart-notifications/test', async (req: any, res) => {
+    try {
+      const { type = 'welcome', email = 'test@example.com' } = req.body;
+      
+      const { default: smartNotifications } = await import('./smart-notifications.js');
+      let result: boolean = false;
+      
+      switch (type) {
+        case 'welcome':
+          result = await smartNotifications.delivery.sendWelcomeMessage(email, {
+            name: 'مستخدم تجريبي',
+            gradeLevel: 'الصف العاشر',
+            bountyPoints: 100
+          });
+          break;
+        case 'order':
+          result = await smartNotifications.delivery.sendOrderStatusNotification(email, {
+            orderNumber: 'ORD-12345',
+            status: 'confirmed',
+            totalAmount: '150.00',
+            estimatedDelivery: 'خلال 3 أيام عمل'
+          });
+          break;
+        case 'campaign':
+          const campaign = await smartNotifications.createAndSendCampaign(
+            'حملة تجريبية',
+            {
+              demographic: {
+                gradeLevel: ['الصف العاشر', 'الصف الحادي عشر'],
+              },
+              behavioral: {
+                totalOrders: { min: 1, max: 10 }
+              }
+            }
+          );
+          result = campaign.sent > 0;
+          break;
+      }
+      
+      res.json({
+        success: result,
+        message: result ? 'تم إرسال الاختبار بنجاح' : 'فشل في إرسال الاختبار',
+        type,
+        email
+      });
+    } catch (error) {
+      console.error('Error testing smart notifications:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في اختبار النظام الذكي',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // ==================== ADMIN COUPONS MANAGEMENT ====================
   
   // Get all coupons (admin only)
