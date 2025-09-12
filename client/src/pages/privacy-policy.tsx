@@ -19,7 +19,7 @@ export default function PrivacyPolicy() {
     queryKey: ['/api/privacy-policy/current'],
     retry: 3,
     staleTime: 1000 * 60 * 5, // 5 minutes cache
-  });
+  }) as { data: any, isLoading: boolean, error: any };
 
   if (isLoading) {
     return (
@@ -32,7 +32,7 @@ export default function PrivacyPolicy() {
     );
   }
 
-  if (error || !privacyResponse?.success) {
+  if (error || !privacyResponse?.data) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 py-8">
         <div className="container mx-auto px-4 max-w-4xl">
@@ -60,7 +60,7 @@ export default function PrivacyPolicy() {
     );
   }
 
-  const policy = privacyResponse.data;
+  const policy = privacyResponse?.data;
 
   // Content sections configuration with icons
   const contentSections = [
