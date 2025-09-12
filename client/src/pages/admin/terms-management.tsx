@@ -157,7 +157,7 @@ function TermsManagementContent() {
       content: terms.content || '',
       summary: terms.summary || '',
       effectiveDate: terms.effectiveDate ? new Date(terms.effectiveDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      isActive: terms.isActive
+      isActive: terms.isActive ?? false
     });
     setDialogOpen(true);
   };
@@ -294,7 +294,7 @@ function TermsManagementContent() {
                     <span>الإصدار: {terms.version}</span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {new Date(terms.effectiveDate).toLocaleDateString('ar-EG')}
+                      {terms.effectiveDate ? new Date(terms.effectiveDate).toLocaleDateString('ar-EG') : 'غير محدد'}
                     </span>
                     <span className="flex items-center gap-1">
                       <Users className="w-3 h-3" />
@@ -465,7 +465,7 @@ function TermsManagementContent() {
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><strong>الإصدار:</strong> {viewingTerms.version}</div>
-                <div><strong>تاريخ السريان:</strong> {new Date(viewingTerms.effectiveDate).toLocaleDateString('ar-EG')}</div>
+                <div><strong>تاريخ السريان:</strong> {viewingTerms.effectiveDate ? new Date(viewingTerms.effectiveDate).toLocaleDateString('ar-EG') : 'غير محدد'}</div>
                 <div><strong>الحالة:</strong> {viewingTerms.isActive ? 'نشط' : 'مسودة'}</div>
                 <div><strong>منشئ بواسطة:</strong> {viewingTerms.createdBy}</div>
               </div>
