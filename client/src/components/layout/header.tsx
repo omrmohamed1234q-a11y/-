@@ -7,12 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import CartDrawer from '@/components/cart/CartDrawer';
-// Notification system will be rebuilt with smart targeting capabilities
+import NotificationCenter from '@/components/NotificationCenter';
 
 export default function Header() {
   const { user } = useAuth();
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   // Fetch real cart data for cart count
   const { data: cartData } = useQuery({
@@ -20,9 +19,6 @@ export default function Header() {
     retry: false,
     enabled: !!user
   });
-
-  // Placeholder for smart notifications system
-  const unreadCount = 0;
 
   const cartItemsCount = (cartData as any)?.items?.length || 0;
 
@@ -62,23 +58,8 @@ export default function Header() {
                 )}
               </Button>
               
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="relative p-1.5"
-                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                data-testid="button-notifications"
-              >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -left-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center p-0 arabic-nums"
-                  >
-                    {unreadCount}
-                  </Badge>
-                )}
-              </Button>
+              {/* Replace old notification system with new NotificationCenter */}
+              <NotificationCenter />
             
               <Link href="/profile">
                 <Button variant="ghost" size="sm" className="p-2">
@@ -106,8 +87,7 @@ export default function Header() {
         onClose={() => setIsCartOpen(false)} 
       />
 
-      {/* Notification Center */}
-      {/* Smart notification center will be implemented here */}
+      {/* Notification Center - Now implemented with full smart targeting */}
     </>
   );
 }
