@@ -42,7 +42,6 @@ const navigation = [
   { name: 'المواد التعليمية', href: '/admin/teacher-materials', icon: GraduationCap },
   { name: 'المستخدمين', href: '/admin/users', icon: Users },
   { name: 'الشروط والأحكام', href: '/admin/terms-management', icon: FileText },
-  { name: 'سياسات الاستخدام', href: '/admin/usage-policies', icon: ScrollText },
   { name: 'سياسة الخصوصية', href: '/admin/privacy-policy-management', icon: Lock },
   { name: 'التحليلات', href: '/admin/reports', icon: BarChart3 },
   { name: 'الأمان', href: '/admin/security-dashboard', icon: Shield },

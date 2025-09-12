@@ -63,7 +63,6 @@ import TwoFactorSettings from '@/pages/admin/two-factor-settings';
 import MainAdmin from '@/pages/admin/main-admin';
 import ApiDocumentation from '@/pages/admin/api-documentation';
 import TermsManagement from '@/pages/admin/terms-management';
-import UsagePoliciesManagement from '@/pages/admin/usage-policies-management';
 import PrivacyPolicyManagement from '@/pages/admin/privacy-policy-management';
 import WebSocketTest from '@/pages/websocket-test';
 import MapsTest from '@/pages/maps-test';
@@ -142,7 +141,6 @@ function Router() {
         <Route path="/admin/two-factor-settings" component={() => <AdminProtectedRoute><TwoFactorSettings /></AdminProtectedRoute>} />
         <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/terms-management" component={() => <AdminProtectedRoute><TermsManagement /></AdminProtectedRoute>} />
-        <Route path="/admin/usage-policies" component={() => <AdminProtectedRoute><UsagePoliciesManagement /></AdminProtectedRoute>} />
         <Route path="/admin/privacy-policy-management" component={() => <AdminProtectedRoute><PrivacyPolicyManagement /></AdminProtectedRoute>} />
         <Route path="/quick-access" component={QuickAccess} />
 
