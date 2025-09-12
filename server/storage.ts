@@ -155,6 +155,15 @@ export interface IStorage {
   getUserTermsStatus(userId: string): Promise<any>;
   getTermsAnalytics(): Promise<any>;
   getUsersPendingTermsAcceptance(): Promise<any[]>;
+  
+  // Privacy Policy operations  
+  getCurrentActivePrivacyPolicy(): Promise<any>;
+  getAllPrivacyPolicyVersions(): Promise<any[]>;
+  getPrivacyPolicyById(id: string): Promise<any>;
+  createPrivacyPolicy(policy: any): Promise<any>;
+  updatePrivacyPolicy(id: string, updates: any): Promise<any>;
+  activatePrivacyPolicy(id: string): Promise<any>;
+  deletePrivacyPolicy(id: string): Promise<boolean>;
 }
 
 // Global storage to persist across application lifecycle
@@ -175,6 +184,7 @@ export class MemoryStorage implements IStorage {
   private usagePolicies: any[] = [];
   private usagePolicyAcceptances: any[] = [];
   private usagePolicyAudits: any[] = [];
+  private privacyPolicies: any[] = [];
   
   // User operations
   async getUser(id: string): Promise<User | undefined> {
@@ -4299,6 +4309,73 @@ class MemStorage implements IStorage {
         createdAt: user.createdAt,
         lastLogin: user.lastLogin || null
       }));
+  }
+
+  // Privacy Policy operations
+  async getCurrentActivePrivacyPolicy(): Promise<any> {
+    return this.privacyPolicies.find(p => p.isActive) || null;
+  }
+
+  async getAllPrivacyPolicyVersions(): Promise<any[]> {
+    return this.privacyPolicies.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async getPrivacyPolicyById(id: string): Promise<any> {
+    return this.privacyPolicies.find(p => p.id === id) || null;
+  }
+
+  async createPrivacyPolicy(policy: any): Promise<any> {
+    const newPolicy = {
+      id: `privacy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...policy,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.privacyPolicies.push(newPolicy);
+    return newPolicy;
+  }
+
+  async updatePrivacyPolicy(id: string, updates: any): Promise<any> {
+    const index = this.privacyPolicies.findIndex(p => p.id === id);
+    if (index === -1) return null;
+    
+    this.privacyPolicies[index] = {
+      ...this.privacyPolicies[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    return this.privacyPolicies[index];
+  }
+
+  async activatePrivacyPolicy(id: string): Promise<any> {
+    // Deactivate all existing versions
+    this.privacyPolicies.forEach(p => p.isActive = false);
+    
+    // Activate the specified version
+    const index = this.privacyPolicies.findIndex(p => p.id === id);
+    if (index === -1) return null;
+    
+    this.privacyPolicies[index].isActive = true;
+    this.privacyPolicies[index].updatedAt = new Date().toISOString();
+    
+    return this.privacyPolicies[index];
+  }
+
+  async deletePrivacyPolicy(id: string): Promise<boolean> {
+    const index = this.privacyPolicies.findIndex(p => p.id === id);
+    if (index === -1) return false;
+    
+    // Don't allow deletion of active version
+    if (this.privacyPolicies[index].isActive) {
+      throw new Error('لا يمكن حذف الإصدار النشط من سياسة الخصوصية');
+    }
+    
+    this.privacyPolicies.splice(index, 1);
+    return true;
   }
 }
 
