@@ -151,6 +151,46 @@ export const userTermsAcceptance = pgTable("user_terms_acceptance", {
   revokedReason: text("revoked_reason"),
 });
 
+// Usage Policies table - similar to terms but separate
+export const usagePolicies = pgTable("usage_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  version: varchar("version", { length: 10 }).notNull().unique(),
+  title: text("title").notNull(),
+  content: text("content").notNull(), // Full policy content in HTML/Markdown
+  summary: text("summary"), // Brief summary of changes
+  createdBy: varchar("created_by").notNull(), // Admin ID who created this version
+  isActive: boolean("is_active").default(false), // Only one active version at a time
+  effectiveDate: timestamp("effective_date"), // When these policies become effective
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User Usage Policy Acceptance tracking table
+export const userUsagePolicyAcceptance = pgTable("user_usage_policy_acceptance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // Reference to users table
+  policyVersion: varchar("policy_version", { length: 10 }).notNull(), // Version of policy accepted
+  acceptedAt: timestamp("accepted_at").defaultNow(),
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv4 or IPv6
+  userAgent: text("user_agent"), // Browser/device information
+  consentMethod: text("consent_method").notNull().default("signup"), // "signup", "update", "forced"
+  isActive: boolean("is_active").default(true), // Can be revoked
+  revokedAt: timestamp("revoked_at"),
+  revokedReason: text("revoked_reason"),
+});
+
+// Usage Policy Audit Trail
+export const usagePolicyAudit = pgTable("usage_policy_audit", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  policyId: varchar("policy_id").notNull(),
+  version: varchar("version").notNull(),
+  changeType: varchar("change_type", { length: 20 }).notNull(), // 'create', 'update', 'activate', 'deactivate', 'delete'
+  changeSummary: text("change_summary"),
+  changedBy: varchar("changed_by").notNull(), // Admin ID
+  metadata: text("metadata"), // JSON string with additional info
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Partners/Print Shops table
 export const partners = pgTable("partners", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1278,3 +1318,26 @@ export const insertUserTermsAcceptanceSchema = createInsertSchema(userTermsAccep
 });
 export type InsertUserTermsAcceptance = z.infer<typeof insertUserTermsAcceptanceSchema>;
 export type UserTermsAcceptance = typeof userTermsAcceptance.$inferSelect;
+
+// Usage Policies schemas
+export const insertUsagePoliciesSchema = createInsertSchema(usagePolicies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+export type InsertUsagePolicies = z.infer<typeof insertUsagePoliciesSchema>;
+export type UsagePolicies = typeof usagePolicies.$inferSelect;
+
+export const insertUserUsagePolicyAcceptanceSchema = createInsertSchema(userUsagePolicyAcceptance).omit({
+  id: true,
+  acceptedAt: true
+});
+export type InsertUserUsagePolicyAcceptance = z.infer<typeof insertUserUsagePolicyAcceptanceSchema>;
+export type UserUsagePolicyAcceptance = typeof userUsagePolicyAcceptance.$inferSelect;
+
+export const insertUsagePolicyAuditSchema = createInsertSchema(usagePolicyAudit).omit({
+  id: true,
+  createdAt: true
+});
+export type InsertUsagePolicyAudit = z.infer<typeof insertUsagePolicyAuditSchema>;
+export type UsagePolicyAudit = typeof usagePolicyAudit.$inferSelect;
