@@ -40,10 +40,12 @@ function TermsManagementContent() {
   });
 
   // Fetch all terms versions
-  const { data: termsVersions, isLoading } = useQuery<TermsAndConditions[]>({
+  const { data: termsResponse, isLoading } = useQuery({
     queryKey: ['/api/admin/terms'],
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+  
+  const termsVersions = termsResponse?.data || [];
 
   // Create mutation
   const createTermsMutation = useMutation({
