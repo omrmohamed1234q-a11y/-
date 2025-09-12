@@ -268,18 +268,19 @@ function PrivacyPolicyManagementContent() {
                 <div>
                   <label className="block text-sm font-medium mb-2">رقم الإصدار *</label>
                   <Input
-                    value={formData.version}
-                    onChange={(e) => setFormData(prev => ({ ...prev, version: e.target.value }))}
+                    {...form.register('version')}
                     placeholder="مثال: 1.0.0"
                     data-testid="input-privacy-version"
                   />
+                  {form.formState.errors.version && (
+                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.version.message}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">تاريخ السريان</label>
                   <Input
                     type="date"
-                    value={formData.effectiveDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, effectiveDate: e.target.value }))}
+                    {...form.register('effectiveDate', { valueAsDate: true })}
                     data-testid="input-privacy-effective-date"
                   />
                 </div>
@@ -288,58 +289,45 @@ function PrivacyPolicyManagementContent() {
               <div>
                 <label className="block text-sm font-medium mb-2">عنوان سياسة الخصوصية *</label>
                 <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  {...form.register('title')}
                   placeholder="عنوان سياسة الخصوصية"
                   data-testid="input-privacy-title"
                 />
+                {form.formState.errors.title && (
+                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.title.message}</p>
+                )}
               </div>
 
               {/* Content Sections */}
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold border-b pb-2">أقسام سياسة الخصوصية</h3>
                 
-                {Object.entries(formData.content).map(([key, section]) => {
-                  const icons = {
-                    dataCollection: Database,
-                    dataUsage: Eye,
-                    dataSharing: Users,
-                    userRights: CheckCircle,
-                    security: Lock,
-                    contact: Shield
-                  };
-                  const IconComponent = icons[key as keyof typeof icons];
-                  
-                  return (
-                    <Card key={key}>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <IconComponent className="w-5 h-5" />
-                          {section.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-2">عنوان القسم</label>
-                          <Input
-                            value={section.title}
-                            onChange={(e) => updateContentSection(key as keyof PrivacyPolicyContent, 'title', e.target.value)}
-                            placeholder="عنوان القسم"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">محتوى القسم</label>
-                          <Textarea
-                            value={section.content}
-                            onChange={(e) => updateContentSection(key as keyof PrivacyPolicyContent, 'content', e.target.value)}
-                            placeholder="اكتب محتوى هذا القسم..."
-                            className="min-h-[120px]"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                {contentSections.map(({ key, title, icon: IconComponent }) => (
+                  <Card key={key}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <IconComponent className="w-5 h-5" />
+                        {title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">محتوى {title}</label>
+                        <Textarea
+                          {...form.register(key as keyof InsertPrivacyPolicy)}
+                          placeholder={`اكتب محتوى ${title}...`}
+                          rows={6}
+                          className="min-h-[120px]"
+                        />
+                        {form.formState.errors[key as keyof InsertPrivacyPolicy] && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {form.formState.errors[key as keyof InsertPrivacyPolicy]?.message}
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
               
               <div className="flex justify-end gap-2 pt-4">
