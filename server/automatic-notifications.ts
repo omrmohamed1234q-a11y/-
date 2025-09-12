@@ -8,10 +8,36 @@ import { smartDeliveryService } from './smart-notifications';
 export class AutomaticNotificationService {
   private storage: IStorage;
   private smartDelivery: any;
+  private websocket: any; // WebSocket helpers from routes.ts
 
-  constructor(storage: IStorage) {
+  constructor(storage: IStorage, websocket?: any) {
     this.storage = storage;
     this.smartDelivery = smartDeliveryService;
+    this.websocket = websocket;
+  }
+
+  // Set WebSocket helpers (called from routes.ts)
+  setWebSocket(websocket: any) {
+    this.websocket = websocket;
+  }
+
+  /**
+   * إرسال إشعار فوري عبر WebSocket
+   * Send real-time notification via WebSocket
+   */
+  private async sendRealtimeNotification(userId: string, notification: any): Promise<void> {
+    if (this.websocket && this.websocket.sendToUser) {
+      try {
+        await this.websocket.sendToUser(userId, {
+          type: 'notification',
+          data: notification,
+          timestamp: Date.now()
+        });
+        console.log(`📨 Real-time notification sent to user: ${userId}`);
+      } catch (error: any) {
+        console.error('❌ Failed to send real-time notification:', error.message);
+      }
+    }
   }
 
   /**
@@ -23,7 +49,7 @@ export class AutomaticNotificationService {
       console.log(`📦 Sending order creation notification for order: ${order.id}`);
 
       // Create in-app notification
-      await this.storage.createNotification({
+      const notification = await this.storage.createNotification({
         userId: order.userId,
         title: 'تم إنشاء طلبك بنجاح 🎉',
         message: `طلبك رقم ${order.orderNumber} قيد المعالجة وسيتم التواصل معك قريباً`,
@@ -40,6 +66,9 @@ export class AutomaticNotificationService {
           totalAmount: order.totalAmount
         }
       });
+
+      // Send real-time notification
+      await this.sendRealtimeNotification(order.userId, notification);
 
       // Send welcome email for first-time users
       const user = await this.storage.getUser(order.userId);
@@ -111,7 +140,7 @@ export class AutomaticNotificationService {
 
       const statusData = statusMessages[order.status];
       if (statusData) {
-        await this.storage.createNotification({
+        const notification = await this.storage.createNotification({
           userId: order.userId,
           title: statusData.title,
           message: statusData.message,
@@ -129,6 +158,9 @@ export class AutomaticNotificationService {
             previousStatus
           }
         });
+
+        // Send real-time notification
+        await this.sendRealtimeNotification(order.userId, notification);
       }
 
       console.log(`✅ Order status update notification sent: ${order.id}`);
@@ -145,7 +177,7 @@ export class AutomaticNotificationService {
     try {
       console.log(`🖨️ Sending print job completion notification: ${printJob.id}`);
 
-      await this.storage.createNotification({
+      const notification = await this.storage.createNotification({
         userId: printJob.userId,
         title: 'اكتملت مهمة الطباعة! 📄',
         message: `تم الانتهاء من طباعة "${printJob.filename}" بنجاح`,
@@ -164,6 +196,9 @@ export class AutomaticNotificationService {
         }
       });
 
+      // Send real-time notification
+      await this.sendRealtimeNotification(printJob.userId, notification);
+
       console.log(`✅ Print job completion notification sent: ${printJob.id}`);
     } catch (error) {
       console.error('Error sending print job completion notification:', error);
@@ -178,7 +213,7 @@ export class AutomaticNotificationService {
     try {
       console.log(`👤 Sending welcome notification for new user: ${user.id}`);
 
-      await this.storage.createNotification({
+      const notification = await this.storage.createNotification({
         userId: user.id,
         title: 'مرحباً بك في منصة اطبعلي! 🎉',
         message: 'نحن سعداء لانضمامك إلينا. اكتشف خدماتنا المتميزة في الطباعة والخدمات التعليمية',
@@ -195,6 +230,9 @@ export class AutomaticNotificationService {
           welcomeBonus: 50 // Bonus points for new users
         }
       });
+
+      // Send real-time notification
+      await this.sendRealtimeNotification(user.id, notification);
 
       // Create default notification preferences for new user
       await this.storage.createUserNotificationPreferences({

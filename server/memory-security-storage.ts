@@ -698,18 +698,9 @@ export class MemorySecurityStorage {
     // Save the updated data
     this.saveDataToLocalFile();
     console.log('🔐 Super admin created successfully');
-    console.log('📋 Super Admin Login Details:');
-    console.log('   Username: superadmin');
-    console.log('   Email: superadmin@atbaali.com');  
-    console.log('   Password: SuperAdmin2025!');
-    console.log('   Access: Full delete permissions');
-    console.log('🚚 Test driver created successfully');
-    console.log('📋 Test Driver Login Details:');
-    console.log('   Username: testdriver');
-    console.log('   Email: testdriver@atbaali.com');
-    console.log('   Password: Driver123!');
-    console.log('   Driver Code: DR001');
-    console.log('   Access: Driver dashboard');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔐 Super admin and test driver created successfully (credentials available in secure storage)');
+    }
   }
 
   // ==================== TWO-FACTOR AUTHENTICATION METHODS ====================

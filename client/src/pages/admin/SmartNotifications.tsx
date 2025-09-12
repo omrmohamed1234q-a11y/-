@@ -87,7 +87,7 @@ function SmartCampaignCreator() {
 
   const createCampaign = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest('/api/smart-notifications/campaigns', 'POST', data);
+      return await apiRequest('POST', '/api/smart-notifications/campaigns', data);
     },
     onSuccess: (data) => {
       toast({
@@ -422,7 +422,7 @@ function QuickActions() {
 
   const testNotification = useMutation({
     mutationFn: async (type: string) => {
-      return await apiRequest('/api/smart-notifications/test', 'POST', {
+      return await apiRequest('POST', '/api/smart-notifications/test', {
         type,
         email: 'test@example.com'
       });

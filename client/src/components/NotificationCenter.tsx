@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useAuth } from '@/hooks/use-auth';
 import { useLocation } from 'wouter';
+import { useWebSocket } from '@/hooks/use-websocket';
 
 // Types
 interface Notification {
@@ -82,12 +83,15 @@ export default function NotificationCenter() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  
+  // Initialize WebSocket for real-time notifications
+  const { state: wsState } = useWebSocket();
 
   // Fetch notifications (only if authenticated)
   const { data: notificationsData, isLoading } = useQuery({
     queryKey: ['/api/notifications', filter],
     queryFn: async () => {
-      const response = await apiRequest(`/api/notifications?limit=50&offset=0`);
+      const response = await apiRequest('GET', `/api/notifications?limit=50&offset=0`);
       return response;
     },
     enabled: !!user, // Only fetch if user is authenticated
@@ -98,7 +102,7 @@ export default function NotificationCenter() {
   const { data: unreadData } = useQuery({
     queryKey: ['/api/notifications/unread-count'],
     queryFn: async () => {
-      const response = await apiRequest('/api/notifications/unread-count');
+      const response = await apiRequest('GET', '/api/notifications/unread-count');
       return response;
     },
     enabled: !!user, // Only fetch if user is authenticated
@@ -108,9 +112,7 @@ export default function NotificationCenter() {
   // Mark as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      return apiRequest(`/api/notifications/${notificationId}/read`, {
-        method: 'PATCH'
-      });
+      return apiRequest('PATCH', `/api/notifications/${notificationId}/read`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
@@ -121,9 +123,7 @@ export default function NotificationCenter() {
   // Mark as clicked mutation
   const markAsClickedMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      return apiRequest(`/api/notifications/${notificationId}/click`, {
-        method: 'PATCH'
-      });
+      return apiRequest('PATCH', `/api/notifications/${notificationId}/click`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
@@ -134,9 +134,7 @@ export default function NotificationCenter() {
   // Delete notification mutation
   const deleteNotificationMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      return apiRequest(`/api/notifications/${notificationId}`, {
-        method: 'DELETE'
-      });
+      return apiRequest('DELETE', `/api/notifications/${notificationId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });

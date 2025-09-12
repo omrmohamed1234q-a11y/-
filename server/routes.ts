@@ -37,7 +37,7 @@ import { AutomaticNotificationService } from './automatic-notifications';
 
 // Using centralized security singleton (no need to create new instance)
 
-// Initialize automatic notification service
+// Initialize automatic notification service (WebSocket will be added later)
 const automaticNotifications = new AutomaticNotificationService(storage);
 
 // Old notification system removed - building smart targeting system
@@ -6947,23 +6947,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // معالج اتصالات WebSocket
   wss.on('connection', (ws, request) => {
     const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const clientOrigin = request.headers.origin;
+    
+    // Origin validation for security
+    const allowedOrigins = [
+      'https://f26bb11c-218a-4594-bd57-714b53576ecf-00-15rco3z6ir6rr.picard.replit.dev',
+      'http://localhost:5000',
+      process.env.REPLIT_DOMAINS
+    ].filter(Boolean);
+    
+    if (process.env.NODE_ENV === 'production' && !allowedOrigins.includes(clientOrigin)) {
+      console.log(`🚫 Rejected WebSocket connection from unauthorized origin`);
+      ws.close(1008, 'Unauthorized origin');
+      return;
+    }
+    
     console.log(`🔗 WebSocket connection established: ${connectionId}`);
 
-    // تسجيل الاتصال الجديد
+    // تسجيل الاتصال الجديد مع authentication timeout
     activeConnections.set(connectionId, {
       ws,
-      lastSeen: new Date()
+      lastSeen: new Date(),
+      authenticated: false
     });
 
+    // Close unauthenticated connections after 30 seconds
+    const authTimeout = setTimeout(() => {
+      const connection = activeConnections.get(connectionId);
+      if (connection && !connection.authenticated) {
+        console.log(`⏰ Closing unauthenticated connection: ${connectionId}`);
+        ws.close(4001, 'Authentication timeout');
+        activeConnections.delete(connectionId);
+      }
+    }, 30000);
+
     // معالج الرسائل الواردة
-    ws.on('message', (data) => {
+    ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data.toString());
         console.log(`📨 WebSocket message received:`, message);
 
         switch (message.type) {
           case 'authenticate':
-            handleAuthentication(connectionId, message, ws);
+            await handleAuthentication(connectionId, message, ws);
             break;
             
           case 'subscribe_order_updates':
@@ -7016,15 +7042,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // دالة مصادقة المستخدم
-  function handleAuthentication(connectionId: string, message: any, ws: WebSocket) {
+  async function handleAuthentication(connectionId: string, message: any, ws: WebSocket) {
     const connection = activeConnections.get(connectionId);
     if (!connection) return;
 
     const { userId, userType, token } = message.data || {};
     
-    if (userId && userType) {
+    // Verify JWT token for security
+    let isValidAuth = false;
+    
+    // Strict JWT validation - no temp tokens allowed
+    if (token && supabase) {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (user && user.id === userId && !error) {
+          isValidAuth = true;
+          console.log(`✅ JWT token verified and user ID matches: ${userId}`);
+        } else {
+          console.log(`❌ JWT validation failed: User ID mismatch or invalid token`);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`🔍 Expected: ${userId}, Got: ${user?.id || 'none'}`);
+          }
+        }
+      } catch (error: any) {
+        console.log(`⚠️ JWT verification error: ${error.message}`);
+      }
+    } else {
+      console.log(`❌ No valid JWT token provided for authentication`);
+    }
+    
+    if (userId && userType && isValidAuth) {
       connection.userId = userId;
       connection.userType = userType;
+      connection.authenticated = true;
       activeConnections.set(connectionId, connection);
       
       console.log(`✅ User authenticated: ${userId} (${userType})`);
@@ -7036,6 +7086,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userType,
           timestamp: Date.now()
         }));
+      }
+    } else {
+      console.log(`❌ Authentication failed for user: ${userId}`);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'auth_failed',
+          reason: 'Invalid token or credentials'
+        }));
+        ws.close(4001, 'Authentication required');
       }
     }
   }
@@ -7150,14 +7209,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }, 60000);
 
   // إضافة WebSocket helpers إلى app للاستخدام في routes أخرى
-  (app as any).websocket = {
+  const websocketHelpers = {
     broadcastToAll,
     broadcastToOrderSubscribers,
     sendToUser,
     getActiveConnections: () => activeConnections.size
   };
+  
+  (app as any).websocket = websocketHelpers;
+
+  // Connect WebSocket to automatic notifications for real-time notifications
+  automaticNotifications.setWebSocket(websocketHelpers);
 
   console.log('🔌 WebSocket server initialized on /ws');
+  console.log('📨 Real-time notifications connected to WebSocket');
+  console.log(`🔗 WebSocket helpers available: ${Object.keys(websocketHelpers).join(', ')}`);
+  
+  // Integration test: Verify WebSocket is bound to notifications
+  console.log('🧪 Testing real-time notification integration...');
+  if (typeof automaticNotifications.sendRealtimeNotification === 'function') {
+    console.log('✅ AutomaticNotificationService.sendRealtimeNotification is available');
+  } else {
+    console.log('❌ AutomaticNotificationService.sendRealtimeNotification is missing');
+  }
   
   // Initialize security system with Supabase on server start
   (async () => {

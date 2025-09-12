@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './use-auth';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from './use-toast';
 
 interface WebSocketMessage {
   type: string;
@@ -31,7 +33,52 @@ interface WebSocketHook {
 }
 
 export function useWebSocket(): WebSocketHook {
-  const { user } = useAuth();
+  const { user, getAuthToken } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Handle notification message  
+  // Request notification permission on first use
+  const requestNotificationPermission = useCallback(async () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      try {
+        const permission = await Notification.requestPermission();
+        console.log('🔔 Notification permission:', permission);
+      } catch (error) {
+        console.log('⚠️ Failed to request notification permission:', error);
+      }
+    }
+  }, []);
+
+  const handleNotificationMessage = useCallback((notification: any) => {
+    if (!notification) return;
+
+    console.log('🔔 Real-time notification received:', notification);
+
+    // Invalidate notification queries to refresh data
+    queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+
+    // Show toast notification if priority is high or urgent
+    if (notification.priority === 'high' || notification.priority === 'urgent') {
+      toast({
+        title: notification.title,
+        description: notification.message,
+        duration: notification.priority === 'urgent' ? 10000 : 5000,
+      });
+    }
+
+    // Trigger browser notification if permissions granted
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(notification.title, {
+        body: notification.message,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: notification.id,
+        requireInteraction: notification.priority === 'urgent'
+      });
+    }
+  }, [queryClient, toast]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -66,17 +113,33 @@ export function useWebSocket(): WebSocketHook {
           error: undefined
         }));
 
-        // مصادقة المستخدم إذا كان متاحاً
+        // Request notification permission
+        requestNotificationPermission();
+
+        // مصادقة المستخدم إذا كان متاحاً مع JWT token
         if (user) {
-          const authMessage: WebSocketMessage = {
-            type: 'authenticate',
-            data: {
-              userId: user.id,
-              userType: 'customer', // يمكن تحديدها حسب نوع المستخدم
-              token: user.accessToken || 'temp-token'
-            }
-          };
-          ws.send(JSON.stringify(authMessage));
+          const token = getAuthToken ? getAuthToken() : null;
+          
+          // Only authenticate if we have a valid JWT token
+          if (token && token !== 'temp-token') {
+            const authMessage: WebSocketMessage = {
+              type: 'authenticate',
+              data: {
+                userId: user.id,
+                userType: 'customer',
+                token: token
+              }
+            };
+            ws.send(JSON.stringify(authMessage));
+          } else {
+            console.log('⚠️ No valid JWT token available for WebSocket authentication');
+            // Close connection if no valid token
+            setState(prev => ({
+              ...prev,
+              error: 'مطلوب تسجيل دخول صالح للاتصال'
+            }));
+            ws.close(4001, 'Authentication required');
+          }
         }
 
         // بدء ping للحفاظ على الاتصال
@@ -89,6 +152,10 @@ export function useWebSocket(): WebSocketHook {
           console.log('📨 WebSocket message received:', message);
 
           switch (message.type) {
+            case 'notification':
+              handleNotificationMessage(message.data);
+              break;
+              
             case 'welcome':
               setState(prev => ({
                 ...prev,
@@ -121,12 +188,6 @@ export function useWebSocket(): WebSocketHook {
               }));
               break;
 
-            case 'notification':
-              // بث الإشعارات
-              window.dispatchEvent(new CustomEvent('realtimeNotification', {
-                detail: message.data
-              }));
-              break;
 
             default:
               console.log(`❓ Unknown message type: ${message.type}`);
