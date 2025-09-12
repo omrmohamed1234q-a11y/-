@@ -7778,9 +7778,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new terms version (Admin only)
   app.post('/api/admin/terms', isAdminAuthenticated, async (req, res) => {
     try {
+      // Convert effectiveDate string to Date if present
+      const processedBody = {
+        ...req.body,
+        effectiveDate: req.body.effectiveDate ? new Date(req.body.effectiveDate) : undefined
+      };
+      
       // Validate request body with Zod
       const termsData = insertTermsAndConditionsSchema.parse({
-        ...req.body,
+        ...processedBody,
         createdBy: req.user?.id || 'admin',
         isActive: false // Created as draft by default
       });
@@ -7819,8 +7825,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
+      // Convert effectiveDate string to Date if present
+      const processedBody = {
+        ...req.body,
+        effectiveDate: req.body.effectiveDate ? new Date(req.body.effectiveDate) : undefined
+      };
+      
       // Validate request body with Zod - allow partial updates
-      const updates = insertTermsAndConditionsSchema.partial().parse(req.body);
+      const updates = insertTermsAndConditionsSchema.partial().parse(processedBody);
       
       const updatedTerms = await storage.updateTermsVersion(id, updates);
       

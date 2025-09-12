@@ -171,6 +171,7 @@ export class MemoryStorage implements IStorage {
   private partnerProducts: any[] = [];
   private announcements: Announcement[] = [];
   private drivers: any[] = [];
+  private termsVersions: any[] = [];
   
   // User operations
   async getUser(id: string): Promise<User | undefined> {
@@ -755,6 +756,107 @@ export class MemoryStorage implements IStorage {
     return true;
   }
   
+  // Terms and Conditions operations
+  async getCurrentActiveTerms(): Promise<any> {
+    return this.termsVersions.find(t => t.isActive) || null;
+  }
+
+  async getAllTermsVersions(): Promise<any[]> {
+    return this.termsVersions.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async getTermsById(id: string): Promise<any> {
+    return this.termsVersions.find(t => t.id === id) || null;
+  }
+
+  async createTermsVersion(terms: any): Promise<any> {
+    const newTerms = {
+      id: `terms_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...terms,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.termsVersions.push(newTerms);
+    console.log(`📋 Created terms version: ${newTerms.version} (${newTerms.id})`);
+    return newTerms;
+  }
+
+  async updateTermsVersion(id: string, updates: any): Promise<any> {
+    const index = this.termsVersions.findIndex(t => t.id === id);
+    if (index === -1) return null;
+    
+    this.termsVersions[index] = {
+      ...this.termsVersions[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log(`📋 Updated terms version: ${id}`);
+    return this.termsVersions[index];
+  }
+
+  async activateTermsVersion(id: string): Promise<any> {
+    // Deactivate all existing versions
+    this.termsVersions.forEach(t => t.isActive = false);
+    
+    // Activate the specified version
+    const index = this.termsVersions.findIndex(t => t.id === id);
+    if (index === -1) return null;
+    
+    this.termsVersions[index].isActive = true;
+    this.termsVersions[index].activatedAt = new Date().toISOString();
+    
+    console.log(`📋 Activated terms version: ${id}`);
+    return this.termsVersions[index];
+  }
+
+  async deleteTermsVersion(id: string): Promise<boolean> {
+    const index = this.termsVersions.findIndex(t => t.id === id);
+    if (index === -1) return false;
+    
+    // Don't allow deletion of active version
+    if (this.termsVersions[index].isActive) {
+      throw new Error('لا يمكن حذف الإصدار النشط من الشروط والأحكام');
+    }
+    
+    this.termsVersions.splice(index, 1);
+    console.log(`📋 Deleted terms version: ${id}`);
+    return true;
+  }
+
+  async acceptTerms(acceptanceData: any): Promise<any> {
+    // Simple in-memory implementation
+    return {
+      id: `acceptance_${Date.now()}`,
+      ...acceptanceData,
+      acceptedAt: new Date().toISOString()
+    };
+  }
+
+  async getUserTermsStatus(userId: string): Promise<any> {
+    // Simple implementation - return status
+    return {
+      hasAcceptedCurrent: false,
+      lastAcceptedVersion: null,
+      needsToAccept: true
+    };
+  }
+
+  async getTermsAnalytics(): Promise<any> {
+    return {
+      totalVersions: this.termsVersions.length,
+      activeVersion: this.termsVersions.find(t => t.isActive)?.version || null,
+      totalAcceptances: 0
+    };
+  }
+
+  async getUsersPendingTermsAcceptance(): Promise<any[]> {
+    return [];
+  }
+
   // Security
   async getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined> { return undefined; }
   async getSecureDriverByCredentials(username: string, email: string, driverCode?: string): Promise<any | undefined> { return undefined; }
