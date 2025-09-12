@@ -525,28 +525,22 @@ function PrivacyPolicyManagementContent() {
               
               {/* Content Sections */}
               <div className="space-y-6">
-                {Object.entries(viewingPolicy.content).map(([key, section]) => {
-                  const icons = {
-                    dataCollection: Database,
-                    dataUsage: Eye,
-                    dataSharing: Users,
-                    userRights: CheckCircle,
-                    security: Lock,
-                    contact: Shield
-                  };
-                  const IconComponent = icons[key as keyof typeof icons];
+                {contentSections.map(({ key, title, icon: IconComponent }) => {
+                  const content = viewingPolicy[key as keyof typeof viewingPolicy] as string;
+                  
+                  if (!content) return null;
                   
                   return (
                     <Card key={key}>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <IconComponent className="w-5 h-5" />
-                          {section.title}
+                          {title}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                          {section.content}
+                          {content}
                         </div>
                       </CardContent>
                     </Card>
