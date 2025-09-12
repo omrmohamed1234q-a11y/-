@@ -944,6 +944,76 @@ export class MemoryStorage implements IStorage {
     return [];
   }
 
+  // Privacy Policy operations
+  async getCurrentActivePrivacyPolicy(): Promise<any> {
+    return this.privacyPolicies.find(p => p.isActive) || null;
+  }
+
+  async getAllPrivacyPolicyVersions(): Promise<any[]> {
+    return this.privacyPolicies.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async getPrivacyPolicyById(id: string): Promise<any> {
+    return this.privacyPolicies.find(p => p.id === id) || null;
+  }
+
+  async createPrivacyPolicy(policy: any): Promise<any> {
+    const newPolicy = {
+      id: `privacy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...policy,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.privacyPolicies.push(newPolicy);
+    console.log(`📋 Created privacy policy version: ${newPolicy.version} (${newPolicy.id})`);
+    return newPolicy;
+  }
+
+  async updatePrivacyPolicy(id: string, updates: any): Promise<any> {
+    const index = this.privacyPolicies.findIndex(p => p.id === id);
+    if (index === -1) return null;
+    
+    this.privacyPolicies[index] = {
+      ...this.privacyPolicies[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log(`📋 Updated privacy policy version: ${id}`);
+    return this.privacyPolicies[index];
+  }
+
+  async activatePrivacyPolicy(id: string): Promise<any> {
+    // Deactivate all existing versions
+    this.privacyPolicies.forEach(p => p.isActive = false);
+    
+    // Activate the specified version
+    const index = this.privacyPolicies.findIndex(p => p.id === id);
+    if (index === -1) return null;
+    
+    this.privacyPolicies[index].isActive = true;
+    this.privacyPolicies[index].updatedAt = new Date().toISOString();
+    
+    console.log(`📋 Activated privacy policy version: ${id}`);
+    return this.privacyPolicies[index];
+  }
+
+  async deletePrivacyPolicy(id: string): Promise<boolean> {
+    const index = this.privacyPolicies.findIndex(p => p.id === id);
+    if (index === -1) return false;
+    
+    // Don't allow deletion of active version
+    if (this.privacyPolicies[index].isActive) {
+      throw new Error('لا يمكن حذف الإصدار النشط من سياسة الخصوصية');
+    }
+    
+    this.privacyPolicies.splice(index, 1);
+    console.log(`📋 Deleted privacy policy version: ${id}`);
+    return true;
+  }
 
   // Security
   async getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined> { return undefined; }
