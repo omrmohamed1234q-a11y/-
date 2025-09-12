@@ -1,5 +1,6 @@
 // Centralized security singleton to prevent multiple instances issue
 import { MemorySecurityStorage } from './memory-security-storage';
+import { randomBytes } from 'crypto';
 
 // Create and export a single instance used across the entire application
 export const securityStorage = new MemorySecurityStorage();
@@ -21,7 +22,7 @@ export const issueAdminToken = (userId: string): string => {
   cleanupExpiredTokens();
   
   // Generate secure 32-byte hex token
-  const token = require('crypto').randomBytes(32).toString('hex');
+  const token = randomBytes(32).toString('hex');
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
   
