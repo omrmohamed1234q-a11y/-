@@ -18,11 +18,16 @@ import { registerInventoryRoutes } from "./inventory-routes";
 import { hybridUploadService } from './hybrid-upload-service';
 import { googleDriveService } from './google-drive-service';
 import { setupCaptainSystem } from './captain-system';
+import { isAuthenticated } from './replitAuth';
 import { 
   insertTermsAndConditionsSchema, 
   insertUserTermsAcceptanceSchema,
+  insertUsagePoliciesSchema,
+  insertUserUsagePolicyAcceptanceSchema,
   type InsertTermsAndConditions,
-  type InsertUserTermsAcceptance 
+  type InsertUserTermsAcceptance,
+  type InsertUsagePolicies,
+  type InsertUserUsagePolicyAcceptance 
 } from '../shared/schema';
 
 // Using centralized security singleton (no need to create new instance)
@@ -191,8 +196,63 @@ const requireTermsConsent = async (req: any, res: any, next: any) => {
   }
 };
 
+// Usage Policy Consent Middleware
+const requireUsagePolicyConsent = async (req: any, res: any, next: any) => {
+  // Skip for dev/test environments with admin token
+  const adminToken = req.headers['x-admin-token'];
+  if (adminToken && process.env.NODE_ENV !== 'production') {
+    return next();
+  }
+
+  const userId = req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Authentication required for usage policy consent check' 
+    });
+  }
+
+  try {
+    const usagePolicyStatus = await storage.getUserUsagePolicyStatus(userId);
+    const currentPolicy = await storage.getCurrentActiveUsagePolicy();
+
+    // If no active usage policy exists, allow access
+    if (!currentPolicy) {
+      return next();
+    }
+
+    // Check if user has accepted the current active usage policy
+    if (!usagePolicyStatus?.hasAccepted || usagePolicyStatus.policyVersion !== currentPolicy.version) {
+      return res.status(403).json({
+        success: false,
+        message: 'يجب الموافقة على سياسات الاستخدام الحالية للمتابعة',
+        code: 'USAGE_POLICY_CONSENT_REQUIRED',
+        data: {
+          currentPolicy: {
+            id: currentPolicy.id,
+            version: currentPolicy.version,
+            title: currentPolicy.title,
+            effectiveDate: currentPolicy.effectiveDate
+          },
+          userStatus: usagePolicyStatus
+        }
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error checking usage policy consent:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'خطأ في التحقق من موافقة سياسات الاستخدام' 
+    });
+  }
+};
+
 // Combined middleware for authentication and consent
 const requireAuthAndConsent = [requireAuth, requireTermsConsent];
+const requireAuthAndUsagePolicyConsent = [requireAuth, requireUsagePolicyConsent];
+const requireFullConsent = [requireAuth, requireTermsConsent, requireUsagePolicyConsent];
 
 // Admin authentication middleware - Secure version
 const isAdminAuthenticated = async (req: any, res: any, next: any) => {
@@ -7946,6 +8006,298 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         message: 'خطأ في جلب إحصائيات الشروط والأحكام' 
+      });
+    }
+  });
+
+  // ===== USAGE POLICIES ROUTES =====
+  
+  // Get all usage policy versions (Admin only)
+  app.get('/api/admin/usage-policies', isAdminAuthenticated, async (req, res) => {
+    try {
+      const policies = await storage.getAllUsagePolicyVersions();
+      res.json({ 
+        success: true, 
+        data: policies 
+      });
+    } catch (error) {
+      console.error('Error fetching usage policies:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب إصدارات سياسات الاستخدام' 
+      });
+    }
+  });
+  
+  // Get specific usage policy version (Admin only)
+  app.get('/api/admin/usage-policies/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const policy = await storage.getUsagePolicyById(id);
+      
+      if (!policy) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على هذا الإصدار' 
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        data: policy 
+      });
+    } catch (error) {
+      console.error('Error fetching usage policy by ID:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب سياسة الاستخدام' 
+      });
+    }
+  });
+  
+  // Create new usage policy version (Admin only)
+  app.post('/api/admin/usage-policies', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Convert effectiveDate string to Date if present (avoid date validation error)
+      const processedBody = {
+        ...req.body,
+        effectiveDate: req.body.effectiveDate ? new Date(req.body.effectiveDate) : undefined
+      };
+      
+      // Validate request body with Zod
+      const policyData = insertUsagePoliciesSchema.parse({
+        ...processedBody,
+        createdBy: req.user?.id || 'admin',
+        isActive: false // Created as draft by default
+      });
+      
+      const newPolicy = await storage.createUsagePolicyVersion(policyData);
+      
+      // Clear cache
+      cacheClear('policies');
+      
+      console.log(`✅ Admin ${policyData.createdBy} created usage policy version ${policyData.version}`);
+      res.json({ 
+        success: true, 
+        message: 'تم إنشاء إصدار جديد من سياسات الاستخدام',
+        data: newPolicy 
+      });
+    } catch (error) {
+      console.error('Error creating usage policy:', error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'بيانات غير صحيحة',
+          errors: error.errors
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في إنشاء سياسة الاستخدام' 
+      });
+    }
+  });
+  
+  // Update usage policy version (Admin only)
+  app.put('/api/admin/usage-policies/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Convert effectiveDate string to Date if present (avoid date validation error)
+      const processedBody = {
+        ...req.body,
+        effectiveDate: req.body.effectiveDate ? new Date(req.body.effectiveDate) : undefined
+      };
+      
+      // Validate request body with Zod - allow partial updates
+      const updates = insertUsagePoliciesSchema.partial().parse(processedBody);
+      
+      const updatedPolicy = await storage.updateUsagePolicyVersion(id, updates);
+      
+      if (!updatedPolicy) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على هذا الإصدار' 
+        });
+      }
+      
+      // Clear cache
+      cacheClear('policies');
+      
+      console.log(`✅ Admin updated usage policy version ${id}`);
+      res.json({ 
+        success: true, 
+        message: 'تم تحديث سياسة الاستخدام بنجاح',
+        data: updatedPolicy 
+      });
+    } catch (error) {
+      console.error('Error updating usage policy:', error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'بيانات غير صحيحة',
+          errors: error.errors
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في تحديث سياسة الاستخدام' 
+      });
+    }
+  });
+  
+  // Activate usage policy version (Admin only)
+  app.post('/api/admin/usage-policies/:id/activate', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const activatedPolicy = await storage.activateUsagePolicyVersion(id);
+      
+      if (!activatedPolicy) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على هذا الإصدار' 
+        });
+      }
+      
+      // Clear cache
+      cacheClear('policies');
+      
+      console.log(`✅ Admin activated usage policy version ${id}`);
+      res.json({ 
+        success: true, 
+        message: 'تم تفعيل إصدار سياسة الاستخدام بنجاح',
+        data: activatedPolicy 
+      });
+    } catch (error) {
+      console.error('Error activating usage policy:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في تفعيل سياسة الاستخدام' 
+      });
+    }
+  });
+  
+  // Delete usage policy version (Admin only)
+  app.delete('/api/admin/usage-policies/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteUsagePolicyVersion(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'لم يتم العثور على هذا الإصدار أو لا يمكن حذفه' 
+        });
+      }
+      
+      // Clear cache
+      cacheClear('policies');
+      
+      console.log(`✅ Admin deleted usage policy version ${id}`);
+      res.json({ 
+        success: true, 
+        message: 'تم حذف إصدار سياسة الاستخدام بنجاح' 
+      });
+    } catch (error) {
+      console.error('Error deleting usage policy:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || 'خطأ في حذف سياسة الاستخدام' 
+      });
+    }
+  });
+  
+  // Get usage policy analytics (Admin only)
+  app.get('/api/admin/usage-policies/analytics', isAdminAuthenticated, async (req, res) => {
+    try {
+      const analytics = await storage.getUsagePolicyAnalytics();
+      res.json({ 
+        success: true, 
+        data: analytics 
+      });
+    } catch (error) {
+      console.error('Error fetching usage policy analytics:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب إحصائيات سياسات الاستخدام' 
+      });
+    }
+  });
+
+  // ===== PUBLIC USAGE POLICY ROUTES =====
+  
+  // Get current active usage policy (Public)
+  app.get('/api/policies/usage/current', async (req, res) => {
+    try {
+      const currentPolicy = await storage.getCurrentActiveUsagePolicy();
+      res.json({ 
+        success: true, 
+        data: currentPolicy 
+      });
+    } catch (error) {
+      console.error('Error fetching current usage policy:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب سياسة الاستخدام الحالية' 
+      });
+    }
+  });
+  
+  // Get user's usage policy acceptance status (User)
+  app.get('/api/policies/usage/status', requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const status = await storage.getUserUsagePolicyStatus(userId);
+      res.json({ 
+        success: true, 
+        data: status 
+      });
+    } catch (error) {
+      console.error('Error fetching user usage policy status:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في جلب حالة موافقة المستخدم على سياسات الاستخدام' 
+      });
+    }
+  });
+
+  // Accept usage policy (User)
+  app.post('/api/policies/usage/accept', isAuthenticated, async (req, res) => {
+    try {
+      const acceptanceData = insertUserUsagePolicyAcceptanceSchema.parse({
+        ...req.body,
+        userId: req.user?.id,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        consentMethod: req.body.consentMethod || 'manual'
+      });
+      
+      const acceptance = await storage.acceptUsagePolicy(acceptanceData);
+      
+      console.log(`✅ User ${acceptanceData.userId} accepted usage policy ${acceptanceData.policyVersion}`);
+      res.json({ 
+        success: true, 
+        message: 'تم قبول سياسة الاستخدام بنجاح',
+        data: acceptance 
+      });
+    } catch (error) {
+      console.error('Error accepting usage policy:', error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'بيانات غير صحيحة',
+          errors: error.errors
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        message: 'خطأ في قبول سياسة الاستخدام' 
       });
     }
   });

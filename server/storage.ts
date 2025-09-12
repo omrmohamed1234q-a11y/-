@@ -172,6 +172,9 @@ export class MemoryStorage implements IStorage {
   private announcements: Announcement[] = [];
   private drivers: any[] = [];
   private termsVersions: any[] = [];
+  private usagePolicies: any[] = [];
+  private usagePolicyAcceptances: any[] = [];
+  private usagePolicyAudits: any[] = [];
   
   // User operations
   async getUser(id: string): Promise<User | undefined> {
@@ -855,6 +858,162 @@ export class MemoryStorage implements IStorage {
 
   async getUsersPendingTermsAcceptance(): Promise<any[]> {
     return [];
+  }
+
+  // Usage Policies operations
+  async getCurrentActiveUsagePolicy(): Promise<any> {
+    return this.usagePolicies.find(p => p.isActive) || null;
+  }
+
+  async getAllUsagePolicyVersions(): Promise<any[]> {
+    return this.usagePolicies.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async getUsagePolicyById(id: string): Promise<any> {
+    return this.usagePolicies.find(p => p.id === id) || null;
+  }
+
+  async createUsagePolicyVersion(policy: any): Promise<any> {
+    const newPolicy = {
+      id: `policy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...policy,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.usagePolicies.push(newPolicy);
+    
+    // Add audit log
+    await this.logUsagePolicyChange(newPolicy.id, newPolicy.version, 'create', 'سياسة جديدة', policy.createdBy, {});
+    
+    console.log(`📋 Created usage policy version: ${newPolicy.version} (${newPolicy.id})`);
+    return newPolicy;
+  }
+
+  async updateUsagePolicyVersion(id: string, updates: any): Promise<any> {
+    const index = this.usagePolicies.findIndex(p => p.id === id);
+    if (index === -1) return null;
+    
+    const oldPolicy = { ...this.usagePolicies[index] };
+    this.usagePolicies[index] = {
+      ...this.usagePolicies[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Add audit log
+    await this.logUsagePolicyChange(id, this.usagePolicies[index].version, 'update', 'تعديل السياسة', updates.createdBy || 'admin', { oldData: oldPolicy });
+    
+    console.log(`📋 Updated usage policy version: ${id}`);
+    return this.usagePolicies[index];
+  }
+
+  async activateUsagePolicyVersion(id: string): Promise<any> {
+    // Deactivate all existing versions
+    this.usagePolicies.forEach(p => p.isActive = false);
+    
+    // Activate the specified version
+    const index = this.usagePolicies.findIndex(p => p.id === id);
+    if (index === -1) return null;
+    
+    this.usagePolicies[index].isActive = true;
+    this.usagePolicies[index].activatedAt = new Date().toISOString();
+    
+    // Add audit log
+    await this.logUsagePolicyChange(id, this.usagePolicies[index].version, 'activate', 'تفعيل السياسة', 'admin', {});
+    
+    console.log(`📋 Activated usage policy version: ${id}`);
+    return this.usagePolicies[index];
+  }
+
+  async deleteUsagePolicyVersion(id: string): Promise<boolean> {
+    const index = this.usagePolicies.findIndex(p => p.id === id);
+    if (index === -1) return false;
+    
+    // Don't allow deletion of active version
+    if (this.usagePolicies[index].isActive) {
+      throw new Error('لا يمكن حذف الإصدار النشط من سياسات الاستخدام');
+    }
+    
+    const deletedPolicy = this.usagePolicies[index];
+    this.usagePolicies.splice(index, 1);
+    
+    // Add audit log
+    await this.logUsagePolicyChange(id, deletedPolicy.version, 'delete', 'حذف السياسة', 'admin', {});
+    
+    console.log(`📋 Deleted usage policy version: ${id}`);
+    return true;
+  }
+
+  async acceptUsagePolicy(acceptanceData: any): Promise<any> {
+    const newAcceptance = {
+      id: `acceptance_${Date.now()}`,
+      ...acceptanceData,
+      acceptedAt: new Date().toISOString()
+    };
+    
+    this.usagePolicyAcceptances.push(newAcceptance);
+    console.log(`📋 User ${acceptanceData.userId} accepted usage policy ${acceptanceData.policyVersion}`);
+    return newAcceptance;
+  }
+
+  async getUserUsagePolicyStatus(userId: string): Promise<any> {
+    const activePolicy = await this.getCurrentActiveUsagePolicy();
+    const userAcceptance = this.usagePolicyAcceptances
+      .filter(a => a.userId === userId && a.isActive)
+      .sort((a, b) => new Date(b.acceptedAt).getTime() - new Date(a.acceptedAt).getTime())[0];
+    
+    return {
+      hasAcceptedCurrent: userAcceptance?.policyVersion === activePolicy?.version,
+      lastAcceptedVersion: userAcceptance?.policyVersion || null,
+      needsToAccept: !userAcceptance || userAcceptance.policyVersion !== activePolicy?.version,
+      activeVersion: activePolicy?.version || null
+    };
+  }
+
+  async getUsagePolicyAnalytics(): Promise<any> {
+    const activePolicy = await this.getCurrentActiveUsagePolicy();
+    const totalAcceptances = this.usagePolicyAcceptances.filter(a => a.isActive).length;
+    const currentVersionAcceptances = activePolicy 
+      ? this.usagePolicyAcceptances.filter(a => a.policyVersion === activePolicy.version && a.isActive).length 
+      : 0;
+    
+    return {
+      totalVersions: this.usagePolicies.length,
+      activeVersion: activePolicy?.version || null,
+      totalAcceptances,
+      currentVersionAcceptances,
+      pendingAcceptances: Math.max(0, this.users.length - currentVersionAcceptances)
+    };
+  }
+
+  async getUsersPendingUsagePolicyAcceptance(): Promise<any[]> {
+    const activePolicy = await this.getCurrentActiveUsagePolicy();
+    if (!activePolicy) return [];
+    
+    const acceptedUsers = this.usagePolicyAcceptances
+      .filter(a => a.policyVersion === activePolicy.version && a.isActive)
+      .map(a => a.userId);
+    
+    return this.users.filter(u => !acceptedUsers.includes(u.id));
+  }
+
+  async logUsagePolicyChange(policyId: string, version: string, changeType: string, changeSummary: string, changedBy: string, metadata: any): Promise<any> {
+    const auditEntry = {
+      id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      policyId,
+      version,
+      changeType,
+      changeSummary,
+      changedBy,
+      metadata: JSON.stringify(metadata),
+      createdAt: new Date().toISOString()
+    };
+    
+    this.usagePolicyAudits.push(auditEntry);
+    return auditEntry;
   }
 
   // Security

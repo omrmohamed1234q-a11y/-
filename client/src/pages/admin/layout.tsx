@@ -21,7 +21,8 @@ import {
   Shield,
   Smartphone,
   HardDrive,
-  FileText
+  FileText,
+  ScrollText
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -40,6 +41,7 @@ const navigation = [
   { name: 'المواد التعليمية', href: '/admin/teacher-materials', icon: GraduationCap },
   { name: 'المستخدمين', href: '/admin/users', icon: Users },
   { name: 'الشروط والأحكام', href: '/admin/terms-management', icon: FileText },
+  { name: 'سياسات الاستخدام', href: '/admin/usage-policies-management', icon: ScrollText },
   { name: 'التحليلات', href: '/admin/reports', icon: BarChart3 },
   { name: 'الأمان', href: '/admin/security-dashboard', icon: Shield },
   { name: 'إدارة المساحة', href: '/admin/storage-dashboard', icon: HardDrive },
