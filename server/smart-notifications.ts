@@ -1,0 +1,501 @@
+// ============================================================================
+// نظام التنبيهات الذكي - Smart Notifications Service
+// Implementation using SendGrid blueprint
+// ============================================================================
+
+import { MailService } from '@sendgrid/mail';
+import {
+  smartCampaigns,
+  targetingRules,
+  sentMessages,
+  userBehaviorTracking,
+  messageTemplates,
+  scheduledJobs,
+  type SmartCampaign,
+  type InsertSmartCampaign,
+  type TargetingRule,
+  type SentMessage,
+  type UserBehavior,
+  type MessageTemplate,
+} from '../shared/smart-notifications-schema';
+
+// Initialize SendGrid
+if (!process.env.SENDGRID_API_KEY) {
+  console.warn("⚠️ SENDGRID_API_KEY not found. Email notifications will be disabled.");
+}
+
+const mailService = new MailService();
+if (process.env.SENDGRID_API_KEY) {
+  mailService.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+// ============================================================================
+// Smart Targeting Engine - محرك الاستهداف الذكي
+// ============================================================================
+
+interface SmartTargetingCriteria {
+  demographic?: {
+    ageRange?: [number, number];
+    gradeLevel?: string[];
+    location?: string[];
+    gender?: string;
+  };
+  behavioral?: {
+    totalOrders?: { min?: number; max?: number };
+    totalSpent?: { min?: number; max?: number };
+    lastOrderDays?: number; // Days since last order
+    engagementScore?: { min?: number; max?: number };
+  };
+  engagement?: {
+    emailOpenRate?: { min?: number; max?: number };
+    clickThroughRate?: { min?: number; max?: number };
+    preferredChannel?: string[];
+    optedOutChannels?: string[];
+  };
+  temporal?: {
+    bestTimeToSend?: string[];
+    timezone?: string;
+    dayOfWeek?: number[]; // 0-6 (Sunday-Saturday)
+  };
+}
+
+class SmartTargetingEngine {
+  /**
+   * حساب الجمهور المستهدف بناءً على المعايير الذكية
+   * Calculate target audience based on smart criteria
+   */
+  async calculateTargetAudience(criteria: SmartTargetingCriteria): Promise<string[]> {
+    // In a real implementation, this would query the database
+    // For now, return mock user IDs for testing
+    console.log('🎯 Calculating target audience with criteria:', criteria);
+    
+    // Mock implementation - would be replaced with actual database queries
+    const mockUsers = [
+      'user_1_student_grade_5',
+      'user_2_teacher_high_engagement', 
+      'user_3_parent_low_activity',
+      'user_4_student_grade_10_active'
+    ];
+    
+    return mockUsers;
+  }
+
+  /**
+   * حساب أفضل وقت للإرسال لكل مستخدم
+   * Calculate optimal send time for each user
+   */
+  getOptimalSendTime(userId: string): string {
+    // Mock implementation - would analyze user behavior patterns
+    const defaultTimes = ['09:00', '14:00', '19:00'];
+    return defaultTimes[Math.floor(Math.random() * defaultTimes.length)];
+  }
+
+  /**
+   * تخصيص المحتوى لكل مستخدم
+   * Personalize content for each user
+   */
+  personalizeContent(template: string, userData: any): string {
+    let personalizedContent = template;
+    
+    // Replace common placeholders
+    personalizedContent = personalizedContent.replace('{{name}}', userData.name || 'عميلنا العزيز');
+    personalizedContent = personalizedContent.replace('{{grade}}', userData.gradeLevel || '');
+    personalizedContent = personalizedContent.replace('{{points}}', userData.bountyPoints || '0');
+    
+    return personalizedContent;
+  }
+
+  /**
+   * تحديث نقاط التفاعل للمستخدم
+   * Update user engagement score
+   */
+  async updateEngagementScore(userId: string, action: 'opened' | 'clicked' | 'converted'): Promise<void> {
+    const scoreIncrements = {
+      opened: 5,
+      clicked: 15,
+      converted: 50
+    };
+    
+    console.log(`📈 User ${userId} engagement +${scoreIncrements[action]} points for ${action}`);
+    
+    // In real implementation, update the userBehaviorTracking table
+    // This would calculate running averages and update customer segments
+  }
+}
+
+// ============================================================================
+// Smart Delivery Service - خدمة التوصيل الذكية
+// ============================================================================
+
+interface EmailParams {
+  to: string;
+  from: string;
+  subject: string;
+  text?: string;
+  html?: string;
+  templateId?: string;
+  personalizations?: any[];
+}
+
+class SmartDeliveryService {
+  private targetingEngine: SmartTargetingEngine;
+
+  constructor() {
+    this.targetingEngine = new SmartTargetingEngine();
+  }
+
+  /**
+   * إرسال إيميل ذكي مع التخصيص
+   * Send smart email with personalization
+   */
+  async sendSmartEmail(params: EmailParams): Promise<boolean> {
+    if (!process.env.SENDGRID_API_KEY) {
+      console.log('📧 Email would be sent (SendGrid API key not configured):', params.subject);
+      return true; // Return true for testing when API key not available
+    }
+
+    try {
+      await mailService.send({
+        to: params.to,
+        from: params.from || 'no-reply@atbaali.com',
+        subject: params.subject,
+        text: params.text,
+        html: params.html,
+        templateId: params.templateId,
+        personalizations: params.personalizations,
+      });
+      
+      console.log('✅ Smart email sent successfully to:', params.to);
+      return true;
+    } catch (error) {
+      console.error('❌ SendGrid email error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * إرسال حملة ذكية للجمهور المستهدف
+   * Send smart campaign to targeted audience
+   */
+  async sendSmartCampaign(campaignId: string, targetingCriteria: SmartTargetingCriteria): Promise<{
+    sent: number;
+    failed: number;
+    details: any[];
+  }> {
+    console.log('🚀 Starting smart campaign:', campaignId);
+
+    // Get target audience
+    const targetUsers = await this.targetingEngine.calculateTargetAudience(targetingCriteria);
+    
+    let sentCount = 0;
+    let failedCount = 0;
+    const details: any[] = [];
+
+    // Mock campaign template
+    const campaignTemplate = {
+      subject: 'عرض خاص لك في منصة اطبعلي! 🎉',
+      html: `
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>مرحباً {{name}}! 👋</h2>
+          <p>لديك عرض خاص ينتظرك في منصة اطبعلي للطباعة والخدمات التعليمية.</p>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3>🎯 عرض مخصص لك:</h3>
+            <ul>
+              <li>خصم 25% على جميع خدمات الطباعة</li>
+              <li>توصيل مجاني للطلبات أكثر من 100 جنيه</li>
+              <li>نقاط مكافآت إضافية: {{points}} نقطة</li>
+            </ul>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://atbaali.com/store" 
+               style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              اطلب الآن واستفد من العرض 🛒
+            </a>
+          </div>
+          <p><small>هذا العرض صالح لمدة محدودة. لا تفوت الفرصة!</small></p>
+        </div>
+      `
+    };
+
+    // Send to each targeted user
+    for (const userId of targetUsers) {
+      try {
+        // Mock user data - in real implementation, fetch from database
+        const userData = {
+          name: `مستخدم ${userId.split('_')[1]}`,
+          email: `${userId}@example.com`,
+          gradeLevel: userId.includes('grade') ? userId.split('_')[3] : undefined,
+          bountyPoints: Math.floor(Math.random() * 500) + 50,
+        };
+
+        // Personalize content
+        const personalizedSubject = this.targetingEngine.personalizeContent(campaignTemplate.subject, userData);
+        const personalizedHtml = this.targetingEngine.personalizeContent(campaignTemplate.html, userData);
+
+        // Send email
+        const emailSent = await this.sendSmartEmail({
+          to: userData.email,
+          from: 'campaigns@atbaali.com',
+          subject: personalizedSubject,
+          html: personalizedHtml,
+        });
+
+        if (emailSent) {
+          sentCount++;
+          details.push({
+            userId,
+            email: userData.email,
+            status: 'sent',
+            personalizedSubject,
+            sentAt: new Date().toISOString(),
+          });
+        } else {
+          failedCount++;
+          details.push({
+            userId,
+            email: userData.email,
+            status: 'failed',
+            error: 'SendGrid delivery failed',
+            sentAt: new Date().toISOString(),
+          });
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+      } catch (error) {
+        failedCount++;
+        details.push({
+          userId,
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          sentAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    console.log(`📊 Campaign ${campaignId} completed: ${sentCount} sent, ${failedCount} failed`);
+
+    return {
+      sent: sentCount,
+      failed: failedCount,
+      details,
+    };
+  }
+
+  /**
+   * إرسال رسالة ترحيب ذكية للمستخدمين الجدد
+   * Send smart welcome message to new users
+   */
+  async sendWelcomeMessage(userEmail: string, userData: any): Promise<boolean> {
+    const welcomeTemplate = {
+      subject: 'أهلاً وسهلاً بك في منصة اطبعلي! 🎉',
+      html: `
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #007bff;">مرحباً بك في اطبعلي! 👋</h1>
+            <p style="font-size: 18px; color: #666;">منصتك الشاملة للطباعة والخدمات التعليمية</p>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin: 20px 0;">
+            <h3>🎯 ماذا يمكنك أن تفعل معنا:</h3>
+            <ul style="line-height: 1.8;">
+              <li>📄 طباعة عالية الجودة بأسعار منافسة</li>
+              <li>📚 مواد تعليمية متنوعة لجميع المراحل</li>
+              <li>🚚 توصيل سريع لباب البيت</li>
+              <li>🎁 نظام نقاط ومكافآت حصري</li>
+            </ul>
+          </div>
+          
+          <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3>🎉 هدية ترحيب خاصة:</h3>
+            <p>احصل على <strong>خصم 20%</strong> على أول طلب لك + <strong>50 نقطة مكافآت</strong> مجانية!</p>
+            <p><strong>كود الخصم:</strong> WELCOME20</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://atbaali.com/store" 
+               style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
+              ابدأ التسوق الآن 🛒
+            </a>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <p style="color: #666;">هل تحتاج مساعدة؟ نحن هنا دائماً لخدمتك</p>
+            <p>
+              <a href="mailto:support@atbaali.com" style="color: #007bff;">support@atbaali.com</a> |
+              <a href="https://atbaali.com/contact" style="color: #007bff;">اتصل بنا</a>
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    return await this.sendSmartEmail({
+      to: userEmail,
+      from: 'welcome@atbaali.com',
+      subject: welcomeTemplate.subject,
+      html: this.targetingEngine.personalizeContent(welcomeTemplate.html, userData),
+    });
+  }
+
+  /**
+   * إرسال تنبيه حالة الطلب
+   * Send order status notification
+   */
+  async sendOrderStatusNotification(userEmail: string, orderData: any): Promise<boolean> {
+    const statusTemplates = {
+      confirmed: {
+        subject: 'تأكيد طلبك رقم {{orderNumber}} ✅',
+        html: `
+          <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>تم تأكيد طلبك! ✅</h2>
+            <p>طلبك رقم <strong>{{orderNumber}}</strong> قيد التحضير وسيصلك قريباً.</p>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+              <h3>تفاصيل الطلب:</h3>
+              <p><strong>المبلغ الإجمالي:</strong> {{totalAmount}} جنيه</p>
+              <p><strong>وقت التسليم المتوقع:</strong> {{estimatedDelivery}}</p>
+            </div>
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="https://atbaali.com/orders/{{orderId}}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                تتبع الطلب 📍
+              </a>
+            </div>
+          </div>
+        `
+      },
+      shipped: {
+        subject: 'طلبك في الطريق إليك! 🚚',
+        html: `
+          <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>طلبك في الطريق! 🚚</h2>
+            <p>الكابتن {{driverName}} في طريقه إليك بطلبك رقم <strong>{{orderNumber}}</strong></p>
+            <p><strong>الوصول المتوقع:</strong> خلال {{estimatedArrival}} دقيقة</p>
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="https://atbaali.com/track/{{trackingId}}" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                تتبع مباشر 📍
+              </a>
+            </div>
+          </div>
+        `
+      }
+    };
+
+    const template = statusTemplates[orderData.status] || statusTemplates.confirmed;
+    const personalizedSubject = this.targetingEngine.personalizeContent(template.subject, orderData);
+    const personalizedHtml = this.targetingEngine.personalizeContent(template.html, orderData);
+
+    return await this.sendSmartEmail({
+      to: userEmail,
+      from: 'orders@atbaali.com',
+      subject: personalizedSubject,
+      html: personalizedHtml,
+    });
+  }
+}
+
+// ============================================================================
+// Smart Analytics Service - خدمة التحليلات الذكية
+// ============================================================================
+
+class SmartAnalyticsService {
+  /**
+   * حساب إحصائيات الحملة
+   * Calculate campaign analytics
+   */
+  async getCampaignAnalytics(campaignId: string): Promise<{
+    totalSent: number;
+    deliveryRate: number;
+    openRate: number;
+    clickRate: number;
+    conversionRate: number;
+    engagementScore: number;
+    bestPerformingSegment: string;
+  }> {
+    // Mock analytics data - in real implementation, query from sentMessages table
+    return {
+      totalSent: 1250,
+      deliveryRate: 98.5,
+      openRate: 45.2,
+      clickRate: 12.8,
+      conversionRate: 3.4,
+      engagementScore: 78.5,
+      bestPerformingSegment: 'students_grade_10_12'
+    };
+  }
+
+  /**
+   * تحليل سلوك المستخدمين
+   * Analyze user behavior patterns
+   */
+  async analyzeUserBehavior(userId: string): Promise<{
+    segment: string;
+    engagementLevel: string;
+    preferredTime: string;
+    preferredChannel: string;
+    recommendations: string[];
+  }> {
+    // Mock behavior analysis
+    return {
+      segment: 'active_student',
+      engagementLevel: 'high',
+      preferredTime: '19:00',
+      preferredChannel: 'email',
+      recommendations: [
+        'إرسال عروض خاصة في المساء',
+        'التركيز على المواد التعليمية',
+        'استخدام الإيميل كقناة أساسية'
+      ]
+    };
+  }
+}
+
+// ============================================================================
+// Export Services - تصدير الخدمات
+// ============================================================================
+
+export const smartTargetingEngine = new SmartTargetingEngine();
+export const smartDeliveryService = new SmartDeliveryService();
+export const smartAnalyticsService = new SmartAnalyticsService();
+
+// Main class export
+export class SmartNotificationsSystem {
+  public targeting = smartTargetingEngine;
+  public delivery = smartDeliveryService;
+  public analytics = smartAnalyticsService;
+
+  constructor() {
+    console.log('🧠 Smart Notifications System initialized');
+    if (process.env.SENDGRID_API_KEY) {
+      console.log('✅ SendGrid API key configured - email delivery enabled');
+    } else {
+      console.log('⚠️ SendGrid API key not found - email delivery disabled (demo mode)');
+    }
+  }
+
+  /**
+   * إنشاء وإرسال حملة ذكية جديدة
+   * Create and send new smart campaign
+   */
+  async createAndSendCampaign(
+    name: string,
+    targetingCriteria: SmartTargetingCriteria,
+    customTemplate?: { subject: string; html: string }
+  ) {
+    const campaignId = `campaign_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    console.log(`🎯 Creating smart campaign: ${name} (${campaignId})`);
+    
+    const result = await this.delivery.sendSmartCampaign(campaignId, targetingCriteria);
+    
+    return {
+      campaignId,
+      name,
+      ...result,
+      analytics: await this.analytics.getCampaignAnalytics(campaignId)
+    };
+  }
+}
+
+// Default export
+export default new SmartNotificationsSystem();

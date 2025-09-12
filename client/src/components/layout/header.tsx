@@ -7,8 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import CartDrawer from '@/components/cart/CartDrawer';
-import { NotificationCenter } from '@/components/NotificationCenter';
-import { useNotifications } from '@/hooks/useNotifications';
+// Notification system will be rebuilt with smart targeting capabilities
 
 export default function Header() {
   const { user } = useAuth();
@@ -22,8 +21,8 @@ export default function Header() {
     enabled: !!user
   });
 
-  // Use the notifications hook
-  const { unreadCount } = useNotifications();
+  // Placeholder for smart notifications system
+  const unreadCount = 0;
 
   const cartItemsCount = (cartData as any)?.items?.length || 0;
 
@@ -108,10 +107,7 @@ export default function Header() {
       />
 
       {/* Notification Center */}
-      <NotificationCenter 
-        isOpen={isNotificationOpen} 
-        onClose={() => setIsNotificationOpen(false)} 
-      />
+      {/* Smart notification center will be implemented here */}
     </>
   );
 }
