@@ -5103,7 +5103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get admin by username and email using Memory Storage
       const { memorySecurityStorage } = await import('./memory-security-storage');
-      const admin = await memorySecurityStorage.getSecurityUserByCredentials(username, email);
+      const admin = await memorySecurityStorage.getSecureAdminByCredentials(username, email);
       
       if (!admin) {
         await logSecurityEvent('unknown', 'admin', 'failed_login', false, req, 'Admin not found');

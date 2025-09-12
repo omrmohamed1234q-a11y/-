@@ -781,6 +781,91 @@ export class MemorySecurityStorage {
       backupCodes: []
     }));
   }
+
+  // ==================== TOKEN VERIFICATION METHODS ====================
+  
+  // Verify admin token - Missing method that's causing 401 errors
+  async verifyAdminToken(token: string): Promise<SecurityUser | null> {
+    try {
+      console.log(`🔍 Verifying admin token: ${token.substring(0, 8)}...`);
+      
+      // Find user with matching token
+      const user = this.users.find(u => 
+        u.role === 'admin' && 
+        u.is_active === true && 
+        u.currentToken === token
+      );
+      
+      if (user) {
+        console.log(`✅ Valid admin token for: ${user.username}`);
+        return user;
+      } else {
+        console.log(`❌ Invalid or expired admin token`);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error verifying admin token:', error);
+      return null;
+    }
+  }
+  
+  // Get admin by email (for Supabase JWT verification)
+  async getAdminByEmail(email: string): Promise<SecurityUser | null> {
+    try {
+      const user = this.users.find(u => 
+        u.role === 'admin' && 
+        u.is_active === true && 
+        u.email === email
+      );
+      return user || null;
+    } catch (error) {
+      console.error('❌ Error getting admin by email:', error);
+      return null;
+    }
+  }
+  
+  // Get secure admin by credentials (for login)
+  async getSecureAdminByCredentials(username: string, email: string): Promise<SecurityUser | null> {
+    try {
+      const user = this.users.find(u => 
+        u.role === 'admin' && 
+        u.is_active === true && 
+        (u.username === username || u.email === email)
+      );
+      return user || null;
+    } catch (error) {
+      console.error('❌ Error getting admin by credentials:', error);
+      return null;
+    }
+  }
+  
+  // Get secure captain by credentials (for driver login)
+  async getSecureCaptainByCredentials(username: string, email: string): Promise<SecurityUser | null> {
+    try {
+      const user = this.users.find(u => 
+        u.role === 'driver' && 
+        u.is_active === true && 
+        (u.username === username || u.email === email)
+      );
+      return user || null;
+    } catch (error) {
+      console.error('❌ Error getting captain by credentials:', error);
+      return null;
+    }
+  }
+  
+  // Get user by username or email (for conflict checking)
+  async getUserByUsernameOrEmail(username: string, email: string): Promise<SecurityUser | null> {
+    try {
+      const user = this.users.find(u => 
+        u.username === username || u.email === email
+      );
+      return user || null;
+    } catch (error) {
+      console.error('❌ Error getting user by username or email:', error);
+      return null;
+    }
+  }
 }
 
 // Export singleton instance
