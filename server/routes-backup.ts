@@ -231,8 +231,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     delayMs: (hits) => hits * 500 // Add 500ms delay per request after limit
   });
 
-  // Configure Express to trust proxy for rate limiting
-  app.set('trust proxy', true);
+  // Configure Express to trust proxy securely for Replit environment
+  // Only trust Replit's proxy infrastructure, not arbitrary proxies
+  if (process.env.NODE_ENV === 'production') {
+    // In production, trust first proxy (Replit's infrastructure)
+    app.set('trust proxy', 1);
+  } else {
+    // In development, trust Replit's development proxy
+    app.set('trust proxy', ['127.0.0.1', '::1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
+  }
 
   // Force HTTPS in production
   if (process.env.NODE_ENV === 'production') {

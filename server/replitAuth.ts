@@ -67,7 +67,13 @@ async function upsertUser(
 }
 
 export async function setupAuth(app: Express) {
-  app.set("trust proxy", 1);
+  // Configure trust proxy securely for Replit Auth
+  if (process.env.NODE_ENV === 'production') {
+    app.set("trust proxy", 1);
+  } else {
+    // In development, trust only local and private networks
+    app.set("trust proxy", ['127.0.0.1', '::1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
+  }
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());

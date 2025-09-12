@@ -25,6 +25,14 @@ import {
   type InsertTermsAndConditions,
   type InsertUserTermsAcceptance 
 } from '../shared/schema';
+import {
+  insertSmartCampaignSchema,
+  insertMessageTemplateSchema,
+  insertTargetingRuleSchema,
+  type InsertSmartCampaign,
+  type InsertMessageTemplate,
+  type InsertTargetingRule
+} from '../shared/smart-notifications-schema';
 
 // Using centralized security singleton (no need to create new instance)
 
@@ -555,8 +563,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     delayMs: (hits) => hits * 500 // Add 500ms delay per request after limit
   });
 
-  // Configure Express to trust proxy for rate limiting
-  app.set('trust proxy', true);
+  // Configure Express to trust proxy securely for Replit environment
+  // Only trust Replit's proxy infrastructure, not arbitrary proxies
+  if (process.env.NODE_ENV === 'production') {
+    // In production, trust first proxy (Replit's infrastructure)
+    app.set('trust proxy', 1);
+  } else {
+    // In development, trust Replit's development proxy
+    app.set('trust proxy', ['127.0.0.1', '::1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
+  }
 
   // Force HTTPS in production
   if (process.env.NODE_ENV === 'production') {
@@ -8373,8 +8388,453 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // Smart Notifications API Endpoints - نظام التنبيهات الذكي
+  // ============================================================================
+  
+  // Debug endpoint to check storage methods
+  app.get('/api/smart-notifications/debug', isAdminAuthenticated, async (req, res) => {
+    try {
+      const storageMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(storage))
+        .filter(method => method.startsWith('get') || method.startsWith('create') || method.includes('Smart') || method.includes('Campaign'))
+        .sort();
+      
+      res.json({
+        success: true,
+        data: {
+          storageMethods,
+          hasGetAllSmartCampaigns: typeof storage.getAllSmartCampaigns === 'function',
+          storageType: storage.constructor.name
+        }
+      });
+    } catch (error) {
+      console.error('Debug error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Debug error'
+      });
+    }
+  });
+  
+  // Get all smart campaigns (Admin only)
+  app.get('/api/smart-notifications/campaigns', isAdminAuthenticated, async (req, res) => {
+    try {
+      const campaigns = await storage.getAllSmartCampaigns();
+      
+      res.json({
+        success: true,
+        data: campaigns
+      });
+    } catch (error) {
+      console.error('Error fetching smart campaigns:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب الحملات الذكية'
+      });
+    }
+  });
 
+  // Get specific smart campaign (Admin only)
+  app.get('/api/smart-notifications/campaigns/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const campaign = await storage.getSmartCampaign(id);
+      
+      if (!campaign) {
+        return res.status(404).json({
+          success: false,
+          message: 'لم يتم العثور على الحملة المحددة'
+        });
+      }
+      
+      // Also get targeting rules for this campaign
+      const targetingRules = await storage.getTargetingRules(id);
+      
+      res.json({
+        success: true,
+        data: {
+          ...campaign,
+          targetingRules
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching smart campaign:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب الحملة الذكية'
+      });
+    }
+  });
 
+  // Create new smart campaign (Admin only)
+  app.post('/api/smart-notifications/campaigns', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      // Validate request body with Zod
+      const validationResult = insertSmartCampaignSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: 'بيانات غير صالحة',
+          errors: validationResult.error.errors
+        });
+      }
+
+      const campaignData = {
+        ...validationResult.data,
+        createdBy: req.user?.id || 'admin'
+      };
+
+      const newCampaign = await storage.createSmartCampaign(campaignData);
+      
+      console.log(`✅ Admin created smart campaign: ${newCampaign.name}`);
+      res.status(201).json({
+        success: true,
+        message: 'تم إنشاء الحملة الذكية بنجاح',
+        data: newCampaign
+      });
+    } catch (error) {
+      console.error('Error creating smart campaign:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إنشاء الحملة الذكية'
+      });
+    }
+  });
+
+  // Update smart campaign (Admin only)
+  app.put('/api/smart-notifications/campaigns/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updatedCampaign = await storage.updateSmartCampaign(id, req.body);
+      
+      if (!updatedCampaign) {
+        return res.status(404).json({
+          success: false,
+          message: 'لم يتم العثور على الحملة المحددة'
+        });
+      }
+      
+      console.log(`✅ Admin updated smart campaign: ${id}`);
+      res.json({
+        success: true,
+        message: 'تم تحديث الحملة الذكية بنجاح',
+        data: updatedCampaign
+      });
+    } catch (error) {
+      console.error('Error updating smart campaign:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في تحديث الحملة الذكية'
+      });
+    }
+  });
+
+  // Pause smart campaign (Admin only)
+  app.patch('/api/smart-notifications/campaigns/:id/pause', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const pausedCampaign = await storage.pauseSmartCampaign(id);
+      
+      if (!pausedCampaign) {
+        return res.status(404).json({
+          success: false,
+          message: 'لم يتم العثور على الحملة المحددة'
+        });
+      }
+      
+      console.log(`⏸️ Admin paused smart campaign: ${id}`);
+      res.json({
+        success: true,
+        message: 'تم إيقاف الحملة الذكية مؤقتاً',
+        data: pausedCampaign
+      });
+    } catch (error) {
+      console.error('Error pausing smart campaign:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إيقاف الحملة الذكية'
+      });
+    }
+  });
+
+  // Resume smart campaign (Admin only)
+  app.patch('/api/smart-notifications/campaigns/:id/resume', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const resumedCampaign = await storage.resumeSmartCampaign(id);
+      
+      if (!resumedCampaign) {
+        return res.status(404).json({
+          success: false,
+          message: 'لم يتم العثور على الحملة المحددة'
+        });
+      }
+      
+      console.log(`▶️ Admin resumed smart campaign: ${id}`);
+      res.json({
+        success: true,
+        message: 'تم استئناف الحملة الذكية',
+        data: resumedCampaign
+      });
+    } catch (error) {
+      console.error('Error resuming smart campaign:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في استئناف الحملة الذكية'
+      });
+    }
+  });
+
+  // Delete smart campaign (Admin only)
+  app.delete('/api/smart-notifications/campaigns/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteSmartCampaign(id);
+      
+      if (!deleted) {
+        return res.status(404).json({
+          success: false,
+          message: 'لم يتم العثور على الحملة المحددة'
+        });
+      }
+      
+      console.log(`🗑️ Admin deleted smart campaign: ${id}`);
+      res.json({
+        success: true,
+        message: 'تم حذف الحملة الذكية بنجاح'
+      });
+    } catch (error) {
+      console.error('Error deleting smart campaign:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في حذف الحملة الذكية'
+      });
+    }
+  });
+
+  // Get all message templates (Admin only)
+  app.get('/api/smart-notifications/templates', isAdminAuthenticated, async (req, res) => {
+    try {
+      const templates = await storage.getAllMessageTemplates();
+      
+      res.json({
+        success: true,
+        data: templates
+      });
+    } catch (error) {
+      console.error('Error fetching message templates:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب قوالب الرسائل'
+      });
+    }
+  });
+
+  // Create message template (Admin only)
+  app.post('/api/smart-notifications/templates', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const validationResult = insertMessageTemplateSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: 'بيانات غير صالحة',
+          errors: validationResult.error.errors
+        });
+      }
+
+      const templateData = {
+        ...validationResult.data,
+        createdBy: req.user?.id || 'admin'
+      };
+
+      const newTemplate = await storage.createMessageTemplate(templateData);
+      
+      console.log(`✅ Admin created message template: ${newTemplate.name}`);
+      res.status(201).json({
+        success: true,
+        message: 'تم إنشاء قالب الرسالة بنجاح',
+        data: newTemplate
+      });
+    } catch (error) {
+      console.error('Error creating message template:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إنشاء قالب الرسالة'
+      });
+    }
+  });
+
+  // Update message template (Admin only)
+  app.put('/api/smart-notifications/templates/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updatedTemplate = await storage.updateMessageTemplate(id, req.body);
+      
+      if (!updatedTemplate) {
+        return res.status(404).json({
+          success: false,
+          message: 'لم يتم العثور على القالب المحدد'
+        });
+      }
+      
+      console.log(`✅ Admin updated message template: ${id}`);
+      res.json({
+        success: true,
+        message: 'تم تحديث قالب الرسالة بنجاح',
+        data: updatedTemplate
+      });
+    } catch (error) {
+      console.error('Error updating message template:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في تحديث قالب الرسالة'
+      });
+    }
+  });
+
+  // Delete message template (Admin only)
+  app.delete('/api/smart-notifications/templates/:id', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteMessageTemplate(id);
+      
+      if (!deleted) {
+        return res.status(404).json({
+          success: false,
+          message: 'لم يتم العثور على القالب المحدد'
+        });
+      }
+      
+      console.log(`🗑️ Admin deleted message template: ${id}`);
+      res.json({
+        success: true,
+        message: 'تم حذف قالب الرسالة بنجاح'
+      });
+    } catch (error) {
+      console.error('Error deleting message template:', error);
+      
+      if (error.message && error.message.includes('لا يمكن حذف القوالب النظامية')) {
+        return res.status(400).json({
+          success: false,
+          message: error.message
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في حذف قالب الرسالة'
+      });
+    }
+  });
+
+  // Get targeting rules for a campaign (Admin only)
+  app.get('/api/smart-notifications/campaigns/:campaignId/targeting-rules', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { campaignId } = req.params;
+      const rules = await storage.getTargetingRules(campaignId);
+      
+      res.json({
+        success: true,
+        data: rules
+      });
+    } catch (error) {
+      console.error('Error fetching targeting rules:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب قواعد الاستهداف'
+      });
+    }
+  });
+
+  // Create targeting rule (Admin only)
+  app.post('/api/smart-notifications/targeting-rules', isAdminAuthenticated, async (req, res) => {
+    try {
+      const validationResult = insertTargetingRuleSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: 'بيانات غير صالحة',
+          errors: validationResult.error.errors
+        });
+      }
+
+      const newRule = await storage.createTargetingRule(validationResult.data);
+      
+      console.log(`✅ Admin created targeting rule for campaign: ${newRule.campaignId}`);
+      res.status(201).json({
+        success: true,
+        message: 'تم إنشاء قاعدة الاستهداف بنجاح',
+        data: newRule
+      });
+    } catch (error) {
+      console.error('Error creating targeting rule:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إنشاء قاعدة الاستهداف'
+      });
+    }
+  });
+
+  // Get sent messages for a campaign (Admin only)
+  app.get('/api/smart-notifications/campaigns/:campaignId/messages', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { campaignId } = req.params;
+      const messages = await storage.getSentMessages(campaignId);
+      
+      res.json({
+        success: true,
+        data: messages
+      });
+    } catch (error) {
+      console.error('Error fetching sent messages:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب الرسائل المرسلة'
+      });
+    }
+  });
+
+  // Test send notification (Admin only)
+  app.post('/api/smart-notifications/test', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { email, subject, content, channel = 'email' } = req.body;
+      
+      if (!email || !subject || !content) {
+        return res.status(400).json({
+          success: false,
+          message: 'البريد الإلكتروني والموضوع والمحتوى مطلوبة'
+        });
+      }
+
+      // Create a test message record
+      const testMessage = await storage.createSentMessage({
+        campaignId: 'test_campaign',
+        userId: 'test_user',
+        channel,
+        subject,
+        content,
+        status: 'sent'
+      });
+      
+      console.log(`🧪 Admin sent test notification to: ${email}`);
+      res.json({
+        success: true,
+        message: `تم إرسال رسالة تجريبية إلى ${email}`,
+        data: testMessage
+      });
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إرسال الرسالة التجريبية'
+      });
+    }
+  });
 
   return httpServer;
 }

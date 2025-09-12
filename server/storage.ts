@@ -156,6 +156,37 @@ export interface IStorage {
   updatePrivacyPolicy(id: string, updates: any): Promise<any>;
   activatePrivacyPolicy(id: string): Promise<any>;
   deletePrivacyPolicy(id: string): Promise<boolean>;
+
+  // Smart Notifications operations
+  getAllSmartCampaigns(): Promise<any[]>;
+  getSmartCampaign(id: string): Promise<any | undefined>;
+  createSmartCampaign(campaign: any): Promise<any>;
+  updateSmartCampaign(id: string, updates: any): Promise<any>;
+  deleteSmartCampaign(id: string): Promise<boolean>;
+  pauseSmartCampaign(id: string): Promise<any>;
+  resumeSmartCampaign(id: string): Promise<any>;
+  
+  // Message Templates operations
+  getAllMessageTemplates(): Promise<any[]>;
+  getMessageTemplate(id: string): Promise<any | undefined>;
+  createMessageTemplate(template: any): Promise<any>;
+  updateMessageTemplate(id: string, updates: any): Promise<any>;
+  deleteMessageTemplate(id: string): Promise<boolean>;
+  
+  // Targeting Rules operations
+  getTargetingRules(campaignId: string): Promise<any[]>;
+  createTargetingRule(rule: any): Promise<any>;
+  updateTargetingRule(id: string, updates: any): Promise<any>;
+  deleteTargetingRule(id: string): Promise<boolean>;
+  
+  // User Behavior operations
+  getUserBehavior(userId: string): Promise<any | undefined>;
+  updateUserBehavior(userId: string, updates: any): Promise<any>;
+  
+  // Sent Messages operations
+  getSentMessages(campaignId?: string): Promise<any[]>;
+  createSentMessage(message: any): Promise<any>;
+  updateSentMessage(id: string, updates: any): Promise<any>;
 }
 
 // Global storage to persist across application lifecycle
@@ -173,6 +204,11 @@ export class MemoryStorage implements IStorage {
   private announcements: Announcement[] = [];
   private drivers: any[] = [];
   private termsVersions: any[] = [];
+  private smartCampaigns: any[] = [];
+  private messageTemplates: any[] = [];
+  private targetingRules: any[] = [];
+  private sentMessages: any[] = [];
+  private userBehaviors: any[] = [];
   private privacyPolicies: any[] = [
     {
       id: 'privacy_policy_1',
@@ -4357,6 +4393,239 @@ class MemStorage implements IStorage {
     
     this.privacyPolicies.splice(index, 1);
     return true;
+  }
+
+  // Smart Notifications operations
+  async getAllSmartCampaigns(): Promise<any[]> {
+    return this.smartCampaigns.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async getSmartCampaign(id: string): Promise<any | undefined> {
+    return this.smartCampaigns.find(c => c.id === id);
+  }
+
+  async createSmartCampaign(campaign: any): Promise<any> {
+    const newCampaign = {
+      id: `campaign_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...campaign,
+      status: campaign.status || 'draft',
+      totalSent: 0,
+      totalDelivered: 0,
+      totalOpened: 0,
+      totalClicked: 0,
+      estimatedAudience: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.smartCampaigns.push(newCampaign);
+    return newCampaign;
+  }
+
+  async updateSmartCampaign(id: string, updates: any): Promise<any> {
+    const index = this.smartCampaigns.findIndex(c => c.id === id);
+    if (index === -1) return null;
+    
+    this.smartCampaigns[index] = {
+      ...this.smartCampaigns[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    return this.smartCampaigns[index];
+  }
+
+  async deleteSmartCampaign(id: string): Promise<boolean> {
+    const index = this.smartCampaigns.findIndex(c => c.id === id);
+    if (index === -1) return false;
+    
+    this.smartCampaigns.splice(index, 1);
+    
+    // Also delete related targeting rules and sent messages
+    this.targetingRules = this.targetingRules.filter(r => r.campaignId !== id);
+    this.sentMessages = this.sentMessages.filter(m => m.campaignId !== id);
+    
+    return true;
+  }
+
+  async pauseSmartCampaign(id: string): Promise<any> {
+    return this.updateSmartCampaign(id, { status: 'paused' });
+  }
+
+  async resumeSmartCampaign(id: string): Promise<any> {
+    return this.updateSmartCampaign(id, { status: 'active' });
+  }
+
+  // Message Templates operations
+  async getAllMessageTemplates(): Promise<any[]> {
+    return this.messageTemplates.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async getMessageTemplate(id: string): Promise<any | undefined> {
+    return this.messageTemplates.find(t => t.id === id);
+  }
+
+  async createMessageTemplate(template: any): Promise<any> {
+    const newTemplate = {
+      id: `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...template,
+      isActive: template.isActive !== false,
+      isSystem: template.isSystem || false,
+      usageCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.messageTemplates.push(newTemplate);
+    return newTemplate;
+  }
+
+  async updateMessageTemplate(id: string, updates: any): Promise<any> {
+    const index = this.messageTemplates.findIndex(t => t.id === id);
+    if (index === -1) return null;
+    
+    this.messageTemplates[index] = {
+      ...this.messageTemplates[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    return this.messageTemplates[index];
+  }
+
+  async deleteMessageTemplate(id: string): Promise<boolean> {
+    const index = this.messageTemplates.findIndex(t => t.id === id);
+    if (index === -1) return false;
+    
+    // Don't allow deletion of system templates
+    if (this.messageTemplates[index].isSystem) {
+      throw new Error('لا يمكن حذف القوالب النظامية');
+    }
+    
+    this.messageTemplates.splice(index, 1);
+    return true;
+  }
+
+  // Targeting Rules operations
+  async getTargetingRules(campaignId: string): Promise<any[]> {
+    return this.targetingRules
+      .filter(r => r.campaignId === campaignId)
+      .sort((a, b) => a.priority - b.priority);
+  }
+
+  async createTargetingRule(rule: any): Promise<any> {
+    const newRule = {
+      id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...rule,
+      createdAt: new Date().toISOString()
+    };
+    
+    this.targetingRules.push(newRule);
+    return newRule;
+  }
+
+  async updateTargetingRule(id: string, updates: any): Promise<any> {
+    const index = this.targetingRules.findIndex(r => r.id === id);
+    if (index === -1) return null;
+    
+    this.targetingRules[index] = {
+      ...this.targetingRules[index],
+      ...updates
+    };
+    
+    return this.targetingRules[index];
+  }
+
+  async deleteTargetingRule(id: string): Promise<boolean> {
+    const index = this.targetingRules.findIndex(r => r.id === id);
+    if (index === -1) return false;
+    
+    this.targetingRules.splice(index, 1);
+    return true;
+  }
+
+  // User Behavior operations
+  async getUserBehavior(userId: string): Promise<any | undefined> {
+    return this.userBehaviors.find(b => b.userId === userId);
+  }
+
+  async updateUserBehavior(userId: string, updates: any): Promise<any> {
+    let behavior = await this.getUserBehavior(userId);
+    
+    if (!behavior) {
+      behavior = {
+        id: `behavior_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId,
+        pageViews: 0,
+        sessionDuration: 0,
+        totalOrders: 0,
+        totalSpent: '0',
+        averageOrderValue: '0',
+        notificationsReceived: 0,
+        notificationsOpened: 0,
+        notificationsClicked: 0,
+        engagementScore: '0',
+        preferredChannel: 'email',
+        optedOutChannels: [],
+        customerSegment: 'new',
+        lifetimeValue: '0',
+        updatedAt: new Date().toISOString()
+      };
+      this.userBehaviors.push(behavior);
+    }
+    
+    const index = this.userBehaviors.findIndex(b => b.userId === userId);
+    this.userBehaviors[index] = {
+      ...this.userBehaviors[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    return this.userBehaviors[index];
+  }
+
+  // Sent Messages operations
+  async getSentMessages(campaignId?: string): Promise<any[]> {
+    let messages = this.sentMessages;
+    
+    if (campaignId) {
+      messages = messages.filter(m => m.campaignId === campaignId);
+    }
+    
+    return messages.sort((a, b) => 
+      new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()
+    );
+  }
+
+  async createSentMessage(message: any): Promise<any> {
+    const newMessage = {
+      id: `message_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...message,
+      status: message.status || 'pending',
+      deliveryAttempts: 0,
+      isOpened: false,
+      isClicked: false,
+      sentAt: new Date().toISOString()
+    };
+    
+    this.sentMessages.push(newMessage);
+    return newMessage;
+  }
+
+  async updateSentMessage(id: string, updates: any): Promise<any> {
+    const index = this.sentMessages.findIndex(m => m.id === id);
+    if (index === -1) return null;
+    
+    this.sentMessages[index] = {
+      ...this.sentMessages[index],
+      ...updates
+    };
+    
+    return this.sentMessages[index];
   }
 }
 
