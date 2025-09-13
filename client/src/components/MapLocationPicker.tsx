@@ -53,23 +53,33 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       const script = document.createElement('script');
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
       
+      console.log('🗺️ MapLocationPicker: Attempting to load Google Maps...');
+      console.log('🔑 API Key available:', !!apiKey);
+      
       if (!apiKey) {
+        console.error('❌ No Google Maps API key found');
         setError('مفتاح الخرائط غير متوفر. يرجى التواصل مع الدعم الفني');
         setIsLoading(false);
         return;
       }
       
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=ar&region=EG`;
+      const scriptUrl = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=ar&region=EG`;
+      console.log('🌐 Loading script from:', scriptUrl.replace(apiKey, 'KEY_HIDDEN'));
+      
+      script.src = scriptUrl;
       script.async = true;
       script.onload = () => {
+        console.log('✅ Google Maps script loaded successfully');
         setIsMapLoaded(true);
       };
-      script.onerror = () => {
+      script.onerror = (e) => {
+        console.error('❌ Google Maps script failed to load:', e);
         setError('فشل في تحميل الخرائط. يرجى المحاولة مرة أخرى');
         setIsLoading(false);
       };
       document.head.appendChild(script);
     } else if (showMap && window.google) {
+      console.log('✅ Google Maps already loaded');
       setIsMapLoaded(true);
     }
   }, [showMap]);
