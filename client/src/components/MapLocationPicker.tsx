@@ -80,10 +80,10 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         console.error('🔗 Full URL:', window.location.href);
         console.error('🔗 Required restriction: https://*.picard.replit.dev/*');
         
-        // تفعيل الوضع البديل - بدون خريطة
-        setError(`الخريطة غير متاحة حالياً. أضف ${window.location.hostname} للقيود في Google Cloud Console`);
-        setShowMap(false);
+        // عرض الخطأ لكن بقاء الخريطة متاحة للمحاولة مرة أخرى
+        setError(`فشل تحميل الخريطة. تأكد من إعدادات API في Google Cloud Console أو جرب مرة أخرى`);
         setIsLoading(false);
+        // إزالة: setShowMap(false); عشان المستخدم يقدر يجرب تاني
       };
       document.head.appendChild(script);
     } else if (showMap && window.google) {
