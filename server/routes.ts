@@ -4207,7 +4207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Apply 10% discount for black and white printing (NOT for large formats)
       const discount = (is_black_white && !isLargeFormat) ? baseTotal * 0.10 : 0;
-      const totalCost = Math.ceil(baseTotal - discount);
+      const totalCost = parseFloat((baseTotal - discount).toFixed(2));
       
       if (isLargeFormat) {
         console.log(`🚫 No B&W discount for large format ${paperSize}`);
