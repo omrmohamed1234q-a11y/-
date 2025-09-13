@@ -67,6 +67,14 @@ export class GoogleDriveService {
   }
 
   /**
+   * Reinitialize Google Drive service with updated credentials
+   */
+  reinitialize(): void {
+    console.log('🔄 Reinitializing Google Drive service with updated credentials...');
+    this.initializeAuth();
+  }
+
+  /**
    * Upload file to Google Drive
    */
   async uploadFile(

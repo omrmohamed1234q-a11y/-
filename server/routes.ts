@@ -1142,6 +1142,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Storage Management APIs
 
+  // Reinitialize Google Drive service with updated credentials
+  app.post('/api/drive/reinitialize', async (req, res) => {
+    try {
+      console.log('🔄 Manual Google Drive service reinitialization requested...');
+      
+      googleDriveService.reinitialize();
+      
+      // Test if reinitialization worked
+      const testResult = await googleDriveService.getStorageInfo();
+      
+      if (testResult.success) {
+        res.json({
+          success: true,
+          message: 'Google Drive service reinitialized successfully',
+          isEnabled: googleDriveService.isEnabled()
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Google Drive reinitialization failed',
+          error: testResult.error,
+          isEnabled: googleDriveService.isEnabled()
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Google Drive reinitialize error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
   // Get Google Drive storage information
   app.get('/api/drive/storage-info', async (req, res) => {
     try {
@@ -1456,6 +1489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       '/api/setup',
       '/api/test',
       '/api/drive/storage-info',
+      '/api/drive/reinitialize',  // Public access to reinitialize Google Drive
       '/api/terms/current',  // Public access to current terms and conditions
       '/api/privacy-policy/current'  // Public access to current privacy policy
     ];
