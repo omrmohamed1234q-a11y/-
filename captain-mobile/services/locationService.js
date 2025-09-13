@@ -63,6 +63,29 @@ class LocationService {
   }
 
   /**
+   * Initialize location service
+   */
+  async initialize() {
+    try {
+      console.log('🗺️ Initializing location service...');
+      
+      // Request permissions
+      const hasPermission = await this.requestPermissions();
+      if (!hasPermission) {
+        console.warn('⚠️ Location permissions not granted');
+        return false;
+      }
+
+      console.log('✅ Location service initialized successfully');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize location service:', error);
+      return false;
+    }
+  }
+
+  /**
    * Request location permissions (React Native/Expo)
    */
   async requestPermissions() {

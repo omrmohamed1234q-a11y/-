@@ -369,6 +369,13 @@ class ApiService {
   }
 
   /**
+   * رفض طلب محدد
+   */
+  async rejectOrder(captainId, orderId) {
+    return await this.makeRequest('POST', `/api/captain/${captainId}/reject-order/${orderId}`, {});
+  }
+
+  /**
    * تحديث حالة طلب
    */
   async updateOrderStatus(captainId, orderId, status, notes = null, location = null) {

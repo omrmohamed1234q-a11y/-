@@ -369,6 +369,35 @@ class CaptainService {
   }
 
   /**
+   * رفض طلب
+   */
+  async rejectOrder(orderId) {
+    if (!this.captain) return { success: false, error: 'Not logged in' };
+
+    try {
+      const response = await apiService.rejectOrder(this.captain.id, orderId);
+      
+      if (response.success) {
+        // إزالة الطلب من القائمة المتاحة
+        this.orders = this.orders.filter(order => order.id !== orderId);
+        
+        console.log('❌ Order rejected:', orderId);
+        
+        // إخطار المستمعين
+        this.notifyHandlers('onOrdersUpdate', this.orders);
+        
+        return response;
+      } else {
+        throw new Error(response.error || 'Failed to reject order');
+      }
+
+    } catch (error) {
+      console.error('❌ Failed to reject order:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * تحديث حالة طلب
    */
   async updateOrderStatus(orderId, status, notes = null, location = null) {
