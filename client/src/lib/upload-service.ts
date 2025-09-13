@@ -103,12 +103,18 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
     
     if (result.success) {
       console.log('✅ Cloud upload successful! Cost savings activated 💰');
+      console.log('🔍 Server response debug:', {
+        webViewLink: result.webViewLink,
+        directDownloadLink: result.directDownloadLink,
+        folderLink: result.folderLink,
+        hasWebViewLink: !!result.webViewLink
+      });
       
       const uploadResult: UploadResult = {
         success: true,
         url: result.folderLink || result.url, // Use folder link for admin, file link for direct access
         downloadUrl: result.directDownloadLink || result.url,
-        previewUrl: result.webViewLink,
+        previewUrl: result.webViewLink || result.directDownloadLink || result.url, // Fallback chain
         provider: 'google_drive' as const,
         fileId: result.fileId,
         folderLink: result.folderLink,

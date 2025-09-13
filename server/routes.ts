@@ -4260,7 +4260,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         copies: printJobData.copies,
         colorMode: printJobData.colorMode === 'color' ? 'ملون' : 'أبيض وأسود',
         paperSize: printJobData.paperSize,
-        doubleSided: printJobData.doubleSided ? 'وجهين' : 'وجه واحد'
+        doubleSided: printJobData.doubleSided ? 'وجهين' : 'وجه واحد',
+        // ★ معلومات المعاينة والتعريف المطلوبة للواجهة
+        previewUrl: printJobData.previewUrl,
+        fileId: printJobData.fileId,
+        provider: printJobData.provider,
+        productSource: printJobData.productSource || 'print_service',
+        variant: printJobData.variant || { isPrintJob: true },
+        printJobData: printJobData.printJobData || { isFile: true, pages: 'all' }
       }, totalCost.toString()); // Pass the calculated price as custom price
 
       console.log('✅ Print job added to cart successfully:', cartItem.id);
