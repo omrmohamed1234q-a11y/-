@@ -1007,11 +1007,9 @@ export default function Print() {
     let successCount = 0;
     let failureCount = 0;
 
-    console.info('🔄 Starting add all files to cart with', uploadResults.length, 'files');
-
-    // إنشاء print jobs من uploadResults مباشرة
+    // إنشاء print jobs لكل ملف مع إعداداته
     for (const result of uploadResults) {
-      const fileName = result.name || 'unknown';
+      const fileName = result.name;
       const settings = fileSettings[fileName] || {
         copies: 1,
         colorMode: 'grayscale' as 'grayscale' | 'color',
@@ -1020,18 +1018,9 @@ export default function Print() {
         doubleSided: false,
       };
 
-      // التحقق من الحقول المطلوبة
-      if (!result.url && !(result as any).downloadUrl) {
-        console.error(`❌ Missing URL for file: ${fileName}`);
-        failureCount++;
-        continue;
-      }
-
       const printJob = {
-        // بيانات أساسية
         filename: fileName,
-        fileUrl: (result as any).downloadUrl || result.url,
-        fileSize: result.fileSize || 0,
+        fileUrl: result.url,
         pages: 'all',
         copies: settings.copies,
         colorMode: settings.colorMode,
@@ -1040,34 +1029,18 @@ export default function Print() {
         doubleSided: settings.doubleSided,
         userId: user.id,
         displayName: generatePrintJobFilename(settings, fileName),
-        
-        // معلومات المعاينة وهوية الطباعة
+        // معلومات المعاينة
         previewUrl: result.previewUrl,
         fileId: (result as any).fileId,
-        fileType: (result as any).type || 'application/octet-stream',
-        provider: result.provider,
-        
-        // علامات print job
-        productSource: 'print_service',
-        variant: { isPrintJob: true },
-        printJobData: {
-          isFile: true,
-          pages: 'all'
-        }
+        fileType: (result as any).type || 'application/octet-stream', // استخدام النوع من نتيجة الرفع
+        provider: result.provider
       };
 
       try {
-        console.info('📋 Adding print job to cart:', {
-          filename: printJob.filename,
-          previewUrl: printJob.previewUrl ? 'present' : 'missing',
-          productSource: printJob.productSource,
-          isPrintJob: printJob.variant.isPrintJob
-        });
-        
         await addToCartMutation.mutateAsync(printJob);
         successCount++;
       } catch (error) {
-        console.error(`❌ Failed to add ${fileName} to cart:`, error);
+        console.error(`فشل في إضافة ${fileName} للسلة:`, error);
         failureCount++;
       }
     }
@@ -1145,6 +1118,7 @@ export default function Print() {
           filename: generatePrintJobFilename(printSettings, file.name),
           fileUrl: uploadedUrls[index],
           fileSize: file.size,
+          fileType: file.type,
           pages: 1,
           copies: printSettings.copies,
           colorMode: printSettings.colorMode,
@@ -1155,7 +1129,6 @@ export default function Print() {
           // معلومات المعاينة
           previewUrl: uploadResult?.previewUrl,
           fileId: (uploadResult as any)?.fileId,
-          fileType: (uploadResult as any)?.type || file.type, // استخدام النوع من نتيجة الرفع أو الملف الأصلي
           provider: uploadResult?.provider
         };
       });
