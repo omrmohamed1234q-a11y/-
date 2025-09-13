@@ -74,7 +74,10 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       };
       script.onerror = (e) => {
         console.error('❌ Google Maps script failed to load:', e);
-        setError('فشل في تحميل الخرائط. يرجى المحاولة مرة أخرى');
+        console.error('🔍 Check if API key is valid and has proper restrictions');
+        console.error('🌐 Required APIs: Maps JavaScript API, Places API');
+        console.error('🔗 Domain restriction: *.replit.dev/*');
+        setError('فشل في تحميل الخرائط. تحقق من صحة مفتاح API وإعداداته في Google Cloud Console');
         setIsLoading(false);
       };
       document.head.appendChild(script);
