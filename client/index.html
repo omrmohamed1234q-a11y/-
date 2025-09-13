@@ -40,16 +40,24 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     
-    <!-- Google Maps API - Direct loading -->
-    <script async defer 
-            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbj_ubPn2MbYn3LYzAhDMMU0UE38lPzZQ&libraries=places&language=ar&region=EG&callback=initGoogleMaps">
-    </script>
+    <!-- Google Maps API - Synchronous loading -->
     <script>
+      // Initialize callback function first
       function initGoogleMaps() {
         console.log('✅ Google Maps loaded successfully from HTML head');
         window.googleMapsReady = true;
         window.dispatchEvent(new Event('googleMapsLoaded'));
+        
+        // Additional validation
+        if (window.google && window.google.maps) {
+          console.log('✅ Google Maps API fully available');
+        } else {
+          console.warn('⚠️ Google Maps loaded but API not fully available');
+        }
       }
+      
+      // Load script immediately without async/defer
+      document.write('<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbj_ubPn2MbYn3LYzAhDMMU0UE38lPzZQ&libraries=places&language=ar&region=EG&callback=initGoogleMaps"><\/script>');
     </script>
   </head>
   <body>
