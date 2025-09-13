@@ -64,14 +64,29 @@ class CaptainService {
       onSettingsChange: []
     };
     
-    // تهيئة الخدمات
-    this.initializeServices();
+    // تهيئة الخدمات (async)
+    this.initializationPromise = this.initializeServices();
   }
 
   /**
    * تهيئة الخدمات الفرعية
    */
-  initializeServices() {
+  async initializeServices() {
+    // تهيئة خدمة الإشعارات المحلية أولاً
+    try {
+      const notificationService = require('./notificationService.js').default || require('./notificationService.js');
+      await notificationService.initialize();
+      console.log('✅ NotificationService initialized successfully');
+      
+      // ربط إعدادات الإشعارات مع حالة التطبيق
+      notificationService.addEventListener('onNewNotification', (notification) => {
+        this.notifyHandlers('onNewOrder', notification);
+      });
+      
+    } catch (error) {
+      console.warn('⚠️ Failed to initialize NotificationService:', error.message);
+    }
+    
     // تهيئة WebSocket مع المعالجات الجديدة
     webSocketService.addConnectionListener('onConnect', () => {
       console.log('🔗 WebSocket connected');
@@ -703,6 +718,15 @@ class CaptainService {
     } catch (error) {
       console.error('❌ Failed to save settings:', error);
       return { success: false, error: 'فشل في حفظ الإعدادات' };
+    }
+  }
+
+  /**
+   * انتظار اكتمال التهيئة
+   */
+  async waitForInitialization() {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
     }
   }
 

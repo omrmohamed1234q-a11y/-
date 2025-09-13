@@ -19,11 +19,17 @@ class NotificationService {
     this.storageKey = 'captain_notifications';
     this.maxStoredNotifications = 100;
     
+    // حالة إمكانيات النظام
+    this.hasPushNotifications = false;
+    this.hasBrowserNotifications = false;
+    this.hasServiceWorker = false;
+    
     // معالجات الأحداث
     this.eventHandlers = {
       onNewNotification: [],
       onNotificationRead: [],
-      onNotificationDeleted: []
+      onNotificationDeleted: [],
+      onNotificationClick: []
     };
   }
 
@@ -53,17 +59,96 @@ class NotificationService {
    */
   async initializeSystemNotifications() {
     try {
-      // في بيئة React Native، يمكن استخدام مكتبة إشعارات محلية
-      // هنا نضع placeholder للتهيئة المستقبلية
       console.log('📱 تهيئة إشعارات النظام المحلية...');
       
-      // TODO: إضافة مكتبة local notifications مثل:
-      // - @react-native-async-storage/async-storage
-      // - react-native-push-notification  
-      // - @react-native-community/push-notification-ios
+      // تهيئة React Native Push Notifications إذا متوفرة (safe loading)
+      if (typeof require !== 'undefined' && typeof window === 'undefined') {
+        try {
+          // Only try to load in React Native environment (not web)
+          const PushNotification = require('react-native-push-notification');
+          
+          // إعداد قناة الإشعارات (Android)
+          PushNotification.createChannel(
+            {
+              channelId: 'captain-notifications', // ID فريد للقناة
+              channelName: 'إشعارات الكابتن', // اسم القناة
+              channelDescription: 'إشعارات الطلبات الجديدة وتحديثات الحالة',
+              playSound: true,
+              soundName: 'default',
+              importance: 4, // IMPORTANCE_HIGH
+              vibrate: true,
+            },
+            (created) => console.log(`📱 Notification channel created: ${created}`)
+          );
+
+          // إعداد إعدادات الإشعارات الافتراضية
+          PushNotification.configure({
+            // (اختياري) يُستدعى عند تلقي إشعار عن بعد أو محلي
+            onNotification: function (notification) {
+              console.log('📱 Notification received:', notification);
+
+              // معالجة النقر على الإشعار
+              if (notification.userInteraction) {
+                console.log('📱 User tapped notification');
+                // يمكن إضافة معالجة إضافية هنا
+              }
+            },
+
+            // (اختياري) يُستدعى عند فتح التطبيق من إشعار
+            onAction: function (notification) {
+              console.log('📱 Notification action:', notification.action);
+            },
+
+            // (اختياري) يُستدعى عند تسجيل التطبيق للإشعارات عن بعد
+            onRegistrationError: function(err) {
+              console.error('📱 Push notification registration error:', err.message);
+            },
+
+            // IOS only (اختياري): الافتراضية: كل الإذونات تُطلب تلقائياً
+            permissions: {
+              alert: true,
+              badge: true,
+              sound: true,
+            },
+
+            // طلب الأذونات بمجرد تشغيل التطبيق
+            requestPermissions: true,
+          });
+
+          console.log('✅ React Native Push Notifications configured successfully');
+          this.hasPushNotifications = true;
+          
+        } catch (rnError) {
+          console.warn('⚠️ React Native Push Notifications not available:', rnError.message);
+          this.hasPushNotifications = false;
+        }
+      }
+
+      // تهيئة إشعارات المتصفح للبيئة Web
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        // طلب إذن الإشعارات إذا لم يكن ممنوحاً
+        if (Notification.permission === 'default') {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            console.log('✅ Browser notification permission granted');
+            this.hasBrowserNotifications = true;
+          } else {
+            console.warn('⚠️ Browser notification permission denied');
+            this.hasBrowserNotifications = false;
+          }
+        } else if (Notification.permission === 'granted') {
+          this.hasBrowserNotifications = true;
+          console.log('✅ Browser notifications already permitted');
+        } else {
+          this.hasBrowserNotifications = false;
+          console.warn('⚠️ Browser notifications blocked');
+        }
+      }
       
     } catch (error) {
       console.warn('⚠️ لا يمكن تهيئة إشعارات النظام:', error.message);
+      this.hasPushNotifications = false;
+      this.hasBrowserNotifications = false;
     }
   }
 
@@ -144,9 +229,15 @@ class NotificationService {
   }
 
   /**
-   * إضافة إشعار جديد
+   * إضافة إشعار جديد مع فحص الإعدادات
    */
   addNotification(notification) {
+    // فحص إعدادات الإشعارات قبل الإضافة
+    if (!this.shouldShowNotification(notification.type)) {
+      console.log('🔕 Notification blocked by settings:', notification.type);
+      return null;
+    }
+
     // التأكد من وجود id فريد
     if (!notification.id) {
       notification.id = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -177,11 +268,48 @@ class NotificationService {
   }
 
   /**
-   * عرض إشعار محلي - Production Implementation
+   * فحص إعدادات الإشعارات قبل العرض
    */
-  async showLocalNotification(title, message, data = null) {
+  shouldShowNotification(notificationType = 'general') {
     try {
-      console.log('🔔 عرض إشعار محلي:', { title, message });
+      // محاولة الحصول على إعدادات الكابتن
+      const captainService = require('./captainService.js').default || require('./captainService.js');
+      const settings = captainService.appSettings;
+      
+      if (!settings?.notifications?.enabled) {
+        console.log('🔕 Notifications disabled in settings');
+        return false;
+      }
+      
+      // فحص أنواع الإشعارات المختلفة
+      switch (notificationType) {
+        case 'new_order':
+          return settings.notifications.newOrders !== false;
+        case 'order_update':
+          return settings.notifications.orderUpdates !== false;
+        case 'system':
+          return settings.notifications.systemAlerts !== false;
+        default:
+          return true;
+      }
+    } catch (error) {
+      // إذا فشل في الحصول على الإعدادات، اعرض الإشعار (افتراضي آمن)
+      return true;
+    }
+  }
+
+  /**
+   * عرض إشعار محلي - Production Implementation مع فحص الإعدادات
+   */
+  async showLocalNotification(title, message, data = null, notificationType = 'general') {
+    try {
+      console.log('🔔 عرض إشعار محلي:', { title, message, type: notificationType });
+      
+      // فحص إعدادات الإشعارات أولاً
+      if (!this.shouldShowNotification(notificationType)) {
+        console.log('🔕 Notification blocked by user settings');
+        return false;
+      }
       
       // Method 1: Web Browser Notifications API
       if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -227,34 +355,43 @@ class NotificationService {
       }
       
       // Method 2: React Native Local Notifications (if available)
-      if (typeof require !== 'undefined') {
+      if (this.hasPushNotifications && typeof require !== 'undefined') {
         try {
-          // Try to use React Native local notifications
           const PushNotification = require('react-native-push-notification');
           
+          // تحسين إعدادات الإشعار المحلي
           PushNotification.localNotification({
             title: title,
             message: message,
-            data: data,
+            data: data || {},
             playSound: true,
             soundName: 'default',
             vibrate: true,
-            vibration: 300,
+            vibration: [500, 300, 500], // نمط اهتزاز مخصص
             ongoing: false,
             priority: 'high',
             visibility: 'public',
             importance: 'high',
             allowWhileIdle: true,
             ignoreInForeground: false,
+            autoCancel: true,
+            largeIcon: 'ic_launcher', // أيقونة كبيرة
+            smallIcon: 'ic_notification', // أيقونة صغيرة
+            bigText: message, // نص موسع للإشعارات الطويلة
             shortcutId: 'captain_notifications',
-            channelId: 'captain_notifications',
-            id: data?.id || Math.floor(Math.random() * 1000000)
+            channelId: 'captain-notifications',
+            category: 'order', // فئة الإشعار
+            id: data?.id || Math.floor(Math.random() * 1000000),
+            when: Date.now(), // وقت الإشعار
+            usesChronometer: false,
+            invokeApp: true, // فتح التطبيق عند النقر
+            actions: ['قبول', 'رفض'] // أزرار إجراءات (اختياري)
           });
           
-          console.log('✅ React Native notification sent successfully');
+          console.log('✅ Enhanced React Native notification sent successfully');
           return true;
         } catch (rnError) {
-          console.warn('⚠️ React Native notifications not available:', rnError.message);
+          console.warn('⚠️ React Native notifications failed:', rnError.message);
         }
       }
       

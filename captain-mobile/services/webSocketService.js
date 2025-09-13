@@ -572,9 +572,12 @@ class WebSocketService {
       priority: priority === 'urgent' ? 'high' : 'medium'
     };
     
-    // Safe notification service usage
+    // Safe notification service usage مع تحسين Local Notification
     if (this._tryNotificationService(notification)) {
       console.log('✅ تم إرسال الإشعار عبر NotificationService');
+      
+      // عرض إشعار محلي فوري للطلبات الجديدة (مهم)
+      this._tryLocalNotification(notification);
     } else {
       // Fallback للـ console log
       console.log('🔔 Fallback notification:', {
