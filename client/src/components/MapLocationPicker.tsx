@@ -45,10 +45,25 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const [selectedPosition, setSelectedPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [showSimpleLocationPicker, setShowSimpleLocationPicker] = useState(false);
+  const [manualAddress, setManualAddress] = useState('');
+  const [selectedArea, setSelectedArea] = useState('');
   
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+
+  // Predefined areas in Suez with coordinates
+  const suezAreas = [
+    { name: 'الأربعين', lat: 30.0964396, lng: 32.4642696 },
+    { name: 'السويس الجديدة', lat: 30.0456789, lng: 32.5123456 },
+    { name: 'الجناين', lat: 30.0612345, lng: 32.4789012 },
+    { name: 'فيصل', lat: 30.0834567, lng: 32.4567890 },
+    { name: 'الضواحي', lat: 30.0723456, lng: 32.4901234 },
+    { name: 'المدينة المنورة', lat: 30.0545678, lng: 32.4812345 },
+    { name: 'الصدر', lat: 30.0767890, lng: 32.4656789 },
+    { name: 'الشيخ زايد', lat: 30.0890123, lng: 32.4734567 }
+  ];
 
   // Check for Google Maps availability
   useEffect(() => {
@@ -298,7 +313,70 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     setAddress('');
     setSearchQuery('');
     setSelectedPosition(null);
+    setManualAddress('');
+    setSelectedArea('');
     onLocationClear?.();
+  };
+
+  // Handle area selection
+  const handleAreaSelect = async (area: typeof suezAreas[0]) => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const locationData: LocationData = {
+        latitude: area.lat,
+        longitude: area.lng,
+        address: `منطقة ${area.name}، السويس`
+      };
+      
+      const validation = await validateDeliveryLocation(locationData);
+      setValidation(validation);
+      setAddress(locationData.address || '');
+      setSelectedArea(area.name);
+      
+      if (validation.isValid) {
+        onLocationSelect(locationData, validation);
+      }
+    } catch (error) {
+      console.error('Error validating area:', error);
+      setError('حدث خطأ في التحقق من المنطقة');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle manual address entry
+  const handleManualAddress = async () => {
+    if (!manualAddress.trim()) {
+      setError('يرجى إدخال العنوان');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      // Use default Suez coordinates for manual address
+      const locationData: LocationData = {
+        latitude: 30.0964396,
+        longitude: 32.4642696,
+        address: manualAddress.trim()
+      };
+      
+      const validation = await validateDeliveryLocation(locationData);
+      setValidation(validation);
+      setAddress(manualAddress.trim());
+      
+      if (validation.isValid) {
+        onLocationSelect(locationData, validation);
+      }
+    } catch (error) {
+      console.error('Error validating manual address:', error);
+      setError('حدث خطأ في التحقق من العنوان');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getValidationIcon = () => {
@@ -364,7 +442,62 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                 <Map className="h-4 w-4 ml-2" />
                 اختيار من الخريطة
               </Button>
+              
+              <Button
+                onClick={() => setShowSimpleLocationPicker(!showSimpleLocationPicker)}
+                className="w-full bg-green-600 hover:bg-green-700"
+                variant="outline"
+              >
+                <MapPin className="h-4 w-4 ml-2" />
+                {showSimpleLocationPicker ? 'إخفاء' : 'عرض'} خيارات أخرى
+              </Button>
             </div>
+
+            {/* Simple location picker alternatives */}
+            {showSimpleLocationPicker && (
+              <div className="space-y-4 border-t pt-4 mt-4">
+                <h4 className="font-medium text-gray-900 text-center">🏠 اختر منطقتك أو اكتب عنوانك</h4>
+                
+                {/* Manual address input */}
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      value={manualAddress}
+                      onChange={(e) => setManualAddress(e.target.value)}
+                      placeholder="اكتب عنوانك بالتفصيل..."
+                      onKeyPress={(e) => e.key === 'Enter' && handleManualAddress()}
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={handleManualAddress}
+                      disabled={isLoading || !manualAddress.trim()}
+                      size="sm"
+                    >
+                      تأكيد
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Area selection */}
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 text-center">أو اختر منطقتك:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {suezAreas.map((area) => (
+                      <Button
+                        key={area.name}
+                        onClick={() => handleAreaSelect(area)}
+                        disabled={isLoading}
+                        variant={selectedArea === area.name ? "default" : "outline"}
+                        size="sm"
+                        className="text-sm"
+                      >
+                        {area.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* Advanced map picker */
