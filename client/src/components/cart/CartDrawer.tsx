@@ -90,6 +90,72 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     }, 0);
   };
 
+  // Enhanced order summary calculations
+  const calculateOrderStats = () => {
+    if (!cart?.items) {
+      return {
+        totalItems: 0,
+        totalPages: 0,
+        colorPages: 0,
+        bwPages: 0,
+        paperTypes: {},
+        printJobs: 0,
+        regularProducts: 0
+      };
+    }
+
+    let totalItems = 0;
+    let totalPages = 0;
+    let colorPages = 0;
+    let bwPages = 0;
+    let printJobs = 0;
+    let regularProducts = 0;
+    const paperTypes: Record<string, number> = {};
+
+    cart.items.forEach(item => {
+      totalItems += item.quantity;
+      
+      // Check if it's a print job
+      const isPrintJob = (item.variant as any)?.isPrintJob || 
+                        (item as any).productSource === 'print_service' || 
+                        (item as any).printJobData;
+      
+      if (isPrintJob) {
+        printJobs += item.quantity;
+        
+        // Extract print job details
+        const printJobData = (item as any).printJobData || (item.variant as any)?.printJob || {};
+        const pages = printJobData.pages || 1;
+        const copies = printJobData.copies || item.quantity || 1;
+        const colorMode = printJobData.colorMode || 'grayscale';
+        const paperSize = printJobData.paperSize || 'A4';
+        
+        const totalPagesForItem = pages * copies;
+        totalPages += totalPagesForItem;
+        
+        if (colorMode === 'color') {
+          colorPages += totalPagesForItem;
+        } else {
+          bwPages += totalPagesForItem;
+        }
+        
+        paperTypes[paperSize] = (paperTypes[paperSize] || 0) + totalPagesForItem;
+      } else {
+        regularProducts += item.quantity;
+      }
+    });
+
+    return {
+      totalItems,
+      totalPages,
+      colorPages,
+      bwPages,
+      paperTypes,
+      printJobs,
+      regularProducts
+    };
+  };
+
   // Skeleton loader for cart items
   const CartItemSkeleton = () => (
     <Card className="p-3">
@@ -428,97 +494,370 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           )}
         </div>
 
-        {/* Footer - Only show for cart view with items */}
-        {!showActiveOrders && cart?.items && cart.items.length > 0 && (
-          <SheetFooter className="flex-shrink-0 border-t pt-4">
-            <div className="w-full space-y-4">
-              {/* Order Summary - Only Subtotal */}
-              <div className="space-y-2">
+        {/* Enhanced Order Summary Footer */}
+        {!showActiveOrders && cart?.items && cart.items.length > 0 && (() => {
+          const stats = calculateOrderStats();
+          return (
+            <SheetFooter className="flex-shrink-0 border-t pt-4">
+              <div className="w-full space-y-4">
+                {/* Palestine Support Message */}
                 <div className="bg-green-50 p-2 rounded-lg mb-2">
                   <div className="flex items-center gap-2 text-xs text-green-700">
                     <span>🇵🇸</span>
                     <span className="font-medium">بطلبك انت بتدعم فلسطين</span>
                   </div>
                 </div>
-                <div className="flex justify-between font-bold text-lg">
-                  <span>المجموع الفرعي</span>
-                  <span className="text-green-600" data-testid="cart-subtotal">
-                    <span className="currency-display">
-                      <span className="arabic-nums">{subtotal.toFixed(2)}</span> جنيه
-                    </span>
-                  </span>
-                </div>
-                <div className="text-xs text-gray-500 text-center">
-                  رسوم التوصيل والخدمة ستظهر عند إتمام الطلب
-                </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="space-y-2">
+                {/* Enhanced Order Summary Card */}
+                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-bold text-blue-900 flex items-center gap-2">
+                        📄 ملخص الطلب
+                      </h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPreviewModal({
+                          isOpen: true,
+                          imageUrl: '',
+                          filename: 'ملخص الطلب'
+                        })}
+                        className="text-blue-600 border-blue-300 hover:bg-blue-100"
+                        data-testid="preview-order-button"
+                      >
+                        👁️ معاينة تفصيلية
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2 text-sm">
+                      {/* Order Statistics */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex items-center justify-between bg-white/70 p-2 rounded-lg">
+                          <span className="text-gray-600 flex items-center gap-1">
+                            📦 إجمالي العناصر
+                          </span>
+                          <span className="font-bold text-blue-800">{stats.totalItems}</span>
+                        </div>
+                        
+                        {stats.totalPages > 0 && (
+                          <div className="flex items-center justify-between bg-white/70 p-2 rounded-lg">
+                            <span className="text-gray-600 flex items-center gap-1">
+                              📑 إجمالي الصفحات
+                            </span>
+                            <span className="font-bold text-blue-800">{stats.totalPages}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Print Job Details */}
+                      {stats.printJobs > 0 && (
+                        <div className="bg-white/70 p-3 rounded-lg space-y-2">
+                          <h4 className="font-semibold text-blue-800 flex items-center gap-1">
+                            🖨️ تفاصيل الطباعة
+                          </h4>
+                          
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {stats.colorPages > 0 && (
+                              <div className="flex justify-between">
+                                <span>🎨 ملون:</span>
+                                <span className="font-semibold">{stats.colorPages} صفحة</span>
+                              </div>
+                            )}
+                            {stats.bwPages > 0 && (
+                              <div className="flex justify-between">
+                                <span>⚫ أبيض وأسود:</span>
+                                <span className="font-semibold">{stats.bwPages} صفحة</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Paper Types */}
+                          {Object.keys(stats.paperTypes).length > 0 && (
+                            <div className="mt-2">
+                              <div className="text-xs font-semibold text-blue-700 mb-1">أنواع الورق:</div>
+                              <div className="flex flex-wrap gap-1">
+                                {Object.entries(stats.paperTypes).map(([type, count]) => (
+                                  <Badge 
+                                    key={type}
+                                    variant="secondary" 
+                                    className="text-xs bg-blue-100 text-blue-800"
+                                  >
+                                    {type}: {count}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Products Summary */}
+                      {stats.regularProducts > 0 && (
+                        <div className="bg-white/70 p-2 rounded-lg">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="flex items-center gap-1">
+                              🛍️ منتجات أخرى:
+                            </span>
+                            <span className="font-semibold">{stats.regularProducts}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Total Price */}
+                      <div className="border-t border-blue-200 pt-2 mt-3">
+                        <div className="flex justify-between font-bold text-lg">
+                          <span className="text-blue-900">💰 المجموع الفرعي</span>
+                          <span className="text-green-600" data-testid="cart-subtotal">
+                            <span className="currency-display">
+                              <span className="arabic-nums">{subtotal.toFixed(2)}</span> جنيه
+                            </span>
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 text-center mt-1">
+                          رسوم التوصيل والخدمة ستظهر عند إتمام الطلب
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleCheckout}
+                    className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg font-semibold"
+                    data-testid="checkout-button"
+                  >
+                    <Gift className="h-5 w-5 ml-2" />
+                    إتمام الطلب
+                  </Button>
+                </div>
+
+                {/* Clear Cart Button */}
                 <Button
-                  onClick={handleCheckout}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  data-testid="checkout-button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearCart()}
+                  disabled={isClearingCart}
+                  className="w-full text-red-600 hover:text-red-700"
+                  data-testid="clear-cart-button"
                 >
-                  <Gift className="h-4 w-4 ml-1" />
-                  إتمام الطلب
+                  {isClearingCart ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500 ml-1"></div>
+                  ) : (
+                    <Trash2 className="h-4 w-4 ml-1" />
+                  )}
+                  {isClearingCart ? 'جاري التفريغ...' : 'تفريغ السلة'}
                 </Button>
               </div>
-
-              {/* Clear Cart Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => clearCart()}
-                disabled={isClearingCart}
-                className="w-full text-red-600 hover:text-red-700"
-                data-testid="clear-cart-button"
-              >
-                {isClearingCart ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500 ml-1"></div>
-                ) : (
-                  <Trash2 className="h-4 w-4 ml-1" />
-                )}
-                {isClearingCart ? 'جاري التفريغ...' : 'تفريغ السلة'}
-              </Button>
-            </div>
-          </SheetFooter>
-        )}
+            </SheetFooter>
+          );
+        })()}
       </SheetContent>
     </Sheet>
 
-    {/* مودال معاينة الملف */}
+    {/* Enhanced Preview Modal */}
     <Dialog 
       open={previewModal.isOpen} 
       onOpenChange={(open) => setPreviewModal(prev => ({ ...prev, isOpen: open }))}
     >
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="text-right">
-            معاينة الملف: {previewModal.filename}
+          <DialogTitle className="text-right text-xl font-bold text-blue-900">
+            {previewModal.filename === 'ملخص الطلب' ? '📋 معاينة تفصيلية للطلب' : `معاينة الملف: ${previewModal.filename}`}
           </DialogTitle>
         </DialogHeader>
-        <div className="flex justify-center items-center p-4 bg-gray-50 rounded-lg min-h-[60vh] overflow-auto">
-          {previewModal.imageUrl ? (
-            <img
-              src={previewModal.imageUrl}
-              alt={previewModal.filename}
-              className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
-              onError={(e) => {
-                // في حالة فشل تحميل الصورة
-                (e.target as HTMLImageElement).src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTkgMTJoNm0tNiA0aDZtMiA1SDdhMiAyIDAgMDEtMi0yVjVhMiAyIDAgMDEyLTJoNS41ODZhMSAxIDAgMDEuNzA3LjI5M2w1LjQxNCA1LjQxNGExIDEgMCAwMS4yOTMuNzA3VjE5YTIgMiAwIDAxLTIgMnoiIHN0cm9rZT0iIzk5OTk5OSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+";
-                (e.target as HTMLImageElement).alt = "لا يمكن تحميل المعاينة";
-              }}
-            />
-          ) : (
-            <div className="text-center text-gray-500">
-              <svg className="h-24 w-24 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-              </svg>
-              <p>لا توجد معاينة متاحة لهذا الملف</p>
+        
+        {previewModal.filename === 'ملخص الطلب' ? (
+          // Order Summary Preview
+          <div className="p-6 max-h-[80vh] overflow-auto bg-gradient-to-br from-blue-50 to-indigo-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+              {/* Header */}
+              <div className="text-center border-b-2 border-blue-200 pb-4 mb-6">
+                <h1 className="text-2xl font-bold text-blue-900 mb-2">🏪 اطبعلي</h1>
+                <h2 className="text-lg font-semibold text-gray-700">فاتورة مبدئية - ملخص الطلب</h2>
+                <p className="text-sm text-gray-500 mt-2">تاريخ الإنشاء: {new Date().toLocaleDateString('ar-EG')}</p>
+              </div>
+
+              {(() => {
+                const stats = calculateOrderStats();
+                const subtotal = calculateSubtotal();
+                
+                return (
+                  <>
+                    {/* Order Statistics */}
+                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <h3 className="font-bold text-blue-800 mb-3 flex items-center gap-2">
+                          📊 إحصائيات الطلب
+                        </h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span>📦 إجمالي العناصر:</span>
+                            <span className="font-bold">{stats.totalItems}</span>
+                          </div>
+                          {stats.totalPages > 0 && (
+                            <div className="flex justify-between">
+                              <span>📑 إجمالي الصفحات:</span>
+                              <span className="font-bold">{stats.totalPages}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span>🖨️ مهام طباعة:</span>
+                            <span className="font-bold">{stats.printJobs}</span>
+                          </div>
+                          {stats.regularProducts > 0 && (
+                            <div className="flex justify-between">
+                              <span>🛍️ منتجات أخرى:</span>
+                              <span className="font-bold">{stats.regularProducts}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <h3 className="font-bold text-green-800 mb-3 flex items-center gap-2">
+                          💰 تفاصيل التكلفة
+                        </h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span>المجموع الفرعي:</span>
+                            <span className="font-bold">{subtotal.toFixed(2)} جنيه</span>
+                          </div>
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>رسوم التوصيل:</span>
+                            <span>محدد عند الدفع</span>
+                          </div>
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>رسوم الخدمة:</span>
+                            <span>محدد عند الدفع</span>
+                          </div>
+                          <div className="border-t pt-2 border-green-200">
+                            <div className="flex justify-between font-bold text-lg text-green-700">
+                              <span>الإجمالي المتوقع:</span>
+                              <span>{(subtotal + 10).toFixed(2)} جنيه*</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">* تقدير تقريبي شامل الرسوم</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Print Details */}
+                    {stats.printJobs > 0 && (
+                      <div className="bg-purple-50 p-4 rounded-lg mb-6">
+                        <h3 className="font-bold text-purple-800 mb-3 flex items-center gap-2">
+                          🖨️ تفاصيل الطباعة
+                        </h3>
+                        
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {(stats.colorPages > 0 || stats.bwPages > 0) && (
+                            <div>
+                              <h4 className="font-semibold text-purple-700 mb-2">تصنيف الألوان:</h4>
+                              <div className="space-y-1">
+                                {stats.colorPages > 0 && (
+                                  <div className="flex justify-between bg-white/70 p-2 rounded">
+                                    <span className="flex items-center gap-1">🎨 طباعة ملونة:</span>
+                                    <span className="font-bold">{stats.colorPages} صفحة</span>
+                                  </div>
+                                )}
+                                {stats.bwPages > 0 && (
+                                  <div className="flex justify-between bg-white/70 p-2 rounded">
+                                    <span className="flex items-center gap-1">⚫ أبيض وأسود:</span>
+                                    <span className="font-bold">{stats.bwPages} صفحة</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {Object.keys(stats.paperTypes).length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-purple-700 mb-2">أنواع الورق:</h4>
+                              <div className="space-y-1">
+                                {Object.entries(stats.paperTypes).map(([type, count]) => (
+                                  <div key={type} className="flex justify-between bg-white/70 p-2 rounded">
+                                    <span>📄 {type}:</span>
+                                    <span className="font-bold">{count} صفحة</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Items List */}
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                      <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        📋 تفاصيل العناصر
+                      </h3>
+                      <div className="space-y-2">
+                        {cart?.items?.map((item, index) => (
+                          <div key={item.id || index} className="bg-white p-3 rounded-lg shadow-sm border">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-800">{item.productName || item.title}</h4>
+                                {((item.variant as any)?.isPrintJob || (item as any).productSource === 'print_service') && (
+                                  <div className="text-xs text-blue-600 mt-1">
+                                    🖨️ مهمة طباعة
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-left">
+                                <p className="font-bold text-green-600">{getItemPrice(item).toFixed(2)} جنيه</p>
+                                <p className="text-sm text-gray-500">الكمية: {item.quantity}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="text-center border-t-2 border-blue-200 pt-4">
+                      <div className="bg-green-50 p-3 rounded-lg mb-4">
+                        <p className="text-green-700 font-semibold flex items-center justify-center gap-2">
+                          🇵🇸 بطلبك انت بتدعم فلسطين
+                        </p>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        📞 للاستفسار: اتصل بنا | 💬 خدمة العملاء متاحة 24/7
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2">
+                        هذه فاتورة مبدئية - الفاتورة النهائية ستصدر بعد تأكيد الطلب
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          // File Preview (Original functionality)
+          <div className="flex justify-center items-center p-4 bg-gray-50 rounded-lg min-h-[60vh] overflow-auto">
+            {previewModal.imageUrl ? (
+              <img
+                src={previewModal.imageUrl}
+                alt={previewModal.filename}
+                className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTkgMTJoNm0tNiA0aDZtMiA1SDdhMiAyIDAgMDEtMi0yVjVhMiAyIDAgMDEyLTJoNS41ODZhMSAxIDAgMDEuNzA3LjI5M2w1LjQxNCA1LjQxNGExIDEgMCAwMS4yOTMuNzA3VjE5YTIgMiAwIDAxLTIgMnoiIHN0cm9rZT0iIzk5OTk5OSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+";
+                  (e.target as HTMLImageElement).alt = "لا يمكن تحميل المعاينة";
+                }}
+              />
+            ) : (
+              <div className="text-center text-gray-500">
+                <svg className="h-24 w-24 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <p>لا توجد معاينة متاحة لهذا الملف</p>
+              </div>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
     </>
