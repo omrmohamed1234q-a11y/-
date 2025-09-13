@@ -21,6 +21,10 @@ import captainService from '../services/captainService.js';
 import apiService from '../services/apiService.js';
 import webSocketService from '../services/webSocketService.js';
 import locationService from '../services/locationService.js';
+import performanceService from '../services/performanceService.js';
+import offlineService from '../services/offlineService.js';
+import themeService from '../services/themeService.js';
+import QuickActionsPanel from '../components/QuickActionsPanel.tsx';
 
 const { width, height } = Dimensions.get('window');
 
@@ -62,8 +66,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     totalDeliveries: 0
   });
   
-  // إحصائيات الأداء
-  const [performanceStats, setPerformanceStats] = useState({
+  // إحصائيات الأداء المفصلة
+  const [detailedPerformanceStats, setDetailedPerformanceStats] = useState({
     weeklyEarnings: 0.00,
     monthlyEarnings: 0.00,
     averageDeliveryTime: 25,
@@ -73,6 +77,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   
   // حالة الاتصال والتحديثات
   const [wsConnected, setWsConnected] = useState(false);
+  
+  // حالات الخدمات المحسنة
+  const [performanceStats, setPerformanceStats] = useState(null);
+  const [offlineStatus, setOfflineStatus] = useState(null);
+  const [currentTheme, setCurrentTheme] = useState(null);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
   
   // Animations
@@ -106,6 +116,17 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
       captainService.removeEventListener('onNewOrder', handleNewOrder);
       captainService.removeEventListener('onStatsUpdate', handleStatsUpdate);
       captainService.removeEventListener('onConnectionChange', handleConnectionChange);
+      
+      // تنظيف معالجات الخدمات المحسنة الجديدة
+      try {
+        performanceService.removeAllEventListeners?.();
+        offlineService.removeAllEventListeners?.();
+        themeService.removeAllEventListeners?.();
+        console.log('🧹 Enhanced services event listeners cleaned up');
+      } catch (error) {
+        console.warn('⚠️ Error cleaning up enhanced service listeners:', error);
+      }
+      
       clearInterval(intervalId);
     };
   }, [isOnline, wsConnected]);
@@ -154,10 +175,28 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   };
   
   /**
-   * تهيئة الخدمات المتقدمة
+   * تهيئة الخدمات المتقدمة مع التحسينات الجديدة
    */
   const initializeServices = async () => {
     try {
+      console.log('🔧 تهيئة خدمات لوحة التحكم المحسنة...');
+      const timer = performanceService.startPerformanceTimer('dashboard_services_init');
+      
+      // تهيئة خدمة الأداء
+      await performanceService.initialize();
+      
+      // تهيئة خدمة العمل بدون اتصال
+      await offlineService.initialize();
+      
+      // تهيئة خدمة المظاهر
+      await themeService.initialize();
+      
+      // تحديث حالة المظهر
+      setCurrentTheme(themeService.getTheme());
+      
+      // مراقبة الأحداث للخدمات الجديدة
+      setupServiceEventListeners();
+      
       // تهيئة خدمة الموقع
       await locationService.initialize();
       
@@ -171,6 +210,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
       
       // التحقق من حالة WebSocket
       checkWebSocketConnection();
+      
+      // تحديث إحصائيات الأداء والحالة
+      updatePerformanceStats();
+      updateOfflineStatus();
+      
+      timer?.end();
+      console.log('✅ تم تهيئة الخدمات المحسنة بنجاح');
       
     } catch (error) {
       console.error('❌ خطأ في تهيئة الخدمات:', error);
@@ -259,7 +305,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         const response = await apiService.makeRequest('GET', `/api/captain/${captain.id}/performance`);
         
         if (response.success && response.data) {
-          setPerformanceStats(prev => ({
+          setDetailedPerformanceStats(prev => ({
             ...prev,
             ...response.data
           }));
@@ -290,6 +336,83 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const handleOrdersUpdate = (updatedOrders) => {
     setOrders(updatedOrders);
     console.log('📋 تحديث الطلبات:', updatedOrders?.length || 0);
+  };
+
+  /**
+   * إعداد معالجات أحداث الخدمات الجديدة
+   */
+  const setupServiceEventListeners = () => {
+    try {
+      // معالجات خدمة الأداء
+      performanceService.addEventListener('onPerformanceWarning', (data) => {
+        console.warn('⚠️ Performance warning:', data);
+        // إشعار بسيط للمطور
+        if (data.duration > 2000) {
+          console.log(`🐌 Slow operation detected: ${data.operation} took ${data.duration}ms`);
+        }
+      });
+
+      performanceService.addEventListener('onMemoryWarning', (data) => {
+        console.warn('🧠 Memory warning:', data);
+        // تنظيف تلقائي إذا لزم الأمر
+      });
+
+      // معالجات خدمة العمل بدون اتصال
+      offlineService.addEventListener('onOnlineStatusChanged', (data) => {
+        setIsOfflineMode(!data.isOnline);
+        console.log(`🌐 Network status: ${data.isOnline ? 'Online' : 'Offline'}`);
+        
+        // تحديث UI حسب حالة الاتصال
+        if (data.isOnline && data.wasOffline) {
+          console.log('🔄 Reconnected - syncing data...');
+          refreshStats();
+        }
+      });
+
+      offlineService.addEventListener('onSyncCompleted', (data) => {
+        console.log('✅ Offline sync completed:', data);
+        setLastUpdateTime(new Date());
+        
+        // تحديث البيانات بعد المزامنة
+        refreshStats();
+      });
+
+      // معالجات خدمة المظاهر
+      themeService.addEventListener('onThemeChanged', (data) => {
+        setCurrentTheme(data.theme);
+        console.log('🎨 Theme changed:', data.newTheme);
+      });
+      
+      console.log('✅ Service event listeners configured');
+    } catch (error) {
+      console.error('❌ Error setting up service listeners:', error);
+    }
+  };
+
+  /**
+   * تحديث إحصائيات الأداء
+   */
+  const updatePerformanceStats = () => {
+    try {
+      const stats = performanceService.getPerformanceReport();
+      setPerformanceStats(stats);
+      console.log('📊 Performance stats updated:', stats);
+    } catch (error) {
+      console.error('❌ Error updating performance stats:', error);
+    }
+  };
+
+  /**
+   * تحديث حالة العمل بدون اتصال
+   */
+  const updateOfflineStatus = () => {
+    try {
+      const status = offlineService.getOfflineStatus();
+      setOfflineStatus(status);
+      console.log('📱 Offline status updated:', status);
+    } catch (error) {
+      console.error('❌ Error updating offline status:', error);
+    }
   };
 
   /**
@@ -592,6 +715,78 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* لوحة الإجراءات السريعة المحسنة */}
+      <QuickActionsPanel
+        isAvailable={isAvailable}
+        connectionStatus={
+          wsConnected ? 'connected' : 
+          connectionStatus === 'connecting' ? 'connecting' : 
+          'disconnected'
+        }
+        onToggleAvailability={toggleAvailability}
+        onRefreshData={async () => {
+          const timer = performanceService.startPerformanceTimer('manual_refresh');
+          await Promise.all([
+            refreshOrders(),
+            refreshStats()
+          ]);
+          timer?.end();
+        }}
+        onEmergencyMode={() => {
+          Alert.alert(
+            '🚨 وضع الطوارئ مفعل',
+            'تم إشعار فريق الدعم الفني. سيتواصلون معك في أقرب وقت ممكن.',
+            [{ text: 'حسناً' }]
+          );
+        }}
+        onNavigateToOrders={() => {
+          // يمكن إضافة التنقل للطلبات هنا
+          Alert.alert('📋 الطلبات', 'عرض الطلبات المتاحة');
+        }}
+        onNavigateToEarnings={() => {
+          // يمكن إضافة التنقل للأرباح هنا
+          Alert.alert('💰 الأرباح', `إجمالي أرباح اليوم: ${dailyStats.earnings} جنيه`);
+        }}
+      />
+
+      {/* مؤشرات الحالة المتقدمة */}
+      {(performanceStats || offlineStatus || isOfflineMode) && (
+        <View style={styles.statusIndicators}>
+          <Text style={styles.sectionTitle}>حالة النظام</Text>
+          <View style={styles.statusGrid}>
+            {performanceStats && (
+              <View style={styles.statusCard}>
+                <Text style={styles.statusIcon}>⚡</Text>
+                <Text style={styles.statusValue}>
+                  {performanceStats.isHealthy ? 'ممتاز' : 'يحتاج تحسين'}
+                </Text>
+                <Text style={styles.statusLabel}>الأداء</Text>
+              </View>
+            )}
+            
+            {offlineStatus && (
+              <View style={styles.statusCard}>
+                <Text style={styles.statusIcon}>
+                  {offlineStatus.isOnline ? '🌐' : '📴'}
+                </Text>
+                <Text style={styles.statusValue}>
+                  {offlineStatus.isOnline ? 'متصل' : 'بدون اتصال'}
+                </Text>
+                <Text style={styles.statusLabel}>الشبكة</Text>
+              </View>
+            )}
+            
+            {offlineStatus?.queuedOperations > 0 && (
+              <View style={styles.statusCard}>
+                <Text style={styles.statusIcon}>📋</Text>
+                <Text style={styles.statusValue}>{offlineStatus.queuedOperations}</Text>
+                <Text style={styles.statusLabel}>في الانتظار</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* الإحصائيات اليومية */}
       <View style={styles.statsSection}>
@@ -924,6 +1119,45 @@ const styles = StyleSheet.create({
   },
   profileButtonText: {
     fontSize: 16,
+  },
+  // مؤشرات الحالة المتقدمة
+  statusIndicators: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  statusGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statusCard: {
+    backgroundColor: 'white',
+    width: (width - 60) / 3,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  statusIcon: {
+    fontSize: 24,
+    marginBottom: 6,
+  },
+  statusValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  statusLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
   },
 });
 
