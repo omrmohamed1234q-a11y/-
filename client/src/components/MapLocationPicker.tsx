@@ -24,6 +24,7 @@ interface MapLocationPickerProps {
 declare global {
   interface Window {
     google: any;
+    initGoogleMaps?: () => void;
   }
 }
 
@@ -50,9 +51,9 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   // Load Google Maps script
   useEffect(() => {
     if (showMap && !window.google) {
-      const script = document.createElement('script');
-      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      setIsLoading(true);
       
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
       console.log('🗺️ MapLocationPicker: Attempting to load Google Maps...');
       console.log('🔑 API Key available:', !!apiKey);
       
@@ -62,33 +63,64 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         setIsLoading(false);
         return;
       }
+
+      // تحقق من وجود script موجود
+      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+      if (existingScript) {
+        existingScript.remove();
+        console.log('🗑️ Removed existing Google Maps script');
+      }
       
-      const scriptUrl = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=ar&region=EG`;
+      const script = document.createElement('script');
+      const scriptUrl = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=ar&region=EG&callback=initGoogleMaps`;
       console.log('🌐 Loading script from:', scriptUrl.replace(apiKey, 'KEY_HIDDEN'));
+      
+      // إضافة callback function
+      window.initGoogleMaps = () => {
+        console.log('✅ Google Maps script loaded successfully via callback');
+        setIsMapLoaded(true);
+        setIsLoading(false);
+        setError('');
+        delete window.initGoogleMaps; // تنظيف
+      };
       
       script.src = scriptUrl;
       script.async = true;
-      script.onload = () => {
-        console.log('✅ Google Maps script loaded successfully');
-        setIsMapLoaded(true);
-      };
+      script.defer = true;
+      
       script.onerror = (e) => {
         console.error('❌ Google Maps script failed to load:', e);
-        console.error('🔍 Check if API key is valid and has proper restrictions');
-        console.error('🌐 Required APIs: Maps JavaScript API, Places API');
-        console.error('🔗 Current domain:', window.location.hostname);
+        console.error('🔍 Current domain:', window.location.hostname);
         console.error('🔗 Full URL:', window.location.href);
-        console.error('🔗 Required restriction: https://*.picard.replit.dev/*');
         
-        // عرض الخطأ لكن بقاء الخريطة متاحة للمحاولة مرة أخرى
-        setError(`فشل تحميل الخريطة. تأكد من إعدادات API في Google Cloud Console أو جرب مرة أخرى`);
-        setIsLoading(false);
-        // إزالة: setShowMap(false); عشان المستخدم يقدر يجرب تاني
+        // محاولة طريقة بديلة بدون callback
+        setTimeout(() => {
+          console.log('🔄 Trying alternative loading method...');
+          const fallbackScript = document.createElement('script');
+          const fallbackUrl = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=ar&region=EG`;
+          
+          fallbackScript.src = fallbackUrl;
+          fallbackScript.async = true;
+          fallbackScript.onload = () => {
+            console.log('✅ Google Maps loaded via fallback method');
+            setIsMapLoaded(true);
+            setIsLoading(false);
+            setError('');
+          };
+          fallbackScript.onerror = () => {
+            setError('فشل تحميل الخريطة. يرجى المحاولة مرة أخرى أو استخدام تحديد الموقع الحالي');
+            setIsLoading(false);
+          };
+          
+          document.head.appendChild(fallbackScript);
+        }, 2000);
       };
+      
       document.head.appendChild(script);
     } else if (showMap && window.google) {
       console.log('✅ Google Maps already loaded');
       setIsMapLoaded(true);
+      setIsLoading(false);
     }
   }, [showMap]);
 
