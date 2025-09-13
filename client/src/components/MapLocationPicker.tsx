@@ -77,7 +77,10 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         console.error('🔍 Check if API key is valid and has proper restrictions');
         console.error('🌐 Required APIs: Maps JavaScript API, Places API');
         console.error('🔗 Domain restriction: *.replit.dev/*');
-        setError('فشل في تحميل الخرائط. تحقق من صحة مفتاح API وإعداداته في Google Cloud Console');
+        
+        // تفعيل الوضع البديل - بدون خريطة
+        setError('الخريطة غير متاحة حالياً. يمكنك المتابعة بتحديد موقعك الحالي أو إدخال العنوان يدوياً');
+        setShowMap(false);
         setIsLoading(false);
       };
       document.head.appendChild(script);
