@@ -87,8 +87,18 @@ export function useWebSocket(): WebSocketHook {
     isConnecting: false
   });
 
-  // إنشاء اتصال WebSocket
+  // إنشاء اتصال WebSocket - TEMPORARILY DISABLED to fix auth loop
   const connect = useCallback(() => {
+    console.log('🚫 WebSocket connection TEMPORARILY DISABLED to fix auth loop');
+    console.log('🚫 Will not connect until authentication issues are resolved');
+    setState(prev => ({ 
+      ...prev, 
+      isConnecting: false, 
+      isConnected: false,
+      error: 'WebSocket temporarily disabled - authentication loop fix in progress'
+    }));
+    return;
+
     if (wsRef.current?.readyState === WebSocket.CONNECTING || 
         wsRef.current?.readyState === WebSocket.OPEN) {
       return;
@@ -207,9 +217,31 @@ export function useWebSocket(): WebSocketHook {
 
         stopPing();
 
-        // إعادة الاتصال التلقائي إذا لم يكن الإغلاق مقصوداً
-        if (event.code !== 1000) { // 1000 = normal closure
+        // FIXED: Stop authentication loop - don't reconnect on auth failures
+        const isNormalClosure = event.code === 1000;
+        const isAuthFailure = event.code === 4001 || event.code === 4000;
+        const isInvalidToken = event.reason === 'Authentication required';
+        
+        // Only reconnect if it's not a normal closure and not an auth failure
+        if (!isNormalClosure && !isAuthFailure && !isInvalidToken) {
+          console.log('🔄 Network error detected - scheduling reconnect');
           scheduleReconnect();
+        } else if (isAuthFailure || isInvalidToken) {
+          console.warn('🚫 AUTHENTICATION FAILED - Connection stopped permanently');
+          console.warn('🚫 Please login again to restore WebSocket connection');
+          
+          // Clear any pending reconnection attempts
+          if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+          }
+          
+          setState(prev => ({
+            ...prev,
+            error: 'Authentication required - please login again'
+          }));
+        } else {
+          console.log('🔌 WebSocket connection closed normally - no reconnection needed');
         }
       };
 
@@ -253,8 +285,11 @@ export function useWebSocket(): WebSocketHook {
     }, 30000); // ping كل 30 ثانية
   }, [stopPing]);
 
-  // جدولة إعادة الاتصال
+  // جدولة إعادة الاتصال - ENHANCED with call stack debugging
   const scheduleReconnect = useCallback(() => {
+    // DEBUG: Log call stack to find who's calling this
+    console.error('🔍 scheduleReconnect() called from:', new Error().stack);
+    
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
     }
@@ -340,9 +375,13 @@ export function useWebSocket(): WebSocketHook {
     setTimeout(connect, 100);
   }, [disconnect, connect]);
 
-  // تأثيرات الاتصال والتنظيف
+  // تأثيرات الاتصال والتنظيف - GLOBALLY DISABLED to fix auth loop
   useEffect(() => {
-    connect();
+    console.log('🚫 useWebSocket GLOBALLY DISABLED - Authentication loop fix in progress');
+    console.log('🚫 Multiple parallel connections detected - fixing architecture');
+    
+    // TEMPORARILY DISABLE all auto-connections
+    // connect();
 
     return () => {
       disconnect();

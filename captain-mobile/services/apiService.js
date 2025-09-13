@@ -458,17 +458,20 @@ class ApiService {
   }
 
   /**
-   * الحصول على بيانات الكابتن المحفوظة
+   * الحصول على بيانات الكابتن المحفوظة - محسن مع auto-initialization
    */
-  getCaptainData() {
+  async getCaptainData() {
+    await this.initialize(); // ضمان التهيئة قبل الإرجاع
     return this.captainData;
   }
 
   /**
-   * الحصول على JWT token
+   * الحصول على JWT token - محسن مع auto-initialization
    */
-  getAuthToken() {
+  async getAuthToken() {
+    await this.initialize(); // ضمان التهيئة قبل الإرجاع
     console.log('🔑 getAuthToken called, current token:', this.authToken ? 'EXISTS' : 'NULL');
+    console.log('🔑 Token length:', this.authToken?.length || 0);
     return this.authToken;
   }
 

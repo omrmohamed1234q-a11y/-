@@ -6937,7 +6937,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const activeConnections = new Map<string, {
     ws: WebSocket,
     userId?: string,
-    userType?: 'customer' | 'admin' | 'driver',
+    userType?: 'customer' | 'admin' | 'driver' | 'captain',
+    userData?: any,
+    authenticated?: boolean,
     lastSeen: Date
   }>();
 
@@ -7053,31 +7055,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Verify JWT token for security
     let isValidAuth = false;
+    let authenticatedUser = null;
     
-    // Strict JWT validation - no temp tokens allowed
-    if (token && supabase) {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-        if (user && user.id === userId && !error) {
-          isValidAuth = true;
-          console.log(`✅ JWT token verified and user ID matches: ${userId}`);
-        } else {
-          console.log(`❌ JWT validation failed: User ID mismatch or invalid token`);
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`🔍 Expected: ${userId}, Got: ${user?.id || 'none'}`);
+    // Support both Supabase JWT (customers) and Captain JWT (captains)
+    if (token) {
+      // Method 1: Captain JWT token validation
+      if (userType === 'captain') {
+        try {
+          const secretKey = process.env.JWT_SECRET || 'atbaali-captain-secret-key-2025';
+          const decoded = jwt.verify(token, secretKey) as any;
+          
+          if (decoded.captainId === userId && decoded.role === 'captain') {
+            isValidAuth = true;
+            authenticatedUser = {
+              id: decoded.captainId,
+              username: decoded.username,
+              email: decoded.email,
+              fullName: decoded.fullName,
+              role: 'captain'
+            };
+            console.log(`✅ Captain JWT token verified: ${userId} (${decoded.username})`);
+          } else {
+            console.log(`❌ Captain JWT validation failed: ID mismatch or invalid role`);
           }
+        } catch (error: any) {
+          console.log(`⚠️ Captain JWT verification error: ${error.message}`);
         }
-      } catch (error: any) {
-        console.log(`⚠️ JWT verification error: ${error.message}`);
+      }
+      
+      // Method 2: Supabase JWT token validation (customers/admins)
+      if (!isValidAuth && supabase) {
+        try {
+          const { data: { user }, error } = await supabase.auth.getUser(token);
+          if (user && user.id === userId && !error) {
+            isValidAuth = true;
+            authenticatedUser = user;
+            console.log(`✅ Supabase JWT token verified: ${userId}`);
+          } else {
+            console.log(`❌ Supabase JWT validation failed: User ID mismatch or invalid token`);
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`🔍 Expected: ${userId}, Got: ${user?.id || 'none'}`);
+            }
+          }
+        } catch (error: any) {
+          console.log(`⚠️ Supabase JWT verification error: ${error.message}`);
+        }
       }
     } else {
-      console.log(`❌ No valid JWT token provided for authentication`);
+      console.log(`❌ No JWT token provided for authentication`);
     }
     
-    if (userId && userType && isValidAuth) {
+    if (userId && userType && isValidAuth && authenticatedUser) {
       connection.userId = userId;
       connection.userType = userType;
       connection.authenticated = true;
+      connection.userData = authenticatedUser;
       activeConnections.set(connectionId, connection);
       
       console.log(`✅ User authenticated: ${userId} (${userType})`);
@@ -7085,10 +7117,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
           type: 'authenticated',
-          userId,
-          userType,
+          data: {
+            userId,
+            userType,
+            userData: authenticatedUser
+          },
           timestamp: Date.now()
         }));
+      }
+      
+      // Send test notification to captains after authentication
+      if (userType === 'captain') {
+        setTimeout(() => {
+          sendTestNotificationsToCaptain(userId, ws);
+        }, 2000);
       }
     } else {
       console.log(`❌ Authentication failed for user: ${userId}`);
@@ -7195,6 +7237,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     activeConnections.forEach((connection) => {
       if (connection.userId === userId && connection.ws.readyState === WebSocket.OPEN) {
         connection.ws.send(JSON.stringify(message));
+      }
+    });
+  }
+
+  // إرسال إشعارات تجريبية للكابتن بعد المصادقة
+  function sendTestNotificationsToCaptain(captainId: string, ws: WebSocket) {
+    console.log(`🧪 Sending test notifications to captain: ${captainId}`);
+    
+    const testNotifications = [
+      {
+        type: 'new_order_available',
+        data: {
+          id: `order_${Date.now()}`,
+          orderNumber: `ORD-${Math.floor(Math.random() * 10000)}`,
+          customerName: 'أحمد محمد',
+          customerPhone: '01001234567',
+          totalAmount: 150.5,
+          priority: 'normal',
+          deliveryAddress: 'شارع التحرير، القاهرة',
+          estimatedDelivery: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          items: [
+            { name: 'طباعة مستندات', quantity: 10, price: 15.05 }
+          ]
+        },
+        timestamp: Date.now()
+      },
+      {
+        type: 'order_status_update',
+        data: {
+          id: `order_${Date.now() - 1000}`,
+          orderNumber: 'ORD-8765',
+          status: 'printing',
+          statusText: 'جاري الطباعة',
+          message: 'تم بدء طباعة طلبك بنجاح',
+          timestamp: Date.now()
+        }
+      },
+      {
+        type: 'system_message',
+        data: {
+          id: `sys_${Date.now()}`,
+          type: 'announcement',
+          title: 'إعلان مهم',
+          message: 'سيتم تحديث النظام الليلة من 2:00 ص إلى 4:00 ص',
+          priority: 'medium',
+          timestamp: Date.now()
+        }
+      },
+      {
+        type: 'location_update_request',
+        data: {
+          message: 'يرجى تحديث موقعك للحصول على طلبات أفضل',
+          timestamp: Date.now(),
+          requestId: `loc_${Date.now()}`
+        }
+      }
+    ];
+
+    testNotifications.forEach((notification, index) => {
+      setTimeout(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(notification));
+          console.log(`📤 Test notification sent: ${notification.type}`);
+        }
+      }, (index + 1) * 3000); // Send every 3 seconds
+    });
+  }
+
+  // دالة إرسال إشعار جديد لجميع الكباتن
+  function broadcastToCaptains(notification: any) {
+    activeConnections.forEach((connection) => {
+      if (connection.userType === 'captain' && 
+          connection.authenticated && 
+          connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify(notification));
       }
     });
   }

@@ -56,13 +56,33 @@ export default function App() {
       
       if (hasAuth) {
         const state = captainService.getState();
-        setIsAuthenticated(true);
-        setCaptain(state.captain);
         
-        // الاتصال بالخدمات مع auth data
-        captainService.connectWebSocket();
+        // التحقق الصارم من JWT token قبل الاتصال بـ WebSocket
+        const authToken = await captainService.getAuthToken();
+        const hasValidToken = authToken && authToken.length > 10;
+        const hasValidCaptain = state.captain && state.captain.id;
         
-        console.log('✅ Restored saved authentication data');
+        console.log('🔐 Auth validation:', {
+          hasAuthToken: !!authToken,
+          tokenLength: authToken?.length || 0,
+          hasValidCaptain: hasValidCaptain,
+          captainId: state.captain?.id
+        });
+        
+        if (hasValidToken && hasValidCaptain) {
+          setIsAuthenticated(true);
+          setCaptain(state.captain);
+          
+          // الاتصال بالخدمات مع auth data صحيح فقط
+          captainService.connectWebSocket();
+          
+          console.log('✅ Restored saved authentication data with valid JWT');
+        } else {
+          // مسح البيانات المعطوبة ومنع الاتصال
+          console.warn('⚠️ Invalid authentication data found - clearing and preventing connection');
+          await captainService.clearAuthData();
+          console.log('📱 Cleared invalid authentication data');
+        }
       } else {
         console.log('📱 No saved authentication found');
       }

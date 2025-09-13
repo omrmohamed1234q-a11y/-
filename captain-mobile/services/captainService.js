@@ -118,7 +118,7 @@ class CaptainService {
         console.log('✅ Login successful:', this.captain?.username);
 
         // Connect to WebSocket with proper auth data
-        this.connectWebSocket();
+        await this.connectWebSocket();
 
         // بدء تتبع الموقع إذا كان الكابتن متاح
         if (this.isAvailable) {
@@ -177,28 +177,76 @@ class CaptainService {
   }
 
   /**
-   * الاتصال بـ WebSocket مع JWT token صحيح
+   * الاتصال بـ WebSocket مع JWT token صحيح - محسن مع validation gates وasync support
    */
-  connectWebSocket() {
+  async connectWebSocket() {
     console.log('🔗 connectWebSocket called...');
-    const authToken = apiService.getAuthToken();
-    const captainData = apiService.getCaptainData();
+    
+    // التحقق من حالة المصادقة أولاً
+    if (!this.isAuthenticated) {
+      console.warn('⚠️ Cannot connect WebSocket - captain not authenticated');
+      this.notifyHandlers('onConnectionChange', { 
+        isConnected: false, 
+        error: 'Authentication required' 
+      });
+      return false;
+    }
+
+    // استخدام async methods مع await
+    const authToken = await apiService.getAuthToken();
+    const captainData = await apiService.getCaptainData();
     
     console.log('🔑 WebSocket connection data:', {
       captainExists: !!this.captain,
       authTokenExists: !!authToken,
+      authTokenLength: authToken?.length || 0,
       captainId: this.captain?.id,
       captainDataExists: !!captainData
     });
     
-    if (this.captain && authToken) {
+    // التحقق الصارم من متطلبات الاتصال
+    if (!this.captain) {
+      console.error('❌ WebSocket connection failed - captain data missing');
+      this.notifyHandlers('onConnectionChange', { 
+        isConnected: false, 
+        error: 'Captain data missing' 
+      });
+      return false;
+    }
+
+    if (!authToken || authToken.length < 10) {
+      console.error('❌ WebSocket connection failed - invalid or missing JWT token');
+      console.error('  - authToken exists:', !!authToken);
+      console.error('  - authToken length:', authToken?.length || 0);
+      this.notifyHandlers('onConnectionChange', { 
+        isConnected: false, 
+        error: 'Invalid JWT token' 
+      });
+      return false;
+    }
+
+    if (!this.captain.id) {
+      console.error('❌ WebSocket connection failed - captain ID missing');
+      this.notifyHandlers('onConnectionChange', { 
+        isConnected: false, 
+        error: 'Captain ID missing' 
+      });
+      return false;
+    }
+
+    // جميع الشروط متوفرة - الاتصال مسموح
+    try {
       const baseURL = apiService.baseURL;
-      console.log('🔗 Connecting WebSocket with JWT token to:', baseURL);
+      console.log('✅ WebSocket preconditions met - establishing connection to:', baseURL);
       webSocketService.connect(baseURL, authToken, this.captain.id, captainData);
-    } else {
-      console.error('❌ Cannot connect WebSocket - missing auth token or captain data');
-      console.error('  - this.captain:', !!this.captain);
-      console.error('  - authToken:', !!authToken);
+      return true;
+    } catch (error) {
+      console.error('❌ WebSocket connection error:', error);
+      this.notifyHandlers('onConnectionChange', { 
+        isConnected: false, 
+        error: error.message 
+      });
+      return false;
     }
   }
 
@@ -452,25 +500,64 @@ class CaptainService {
   }
 
   /**
-   * تحميل بيانات المصادقة المحفوظة
+   * تحميل بيانات المصادقة المحفوظة - محسن مع JWT validation
    */
   async loadSavedAuth() {
     try {
       await apiService.initialize();
       
-      if (apiService.isAuthenticated()) {
-        this.captain = apiService.getCaptainData();
+      // التحقق الصارم من JWT token صحيح
+      const authToken = await apiService.getAuthToken();
+      const captainData = await apiService.getCaptainData();
+      
+      console.log('🔐 loadSavedAuth validation:', {
+        hasToken: !!authToken,
+        tokenLength: authToken?.length || 0,
+        hasCaptainData: !!captainData,
+        captainId: captainData?.id
+      });
+      
+      // التحقق الصارم: token صحيح + captain data صحيح
+      const hasValidToken = authToken && authToken.length > 10;
+      const hasValidCaptain = captainData && captainData.id;
+      
+      if (hasValidToken && hasValidCaptain) {
+        this.captain = captainData;
         this.isAuthenticated = true;
         
-        console.log('📱 Restored saved authentication:', this.captain?.username);
+        console.log('✅ loadSavedAuth: Valid authentication restored:', this.captain?.username);
         return true;
+      } else {
+        // مسح البيانات المعطوبة
+        console.warn('⚠️ loadSavedAuth: Invalid authentication data found - clearing');
+        await apiService.clearAuthData();
+        this.captain = null;
+        this.isAuthenticated = false;
+        return false;
       }
       
-      return false;
     } catch (error) {
       console.error('❌ Failed to load saved auth:', error);
+      this.captain = null;
+      this.isAuthenticated = false;
       return false;
     }
+  }
+
+  /**
+   * الحصول على JWT token
+   */
+  async getAuthToken() {
+    return await apiService.getAuthToken();
+  }
+
+  /**
+   * مسح بيانات المصادقة
+   */
+  async clearAuthData() {
+    await apiService.clearAuthData();
+    this.captain = null;
+    this.isAuthenticated = false;
   }
 
   /**
