@@ -76,10 +76,12 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         console.error('❌ Google Maps script failed to load:', e);
         console.error('🔍 Check if API key is valid and has proper restrictions');
         console.error('🌐 Required APIs: Maps JavaScript API, Places API');
-        console.error('🔗 Domain restriction: *.replit.dev/*');
+        console.error('🔗 Current domain:', window.location.hostname);
+        console.error('🔗 Full URL:', window.location.href);
+        console.error('🔗 Required restriction: https://*.picard.replit.dev/*');
         
         // تفعيل الوضع البديل - بدون خريطة
-        setError('الخريطة غير متاحة حالياً. يمكنك المتابعة بتحديد موقعك الحالي أو إدخال العنوان يدوياً');
+        setError(`الخريطة غير متاحة حالياً. أضف ${window.location.hostname} للقيود في Google Cloud Console`);
         setShowMap(false);
         setIsLoading(false);
       };
