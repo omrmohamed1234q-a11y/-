@@ -31,6 +31,7 @@ interface DashboardScreenProps {
   onToggleAvailability?: (isAvailable: boolean) => void;
   onAcceptOrder?: (orderId: string) => void;
   onNavigateToTracking?: () => void;
+  onNavigateToProfile?: () => void;
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ 
@@ -39,7 +40,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onLogout,
   onToggleAvailability,
   onAcceptOrder,
-  onNavigateToTracking
+  onNavigateToTracking,
+  onNavigateToProfile
 }) => {
   // حالة الكابتن والبيانات الأساسية
   const [isOnline, setIsOnline] = useState(false);
@@ -544,12 +546,20 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {captain?.vehicleType === 'motorcycle' ? '🏍️' : '🚗'} {captain?.vehicleNumber || ''}
             </Text>
           </View>
-          <TouchableOpacity 
-            style={styles.logoutButton}
-            onPress={onLogout}
-          >
-            <Text style={styles.logoutButtonText}>تسجيل خروج</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity 
+              style={styles.profileButton}
+              onPress={() => onNavigateToProfile && onNavigateToProfile()}
+            >
+              <Text style={styles.profileButtonText}>👤</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.logoutButton}
+              onPress={onLogout}
+            >
+              <Text style={styles.logoutButtonText}>تسجيل خروج</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* حالة الاتصال */}
@@ -898,6 +908,22 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  profileButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileButtonText: {
+    fontSize: 16,
   },
 });
 

@@ -43,7 +43,7 @@ export interface CaptainType {
   phone?: string;
   email?: string;
   vehicleType?: string;
-  vehiclePlate?: string;
+  vehicleNumber?: string;
   rating?: number;
   totalDeliveries?: number;
   isAvailable?: boolean;

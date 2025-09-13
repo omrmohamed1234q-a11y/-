@@ -25,6 +25,34 @@ class CaptainService {
       onlineTime: 0
     };
     
+    // إعدادات التطبيق (تحفظ في الذاكرة)
+    this.appSettings = {
+      notifications: {
+        enabled: true,
+        sound: true,
+        vibration: true,
+        newOrders: true,
+        orderUpdates: true,
+        systemAlerts: true
+      },
+      location: {
+        highAccuracy: true,
+        backgroundTracking: true,
+        shareLocation: true
+      },
+      app: {
+        language: 'ar',
+        theme: 'light',
+        autoLogout: false,
+        keepScreenOn: false
+      },
+      privacy: {
+        analytics: true,
+        crashReports: true,
+        dataSharing: false
+      }
+    };
+    
     // callbacks للأحداث
     this.eventHandlers = {
       onAuthChange: [],
@@ -32,7 +60,8 @@ class CaptainService {
       onNewOrder: [],
       onStatsUpdate: [],
       onLocationUpdate: [],
-      onConnectionChange: []
+      onConnectionChange: [],
+      onSettingsChange: []
     };
     
     // تهيئة الخدمات
@@ -587,6 +616,94 @@ class CaptainService {
     await apiService.clearAuthData();
     this.captain = null;
     this.isAuthenticated = false;
+  }
+
+  /**
+   * تحديث الملف الشخصي
+   */
+  async updateProfile(captainId, profileData) {
+    try {
+      console.log('💾 Updating captain profile...');
+      
+      // محاكاة تحديث الملف الشخصي
+      const result = { success: true, captain: { ...this.captain, ...profileData } };
+      
+      if (result.success) {
+        // تحديث البيانات المحلية
+        this.captain = {
+          ...this.captain,
+          ...profileData
+        };
+        
+        this.notifyHandlers('onStatsUpdate', {
+          captain: this.captain
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to update profile:', error);
+      return { success: false, error: 'فشل في تحديث الملف الشخصي' };
+    }
+  }
+
+  /**
+   * جلب إعدادات التطبيق
+   */
+  async getSettings() {
+    try {
+      console.log('📄 Getting app settings...', this.appSettings ? 'Found saved settings' : 'Using defaults');
+      // إرجاع الإعدادات المحفوظة أو الافتراضية
+      return this.appSettings || {
+        notifications: {
+          enabled: true,
+          sound: true,
+          vibration: true,
+          newOrders: true,
+          orderUpdates: true,
+          systemAlerts: true
+        },
+        location: {
+          highAccuracy: true,
+          backgroundTracking: true,
+          shareLocation: true
+        },
+        app: {
+          language: 'ar',
+          theme: 'light',
+          autoLogout: false,
+          keepScreenOn: false
+        },
+        privacy: {
+          analytics: true,
+          crashReports: true,
+          dataSharing: false
+        }
+      };
+    } catch (error) {
+      console.error('❌ Failed to get settings:', error);
+      return null;
+    }
+  }
+
+  /**
+   * حفظ إعدادات التطبيق
+   */
+  async saveSettings(settings) {
+    try {
+      console.log('💾 Saving app settings...', settings);
+      // حفظ في الذاكرة (يمكن إضافة AsyncStorage لاحقاً)
+      this.appSettings = { ...this.appSettings, ...settings };
+      
+      // إشعار المستمعين بتغيير الإعدادات
+      this.notifyHandlers('onSettingsChange', { settings: this.appSettings });
+      
+      console.log('✅ Settings saved successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Failed to save settings:', error);
+      return { success: false, error: 'فشل في حفظ الإعدادات' };
+    }
   }
 
   /**

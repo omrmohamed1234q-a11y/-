@@ -22,6 +22,8 @@ import LoginScreen from './screens/LoginScreen.tsx';
 import DashboardScreen from './screens/DashboardScreen.tsx';
 import LoadingScreen from './screens/LoadingScreen.tsx';
 import DeliveryTrackingScreen from './screens/DeliveryTrackingScreen.tsx';
+import ProfileScreen from './screens/ProfileScreen.tsx';
+import SettingsScreen from './screens/SettingsScreen.tsx';
 
 const { width, height } = Dimensions.get('window');
 
@@ -253,6 +255,31 @@ export default function App() {
             route={{}}
           />
         );
+      case 'profile':
+        return (
+          <ProfileScreen
+            navigation={{
+              goBack: () => setCurrentScreen('dashboard'),
+              navigate: (screen) => setCurrentScreen(screen)
+            }}
+            route={{}}
+          />
+        );
+      case 'settings':
+        return (
+          <SettingsScreen
+            navigation={{
+              goBack: () => setCurrentScreen('profile'),
+              navigate: (screen) => setCurrentScreen(screen),
+              reset: (options: any) => {
+                setCurrentScreen('login');
+                setIsAuthenticated(false);
+                setCaptain(null);
+              }
+            }}
+            route={{}}
+          />
+        );
       case 'dashboard':
       default:
         return (
@@ -263,6 +290,7 @@ export default function App() {
             onToggleAvailability={handleToggleAvailability}
             onAcceptOrder={handleAcceptOrder}
             onNavigateToTracking={() => setCurrentScreen('delivery-tracking')}
+            onNavigateToProfile={() => setCurrentScreen('profile')}
           />
         );
     }
