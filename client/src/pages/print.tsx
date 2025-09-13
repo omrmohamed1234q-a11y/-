@@ -1118,7 +1118,6 @@ export default function Print() {
           filename: generatePrintJobFilename(printSettings, file.name),
           fileUrl: uploadedUrls[index],
           fileSize: file.size,
-          fileType: file.type,
           pages: 1,
           copies: printSettings.copies,
           colorMode: printSettings.colorMode,
@@ -1129,6 +1128,7 @@ export default function Print() {
           // معلومات المعاينة
           previewUrl: uploadResult?.previewUrl,
           fileId: (uploadResult as any)?.fileId,
+          fileType: (uploadResult as any)?.type || file.type, // استخدام النوع من نتيجة الرفع أو الملف الأصلي
           provider: uploadResult?.provider
         };
       });

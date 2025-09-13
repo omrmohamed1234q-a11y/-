@@ -12,6 +12,8 @@ export interface UploadResult {
   error?: string;
   fileId?: string;
   folderLink?: string;
+  type?: string; // MIME type
+  name?: string; // اسم الملف
 }
 
 // Upload file using Cloudinary with account integration
@@ -36,7 +38,9 @@ export async function uploadFile(file: File): Promise<UploadResult> {
         downloadUrl: result.url!,
         previewUrl: result.previewUrl,
         provider: 'cloudinary' as const,
-        fileId: result.publicId
+        fileId: result.publicId,
+        type: file.type, // MIME type
+        name: file.name // اسم الملف
       };
       
       // Notify server about successful upload
@@ -107,7 +111,9 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
         previewUrl: result.webViewLink,
         provider: 'google_drive' as const,
         fileId: result.fileId,
-        folderLink: result.folderLink
+        folderLink: result.folderLink,
+        type: file.type, // MIME type
+        name: file.name // اسم الملف
       };
       
       // Notify server about successful upload
