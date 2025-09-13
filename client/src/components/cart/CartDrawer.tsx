@@ -65,14 +65,21 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     onClose();
   };
 
-  const handleQuickOrder = async () => {
-    // Quick order with default settings
-    onClose();
-    setLocation('/checkout?quick=true');
-  };
 
   const calculateSubtotal = () => {
-    return cart?.items?.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0) || 0;
+    if (!cart?.items) return 0;
+    
+    return cart.items.reduce((sum, item) => {
+      let itemPrice = parseFloat(item.price);
+      
+      // Apply 10% discount for black and white printing
+      if (item.variant?.printJob?.colorType === 'black_white' || 
+          (item.printJobData && item.printJobData.colorType === 'black_white')) {
+        itemPrice = itemPrice * 0.9; // 10% discount
+      }
+      
+      return sum + (itemPrice * item.quantity);
+    }, 0);
   };
 
   // Skeleton loader for cart items
@@ -96,21 +103,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   );
 
   const subtotal = calculateSubtotal();
-  
-  // New payment system calculations
-  const baseFare = 5; // Fixed fee
-  const costPerKm = 1.5; // Cost per kilometer  
-  const estimatedDistance = 5; // Default distance estimate for Suez area
-  const minimumOrderAmount = 45; // Minimum order amount for delivery
-  
-  // Service Fee: (Order Value × 5%) + Fixed Fee
-  const serviceFee = (subtotal * 0.05) + baseFare;
-  
-  // Delivery Fee: Base Fare + (Distance × Cost per km)
-  const deliveryFee = baseFare + (estimatedDistance * costPerKm);
-  
-  // New Total: Order Value + Delivery Fee + Service Fee
-  const total = subtotal + deliveryFee + serviceFee;
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -227,7 +219,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 {/* Check if this is a print job - disable quantity controls for print jobs */}
-                                {(item.variant?.isPrintJob || item.productSource === 'print_service' || item.printJobData) ? (
+                                {((item.variant as any)?.isPrintJob || (item as any).productSource === 'print_service' || (item as any).printJobData) ? (
                                   // For print jobs - show quantity but disable controls
                                   <>
                                     <Button
@@ -300,9 +292,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                   </span>
                                 </div>
                                 {/* Debug info for print services */}
-                                {(item.variant?.isPrintJob || item.productSource === 'print_service') && (
+                                {((item.variant as any)?.isPrintJob || (item as any).productSource === 'print_service') && (
                                   <div className="text-xs text-blue-500 mt-1">
-                                    Debug: price={item.price}, copies={item.variant?.printJob?.copies}, pages={item.variant?.printJob?.pages}
+                                    Debug: price={item.price}, copies={(item.variant as any)?.printJob?.copies}, pages={(item.variant as any)?.printJob?.pages}
                                   </div>
                                 )}
                               </div>
@@ -420,51 +412,30 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         {!showActiveOrders && cart?.items && cart.items.length > 0 && (
           <SheetFooter className="flex-shrink-0 border-t pt-4">
             <div className="w-full space-y-4">
-              {/* Order Summary */}
+              {/* Order Summary - Only Subtotal */}
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>المجموع الفرعي</span>
-                  <span data-testid="cart-subtotal">{subtotal.toFixed(0)} جنيه</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>رسوم التوصيل</span>
-                  <span data-testid="cart-delivery">
-                    {deliveryFee.toFixed(0)} جنيه
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>رسوم الخدمة</span>
-                  <span data-testid="service-fee">
-                    {serviceFee.toFixed(0)} جنيه
-                  </span>
-                </div>
                 <div className="bg-green-50 p-2 rounded-lg mb-2">
                   <div className="flex items-center gap-2 text-xs text-green-700">
                     <span>🇵🇸</span>
                     <span className="font-medium">بطلبك انت بتدعم فلسطين</span>
                   </div>
                 </div>
-                <Separator />
-                <div className="flex justify-between font-bold">
-                  <span>الإجمالي</span>
-                  <span className="text-green-600" data-testid="cart-total">
-                    {total.toFixed(0)} جنيه
+                <div className="flex justify-between font-bold text-lg">
+                  <span>المجموع الفرعي</span>
+                  <span className="text-green-600" data-testid="cart-subtotal">
+                    {subtotal.toFixed(0)} جنيه
                   </span>
+                </div>
+                <div className="text-xs text-gray-500 text-center">
+                  رسوم التوصيل والخدمة ستظهر عند إتمام الطلب
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleQuickOrder}
-                  data-testid="quick-order-button"
-                >
-                  طلب سريع
-                </Button>
+              <div className="space-y-2">
                 <Button
                   onClick={handleCheckout}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="w-full bg-green-600 hover:bg-green-700"
                   data-testid="checkout-button"
                 >
                   <Gift className="h-4 w-4 ml-1" />

@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ShoppingBag, MapPin, CreditCard, Truck, Gift, Star, Package } from 'lucide-react';
 import PaymentMethods from '@/components/PaymentMethods';
-import LocationPicker from '@/components/LocationPicker';
+import MapLocationPicker from '@/components/MapLocationPicker';
 import type { LocationData, DeliveryValidation } from '@/utils/locationUtils';
 
 export default function CheckoutPage() {
@@ -42,6 +42,7 @@ export default function CheckoutPage() {
 
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
   const [orderCreated, setOrderCreated] = useState(false);
+  const [showOrderSummary, setShowOrderSummary] = useState(false);
 
   // Check if cart is empty and redirect
   useEffect(() => {
@@ -79,6 +80,12 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Show order summary with fees first
+    if (!showOrderSummary) {
+      setShowOrderSummary(true);
+      return;
+    }
     
     // Validation
     if (!formData.customerName.trim()) {
@@ -297,9 +304,9 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
 
-              {/* Location Picker - Only show if delivery is selected */}
+              {/* Enhanced Map Location Picker - Only show if delivery is selected */}
               {formData.deliveryMethod === 'delivery' && (
-                <LocationPicker
+                <MapLocationPicker
                   onLocationSelect={handleLocationSelect}
                   onLocationClear={handleLocationClear}
                   currentLocation={selectedLocation || undefined}
@@ -458,42 +465,60 @@ export default function CheckoutPage() {
 
                 {/* Pricing Summary */}
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>المجموع الفرعي</span>
-                    <span data-testid="checkout-subtotal">{subtotal.toFixed(0)} جنيه</span>
-                  </div>
-                  {formData.deliveryMethod === 'delivery' && (
-                    <div className="flex justify-between text-sm">
-                      <span>رسوم التوصيل</span>
-                      <span data-testid="checkout-delivery">
-                        {deliveryFee.toFixed(0)} جنيه
-                      </span>
-                    </div>
+                  {!showOrderSummary ? (
+                    /* Initial view - only subtotal */
+                    <>
+                      <div className="flex justify-between font-bold text-lg">
+                        <span>المجموع الفرعي</span>
+                        <span className="text-green-600" data-testid="checkout-subtotal">
+                          {subtotal.toFixed(0)} جنيه
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 text-center mt-2">
+                        رسوم التوصيل والخدمة ستظهر عند إتمام الطلب
+                      </div>
+                    </>
+                  ) : (
+                    /* After clicking submit - show all fees */
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>المجموع الفرعي</span>
+                        <span data-testid="checkout-subtotal">{subtotal.toFixed(0)} جنيه</span>
+                      </div>
+                      {formData.deliveryMethod === 'delivery' && (
+                        <div className="flex justify-between text-sm">
+                          <span>رسوم التوصيل</span>
+                          <span data-testid="checkout-delivery">
+                            {deliveryFee.toFixed(0)} جنيه
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm">
+                        <span>رسوم الخدمة (5% + 5 ج.م)</span>
+                        <span data-testid="service-fee">
+                          {serviceFee.toFixed(0)} جنيه
+                        </span>
+                      </div>
+                      {pointsDiscount > 0 && (
+                        <div className="flex justify-between text-sm text-green-600">
+                          <span>خصم النقاط</span>
+                          <span>-{pointsDiscount} جنيه</span>
+                        </div>
+                      )}
+                      <Separator />
+                      <div className="flex justify-between font-bold text-lg">
+                        <span>الإجمالي</span>
+                        <span className="text-green-600" data-testid="checkout-total">
+                          {total.toFixed(0)} جنيه
+                        </span>
+                      </div>
+                    </>
                   )}
-                  <div className="flex justify-between text-sm">
-                    <span>رسوم الخدمة (5% + 5 ج.م)</span>
-                    <span data-testid="service-fee">
-                      {serviceFee.toFixed(0)} جنيه
-                    </span>
-                  </div>
                   <div className="bg-green-50 p-2 rounded-lg">
                     <div className="flex items-center gap-2 text-sm text-green-700">
                       <span>🇵🇸</span>
                       <span className="font-medium">بطلبك انت بتدعم فلسطين</span>
                     </div>
-                  </div>
-                  {pointsDiscount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>خصم النقاط</span>
-                      <span>-{pointsDiscount} جنيه</span>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>الإجمالي</span>
-                    <span className="text-green-600" data-testid="checkout-total">
-                      {total.toFixed(0)} جنيه
-                    </span>
                   </div>
                 </div>
 
@@ -514,7 +539,7 @@ export default function CheckoutPage() {
                 {/* Submit Button */}
                 <Button
                   onClick={handleSubmit}
-                  disabled={isCheckingOut || !canDeliver}
+                  disabled={isCheckingOut || (!showOrderSummary && !canDeliver)}
                   className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
                   data-testid="submit-order-button"
                 >
@@ -523,10 +548,15 @@ export default function CheckoutPage() {
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent ml-2" />
                       جاري إنشاء الطلب...
                     </>
+                  ) : !showOrderSummary ? (
+                    <>
+                      <Gift className="h-4 w-4 ml-2" />
+                      إتمام الطلب
+                    </>
                   ) : (
                     <>
                       <Gift className="h-4 w-4 ml-2" />
-                      إتمام الطلب (مؤقت)
+                      تأكيد الطلب ومتابعة الدفع
                     </>
                   )}
                 </Button>
