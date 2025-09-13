@@ -57,47 +57,46 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       
       // Check if Google Maps is already loaded
       if (window.google && window.google.maps) {
-        console.log('✅ Google Maps already available from HTML head');
+        console.log('✅ Google Maps already available');
         setIsMapLoaded(true);
         setIsLoading(false);
         setError('');
         return;
       }
       
-      // Check if it's loading from HTML head
+      // Check if ready flag is set
       if (window.googleMapsReady) {
-        console.log('✅ Google Maps ready from HTML head');
+        console.log('✅ Google Maps ready flag detected');
         setIsMapLoaded(true);
         setIsLoading(false);
         setError('');
         return;
       }
       
-      // Set up callback for when Google Maps loads from HTML
-      console.log('⏳ Waiting for Google Maps to load from HTML head...');
-      window.googleMapsCallback = () => {
-        console.log('✅ Google Maps loaded via HTML callback');
+      // Listen for Google Maps loaded event
+      console.log('⏳ Waiting for Google Maps to load...');
+      const handleGoogleMapsLoaded = () => {
+        console.log('✅ Google Maps event received');
         setIsMapLoaded(true);
         setIsLoading(false);
         setError('');
-        delete window.googleMapsCallback;
       };
+      
+      window.addEventListener('googleMapsLoaded', handleGoogleMapsLoaded);
       
       // Fallback timeout
       const timeout = setTimeout(() => {
         if (!window.google || !window.google.maps) {
-          console.warn('⚠️ Google Maps not loaded within timeout');
+          console.warn('⚠️ Google Maps timeout - trying simple text location');
           setError('فشل تحميل الخريطة. يرجى تحديث الصفحة أو استخدام تحديد الموقع الحالي');
           setIsLoading(false);
         }
-      }, 10000); // 10 seconds timeout
+      }, 15000); // 15 seconds timeout
       
-      // Cleanup timeout
+      // Cleanup
       return () => {
         clearTimeout(timeout);
-        if (window.googleMapsCallback) {
-          delete window.googleMapsCallback;
-        }
+        window.removeEventListener('googleMapsLoaded', handleGoogleMapsLoaded);
       };
     }
   }, [showMap]);
