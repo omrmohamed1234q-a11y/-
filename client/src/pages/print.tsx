@@ -1032,7 +1032,7 @@ export default function Print() {
         // معلومات المعاينة
         previewUrl: result.previewUrl,
         fileId: result.fileId,
-        fileType: file.type, // استخدام MIME type بدلاً من extension
+        fileType: result.type || 'application/octet-stream', // استخدام النوع من نتيجة الرفع
         provider: result.provider
       };
 
