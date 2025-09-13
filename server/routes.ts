@@ -511,19 +511,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // ==================== SECURITY MIDDLEWARE ====================
   
-  // Enhanced security headers with helmet
+  // Enhanced security headers with helmet - Google Maps enabled
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.google.com", "https://www.gstatic.com"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:", "https:", "blob:"],
-        connectSrc: ["'self'", "https:", "wss:", "ws:"],
+        scriptSrc: [
+          "'self'", 
+          "'unsafe-inline'", 
+          "'unsafe-eval'", 
+          "https://www.google.com", 
+          "https://www.gstatic.com",
+          "https://maps.googleapis.com",
+          "https://maps.gstatic.com"
+        ],
+        styleSrc: [
+          "'self'", 
+          "'unsafe-inline'", 
+          "https://fonts.googleapis.com",
+          "https://maps.googleapis.com"
+        ],
+        fontSrc: [
+          "'self'", 
+          "https://fonts.gstatic.com",
+          "https://maps.gstatic.com"
+        ],
+        imgSrc: [
+          "'self'", 
+          "data:", 
+          "https:", 
+          "blob:",
+          "https://maps.googleapis.com",
+          "https://maps.gstatic.com",
+          "https://streetviewpixels-pa.googleapis.com"
+        ],
+        connectSrc: [
+          "'self'", 
+          "https:", 
+          "wss:", 
+          "ws:",
+          "https://maps.googleapis.com"
+        ],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
-        frameSrc: ["'self'", "https://www.google.com"]
+        frameSrc: [
+          "'self'", 
+          "https://www.google.com",
+          "https://maps.googleapis.com"
+        ]
       },
     },
     hsts: {
