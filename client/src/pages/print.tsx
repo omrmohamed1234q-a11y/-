@@ -1028,7 +1028,12 @@ export default function Print() {
         paperType: settings.paperType,
         doubleSided: settings.doubleSided,
         userId: user.id,
-        displayName: generatePrintJobFilename(settings, fileName)
+        displayName: generatePrintJobFilename(settings, fileName),
+        // معلومات المعاينة
+        previewUrl: result.previewUrl,
+        fileId: result.fileId,
+        fileType: file.type, // استخدام MIME type بدلاً من extension
+        provider: result.provider
       };
 
       try {
@@ -1105,19 +1110,28 @@ export default function Print() {
       console.log('Adding print jobs to cart:', selectedFiles.map(f => f.name), 'with settings:', printSettings);
       console.log('File URLs:', uploadedUrls);
       
-      const printJobs = selectedFiles.map((file, index) => ({
-        filename: generatePrintJobFilename(printSettings, file.name),
-        fileUrl: uploadedUrls[index],
-        fileSize: file.size,
-        fileType: file.type,
-        pages: 1,
-        copies: printSettings.copies,
-        colorMode: printSettings.colorMode,
-        paperSize: printSettings.paperSize,
-        paperType: printSettings.paperType,
-        doubleSided: printSettings.doubleSided,
-        pageRange: printSettings.pages
-      }));
+      const printJobs = selectedFiles.map((file, index) => {
+        // إيجاد بيانات الرفع الكاملة للملف
+        const uploadResult = uploadResults.find(result => result.name === file.name);
+        
+        return {
+          filename: generatePrintJobFilename(printSettings, file.name),
+          fileUrl: uploadedUrls[index],
+          fileSize: file.size,
+          fileType: file.type,
+          pages: 1,
+          copies: printSettings.copies,
+          colorMode: printSettings.colorMode,
+          paperSize: printSettings.paperSize,
+          paperType: printSettings.paperType,
+          doubleSided: printSettings.doubleSided,
+          pageRange: printSettings.pages,
+          // معلومات المعاينة
+          previewUrl: uploadResult?.previewUrl,
+          fileId: uploadResult?.fileId,
+          provider: uploadResult?.provider
+        };
+      });
 
       // إضافة الملفات للسلة بشكل متتالي مع معالجة أفضل للأخطاء
       let successCount = 0;

@@ -28,9 +28,9 @@ export async function uploadToCloudinary(file: File): Promise<{
     let endpoint = 'image/upload';
     
     if (file.type === 'application/pdf') {
-      resourceType = 'raw'; // Store PDF as raw file for unsigned uploads
-      endpoint = 'raw/upload';
-      // Note: PDF conversion requires signed uploads, storing as raw for now
+      resourceType = 'image'; // Upload PDF as image to enable transformations
+      endpoint = 'image/upload';
+      // This allows PDF-to-image conversion for previews
     } else if (file.type.startsWith('video/')) {
       resourceType = 'video';
       endpoint = 'video/upload';
@@ -65,10 +65,23 @@ export async function uploadToCloudinary(file: File): Promise<{
 
     const result = await response.json();
 
-    // Generate preview URL for PDF files
+    // Generate preview URL for different file types
     let previewUrl;
     if (file.type === 'application/pdf') {
+      // PDF preview - first page as image
       previewUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_400,h_600,c_fit,f_jpg,q_80/${result.public_id}.jpg`;
+    } else if (file.type.startsWith('image/')) {
+      // Image preview - resized version
+      previewUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_400,h_400,c_fit,f_auto,q_80/${result.public_id}`;
+    } else if (file.type.includes('word') || file.type.includes('document')) {
+      // Word document preview (if supported)
+      previewUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_400,h_600,c_fit,f_jpg,q_80/${result.public_id}.jpg`;
+    } else if (file.type.includes('text') || file.type === 'text/plain') {
+      // Text file preview
+      previewUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_400,h_600,c_fit,f_jpg,q_80/${result.public_id}.jpg`;
+    } else {
+      // Generic file icon for unsupported types
+      previewUrl = null;
     }
 
     return {
@@ -87,8 +100,8 @@ export async function uploadToCloudinary(file: File): Promise<{
   }
 }
 
-// Get optimized PDF preview
-export function getCloudinaryPreviewUrl(publicId: string, options: {
+// Get optimized preview for any file type
+export function getCloudinaryPreviewUrl(publicId: string, fileType: string, options: {
   width?: number;
   height?: number;
   page?: number;
@@ -101,7 +114,25 @@ export function getCloudinaryPreviewUrl(publicId: string, options: {
     quality = 80
   } = options;
 
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_${width},h_${height},c_fit,pg_${page},f_jpg,q_${quality}/${publicId}.jpg`;
+  if (fileType === 'application/pdf') {
+    return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_${width},h_${height},c_fit,pg_${page},f_jpg,q_${quality}/${publicId}.jpg`;
+  } else if (fileType.startsWith('image/')) {
+    return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_${width},h_${height},c_fit,f_auto,q_${quality}/${publicId}`;
+  } else if (fileType.includes('word') || fileType.includes('document')) {
+    return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_${width},h_${height},c_fit,f_jpg,q_${quality}/${publicId}.jpg`;
+  } else {
+    return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_${width},h_${height},c_fit,f_jpg,q_${quality}/${publicId}.jpg`;
+  }
+}
+
+// Get thumbnail for cart display  
+export function getThumbnailUrl(publicId: string, fileType: string): string {
+  return getCloudinaryPreviewUrl(publicId, fileType, { width: 60, height: 60, quality: 90 });
+}
+
+// Get medium preview for modal/zoom
+export function getMediumPreviewUrl(publicId: string, fileType: string): string {
+  return getCloudinaryPreviewUrl(publicId, fileType, { width: 800, height: 800, quality: 95 });
 }
 
 // Get download URL

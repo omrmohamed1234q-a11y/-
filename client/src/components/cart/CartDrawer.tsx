@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [usePoints, setUsePoints] = useState(false);
   const [orderNote, setOrderNote] = useState('');
   const [showActiveOrders, setShowActiveOrders] = useState(false);
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    imageUrl: string;
+    filename: string;
+  }>({ isOpen: false, imageUrl: '', filename: '' });
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   const { 
     cart, 
@@ -106,7 +113,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const subtotal = calculateSubtotal();
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
+    <>
+      <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         className="w-full sm:max-w-md flex flex-col h-full" 
         data-testid="cart-drawer"
@@ -186,7 +194,24 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                       <Card key={item.id} className="p-3" data-testid={`cart-item-${item.id}`}>
                         <div className="flex gap-3">
                           <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center">
-                            {item.productImage ? (
+                            {/* معاينة للملفات المرفوعة */}
+                            {((item.variant as any)?.isPrintJob || (item as any).productSource === 'print_service' || (item as any).printJobData) && (item as any).previewUrl && !imageErrors.has(item.id) ? (
+                              <img
+                                src={(item as any).previewUrl}
+                                alt={item.productName}
+                                className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => setPreviewModal({ isOpen: true, imageUrl: (item as any).previewUrl, filename: item.productName })}
+                                data-testid={`file-preview-${item.id}`}
+                                onError={() => {
+                                  setImageErrors(prev => new Set(prev).add(item.id));
+                                }}
+                              />
+                            ) : ((item.variant as any)?.isPrintJob || (item as any).productSource === 'print_service' || (item as any).printJobData) ? (
+                              // أيقونة الملف للـ print jobs بدون معاينة أو عند فشل التحميل
+                              <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                              </svg>
+                            ) : item.productImage ? (
                               <img
                                 src={item.productImage}
                                 alt={item.productName}
@@ -461,5 +486,41 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         )}
       </SheetContent>
     </Sheet>
+
+    {/* مودال معاينة الملف */}
+    <Dialog 
+      open={previewModal.isOpen} 
+      onOpenChange={(open) => setPreviewModal(prev => ({ ...prev, isOpen: open }))}
+    >
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="text-right">
+            معاينة الملف: {previewModal.filename}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex justify-center items-center p-4 bg-gray-50 rounded-lg min-h-[60vh] overflow-auto">
+          {previewModal.imageUrl ? (
+            <img
+              src={previewModal.imageUrl}
+              alt={previewModal.filename}
+              className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+              onError={(e) => {
+                // في حالة فشل تحميل الصورة
+                (e.target as HTMLImageElement).src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTkgMTJoNm0tNiA0aDZtMiA1SDdhMiAyIDAgMDEtMi0yVjVhMiAyIDAgMDEyLTJoNS41ODZhMSAxIDAgMDEuNzA3LjI5M2w1LjQxNCA1LjQxNGExIDEgMCAwMS4yOTMuNzA3VjE5YTIgMiAwIDAxLTIgMnoiIHN0cm9rZT0iIzk5OTk5OSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+";
+                (e.target as HTMLImageElement).alt = "لا يمكن تحميل المعاينة";
+              }}
+            />
+          ) : (
+            <div className="text-center text-gray-500">
+              <svg className="h-24 w-24 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <p>لا توجد معاينة متاحة لهذا الملف</p>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
