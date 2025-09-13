@@ -126,16 +126,31 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         // Extract print job details
         const printJobData = (item as any).printJobData || (item.variant as any)?.printJob || {};
         const pages = printJobData.pages || 1;
-        const copies = printJobData.copies || item.quantity || 1;
+        const copies = printJobData.copies || 1; // Remove default to item.quantity
         const colorMode = printJobData.colorMode || 'grayscale';
         const paperSize = printJobData.paperSize || 'A4';
         
-        const totalPagesForItem = pages * copies;
+        // Correct calculation: pages * copies * quantity
+        const totalPagesForItem = pages * copies * item.quantity;
         totalPages += totalPagesForItem;
         
-        if (colorMode === 'color') {
+        // Expand colorMode checking to handle common aliases
+        const isColorPrint = colorMode === 'color' || 
+                           colorMode === 'colour' || 
+                           colorMode === 'colored' ||
+                           colorMode === 'coloured';
+        const isBWPrint = colorMode === 'grayscale' || 
+                         colorMode === 'bw' || 
+                         colorMode === 'black-and-white' ||
+                         colorMode === 'blackwhite' ||
+                         colorMode === 'monochrome';
+        
+        if (isColorPrint) {
           colorPages += totalPagesForItem;
+        } else if (isBWPrint) {
+          bwPages += totalPagesForItem;
         } else {
+          // Default to BW if colorMode is unrecognized
           bwPages += totalPagesForItem;
         }
         
