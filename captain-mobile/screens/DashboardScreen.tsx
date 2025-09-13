@@ -1,5 +1,5 @@
 /**
- * شاشة لوحة التحكم الرئيسية للكابتن
+ * شاشة لوحة التحكم الرئيسية للكابتن - محسنة ومتقدمة
  */
 
 import React, { useState, useEffect } from 'react';
@@ -11,12 +11,18 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-  Dimensions 
+  Dimensions,
+  Animated,
+  StatusBar,
+  Platform
 } from 'react-native';
 
 import captainService from '../services/captainService.js';
+import apiService from '../services/apiService.js';
+import webSocketService from '../services/webSocketService.js';
+import locationService from '../services/locationService.js';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 interface DashboardScreenProps {
   captain: any;
@@ -29,117 +35,423 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   connectionStatus, 
   onLogout 
 }) => {
+  // حالة الكابتن والبيانات الأساسية
   const [isOnline, setIsOnline] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
   const [orders, setOrders] = useState([]);
+  const [activeOrder, setActiveOrder] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // إحصائيات متقدمة
   const [dailyStats, setDailyStats] = useState({
     orders: 0,
-    earnings: 0,
-    distance: 0,
-    onlineTime: 0
+    earnings: 0.00,
+    distance: 0.0,
+    onlineTime: 0,
+    completedOrders: 0,
+    rating: 4.8,
+    totalDeliveries: 0
   });
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // إحصائيات الأداء
+  const [performanceStats, setPerformanceStats] = useState({
+    weeklyEarnings: 0.00,
+    monthlyEarnings: 0.00,
+    averageDeliveryTime: 25,
+    customerRating: 4.8,
+    onTimeDeliveries: 95
+  });
+  
+  // حالة الاتصال والتحديثات
+  const [wsConnected, setWsConnected] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
+  
+  // Animations
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const slideAnim = useState(new Animated.Value(30))[0];
+  const pulseAnim = useState(new Animated.Value(1))[0];
 
   useEffect(() => {
     initializeDashboard();
+    startAnimations();
     
-    // تسجيل معالجات الأحداث
+    // تسجيل معالجات الأحداث المحسنة
     captainService.addEventListener('onOrdersUpdate', handleOrdersUpdate);
     captainService.addEventListener('onNewOrder', handleNewOrder);
+    captainService.addEventListener('onStatsUpdate', handleStatsUpdate);
+    captainService.addEventListener('onConnectionChange', handleConnectionChange);
+    
+    // تهيئة الخدمات
+    initializeServices();
+    
+    // تحديث دوري للبيانات
+    const intervalId = setInterval(() => {
+      if (isOnline && wsConnected) {
+        refreshStats();
+      }
+    }, 30000); // كل 30 ثانية
 
     return () => {
-      // تنظيف المعالجات عند إلغاء المكون
+      // تنظيف المعالجات والمؤقتات
       captainService.removeEventListener('onOrdersUpdate', handleOrdersUpdate);
       captainService.removeEventListener('onNewOrder', handleNewOrder);
+      captainService.removeEventListener('onStatsUpdate', handleStatsUpdate);
+      captainService.removeEventListener('onConnectionChange', handleConnectionChange);
+      clearInterval(intervalId);
     };
-  }, []);
+  }, [isOnline, wsConnected]);
+  
+  /**
+   * تشغيل الحركات المتقدمة
+   */
+  const startAnimations = () => {
+    // تأثير الظهور
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      })
+    ]).start();
+    
+    // تأثير النبض المستمر للحالة النشطة
+    const createPulseAnimation = () => {
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      ]).start(() => {
+        if (isOnline) {
+          createPulseAnimation();
+        }
+      });
+    };
+    
+    if (isOnline) {
+      createPulseAnimation();
+    }
+  };
+  
+  /**
+   * تهيئة الخدمات المتقدمة
+   */
+  const initializeServices = async () => {
+    try {
+      // تهيئة خدمة الموقع
+      await locationService.initialize();
+      
+      if (isOnline) {
+        // بدء تتبع الموقع
+        await locationService.startLocationTracking();
+        
+        // الاستماع لتحديثات الموقع
+        locationService.addLocationUpdateListener(handleLocationUpdate);
+      }
+      
+      // التحقق من حالة WebSocket
+      checkWebSocketConnection();
+      
+    } catch (error) {
+      console.error('❌ خطأ في تهيئة الخدمات:', error);
+    }
+  };
 
   /**
-   * تهيئة لوحة التحكم
+   * تهيئة لوحة التحكم المحسنة
    */
   const initializeDashboard = async () => {
     try {
+      console.log('🚀 Initializing advanced dashboard...');
+      
       const state = captainService.getState();
       setIsOnline(state.isOnline);
       setIsAvailable(state.isAvailable);
       setOrders(state.orders);
-      setDailyStats(state.dailyStats);
+      setActiveOrder(state.activeOrder);
+      setDailyStats({
+        ...state.dailyStats,
+        rating: state.captain?.rating || 4.8,
+        totalDeliveries: state.captain?.totalDeliveries || 0
+      });
 
-      // جلب الطلبات المتاحة
-      await captainService.refreshOrders();
+      // جلب البيانات المحسنة
+      await Promise.all([
+        refreshOrders(),
+        refreshStats(),
+        refreshPerformanceStats()
+      ]);
+      
+      console.log('✅ Advanced dashboard initialized successfully');
     } catch (error) {
-      console.error('❌ خطأ في تهيئة لوحة التحكم:', error);
+      console.error('❌ خطأ في تهيئة لوحة التحكم المتقدمة:', error);
+    }
+  };
+  
+  /**
+   * تحديث الطلبات المتاحة
+   */
+  const refreshOrders = async () => {
+    try {
+      await captainService.refreshOrders();
+      const state = captainService.getState();
+      setOrders(state.orders);
+      setActiveOrder(state.activeOrder);
+    } catch (error) {
+      console.error('❌ خطأ في تحديث الطلبات:', error);
+    }
+  };
+  
+  /**
+   * تحديث الإحصائيات اليومية
+   */
+  const refreshStats = async () => {
+    try {
+      if (captain?.id) {
+        const statsResponse = await apiService.getCaptainStats(captain.id);
+        
+        if (statsResponse.success && statsResponse.stats) {
+          setDailyStats(prev => ({
+            ...prev,
+            ...statsResponse.stats,
+            rating: statsResponse.stats.rating || prev.rating,
+            totalDeliveries: statsResponse.stats.totalDeliveries || prev.totalDeliveries
+          }));
+        }
+      }
+      
+      // تحديث الوقت
+      setLastUpdateTime(new Date());
+      
+    } catch (error) {
+      console.warn('⚠️ لا يمكن جلب الإحصائيات من الخادم:', error.message);
+      // استخدام البيانات المحلية
+    }
+  };
+  
+  /**
+   * تحديث إحصائيات الأداء
+   */
+  const refreshPerformanceStats = async () => {
+    try {
+      if (captain?.id) {
+        // محاولة جلب إحصائيات الأداء من API
+        const response = await apiService.makeRequest('GET', `/api/captain/${captain.id}/performance`);
+        
+        if (response.success && response.data) {
+          setPerformanceStats(prev => ({
+            ...prev,
+            ...response.data
+          }));
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ لا يمكن جلب إحصائيات الأداء:', error.message);
+      // الاحتفاظ بالقيم الافتراضية
+    }
+  };
+  
+  /**
+   * فحص اتصال WebSocket
+   */
+  const checkWebSocketConnection = () => {
+    const connected = webSocketService.isHealthy();
+    setWsConnected(connected);
+    
+    if (!connected && isOnline) {
+      console.log('🔄 محاولة إعادة الاتصال بـ WebSocket...');
+      webSocketService.reconnect();
     }
   };
 
   /**
-   * معالج تحديث الطلبات
+   * معالج تحديث الطلبات المحسن
    */
   const handleOrdersUpdate = (updatedOrders) => {
     setOrders(updatedOrders);
+    console.log('📋 تحديث الطلبات:', updatedOrders?.length || 0);
   };
 
   /**
-   * معالج الطلب الجديد
+   * معالج الطلب الجديد المحسن
    */
   const handleNewOrder = (newOrder) => {
-    // سيتم تحديث الطلبات تلقائياً عبر handleOrdersUpdate
+    console.log('🚚 طلب جديد وصل:', newOrder);
+    
+    // إشعار بالطلب الجديد
+    Alert.alert(
+      '🚚 طلب جديد!',
+      `طلب رقم ${newOrder.orderNumber || newOrder.id}\n` +
+      `العميل: ${newOrder.customerName || 'غير محدد'}\n` +
+      `القيمة: ${newOrder.totalAmount || 0} جنيه`,
+      [
+        { text: 'إغلاق', style: 'cancel' },
+        { 
+          text: 'عرض التفاصيل', 
+          onPress: () => showOrderDetails(newOrder) 
+        }
+      ]
+    );
+    
+    // تحديث الطلبات تلقائياً
+    refreshOrders();
+  };
+  
+  /**
+   * معالج تحديث الإحصائيات
+   */
+  const handleStatsUpdate = (newStats) => {
+    console.log('📊 تحديث الإحصائيات:', newStats);
+    setDailyStats(prev => ({
+      ...prev,
+      ...newStats
+    }));
+  };
+  
+  /**
+   * معالج تغيير حالة الاتصال
+   */
+  const handleConnectionChange = (connectionData) => {
+    console.log('🔗 تغيير حالة الاتصال:', connectionData);
+    setWsConnected(connectionData.isConnected || false);
+  };
+  
+  /**
+   * معالج تحديث الموقع
+   */
+  const handleLocationUpdate = (location) => {
+    console.log('📍 تحديث الموقع:', location);
+    setCurrentLocation(location);
+    
+    // إرسال الموقع للخادم إذا كان متصل
+    if (isOnline && wsConnected && captain?.id) {
+      webSocketService.sendLocationUpdate(captain.id, location);
+    }
   };
 
   /**
-   * تبديل حالة الكابتن (متاح/غير متاح)
+   * تبديل حالة الكابتن المحسن (متاح/غير متاح)
    */
   const toggleAvailability = async () => {
     try {
       const newAvailability = !isAvailable;
-      await captainService.setAvailability(newAvailability);
-      setIsAvailable(newAvailability);
-      setIsOnline(newAvailability);
-
+      
+      // تأكيد التبديل
       Alert.alert(
-        'تم التحديث',
-        `أنت الآن ${newAvailability ? 'متاح' : 'غير متاح'} لاستقبال الطلبات`
+        newAvailability ? '🟢 تفعيل الحالة النشطة' : '🔴 تعطيل الحالة النشطة',
+        newAvailability 
+          ? 'ستصبح متاحاً لاستقبال الطلبات الجديدة وسيتم تتبع موقعك'
+          : 'ستتوقف عن استقبال طلبات جديدة وسيتم إيقاف تتبع الموقع',
+        [
+          { text: 'إلغاء', style: 'cancel' },
+          {
+            text: newAvailability ? 'تفعيل' : 'تعطيل',
+            onPress: async () => {
+              await captainService.setAvailability(newAvailability);
+              setIsAvailable(newAvailability);
+              setIsOnline(newAvailability);
+              
+              // إدارة تتبع الموقع
+              if (newAvailability) {
+                await locationService.startLocationTracking();
+                startAnimations(); // إعادة تشغيل الحركات
+              } else {
+                await locationService.stopLocationTracking();
+              }
+
+              Alert.alert(
+                '✅ تم التحديث',
+                `أنت الآن ${newAvailability ? 'متاح ونشط' : 'غير متاح'} لاستقبال الطلبات`
+              );
+            }
+          }
+        ]
       );
     } catch (error) {
       console.error('❌ خطأ في تحديث الحالة:', error);
-      Alert.alert('خطأ', 'فشل في تحديث الحالة');
+      Alert.alert('❌ خطأ', 'فشل في تحديث الحالة. حاول مرة أخرى.');
     }
   };
 
   /**
-   * تحديث البيانات
+   * تحديث البيانات المحسن
    */
   const onRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await captainService.refreshOrders();
-      await initializeDashboard();
+      console.log('🔄 تحديث شامل للبيانات...');
+      
+      await Promise.all([
+        refreshOrders(),
+        refreshStats(),
+        refreshPerformanceStats(),
+        checkWebSocketConnection()
+      ]);
+      
+      // إعادة تهيئة الخدمات إذا لزم الأمر
+      if (!wsConnected && isOnline) {
+        await initializeServices();
+      }
+      
+      console.log('✅ تم تحديث جميع البيانات بنجاح');
+      
     } catch (error) {
       console.error('❌ خطأ في تحديث البيانات:', error);
+      Alert.alert(
+        '⚠️ خطأ في التحديث',
+        'حدث خطأ أثناء تحديث البيانات. تحقق من الاتصال.'
+      );
     } finally {
       setIsRefreshing(false);
     }
   };
 
   /**
-   * قبول طلب
+   * قبول طلب محسن
    */
   const acceptOrder = async (orderId) => {
     try {
+      const order = orders.find(o => o.id === orderId);
+      
       Alert.alert(
-        'تأكيد قبول الطلب',
-        'هل أنت متأكد من قبول هذا الطلب؟',
+        '🚚 تأكيد قبول الطلب',
+        `هل تريد قبول هذا الطلب؟\n\n` +
+        `📋 رقم الطلب: ${order?.orderNumber || orderId}\n` +
+        `💰 القيمة: ${order?.totalAmount || 0} جنيه\n` +
+        `📍 العنوان: ${order?.deliveryAddress || 'غير محدد'}`,
         [
-          { text: 'إلغاء', style: 'cancel' },
+          { text: '❌ إلغاء', style: 'cancel' },
           {
-            text: 'قبول',
+            text: '✅ قبول',
             style: 'default',
             onPress: async () => {
-              const result = await captainService.acceptOrder(orderId);
-              if (result.success) {
-                Alert.alert('تم بنجاح', 'تم قبول الطلب، ابدأ رحلة التوصيل');
-              } else {
-                Alert.alert('خطأ', result.error || 'فشل في قبول الطلب');
+              try {
+                const result = await captainService.acceptOrder(orderId);
+                if (result.success) {
+                  setActiveOrder(order);
+                  Alert.alert(
+                    '🎉 تم قبول الطلب!', 
+                    'تم قبول الطلب بنجاح. ابدأ رحلة التوصيل الآن.',
+                    [{ text: 'حسناً', onPress: () => refreshOrders() }]
+                  );
+                } else {
+                  Alert.alert('❌ خطأ', result.error || 'فشل في قبول الطلب');
+                }
+              } catch (error) {
+                console.error('❌ خطأ في قبول الطلب:', error);
+                Alert.alert('❌ خطأ', 'حدث خطأ أثناء قبول الطلب');
               }
             }
           }
@@ -147,30 +459,63 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
       );
     } catch (error) {
       console.error('❌ خطأ في قبول الطلب:', error);
-      Alert.alert('خطأ', 'فشل في قبول الطلب');
+      Alert.alert('❌ خطأ', 'فشل في قبول الطلب');
     }
   };
 
   /**
-   * عرض تفاصيل الطلب
+   * عرض تفاصيل الطلب المحسن
    */
   const showOrderDetails = (order) => {
-    const details = `
-الطلب رقم: ${order.orderNumber || order.id}
-العميل: ${order.customerName || 'غير محدد'}
-العنوان: ${order.deliveryAddress || 'غير محدد'}
-القيمة: ${order.totalAmount || 0} جنيه
-طريقة الدفع: ${order.paymentMethod || 'نقدي'}
-    `;
+    const details = 
+      `📋 رقم الطلب: ${order.orderNumber || order.id}\n\n` +
+      `👤 العميل: ${order.customerName || 'غير محدد'}\n` +
+      `📞 الهاتف: ${order.customerPhone || 'غير محدد'}\n\n` +
+      `📍 عنوان التسليم:\n${order.deliveryAddress || 'غير محدد'}\n\n` +
+      `💰 إجمالي القيمة: ${order.totalAmount || 0} جنيه\n` +
+      `💳 طريقة الدفع: ${order.paymentMethod || 'نقدي'}\n\n` +
+      `⏰ الأولوية: ${
+        order.priority === 'urgent' ? '🔴 عاجل' :
+        order.priority === 'express' ? '🟠 سريع' : '🟢 عادي'
+      }\n\n` +
+      `${order.specialInstructions ? `📝 ملاحظات:\n${order.specialInstructions}` : ''}`;
 
-    Alert.alert('تفاصيل الطلب', details.trim(), [
-      { text: 'إغلاق', style: 'cancel' },
-      { 
-        text: 'قبول الطلب', 
-        style: 'default',
-        onPress: () => acceptOrder(order.id)
-      }
-    ]);
+    Alert.alert(
+      '📄 تفاصيل الطلب', 
+      details.trim(), 
+      [
+        { text: '❌ إغلاق', style: 'cancel' },
+        { 
+          text: '✅ قبول الطلب', 
+          style: 'default',
+          onPress: () => acceptOrder(order.id)
+        }
+      ],
+      { cancelable: true }
+    );
+  };
+  
+  /**
+   * تنسيق الوقت المنقضي
+   */
+  const formatTimeAgo = (timestamp) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInMinutes = Math.floor((now - time) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'الآن';
+    if (diffInMinutes < 60) return `منذ ${diffInMinutes} دقيقة`;
+    if (diffInMinutes < 1440) return `منذ ${Math.floor(diffInMinutes / 60)} ساعة`;
+    return `منذ ${Math.floor(diffInMinutes / 1440)} يوم`;
+  };
+  
+  /**
+   * تنسيق الوقت
+   */
+  const formatTime = (minutes) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}س ${mins}د` : `${mins} دقيقة`;
   };
 
   return (
