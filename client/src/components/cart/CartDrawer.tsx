@@ -69,7 +69,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   // Helper function to get item price (already discounted from server)
   const getItemPrice = (item: any) => {
     // Price from server is already discounted for print jobs
-    return parseFloat(item.price);
+    const price = parseFloat(item.price);
+    console.log('🛒 CartDrawer getItemPrice:', item.productName, 'price:', item.price, 'parsed:', price);
+    return price;
   };
 
   const calculateSubtotal = () => {
