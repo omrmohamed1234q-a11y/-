@@ -86,8 +86,19 @@ class WebSocketService {
    * إرسال رسالة authenticate للخادم
    */
   authenticate() {
+    console.log('🔐 authenticate() called with connection data:', {
+      hasAuthToken: !!this.connectionData.authToken,
+      hasCaptainId: !!this.connectionData.captainId,
+      authTokenLength: this.connectionData.authToken?.length || 0,
+      captainId: this.connectionData.captainId,
+      baseURL: this.connectionData.baseURL
+    });
+    
     if (!this.connectionData.authToken || !this.connectionData.captainId) {
       console.error('⚠️ No valid JWT token available for WebSocket authentication');
+      console.error('  - authToken exists:', !!this.connectionData.authToken);
+      console.error('  - captainId exists:', !!this.connectionData.captainId);
+      console.error('  - connectionData keys:', Object.keys(this.connectionData));
       return;
     }
 

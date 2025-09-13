@@ -94,7 +94,7 @@ class CaptainService {
   /**
    * تسجيل دخول الكابتن
    */
-  async login(username, password, driverCode = null) {
+  async login(username, password, driverCode = undefined) {
     try {
       console.log('🔐 Attempting captain login:', username);
       
@@ -180,15 +180,25 @@ class CaptainService {
    * الاتصال بـ WebSocket مع JWT token صحيح
    */
   connectWebSocket() {
+    console.log('🔗 connectWebSocket called...');
     const authToken = apiService.getAuthToken();
     const captainData = apiService.getCaptainData();
     
+    console.log('🔑 WebSocket connection data:', {
+      captainExists: !!this.captain,
+      authTokenExists: !!authToken,
+      captainId: this.captain?.id,
+      captainDataExists: !!captainData
+    });
+    
     if (this.captain && authToken) {
       const baseURL = apiService.baseURL;
-      console.log('🔗 Connecting WebSocket with JWT token');
+      console.log('🔗 Connecting WebSocket with JWT token to:', baseURL);
       webSocketService.connect(baseURL, authToken, this.captain.id, captainData);
     } else {
       console.error('❌ Cannot connect WebSocket - missing auth token or captain data');
+      console.error('  - this.captain:', !!this.captain);
+      console.error('  - authToken:', !!authToken);
     }
   }
 

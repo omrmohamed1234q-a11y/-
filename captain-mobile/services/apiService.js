@@ -3,62 +3,115 @@
  * تتعامل مع جميع APIs الخاصة بالكابتن مع النظام الحقيقي
  */
 
-// Simple storage solution that works with both web and React Native
+// Enhanced storage solution that works with both web and React Native
 const SimpleStorage = {
-  async setItem(key, value) {
+  // Try to detect if AsyncStorage is available (React Native)
+  _asyncStorage: null,
+  _memory: {},
+  
+  // Initialize storage and detect environment
+  async _init() {
+    if (this._asyncStorage !== null) return; // Already initialized
+    
     try {
-      if (typeof global !== 'undefined' && global.localStorage) {
-        // Web environment
-        global.localStorage.setItem(key, value);
-      } else if (typeof window !== 'undefined' && window.localStorage) {
-        // Web environment (fallback)
-        window.localStorage.setItem(key, value);
-      } else {
-        // React Native - use in-memory storage as fallback
-        SimpleStorage._memory = SimpleStorage._memory || {};
-        SimpleStorage._memory[key] = value;
+      // Try to import AsyncStorage dynamically (React Native)
+      if (typeof window === 'undefined' || window.ReactNativeWebView) {
+        // React Native environment
+        try {
+          const AsyncStorage = await import('@react-native-async-storage/async-storage');
+          this._asyncStorage = AsyncStorage.default || AsyncStorage;
+          console.log('📱 AsyncStorage detected and initialized for React Native');
+          return;
+        } catch (importError) {
+          console.log('📱 AsyncStorage not available, checking for built-in storage...');
+          
+          // Fallback: Check for global storage in React Native (sometimes available as global object)
+          if (typeof global !== 'undefined' && global.storage) {
+            this._asyncStorage = global.storage;
+            console.log('📱 Global storage detected');
+            return;
+          }
+        }
       }
+      
+      // Web environment - use localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        this._asyncStorage = {
+          getItem: async (key) => window.localStorage.getItem(key),
+          setItem: async (key, value) => window.localStorage.setItem(key, value),
+          removeItem: async (key) => window.localStorage.removeItem(key)
+        };
+        console.log('🌐 localStorage detected and initialized for web');
+        return;
+      }
+      
+      // Final fallback - in-memory storage (not persistent!)
+      this._asyncStorage = 'memory';
+      console.warn('⚠️ Using in-memory storage (not persistent across restarts)');
+      
     } catch (error) {
-      console.warn('Storage setItem failed:', error);
-      // Fallback to memory
-      SimpleStorage._memory = SimpleStorage._memory || {};
-      SimpleStorage._memory[key] = value;
+      console.error('❌ Storage initialization failed:', error);
+      this._asyncStorage = 'memory';
+    }
+  },
+
+  async setItem(key, value) {
+    await this._init();
+    
+    try {
+      if (this._asyncStorage === 'memory') {
+        this._memory[key] = value;
+        console.log(`💾 Stored in memory: ${key}`);
+        return;
+      }
+      
+      await this._asyncStorage.setItem(key, value);
+      console.log(`💾 Stored persistently: ${key}`);
+      
+    } catch (error) {
+      console.warn('Storage setItem failed, using memory fallback:', error);
+      this._memory[key] = value;
     }
   },
 
   async getItem(key) {
+    await this._init();
+    
     try {
-      if (typeof global !== 'undefined' && global.localStorage) {
-        return global.localStorage.getItem(key);
-      } else if (typeof window !== 'undefined' && window.localStorage) {
-        return window.localStorage.getItem(key);
-      } else {
-        // React Native - use in-memory storage as fallback
-        SimpleStorage._memory = SimpleStorage._memory || {};
-        return SimpleStorage._memory[key] || null;
+      if (this._asyncStorage === 'memory') {
+        const value = this._memory[key] || null;
+        console.log(`📖 Retrieved from memory: ${key} =`, value ? 'EXISTS' : 'NULL');
+        return value;
       }
+      
+      const value = await this._asyncStorage.getItem(key);
+      console.log(`📖 Retrieved persistently: ${key} =`, value ? 'EXISTS' : 'NULL');
+      return value;
+      
     } catch (error) {
-      console.warn('Storage getItem failed:', error);
-      SimpleStorage._memory = SimpleStorage._memory || {};
-      return SimpleStorage._memory[key] || null;
+      console.warn('Storage getItem failed, checking memory fallback:', error);
+      const value = this._memory[key] || null;
+      console.log(`📖 Retrieved from memory fallback: ${key} =`, value ? 'EXISTS' : 'NULL');
+      return value;
     }
   },
 
   async removeItem(key) {
+    await this._init();
+    
     try {
-      if (typeof global !== 'undefined' && global.localStorage) {
-        global.localStorage.removeItem(key);
-      } else if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem(key);
-      } else {
-        // React Native
-        SimpleStorage._memory = SimpleStorage._memory || {};
-        delete SimpleStorage._memory[key];
+      if (this._asyncStorage === 'memory') {
+        delete this._memory[key];
+        console.log(`🗑️ Removed from memory: ${key}`);
+        return;
       }
+      
+      await this._asyncStorage.removeItem(key);
+      console.log(`🗑️ Removed persistently: ${key}`);
+      
     } catch (error) {
-      console.warn('Storage removeItem failed:', error);
-      SimpleStorage._memory = SimpleStorage._memory || {};
-      delete SimpleStorage._memory[key];
+      console.warn('Storage removeItem failed, using memory fallback:', error);
+      delete this._memory[key];
     }
   }
 };
@@ -69,7 +122,7 @@ const API_CONFIG = {
   timeout: 30000, // 30 seconds
   retryAttempts: 3,
   retryDelay: 1000, // 1 second
-  jwtSecret: 'atbaali-captain-secret-key-2025' // Should match server secret
+  // JWT secrets should never be exposed client-side - removed for security
 };
 
 class ApiService {
@@ -231,26 +284,34 @@ class ApiService {
   /**
    * تسجيل دخول الكابتن الآمن - الطريقة الأساسية
    */
-  async secureLogin(username, password, driverCode = null) {
+  async secureLogin(username, password, driverCode = undefined) {
     const response = await this.makeRequest('POST', '/api/captain/secure-login', {
       username,
       password,
       driverCode
     });
 
-    if (response.success && response.session_token) {
-      // Save JWT token and captain data
-      const captainData = {
-        id: response.user.id,
-        username: response.user.username,
-        fullName: response.user.fullName,
-        email: response.user.email,
-        phone: response.user.phone,
-        driverCode: response.user.driverCode,
-        role: 'captain'
-      };
+    if (response.success && response.user) {
+      // Handle different token field names from server responses
+      const token = response.session_token || response.sessionToken || response.token;
       
-      await this.saveAuthData(response.session_token, captainData);
+      if (token) {
+        // Save JWT token and captain data
+        const captainData = {
+          id: response.user.id,
+          username: response.user.username,
+          fullName: response.user.fullName,
+          email: response.user.email,
+          phone: response.user.phone,
+          driverCode: response.user.driverCode,
+          role: 'captain'
+        };
+        
+        await this.saveAuthData(token, captainData);
+        console.log('✅ Secure login token saved:', token ? 'YES' : 'NO');
+      } else {
+        console.error('❌ No valid token found in response:', Object.keys(response));
+      }
     }
 
     return response;
@@ -265,19 +326,27 @@ class ApiService {
       password
     });
 
-    if (response.success && response.token) {
-      // Save JWT token and captain data
-      const captainData = {
-        id: response.user.id,
-        username: response.user.username,
-        fullName: response.user.fullName,
-        email: response.user.email,
-        phone: response.user.phone,
-        driverCode: response.user.driverCode,
-        role: 'captain'
-      };
+    if (response.success && response.user) {
+      // Handle different token field names from server responses
+      const token = response.session_token || response.sessionToken || response.token;
       
-      await this.saveAuthData(response.token, captainData);
+      if (token) {
+        // Save JWT token and captain data
+        const captainData = {
+          id: response.user.id,
+          username: response.user.username,
+          fullName: response.user.fullName,
+          email: response.user.email,
+          phone: response.user.phone,
+          driverCode: response.user.driverCode,
+          role: 'captain'
+        };
+        
+        await this.saveAuthData(token, captainData);
+        console.log('✅ Regular login token saved:', token ? 'YES' : 'NO');
+      } else {
+        console.error('❌ No valid token found in response:', Object.keys(response));
+      }
     }
 
     return response;
@@ -399,6 +468,7 @@ class ApiService {
    * الحصول على JWT token
    */
   getAuthToken() {
+    console.log('🔑 getAuthToken called, current token:', this.authToken ? 'EXISTS' : 'NULL');
     return this.authToken;
   }
 
