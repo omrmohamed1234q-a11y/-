@@ -1031,8 +1031,8 @@ export default function Print() {
         displayName: generatePrintJobFilename(settings, fileName),
         // معلومات المعاينة
         previewUrl: result.previewUrl,
-        fileId: result.fileId,
-        fileType: result.type || 'application/octet-stream', // استخدام النوع من نتيجة الرفع
+        fileId: (result as any).fileId,
+        fileType: (result as any).type || 'application/octet-stream', // استخدام النوع من نتيجة الرفع
         provider: result.provider
       };
 
@@ -1128,7 +1128,7 @@ export default function Print() {
           pageRange: printSettings.pages,
           // معلومات المعاينة
           previewUrl: uploadResult?.previewUrl,
-          fileId: uploadResult?.fileId,
+          fileId: (uploadResult as any)?.fileId,
           provider: uploadResult?.provider
         };
       });
