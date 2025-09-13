@@ -66,18 +66,24 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   };
 
 
+  // Helper function to calculate item price with discount
+  const getItemPrice = (item: any) => {
+    let itemPrice = parseFloat(item.price);
+    
+    // Apply 10% discount for black and white printing
+    if ((item.variant as any)?.printJob?.colorType === 'black_white' || 
+        ((item as any).printJobData && (item as any).printJobData.colorType === 'black_white')) {
+      itemPrice = itemPrice * 0.9; // 10% discount
+    }
+    
+    return itemPrice;
+  };
+
   const calculateSubtotal = () => {
     if (!cart?.items) return 0;
     
     return cart.items.reduce((sum, item) => {
-      let itemPrice = parseFloat(item.price);
-      
-      // Apply 10% discount for black and white printing
-      if (item.variant?.printJob?.colorType === 'black_white' || 
-          (item.printJobData && item.printJobData.colorType === 'black_white')) {
-        itemPrice = itemPrice * 0.9; // 10% discount
-      }
-      
+      const itemPrice = getItemPrice(item);
       return sum + (itemPrice * item.quantity);
     }, 0);
   };
@@ -283,20 +289,14 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                               <div className="text-left">
                                 <div className="font-bold text-green-600" data-testid={`item-total-${item.id}`}>
                                   <span className="currency-display">
-                                    <span className="arabic-nums">{(parseFloat(item.price) * item.quantity).toFixed(2)}</span> جنيه
+                                    <span className="arabic-nums">{(getItemPrice(item) * item.quantity).toFixed(2)}</span> جنيه
                                   </span>
                                 </div>
                                 <div className="text-xs text-gray-500">
                                   <span className="currency-display">
-                                    <span className="arabic-nums">{parseFloat(item.price).toFixed(2)}</span> جنيه للقطعة
+                                    <span className="arabic-nums">{getItemPrice(item).toFixed(2)}</span> جنيه للقطعة
                                   </span>
                                 </div>
-                                {/* Debug info for print services */}
-                                {((item.variant as any)?.isPrintJob || (item as any).productSource === 'print_service') && (
-                                  <div className="text-xs text-blue-500 mt-1">
-                                    Debug: price={item.price}, copies={(item.variant as any)?.printJob?.copies}, pages={(item.variant as any)?.printJob?.pages}
-                                  </div>
-                                )}
                               </div>
                             </div>
                           </div>

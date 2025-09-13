@@ -51,10 +51,22 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   useEffect(() => {
     if (showMap && !window.google) {
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'DEMO_KEY'}&libraries=places&language=ar&region=EG`;
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      
+      if (!apiKey) {
+        setError('مفتاح الخرائط غير متوفر. يرجى التواصل مع الدعم الفني');
+        setIsLoading(false);
+        return;
+      }
+      
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=ar&region=EG`;
       script.async = true;
       script.onload = () => {
         setIsMapLoaded(true);
+      };
+      script.onerror = () => {
+        setError('فشل في تحميل الخرائط. يرجى المحاولة مرة أخرى');
+        setIsLoading(false);
       };
       document.head.appendChild(script);
     } else if (showMap && window.google) {
