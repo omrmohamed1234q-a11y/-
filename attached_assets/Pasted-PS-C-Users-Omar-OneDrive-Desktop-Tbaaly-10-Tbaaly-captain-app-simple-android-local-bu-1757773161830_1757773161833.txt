@@ -1,0 +1,84 @@
+PS C:\Users\Omar\OneDrive\Desktop\Tbaaly (10)\Tbaaly\captain-app-simple\android> # بدلاً من local build
+>> npm install -g @expo/eas-cli
+>> eas login
+>> eas build --platform android
+npm error code E404
+npm error 404 Not Found - GET https://registry.npmjs.org/@expo%2feas-cli - Not found
+npm error 404
+npm error 404  '@expo/eas-cli@*' is not in this registry.
+npm error 404
+npm error 404 Note that you can also install from a
+npm error 404 tarball, folder, http url, or git url.
+npm error A complete log of this run can be found in: C:\Users\Omar\AppData\Local\npm-cache\_logs\2025-09-13T14_17_08_834Z-debug-0.log
+eas : The term 'eas' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:3 char:1
++ eas login
++ ~~~
+    + CategoryInfo          : ObjectNotFound: (eas:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+eas : The term 'eas' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:4 char:1
++ eas build --platform android
++ ~~~
+    + CategoryInfo          : ObjectNotFound: (eas:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS C:\Users\Omar\OneDrive\Desktop\Tbaaly (10)\Tbaaly\captain-app-simple\android> # بدلاً من local build
+>> npm install -g @expo/eas-cli
+>> eas login
+>> eas build --platform android 
+npm error code E404
+npm error 404 Not Found - GET https://registry.npmjs.org/@expo%2feas-cli - Not found
+npm error 404
+npm error 404  '@expo/eas-cli@*' is not in this registry.
+npm error 404
+npm error 404 Note that you can also install from a
+npm error 404 tarball, folder, http url, or git url.
+npm error A complete log of this run can be found in: C:\Users\Omar\AppData\Local\npm-cache\_logs\2025-09-13T14_18_01_253Z-debug-0.log
+eas : The term 'eas' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:3 char:1
++ eas login
++ ~~~
+    + CategoryInfo          : ObjectNotFound: (eas:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+eas : The term 'eas' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:4 char:1
++ eas build --platform android
++ ~~~
+    + CategoryInfo          : ObjectNotFound: (eas:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS C:\Users\Omar\OneDrive\Desktop\Tbaaly (10)\Tbaaly\captain-app-simple\android> cd "C:\Users\Omar\OneDrive\Desktop\Tbaaly (10)\Tbaaly\captain-app-simple"
+PS C:\Users\Omar\OneDrive\Desktop\Tbaaly (10)\Tbaaly\captain-app-simple> # بدلاً من local build
+>> npm install -g @expo/eas-cli
+>> eas login
+>> eas build --platform android
+npm error code E404
+npm error 404 Not Found - GET https://registry.npmjs.org/@expo%2feas-cli - Not found
+npm error 404
+npm error 404  '@expo/eas-cli@*' is not in this registry.
+npm error 404
+npm error 404 Note that you can also install from a
+npm error 404 tarball, folder, http url, or git url.
+npm error A complete log of this run can be found in: C:\Users\Omar\AppData\Local\npm-cache\_logs\2025-09-13T14_18_41_853Z-debug-0.log
+eas : The term 'eas' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:3 char:1
++ eas login
++ ~~~
+    + CategoryInfo          : ObjectNotFound: (eas:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+eas : The term 'eas' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:4 char:1
++ eas build --platform android
++ ~~~
+    + CategoryInfo          : ObjectNotFound: (eas:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException

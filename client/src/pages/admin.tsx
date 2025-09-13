@@ -339,7 +339,7 @@ export default function AdminDashboard() {
                 </Button>
               </Link>
               
-              <Link href="/admin/store">
+              <Link href="/store">
                 <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-green-50">
                   <Store className="w-6 h-6 text-green-600" />
                   <span className="text-xs">المتجر</span>
@@ -495,12 +495,12 @@ export default function AdminDashboard() {
 
             {/* Quick Access Links */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <Link href="/admin/store">
+              <Link href="/store">
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
                   <CardContent className="p-6 text-center">
                     <Store className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                    <div className="text-lg font-semibold text-blue-900">إدارة المتجر</div>
-                    <div className="text-sm text-blue-600">عرض وإدارة منتجات المتجر</div>
+                    <div className="text-lg font-semibold text-blue-900">المتجر</div>
+                    <div className="text-sm text-blue-600">تصفح منتجات المتجر</div>
                   </CardContent>
                 </Card>
               </Link>

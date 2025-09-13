@@ -127,7 +127,7 @@ export default function TeachersCorner() {
                 </Button>
               </Link>
               
-              <Link href="/admin/store">
+              <Link href="/store">
                 <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2 hover:bg-green-50">
                   <Store className="w-6 h-6 text-green-600" />
                   <span className="text-xs">المتجر</span>
