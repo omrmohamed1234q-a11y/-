@@ -423,7 +423,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 <div className="flex justify-between font-bold text-lg">
                   <span>المجموع الفرعي</span>
                   <span className="text-green-600" data-testid="cart-subtotal">
-                    {subtotal.toFixed(0)} جنيه
+                    <span className="currency-display">
+                      <span className="arabic-nums">{subtotal.toFixed(2)}</span> جنيه
+                    </span>
                   </span>
                 </div>
                 <div className="text-xs text-gray-500 text-center">
