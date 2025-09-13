@@ -39,6 +39,33 @@
     
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <!-- Google Maps API - Preloaded for performance -->
+    <script>
+      window.initGoogleMaps = function() {
+        console.log('✅ Google Maps loaded from HTML head');
+        window.googleMapsReady = true;
+        if (window.googleMapsCallback) {
+          window.googleMapsCallback();
+        }
+      };
+      
+      // Load Google Maps dynamically on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        // Only load if not already loaded
+        if (!window.google && !document.querySelector('script[src*="maps.googleapis.com"]')) {
+          const script = document.createElement('script');
+          script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyAbj_ubPn2MbYn3LYzAhDMMU0UE38lPzZQ&libraries=places&language=ar&region=EG&callback=initGoogleMaps';
+          script.async = true;
+          script.defer = true;
+          script.onerror = function() {
+            console.warn('⚠️ Google Maps failed to load from HTML head');
+          };
+          document.head.appendChild(script);
+          console.log('🗺️ Loading Google Maps from HTML head...');
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

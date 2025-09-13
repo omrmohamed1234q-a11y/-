@@ -25,6 +25,8 @@ declare global {
   interface Window {
     google: any;
     initGoogleMaps?: () => void;
+    googleMapsReady?: boolean;
+    googleMapsCallback?: () => void;
   }
 }
 
@@ -48,79 +50,55 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
 
-  // Load Google Maps script
+  // Check for Google Maps availability
   useEffect(() => {
-    if (showMap && !window.google) {
+    if (showMap) {
       setIsLoading(true);
       
-      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-      console.log('🗺️ MapLocationPicker: Attempting to load Google Maps...');
-      console.log('🔑 API Key available:', !!apiKey);
-      
-      if (!apiKey) {
-        console.error('❌ No Google Maps API key found');
-        setError('مفتاح الخرائط غير متوفر. يرجى التواصل مع الدعم الفني');
-        setIsLoading(false);
-        return;
-      }
-
-      // تحقق من وجود script موجود
-      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
-      if (existingScript) {
-        existingScript.remove();
-        console.log('🗑️ Removed existing Google Maps script');
-      }
-      
-      const script = document.createElement('script');
-      const scriptUrl = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=ar&region=EG&callback=initGoogleMaps`;
-      console.log('🌐 Loading script from:', scriptUrl.replace(apiKey, 'KEY_HIDDEN'));
-      
-      // إضافة callback function
-      window.initGoogleMaps = () => {
-        console.log('✅ Google Maps script loaded successfully via callback');
+      // Check if Google Maps is already loaded
+      if (window.google && window.google.maps) {
+        console.log('✅ Google Maps already available from HTML head');
         setIsMapLoaded(true);
         setIsLoading(false);
         setError('');
-        delete window.initGoogleMaps; // تنظيف
+        return;
+      }
+      
+      // Check if it's loading from HTML head
+      if (window.googleMapsReady) {
+        console.log('✅ Google Maps ready from HTML head');
+        setIsMapLoaded(true);
+        setIsLoading(false);
+        setError('');
+        return;
+      }
+      
+      // Set up callback for when Google Maps loads from HTML
+      console.log('⏳ Waiting for Google Maps to load from HTML head...');
+      window.googleMapsCallback = () => {
+        console.log('✅ Google Maps loaded via HTML callback');
+        setIsMapLoaded(true);
+        setIsLoading(false);
+        setError('');
+        delete window.googleMapsCallback;
       };
       
-      script.src = scriptUrl;
-      script.async = true;
-      script.defer = true;
+      // Fallback timeout
+      const timeout = setTimeout(() => {
+        if (!window.google || !window.google.maps) {
+          console.warn('⚠️ Google Maps not loaded within timeout');
+          setError('فشل تحميل الخريطة. يرجى تحديث الصفحة أو استخدام تحديد الموقع الحالي');
+          setIsLoading(false);
+        }
+      }, 10000); // 10 seconds timeout
       
-      script.onerror = (e) => {
-        console.error('❌ Google Maps script failed to load:', e);
-        console.error('🔍 Current domain:', window.location.hostname);
-        console.error('🔗 Full URL:', window.location.href);
-        
-        // محاولة طريقة بديلة بدون callback
-        setTimeout(() => {
-          console.log('🔄 Trying alternative loading method...');
-          const fallbackScript = document.createElement('script');
-          const fallbackUrl = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=ar&region=EG`;
-          
-          fallbackScript.src = fallbackUrl;
-          fallbackScript.async = true;
-          fallbackScript.onload = () => {
-            console.log('✅ Google Maps loaded via fallback method');
-            setIsMapLoaded(true);
-            setIsLoading(false);
-            setError('');
-          };
-          fallbackScript.onerror = () => {
-            setError('فشل تحميل الخريطة. يرجى المحاولة مرة أخرى أو استخدام تحديد الموقع الحالي');
-            setIsLoading(false);
-          };
-          
-          document.head.appendChild(fallbackScript);
-        }, 2000);
+      // Cleanup timeout
+      return () => {
+        clearTimeout(timeout);
+        if (window.googleMapsCallback) {
+          delete window.googleMapsCallback;
+        }
       };
-      
-      document.head.appendChild(script);
-    } else if (showMap && window.google) {
-      console.log('✅ Google Maps already loaded');
-      setIsMapLoaded(true);
-      setIsLoading(false);
     }
   }, [showMap]);
 
