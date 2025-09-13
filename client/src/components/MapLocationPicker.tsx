@@ -13,6 +13,7 @@ import {
   type LocationData, 
   type DeliveryValidation 
 } from '@/utils/locationUtils';
+import { useGoogleMaps } from '@/lib/googleMapsLoader';
 
 interface MapLocationPickerProps {
   onLocationSelect: (location: LocationData, validation: DeliveryValidation) => void;
@@ -36,18 +37,22 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   currentLocation,
   className = ''
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>('');
   const [validation, setValidation] = useState<DeliveryValidation | null>(null);
   const [address, setAddress] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [mapCenter, setMapCenter] = useState({ lat: 30.0964396, lng: 32.4642696 }); // Default to Suez center
   const [selectedPosition, setSelectedPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showSimpleLocationPicker, setShowSimpleLocationPicker] = useState(false);
   const [manualAddress, setManualAddress] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
+  
+  // Use secure Google Maps loader
+  const { isLoaded: isMapLoaded, isLoading, error, api: googleMapsAPI, loadMaps } = useGoogleMaps({
+    libraries: ['places'],
+    language: 'ar',
+    region: 'EG'
+  });
   
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -65,56 +70,13 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     { name: 'الشيخ زايد', lat: 30.0890123, lng: 32.4734567 }
   ];
 
-  // Check for Google Maps availability
+  // Load Google Maps when user wants to show map
   useEffect(() => {
-    if (showMap) {
-      setIsLoading(true);
-      
-      // Check if Google Maps is already loaded
-      if (window.google && window.google.maps) {
-        console.log('✅ Google Maps already available');
-        setIsMapLoaded(true);
-        setIsLoading(false);
-        setError('');
-        return;
-      }
-      
-      // Check if ready flag is set
-      if (window.googleMapsReady) {
-        console.log('✅ Google Maps ready flag detected');
-        setIsMapLoaded(true);
-        setIsLoading(false);
-        setError('');
-        return;
-      }
-      
-      // Listen for Google Maps loaded event
-      console.log('⏳ Waiting for Google Maps to load...');
-      const handleGoogleMapsLoaded = () => {
-        console.log('✅ Google Maps event received');
-        setIsMapLoaded(true);
-        setIsLoading(false);
-        setError('');
-      };
-      
-      window.addEventListener('googleMapsLoaded', handleGoogleMapsLoaded);
-      
-      // Fallback timeout
-      const timeout = setTimeout(() => {
-        if (!window.google || !window.google.maps) {
-          console.warn('⚠️ Google Maps timeout - trying simple text location');
-          setError('فشل تحميل الخريطة. يرجى تحديث الصفحة أو استخدام تحديد الموقع الحالي');
-          setIsLoading(false);
-        }
-      }, 15000); // 15 seconds timeout
-      
-      // Cleanup
-      return () => {
-        clearTimeout(timeout);
-        window.removeEventListener('googleMapsLoaded', handleGoogleMapsLoaded);
-      };
+    if (showMap && !isMapLoaded && !isLoading) {
+      console.log('🗺️ User requested map - loading Google Maps...');
+      loadMaps();
     }
-  }, [showMap]);
+  }, [showMap, isMapLoaded, isLoading, loadMaps]);
 
   // Initialize map when loaded
   useEffect(() => {
