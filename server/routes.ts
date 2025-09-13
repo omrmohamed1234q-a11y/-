@@ -511,54 +511,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // ==================== SECURITY MIDDLEWARE ====================
   
-  // Enhanced security headers with helmet - Google Maps enabled
+  // Enhanced security headers with helmet - Environment-specific CSP
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: [
+        scriptSrc: isProduction ? [
           "'self'", 
-          "'unsafe-inline'", 
-          "'unsafe-eval'", 
           "https://www.google.com", 
           "https://www.gstatic.com",
           "https://maps.googleapis.com",
-          "https://maps.gstatic.com"
+          "https://maps.gstatic.com",
+          "https://cdnjs.cloudflare.com",
+          // Allow specific inline scripts for Vite/HMR in development only
+          ...(process.env.NODE_ENV === 'development' ? ["'unsafe-inline'", "'unsafe-eval'"] : [])
+        ] : [
+          "'self'", 
+          "'unsafe-inline'", // Required for Vite development
+          "'unsafe-eval'", // Required for Vite development
+          "https://www.google.com", 
+          "https://www.gstatic.com",
+          "https://maps.googleapis.com",
+          "https://maps.gstatic.com",
+          "https://cdnjs.cloudflare.com"
         ],
         styleSrc: [
           "'self'", 
-          "'unsafe-inline'", 
+          "'unsafe-inline'", // Required for dynamic styles and Google Maps
           "https://fonts.googleapis.com",
-          "https://maps.googleapis.com"
+          "https://maps.googleapis.com",
+          "https://cdnjs.cloudflare.com"
         ],
         fontSrc: [
           "'self'", 
           "https://fonts.gstatic.com",
-          "https://maps.gstatic.com"
+          "https://maps.gstatic.com",
+          "https://cdnjs.cloudflare.com"
         ],
         imgSrc: [
           "'self'", 
           "data:", 
-          "https:", 
           "blob:",
           "https://maps.googleapis.com",
           "https://maps.gstatic.com",
-          "https://streetviewpixels-pa.googleapis.com"
+          "https://streetviewpixels-pa.googleapis.com",
+          "https://res.cloudinary.com", // Cloudinary for file uploads
+          ...(isProduction ? [] : ["https:"]) // Allow all HTTPS in development only
         ],
         connectSrc: [
           "'self'", 
-          "https:", 
           "wss:", 
           "ws:",
-          "https://maps.googleapis.com"
+          "https://maps.googleapis.com",
+          "https://api.cloudinary.com",
+          "https://res.cloudinary.com",
+          ...(isProduction ? [
+            "https://supabase.co",
+            "https://*.supabase.co"
+          ] : ["https:"]) // Allow all HTTPS in development only
         ],
         objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
+        mediaSrc: ["'self'", "blob:", "data:"],
         frameSrc: [
           "'self'", 
           "https://www.google.com",
           "https://maps.googleapis.com"
-        ]
+        ],
+        workerSrc: ["'self'", "blob:"], // For web workers
+        childSrc: ["'self'", "blob:"] // For service workers
       },
     },
     hsts: {
