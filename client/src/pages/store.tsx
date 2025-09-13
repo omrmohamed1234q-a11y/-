@@ -100,7 +100,7 @@ export default function Store() {
 
   // Fetch products
   const { data: allProducts = [], isLoading } = useQuery<Product[]>({
-    queryKey: ['/api/admin/products'],
+    queryKey: ['/api/products'],
   });
 
   // Filter and sort products
@@ -137,9 +137,9 @@ export default function Store() {
         if (activeTab === 'books') {
           switch (selectedCategory) {
             case 'teachers':
-              return product.teacherOnly || product.category.includes('teacher');
+              return product.category.includes('teacher');
             case 'students':
-              return !product.teacherOnly && product.category.includes('student');
+              return product.category.includes('student');
             case 'digital':
               return product.isDigital;
             default:
