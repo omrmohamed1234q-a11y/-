@@ -72,7 +72,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     
     // Apply 10% discount for black and white printing
     if ((item.variant as any)?.printJob?.colorType === 'black_white' || 
-        ((item as any).printJobData && (item as any).printJobData.colorType === 'black_white')) {
+        (item.variant as any)?.printJob?.colorType === 'grayscale' ||
+        ((item as any).printJobData && ((item as any).printJobData.colorType === 'black_white' || (item as any).printJobData.colorType === 'grayscale'))) {
       itemPrice = itemPrice * 0.9; // 10% discount
     }
     
