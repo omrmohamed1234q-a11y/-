@@ -6,33 +6,26 @@
 // Order related types
 export type OrderStatus = 
   | 'pending' 
-  | 'accepted' 
+  | 'accepted'
+  | 'at_pickup'
   | 'picked_up' 
   | 'in_delivery' 
   | 'delivered' 
   | 'rejected' 
   | 'cancelled';
 
+export type RouteStatus = 
+  | 'to_pickup'
+  | 'at_pickup'
+  | 'to_delivery'
+  | 'at_delivery'
+  | 'completed';
+
 export type OrderPriority = 'normal' | 'express' | 'urgent';
 
 export type PaymentMethod = 'cash' | 'card' | 'digital_wallet';
 
-export interface OrderType {
-  id: string;
-  orderNumber?: string;
-  customerName?: string;
-  customerPhone?: string;
-  deliveryAddress?: string;
-  totalAmount?: number;
-  paymentMethod?: PaymentMethod;
-  status?: OrderStatus;
-  priority?: OrderPriority;
-  specialInstructions?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  estimatedDeliveryTime?: string;
-  items?: OrderItem[];
-}
+// Note: OrderType is redefined below with delivery coordinates
 
 export interface OrderItem {
   id: string;
@@ -175,3 +168,51 @@ export type LocationErrorHandler = (error: any, message?: string) => void;
 export type OrderUpdateHandler = (orderData: OrderType) => void;
 export type AuthChangeHandler = (authData: AuthChangeEvent) => void;
 export type ConnectionChangeHandler = (connectionData: ConnectionState) => void;
+
+// Delivery tracking types
+export interface DeliveryRoute {
+  id: string;
+  orderId: string;
+  pickupLocation: LocationType;
+  deliveryLocation: LocationType;
+  waypoints?: LocationType[];
+  distance: number;
+  estimatedDuration: number;
+  currentStatus: 'to_pickup' | 'at_pickup' | 'to_delivery' | 'at_delivery' | 'completed';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NavigationStep {
+  instruction: string;
+  distance: number;
+  duration: number;
+  direction: 'left' | 'right' | 'straight' | 'u-turn';
+  maneuver: string;
+}
+
+// Extended OrderType with delivery coordinates
+export interface OrderType {
+  id: string;
+  orderNumber?: string;
+  customerName?: string;
+  customerPhone?: string;
+  deliveryAddress?: string;
+  totalAmount?: number;
+  paymentMethod?: PaymentMethod;
+  status?: OrderStatus;
+  priority?: OrderPriority;
+  specialInstructions?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  estimatedDeliveryTime?: string;
+  items?: OrderItem[];
+  deliveryCoordinates?: {
+    lat: number;
+    lng: number;
+  };
+  pickupCoordinates?: {
+    lat: number;
+    lng: number;
+  };
+}

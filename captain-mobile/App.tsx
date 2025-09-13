@@ -21,6 +21,7 @@ import captainService from './services/captainService.js';
 import LoginScreen from './screens/LoginScreen.tsx';
 import DashboardScreen from './screens/DashboardScreen.tsx';
 import LoadingScreen from './screens/LoadingScreen.tsx';
+import DeliveryTrackingScreen from './screens/DeliveryTrackingScreen.tsx';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,6 +30,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [captain, setCaptain] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('connecting');
+  const [currentScreen, setCurrentScreen] = useState('dashboard');
 
   useEffect(() => {
     initializeApp();
@@ -238,16 +240,37 @@ export default function App() {
     );
   }
 
-  // عرض لوحة التحكم الرئيسية
+  // عرض الشاشة المطلوبة
+  const renderCurrentScreen = () => {
+    switch (currentScreen) {
+      case 'delivery-tracking':
+        return (
+          <DeliveryTrackingScreen
+            navigation={{
+              goBack: () => setCurrentScreen('dashboard'),
+              navigate: (screen) => setCurrentScreen(screen)
+            }}
+            route={{}}
+          />
+        );
+      case 'dashboard':
+      default:
+        return (
+          <DashboardScreen
+            captain={captain}
+            connectionStatus={connectionStatus}
+            onLogout={handleLogout}
+            onToggleAvailability={handleToggleAvailability}
+            onAcceptOrder={handleAcceptOrder}
+            onNavigateToTracking={() => setCurrentScreen('delivery-tracking')}
+          />
+        );
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <DashboardScreen
-        captain={captain}
-        connectionStatus={connectionStatus}
-        onLogout={handleLogout}
-        onToggleAvailability={handleToggleAvailability}
-        onAcceptOrder={handleAcceptOrder}
-      />
+      {renderCurrentScreen()}
     </SafeAreaView>
   );
 }

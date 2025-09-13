@@ -28,12 +28,18 @@ interface DashboardScreenProps {
   captain: any;
   connectionStatus: 'connecting' | 'connected' | 'disconnected';
   onLogout: () => void;
+  onToggleAvailability?: (isAvailable: boolean) => void;
+  onAcceptOrder?: (orderId: string) => void;
+  onNavigateToTracking?: () => void;
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ 
   captain, 
   connectionStatus, 
-  onLogout 
+  onLogout,
+  onToggleAvailability,
+  onAcceptOrder,
+  onNavigateToTracking
 }) => {
   // حالة الكابتن والبيانات الأساسية
   const [isOnline, setIsOnline] = useState(false);
@@ -650,12 +656,24 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 </Text>
               </View>
 
-              <TouchableOpacity 
-                style={styles.acceptButton}
-                onPress={() => acceptOrder(order.id)}
-              >
-                <Text style={styles.acceptButtonText}>قبول الطلب</Text>
-              </TouchableOpacity>
+              <View style={styles.orderButtonsContainer}>
+                <TouchableOpacity 
+                  style={styles.acceptButton}
+                  onPress={() => acceptOrder(order.id)}
+                >
+                  <Text style={styles.acceptButtonText}>قبول الطلب</Text>
+                </TouchableOpacity>
+                
+                {/* زر تتبع التوصيل - يظهر فقط للطلب النشط */}
+                {activeOrder && activeOrder.id === order.id && (
+                  <TouchableOpacity 
+                    style={styles.trackingButton}
+                    onPress={() => onNavigateToTracking && onNavigateToTracking()}
+                  >
+                    <Text style={styles.trackingButtonText}>🗺️ تتبع التوصيل</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </TouchableOpacity>
           ))
         )}
@@ -862,6 +880,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   acceptButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  orderButtonsContainer: {
+    gap: 8,
+  },
+  trackingButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  trackingButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
