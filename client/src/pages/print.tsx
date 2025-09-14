@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import Header from '@/components/layout/header';
@@ -755,6 +755,76 @@ export default function Print() {
     },
   });
 
+  // Pending uploads system (persistent file cart)
+  const { data: pendingUploads = [], refetch: refetchPendingUploads } = useQuery({
+    queryKey: ['/api/pending-uploads'],
+    enabled: !!user,
+  });
+
+  const createPendingUploadMutation = useMutation({
+    mutationFn: async (uploadData: any) => {
+      return await apiRequest('POST', '/api/pending-uploads', uploadData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pending-uploads'] });
+      console.log('📁 Pending upload saved to cart');
+    },
+  });
+
+  const updatePendingUploadMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      return await apiRequest('PUT', `/api/pending-uploads/${id}/settings`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pending-uploads'] });
+      console.log('⚙️ Pending upload settings updated');
+    },
+  });
+
+  const deletePendingUploadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/pending-uploads/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pending-uploads'] });
+      toast({
+        title: 'تم الحذف',
+        description: 'تم حذف الملف من سلة الملفات',
+      });
+    },
+  });
+
+  const clearPendingUploadsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('DELETE', '/api/pending-uploads');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pending-uploads'] });
+      toast({
+        title: 'تم المسح',
+        description: 'تم مسح جميع الملفات من سلة الملفات',
+      });
+    },
+  });
+
+  // Helper functions for pending uploads (persistent file cart)
+  const togglePendingUploadExpanded = (uploadId: string) => {
+    const upload = pendingUploads.find((u: any) => u.id === uploadId);
+    if (upload) {
+      updatePendingUploadMutation.mutate({
+        id: uploadId,
+        updates: { isExpanded: !upload.isExpanded }
+      });
+    }
+  };
+
+  const updatePendingUploadSettings = (uploadId: string, settingName: string, value: any) => {
+    updatePendingUploadMutation.mutate({
+      id: uploadId,
+      updates: { [settingName]: value }
+    });
+  };
+
   const handleFileUpload = async (files: File[]) => {
     if (!user) {
       toast({
@@ -885,13 +955,46 @@ export default function Print() {
       console.log('✅ Successfully uploaded', results.length, 'files');
       console.log('Upload results:', results);
       
+      // Save successfully uploaded files as pending uploads (Amazon-like cart system)
+      console.log('💾 Saving uploaded files to pending uploads cart...');
+      for (const result of results) {
+        try {
+          const uploadSession = `upload_${Date.now()}`;
+          await createPendingUploadMutation.mutateAsync({
+            filename: result.name,
+            originalName: result.name,
+            fileUrl: result.url,
+            fileSize: result.fileSize || 0,
+            fileType: 'application/pdf', // Most uploads are PDFs
+            provider: result.provider || 'google_drive',
+            uploadSession,
+            // Default print settings
+            copies: 1,
+            colorMode: 'grayscale',
+            paperSize: 'A4',
+            paperType: 'plain',
+            doubleSided: false,
+            isExpanded: false
+          });
+          console.log(`📁 Saved ${result.name} to pending uploads cart`);
+        } catch (error) {
+          console.error(`Failed to save ${result.name} as pending upload:`, error);
+        }
+      }
+      
       // إضافة النتائج للنتائج الموجودة بدلاً من استبدالها
       setUploadResults(prev => [...prev, ...results]);
       setUploadErrors(prev => [...prev, ...errors]);
       // لا نعيد تعيين selectedFiles هنا لأنها تم تعيينها بالفعل
       setUploadedUrls(prev => [...prev, ...results.map(r => r.url)]);
       
-      // رسالة النجاح محذوفة - الزر الجماعي سيظهر بدلاً منها
+      // Success message
+      if (results.length > 0) {
+        toast({
+          title: '✅ حُفظت الملفات في سلة الملفات',
+          description: `تم حفظ ${results.length} ملف - ستبقى متاحة حتى لو غادرت الصفحة`,
+        });
+      }
       
       if (errors.length > 0) {
         toast({
@@ -1330,42 +1433,46 @@ export default function Print() {
                       )}
                     </div>
 
-                    {/* Files List */}
-                    {uploadResults.length === 0 ? (
+                    {/* Files List - Now using persistent pending uploads (Amazon-like cart) */}
+                    {pendingUploads.length === 0 ? (
                       <div className="p-8 text-center text-gray-500">
                         <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                        <p className="text-sm">لا توجد ملفات</p>
-                        <p className="text-xs">ارفع ملفات لتبدأ الطباعة</p>
+                        <p className="text-sm">لا توجد ملفات محفوظة</p>
+                        <p className="text-xs">ارفع ملفات لتبدأ الطباعة - ستبقى محفوظة حتى لو غادرت الصفحة</p>
                       </div>
                     ) : (
                       <div className="max-h-96 overflow-y-auto space-y-4 p-4">
-                        {uploadResults.map((result, index) => {
-                          const fileName = result.name;
-                          const currentSettings = fileSettings[fileName] || {
-                            copies: 1,
-                            colorMode: 'grayscale' as 'grayscale' | 'color',
-                            paperSize: 'A4' as 'A4' | 'A3' | 'A0' | 'A1' | 'A2',
-                            paperType: 'plain' as 'plain' | 'coated' | 'glossy' | 'sticker',
-                            doubleSided: false,
+                        {pendingUploads.map((upload: any, index: number) => {
+                          const fileName = upload.originalName || upload.filename;
+                          // Use settings directly from pending upload (persistent across page reloads)
+                          const currentSettings = {
+                            copies: upload.copies || 1,
+                            colorMode: upload.colorMode || 'grayscale',
+                            paperSize: upload.paperSize || 'A4',
+                            paperType: upload.paperType || 'plain',
+                            doubleSided: upload.doubleSided || false,
                           };
 
-                          // تحديد حالة التوسع - افتراضياً مطوي (false)
-                          const isExpanded = fileExpandedState[fileName] ?? false;
+                          // Use expanded state from pending upload (persistent across page reloads)
+                          const isExpanded = upload.isExpanded ?? false;
 
                           return (
-                            <Card key={index} className="border border-gray-200 hover:border-blue-300 transition-colors">
+                            <Card key={upload.id || index} className="border border-gray-200 hover:border-blue-300 transition-colors">
                               <CardContent className="p-0">
                                 {/* Header مع اسم الملف وأزرار التحكم */}
-                                <div className="flex items-center justify-between p-3 border-b bg-gray-50 cursor-pointer" onClick={() => toggleFileExpanded(fileName)}>
+                                <div className="flex items-center justify-between p-3 border-b bg-gray-50 cursor-pointer" onClick={() => togglePendingUploadExpanded(upload.id)}>
                                   <div className="flex items-center space-x-2 space-x-reverse flex-1 min-w-0">
                                     <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
                                     <div className="min-w-0 flex-1">
                                       <p className="font-medium text-sm text-gray-800 truncate">{fileName}</p>
                                       <p className="text-xs text-gray-500">
-                                        {(result.fileSize && result.fileSize > 0) ? 
-                                          `${(result.fileSize / 1024 / 1024).toFixed(1)} MB` : 
+                                        {(upload.fileSize && upload.fileSize > 0) ? 
+                                          `${(upload.fileSize / 1024 / 1024).toFixed(1)} MB` : 
                                           'حجم غير محدد'
                                         }
+                                        {upload.provider && (
+                                          <span className="ml-2 text-green-600">• {upload.provider === 'google_drive' ? 'جوجل درايف' : upload.provider}</span>
+                                        )}
                                       </p>
                                     </div>
                                   </div>
@@ -1377,7 +1484,7 @@ export default function Print() {
                                       size="sm"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        toggleFileExpanded(fileName);
+                                        togglePendingUploadExpanded(upload.id);
                                       }}
                                       className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1 flex-shrink-0"
                                     >
@@ -1398,7 +1505,7 @@ export default function Print() {
                                       size="sm"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        removeFile(fileName);
+                                        deletePendingUploadMutation.mutate(upload.id);
                                       }}
                                       className="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 flex-shrink-0"
                                     >
