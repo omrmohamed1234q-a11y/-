@@ -241,6 +241,7 @@ export class MemoryStorage implements IStorage {
   private userBehaviors: any[] = [];
   private notifications: any[] = [];
   private notificationPreferences: any[] = [];
+  private pendingUploads: PendingUpload[] = [];
   private privacyPolicies: any[] = [
     {
       id: 'privacy_policy_1',
@@ -1232,6 +1233,70 @@ export class MemoryStorage implements IStorage {
     this.privacyPolicies.splice(index, 1);
     console.log(`📋 Deleted privacy policy version: ${id}`);
     return true;
+  }
+
+  // Pending uploads operations (temporary file storage like shopping cart)
+  async getPendingUploads(userId: string): Promise<PendingUpload[]> {
+    return this.pendingUploads.filter(upload => upload.userId === userId);
+  }
+
+  async createPendingUpload(upload: InsertPendingUpload): Promise<PendingUpload> {
+    const newUpload: PendingUpload = {
+      id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...upload,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.pendingUploads.push(newUpload);
+    console.log(`📁 Created pending upload: ${upload.fileName} for user ${upload.userId}`);
+    return newUpload;
+  }
+
+  async updatePendingUpload(id: string, updates: Partial<PendingUpload>): Promise<PendingUpload> {
+    const index = this.pendingUploads.findIndex(upload => upload.id === id);
+    if (index === -1) throw new Error('Pending upload not found');
+    
+    this.pendingUploads[index] = {
+      ...this.pendingUploads[index],
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    console.log(`📁 Updated pending upload: ${id}`);
+    return this.pendingUploads[index];
+  }
+
+  async deletePendingUpload(id: string): Promise<boolean> {
+    const index = this.pendingUploads.findIndex(upload => upload.id === id);
+    if (index === -1) return false;
+    
+    this.pendingUploads.splice(index, 1);
+    console.log(`📁 Deleted pending upload: ${id}`);
+    return true;
+  }
+
+  async clearPendingUploads(userId: string): Promise<boolean> {
+    const initialLength = this.pendingUploads.length;
+    this.pendingUploads = this.pendingUploads.filter(upload => upload.userId !== userId);
+    const deletedCount = initialLength - this.pendingUploads.length;
+    
+    console.log(`📁 Cleared ${deletedCount} pending uploads for user ${userId}`);
+    return deletedCount > 0;
+  }
+
+  async updatePendingUploadSettings(id: string, printSettings: any): Promise<PendingUpload> {
+    const index = this.pendingUploads.findIndex(upload => upload.id === id);
+    if (index === -1) throw new Error('Pending upload not found');
+    
+    this.pendingUploads[index] = {
+      ...this.pendingUploads[index],
+      printSettings: { ...this.pendingUploads[index].printSettings, ...printSettings },
+      updatedAt: new Date()
+    };
+    
+    console.log(`📁 Updated print settings for pending upload: ${id}`);
+    return this.pendingUploads[index];
   }
 
   // Security
