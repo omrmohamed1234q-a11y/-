@@ -1,6 +1,8 @@
 // PDF Tools Library for Arabic printing platform
 // Implements PDF compress, merge, split, and rotate functionality
 
+import { PDFDocument } from 'pdf-lib';
+
 export interface PDFToolResult {
   success: boolean;
   data?: Blob | Blob[];
@@ -180,19 +182,38 @@ export function downloadBlob(blob: Blob, fileName: string) {
 }
 
 /**
- * Get PDF file info (simulated)
+ * Get PDF file info with real page analysis
  */
 export async function getPDFInfo(file: File): Promise<{
   pages: number;
   size: string;
   created: string;
 }> {
-  // Simulate getting PDF metadata
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  const pages = Math.floor(Math.random() * 50) + 1;
-  const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-  const created = new Date(file.lastModified).toLocaleDateString('ar-EG');
-  
-  return { pages, size, created };
+  try {
+    // Read the PDF file as array buffer
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Parse the PDF document with pdf-lib
+    const pdfDoc = await PDFDocument.load(arrayBuffer);
+    
+    // Get actual page count
+    const pages = pdfDoc.getPageCount();
+    
+    const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+    const created = new Date(file.lastModified).toLocaleDateString('ar-EG');
+    
+    console.log(`✅ PDF analyzed: ${file.name} has ${pages} pages`);
+    
+    return { pages, size, created };
+  } catch (error) {
+    console.error('❌ Error parsing PDF:', error);
+    // Fallback to 1 page if parsing fails
+    const pages = 1;
+    const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+    const created = new Date(file.lastModified).toLocaleDateString('ar-EG');
+    
+    console.log(`⚠️ PDF parsing failed, defaulting to 1 page for: ${file.name}`);
+    
+    return { pages, size, created };
+  }
 }
