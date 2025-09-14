@@ -816,6 +816,32 @@ export default function Print() {
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
       return await apiRequest('PUT', `/api/pending-uploads/${id}/settings`, updates);
     },
+    onMutate: async ({ id, updates }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['/api/pending-uploads'] });
+      
+      // Snapshot the previous value
+      const previousUploads = queryClient.getQueryData(['/api/pending-uploads']);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['/api/pending-uploads'], (old: any) => {
+        if (!old) return old;
+        return old.map((upload: any) => 
+          upload.id === id ? { ...upload, ...updates } : upload
+        );
+      });
+      
+      console.log('⚡ Optimistic update applied for', id);
+      
+      // Return a context object with the snapshotted value
+      return { previousUploads };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousUploads) {
+        queryClient.setQueryData(['/api/pending-uploads'], context.previousUploads);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/pending-uploads'] });
       console.log('⚙️ Pending upload settings updated');
@@ -1513,20 +1539,15 @@ export default function Print() {
                                       className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 flex-shrink-0 border border-blue-200 rounded-md"
                                       title={isExpanded ? "إخفاء إعدادات الطباعة" : "عرض إعدادات الطباعة"}
                                     >
-                                      <div className="flex items-center space-x-1 space-x-reverse">
-                                        <span className="text-xs font-medium">
-                                          {isExpanded ? "إخفاء" : "إعدادات"}
-                                        </span>
-                                        {isExpanded ? (
-                                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                          </svg>
-                                        ) : (
-                                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                          </svg>
-                                        )}
-                                      </div>
+                                      {isExpanded ? (
+                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                        </svg>
+                                      ) : (
+                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                      )}
                                     </Button>
                                     
                                     {/* زر الحذف */}
