@@ -433,32 +433,91 @@ export default function CheckoutPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Cart Items */}
-                <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {cart.items.map((item) => (
-                    <div key={item.id} className="flex gap-3 p-2 bg-gray-50 rounded-lg">
-                      <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0 flex items-center justify-center">
-                        {item.productImage ? (
-                          <img
-                            src={item.productImage}
-                            alt={item.productName}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                        ) : (
-                          <Package className="h-6 w-6 text-gray-400" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium line-clamp-2">{item.productName}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <Badge variant="secondary">{item.quantity}×</Badge>
-                          <span className="text-sm font-bold text-green-600">
-                            {(parseFloat(item.price) * item.quantity).toFixed(0)} جنيه
-                          </span>
+                {/* Cart Items with Enhanced Preview */}
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {cart.items.map((item) => {
+                    const isPrintJob = (item.variant as any)?.isPrintJob || 
+                                      (item as any).productSource === 'print_service' || 
+                                      (item as any).printJobData;
+                    const previewUrl = (item as any).previewUrl;
+                    const printJobData = (item as any).printJobData || (item.variant as any)?.printJob || {};
+                    
+                    return (
+                      <div key={item.id} className="p-3 border rounded-lg bg-white hover:shadow-sm transition-shadow" data-testid={`checkout-item-${item.id}`}>
+                        <div className="flex gap-3">
+                          {/* Enhanced Preview Section */}
+                          <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
+                            {isPrintJob && previewUrl ? (
+                              <a
+                                href={previewUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-full h-full"
+                                data-testid={`link-preview-${item.id}`}
+                              >
+                                <img
+                                  src={previewUrl}
+                                  alt={item.productName}
+                                  className="w-full h-full object-cover rounded-lg hover:opacity-80 transition-opacity"
+                                />
+                              </a>
+                            ) : isPrintJob ? (
+                              <svg className="h-8 w-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                              </svg>
+                            ) : item.productImage ? (
+                              <img
+                                src={item.productImage}
+                                alt={item.productName}
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                            ) : (
+                              <Package className="h-8 w-8 text-gray-400" />
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium line-clamp-2 mb-1">{item.productName}</p>
+                                
+                                {/* Print Job Details */}
+                                {isPrintJob && (
+                                  <div className="text-xs text-gray-600 space-y-1 mb-2">
+                                    {printJobData.pages && (
+                                      <div className="flex items-center gap-1">
+                                        <span>📄 {printJobData.pages} صفحة</span>
+                                        {printJobData.copies > 1 && <span>× {printJobData.copies} نسخة</span>}
+                                      </div>
+                                    )}
+                                    {printJobData.colorMode && (
+                                      <div className="flex items-center gap-1">
+                                        <span className={printJobData.colorMode === 'color' ? 'text-blue-600' : 'text-gray-600'}>
+                                          {printJobData.colorMode === 'color' ? '🎨 ملون' : '⚫ أبيض وأسود'}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {printJobData.paperSize && (
+                                      <div className="flex items-center gap-1">
+                                        <span>📏 {printJobData.paperSize}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                <div className="flex items-center justify-between">
+                                  <Badge variant="secondary" className="text-xs">{item.quantity}×</Badge>
+                                  <span className="text-sm font-bold text-green-600">
+                                    {(parseFloat(item.price) * item.quantity).toFixed(2)} جنيه
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <Separator />
@@ -495,14 +554,14 @@ export default function CheckoutPage() {
                         <div className="flex justify-between text-sm">
                           <span>رسوم التوصيل</span>
                           <span data-testid="checkout-delivery">
-                            {deliveryFee.toFixed(0)} جنيه
+                            {deliveryFee.toFixed(2)} جنيه
                           </span>
                         </div>
                       )}
                       <div className="flex justify-between text-sm">
                         <span>رسوم الخدمة (5% + 5 ج.م)</span>
                         <span data-testid="service-fee">
-                          {serviceFee.toFixed(0)} جنيه
+                          {serviceFee.toFixed(2)} جنيه
                         </span>
                       </div>
                       {pointsDiscount > 0 && (
@@ -515,7 +574,7 @@ export default function CheckoutPage() {
                       <div className="flex justify-between font-bold text-lg">
                         <span>الإجمالي</span>
                         <span className="text-green-600" data-testid="checkout-total">
-                          {total.toFixed(0)} جنيه
+                          {total.toFixed(2)} جنيه
                         </span>
                       </div>
                     </>
