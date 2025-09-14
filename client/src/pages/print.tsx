@@ -769,7 +769,48 @@ export default function Print() {
       queryClient.invalidateQueries({ queryKey: ['/api/pending-uploads'] });
       console.log('📁 Pending upload saved to cart');
     },
+    onError: (error) => {
+      console.error('❌ Failed to save pending upload:', error);
+    },
   });
+
+  // Helper function to persist uploaded files as pending uploads
+  const persistPendingUploads = async (uploadedFiles: any[]) => {
+    if (!uploadedFiles || uploadedFiles.length === 0) {
+      console.log('⚠️ No files to persist to pending uploads');
+      return;
+    }
+
+    console.log(`💾 Saving ${uploadedFiles.length} uploaded files to pending uploads cart...`);
+    try {
+      const uploadSession = `upload_${Date.now()}`;
+      
+      // Use Promise.all to save all files to pending uploads
+      await Promise.all(uploadedFiles.map(async (file) => {
+        console.log(`📁 Saving ${file.name} to pending uploads...`);
+        return await createPendingUploadMutation.mutateAsync({
+          filename: file.name,
+          originalName: file.name,
+          fileUrl: file.url,
+          fileSize: file.fileSize || 0,
+          fileType: 'application/pdf', // Most uploads are PDFs
+          provider: file.provider || 'google_drive',
+          uploadSession,
+          // Default print settings
+          copies: 1,
+          colorMode: 'grayscale',
+          paperSize: 'A4',
+          paperType: 'plain',
+          doubleSided: false,
+          isExpanded: false
+        });
+      }));
+      
+      console.log(`✅ All ${uploadedFiles.length} files saved to pending uploads cart successfully!`);
+    } catch (error) {
+      console.error('❌ Failed to save files to pending uploads cart:', error);
+    }
+  };
 
   const updatePendingUploadMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
@@ -955,41 +996,6 @@ export default function Print() {
       console.log('✅ Successfully uploaded', results.length, 'files');
       console.log('Upload results:', results);
       
-      // Save successfully uploaded files as pending uploads (Amazon-like cart system)
-      if (results.length > 0) {
-        console.log(`💾 Saving ${results.length} uploaded files to pending uploads cart...`);
-        try {
-          const uploadSession = `upload_${Date.now()}`;
-          
-          // Use Promise.all to save all files to pending uploads
-          await Promise.all(results.map(async (result) => {
-            console.log(`📁 Saving ${result.name} to pending uploads...`);
-            return await createPendingUploadMutation.mutateAsync({
-              filename: result.name,
-              originalName: result.name,
-              fileUrl: result.url,
-              fileSize: result.fileSize || 0,
-              fileType: 'application/pdf', // Most uploads are PDFs
-              provider: result.provider || 'google_drive',
-              uploadSession,
-              // Default print settings
-              copies: 1,
-              colorMode: 'grayscale',
-              paperSize: 'A4',
-              paperType: 'plain',
-              doubleSided: false,
-              isExpanded: false
-            });
-          }));
-          
-          console.log(`✅ All ${results.length} files saved to pending uploads cart successfully!`);
-        } catch (error) {
-          console.error('❌ Failed to save files to pending uploads cart:', error);
-        }
-      } else {
-        console.log('⚠️ No successful uploads to save to pending uploads cart');
-      }
-      
       // إضافة النتائج للنتائج الموجودة بدلاً من استبدالها
       setUploadResults(prev => [...prev, ...results]);
       setUploadErrors(prev => [...prev, ...errors]);
@@ -1029,12 +1035,24 @@ export default function Print() {
     return uploadResults.reduce((total, result) => total + (result.fileSize || 0), 0);
   };
 
-  const handleDragDropUpload = (files: File[], urls: string[]) => {
+  const handleDragDropUpload = async (files: File[], urls: string[]) => {
     console.log('Files selected via drag & drop:', files.map(f => f.name));
     console.log('URLs received:', urls);
     
     // إضافة الملفات للملفات الموجودة بدلاً من استبدالها
     setSelectedFiles(prev => [...prev, ...files]);
+    
+    // Create upload results for the UI
+    const uploadResults = files.map((file, index) => ({
+      name: file.name,
+      url: urls[index],
+      fileSize: file.size,
+      provider: 'google_drive',
+      status: 'success'
+    }));
+    
+    // **KEY FIX: Save uploaded files to pending uploads cart**
+    await persistPendingUploads(uploadResults);
     setUploadedUrls(prev => [...prev, ...urls]);
     
     // إضافة نتائج الرفع
