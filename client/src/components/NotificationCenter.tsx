@@ -106,7 +106,7 @@ export default function NotificationCenter() {
       return response;
     },
     enabled: !!user, // Only fetch if user is authenticated
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds (optimized from 5s)
   });
 
   // Mark as read mutation
