@@ -193,7 +193,7 @@ export function DragDropUpload({
                   }
                 </p>
                 <p className="text-sm text-gray-500 mt-2">
-                  يدعم: PDF, DOC, DOCX, JPG, PNG
+                  يدعم: PDF, JPG, JPEG, PNG, GIF
                 </p>
                 <p className="text-xs text-gray-400">
                   الحد الأقصى: {Math.round(maxSize / (1024 * 1024))} ميجابايت لكل ملف

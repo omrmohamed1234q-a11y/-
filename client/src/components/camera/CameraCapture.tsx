@@ -336,7 +336,7 @@ export function CameraCapture({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,.pdf,.doc,.docx"
+                accept="image/*,.pdf"
                 onChange={handleFileUpload}
                 className="hidden"
                 data-testid="input-file-upload"
@@ -355,7 +355,7 @@ export function CameraCapture({
           </div>
 
           <div className="text-xs text-gray-500 text-center">
-            <p>يدعم: JPG, PNG, PDF, DOC, DOCX</p>
+            <p>يدعم: JPG, PNG, GIF, PDF</p>
             <p>الحد الأقصى: {Math.round(maxFileSize / (1024 * 1024))} ميجابايت</p>
           </div>
         </div>

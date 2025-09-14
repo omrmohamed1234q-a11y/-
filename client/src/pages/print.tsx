@@ -39,6 +39,7 @@ import { PDFProcessor } from '@/components/pdf/PDFProcessor';
 import { UploadStatus } from '@/components/upload/UploadStatus';
 import { PriceGuide } from '@/components/print/PriceGuide';
 import { calculate_price, convertLegacySettings } from '@/lib/pricing';
+import { getPDFInfo } from '@/lib/pdf-tools';
 
 type ScanMode = 'color' | 'grayscale' | 'blackwhite'
 type ScanStep = 'capture' | 'preview' | 'processing' | 'complete'
@@ -788,17 +789,44 @@ export default function Print() {
     try {
       const uploadSession = `upload_${Date.now()}`;
       
-      // Use Promise.all to save all files to pending uploads
+      // Use Promise.all to save all files to pending uploads with PDF analysis
       await Promise.all(uploadedFiles.map(async (file) => {
         console.log(`📁 Saving ${file.name} to pending uploads...`);
+        
+        // Analyze PDF for real page count if it's a PDF file
+        let actualPages = 1; // Default fallback
+        let actualFileType = file.fileType || 'application/pdf';
+        
+        if (file.url && file.name.toLowerCase().endsWith('.pdf')) {
+          try {
+            console.log(`📄 Analyzing PDF: ${file.name}`);
+            // Download PDF and analyze it
+            const response = await fetch(file.url);
+            if (response.ok) {
+              const blob = await response.blob();
+              const pdfFile = new File([blob], file.name, { type: 'application/pdf' });
+              const pdfInfo = await getPDFInfo(pdfFile);
+              actualPages = pdfInfo.pages;
+              actualFileType = 'application/pdf';
+              console.log(`✅ PDF analyzed: ${file.name} has ${actualPages} pages`);
+            } else {
+              console.warn(`⚠️ Could not download PDF for analysis: ${file.name}`);
+            }
+          } catch (error) {
+            console.error(`❌ Error analyzing PDF ${file.name}:`, error);
+            console.log(`⚠️ Using fallback page count (1) for: ${file.name}`);
+          }
+        }
+        
         return await createPendingUploadMutation.mutateAsync({
           filename: file.name,
           originalName: file.name,
           fileUrl: file.url,
           fileSize: file.fileSize || 0,
-          fileType: 'application/pdf', // Most uploads are PDFs
+          fileType: actualFileType,
           provider: file.provider || 'google_drive',
           uploadSession,
+          pages: actualPages, // Real page count from PDF analysis
           // Default print settings
           copies: 1,
           colorMode: 'grayscale',
