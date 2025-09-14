@@ -1554,10 +1554,10 @@ export default function Print() {
                                         value={currentSettings.copies}
                                         onChange={(e) => {
                                           const copies = parseInt(e.target.value) || 1;
-                                          setFileSettings(prev => ({
-                                            ...prev,
-                                            [fileName]: { ...currentSettings, copies }
-                                          }));
+                                          updatePendingUploadMutation.mutate({
+                                            id: upload.id,
+                                            updates: { copies }
+                                          });
                                         }}
                                         className="h-9 text-center"
                                       />
@@ -1568,10 +1568,10 @@ export default function Print() {
                                       <Select
                                         value={currentSettings.paperSize}
                                         onValueChange={(value: 'A4' | 'A3' | 'A0' | 'A1' | 'A2') => {
-                                          setFileSettings(prev => ({
-                                            ...prev,
-                                            [fileName]: { ...currentSettings, paperSize: value }
-                                          }));
+                                          updatePendingUploadMutation.mutate({
+                                            id: upload.id,
+                                            updates: { paperSize: value }
+                                          });
                                         }}
                                       >
                                         <SelectTrigger className="h-9">
@@ -1596,10 +1596,10 @@ export default function Print() {
                                         <Select
                                           value={currentSettings.paperType}
                                           onValueChange={(value: 'plain' | 'coated' | 'glossy' | 'sticker') => {
-                                            setFileSettings(prev => ({
-                                              ...prev,
-                                              [fileName]: { ...currentSettings, paperType: value }
-                                            }));
+                                            updatePendingUploadMutation.mutate({
+                                              id: upload.id,
+                                              updates: { paperType: value }
+                                            });
                                           }}
                                         >
                                           <SelectTrigger className="h-9">
@@ -1653,10 +1653,10 @@ export default function Print() {
                                       <Select
                                         value={currentSettings.colorMode}
                                         onValueChange={(value: 'grayscale' | 'color') => {
-                                          setFileSettings(prev => ({
-                                            ...prev,
-                                            [fileName]: { ...currentSettings, colorMode: value }
-                                          }));
+                                          updatePendingUploadMutation.mutate({
+                                            id: upload.id,
+                                            updates: { colorMode: value }
+                                          });
                                         }}
                                         disabled={['A0', 'A1', 'A2'].includes(currentSettings.paperSize)}
                                       >
@@ -1683,10 +1683,10 @@ export default function Print() {
                                       <Switch
                                         checked={currentSettings.doubleSided}
                                         onCheckedChange={(checked) => {
-                                          setFileSettings(prev => ({
-                                            ...prev,
-                                            [fileName]: { ...currentSettings, doubleSided: checked }
-                                          }));
+                                          updatePendingUploadMutation.mutate({
+                                            id: upload.id,
+                                            updates: { doubleSided: checked }
+                                          });
                                         }}
                                       />
                                     </div>
