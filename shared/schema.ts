@@ -718,6 +718,31 @@ export const adminUploads = pgTable("admin_uploads", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Pending uploads - files uploaded but not yet processed (like shopping cart)
+export const pendingUploads = pgTable("pending_uploads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  filename: text("filename").notNull(),
+  originalName: text("original_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileSize: integer("file_size"),
+  fileType: text("file_type"),
+  provider: text("provider").default("google_drive"), // "google_drive" | "cloudinary" | "firebase"
+  googleDriveFileId: text("google_drive_file_id"),
+  previewUrl: text("preview_url"),
+  // Print settings for this file
+  copies: integer("copies").default(1),
+  colorMode: text("color_mode").default("grayscale"), // "color" | "grayscale" 
+  paperSize: text("paper_size").default("A4"), // "A4" | "A3" | "A0" | "A1" | "A2"
+  paperType: text("paper_type").default("plain"), // "plain" | "coated" | "glossy" | "sticker"
+  doubleSided: boolean("double_sided").default(false),
+  // Metadata
+  isExpanded: boolean("is_expanded").default(false), // UI state
+  uploadSession: varchar("upload_session"), // Group files uploaded together
+  createdAt: timestamp("created_at").defaultNow(),
+  lastModified: timestamp("last_modified").defaultNow(),
+});
+
 // Order tracking for animations
 export const orderTracking = pgTable("order_tracking", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1379,3 +1404,14 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
 export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
+
+// Pending uploads schema
+export const insertPendingUploadSchema = createInsertSchema(pendingUploads).omit({
+  id: true,
+  createdAt: true,
+  lastModified: true,
+});
+
+// Export types for pending uploads
+export type PendingUpload = typeof pendingUploads.$inferSelect;
+export type InsertPendingUpload = z.infer<typeof insertPendingUploadSchema>;
