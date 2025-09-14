@@ -1,4 +1,4 @@
-import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, partnerProducts, secureAdmins, secureDrivers, securityLogs, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct, type SecureAdmin, type InsertSecureAdmin, type SecureDriver, type InsertSecureDriver, type SecurityLog, type InsertSecurityLog } from "@shared/schema";
+import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, partnerProducts, secureAdmins, secureDrivers, securityLogs, pendingUploads, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct, type SecureAdmin, type InsertSecureAdmin, type SecureDriver, type InsertSecureDriver, type SecurityLog, type InsertSecurityLog, type PendingUpload, type InsertPendingUpload } from "@shared/schema";
 import { type SmartCampaign, type InsertSmartCampaign, type TargetingRule, type InsertTargetingRule, type SentMessage, type InsertSentMessage, type UserBehavior, type InsertUserBehavior, type MessageTemplate, type InsertMessageTemplate, type ScheduledJob, type InsertScheduledJob } from "@shared/smart-notifications-schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
@@ -38,6 +38,14 @@ export interface IStorage {
   getPrintJobsByUserId(userId: string): Promise<PrintJob[]>;
   createPrintJob(printJob: any): Promise<PrintJob>;
   updatePrintJobStatus(id: string, status: string): Promise<PrintJob>;
+  
+  // Pending uploads operations (temporary file storage like shopping cart)
+  getPendingUploads(userId: string): Promise<PendingUpload[]>;
+  createPendingUpload(upload: InsertPendingUpload): Promise<PendingUpload>;
+  updatePendingUpload(id: string, updates: Partial<PendingUpload>): Promise<PendingUpload>;
+  deletePendingUpload(id: string): Promise<boolean>;
+  clearPendingUploads(userId: string): Promise<boolean>;
+  updatePendingUploadSettings(id: string, printSettings: any): Promise<PendingUpload>;
   
   // Cart operations
   getCart(userId: string): Promise<any>;
@@ -2726,6 +2734,7 @@ class MemStorage implements IStorage {
   private secureAdmins: any[] = [];
   private secureDrivers: any[] = [];
   private securityLogs: any[] = [];
+  private pendingUploads: PendingUpload[] = [];
 
   constructor() {
     // Initialize with test admin account
@@ -3482,6 +3491,71 @@ class MemStorage implements IStorage {
       return this.printJobs[index];
     }
     throw new Error('Print job not found');
+  }
+
+  // Pending uploads operations (temporary file storage like shopping cart)
+  async getPendingUploads(userId: string): Promise<PendingUpload[]> {
+    return this.pendingUploads
+      .filter(upload => upload.userId === userId)
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+  }
+
+  async createPendingUpload(uploadData: InsertPendingUpload): Promise<PendingUpload> {
+    const upload: PendingUpload = {
+      id: Math.random().toString(36).substr(2, 9),
+      ...uploadData,
+      createdAt: new Date(),
+      lastModified: new Date()
+    };
+    this.pendingUploads.push(upload);
+    console.log(`📁 Created pending upload: ${upload.originalName} for user ${upload.userId}`);
+    return upload;
+  }
+
+  async updatePendingUpload(id: string, updates: Partial<PendingUpload>): Promise<PendingUpload> {
+    const index = this.pendingUploads.findIndex(u => u.id === id);
+    if (index === -1) throw new Error('Pending upload not found');
+    
+    this.pendingUploads[index] = {
+      ...this.pendingUploads[index],
+      ...updates,
+      lastModified: new Date()
+    };
+    return this.pendingUploads[index];
+  }
+
+  async updatePendingUploadSettings(id: string, printSettings: any): Promise<PendingUpload> {
+    const updates = {
+      copies: printSettings.copies,
+      colorMode: printSettings.colorMode,
+      paperSize: printSettings.paperSize,
+      paperType: printSettings.paperType,
+      doubleSided: printSettings.doubleSided,
+      isExpanded: printSettings.isExpanded
+    };
+    return this.updatePendingUpload(id, updates);
+  }
+
+  async deletePendingUpload(id: string): Promise<boolean> {
+    const index = this.pendingUploads.findIndex(u => u.id === id);
+    if (index === -1) return false;
+    
+    const upload = this.pendingUploads[index];
+    this.pendingUploads.splice(index, 1);
+    console.log(`🗑️ Deleted pending upload: ${upload.originalName}`);
+    return true;
+  }
+
+  async clearPendingUploads(userId: string): Promise<boolean> {
+    const initialCount = this.pendingUploads.length;
+    this.pendingUploads = this.pendingUploads.filter(u => u.userId !== userId);
+    const clearedCount = initialCount - this.pendingUploads.length;
+    console.log(`🧹 Cleared ${clearedCount} pending uploads for user ${userId}`);
+    return clearedCount > 0;
   }
 
   async addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<any> {
