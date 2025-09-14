@@ -46,9 +46,11 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const [showSimpleLocationPicker, setShowSimpleLocationPicker] = useState(false);
   const [manualAddress, setManualAddress] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+  const [error, setError] = useState<string>('');
   
   // Use secure Google Maps loader
-  const { isLoaded: isMapLoaded, isLoading, error, api: googleMapsAPI, loadMaps } = useGoogleMaps({
+  const { isLoaded: isMapLoaded, isLoading, error: mapsError, api: googleMapsAPI, loadMaps } = useGoogleMaps({
     libraries: ['places'],
     language: 'ar',
     region: 'EG'
@@ -146,7 +148,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   };
 
   const handleLocationSelection = async (lat: number, lng: number) => {
-    setIsLoading(true);
+    setIsLocationLoading(true);
     setError('');
     
     try {
@@ -177,12 +179,12 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       setError(err.message || 'حدث خطأ في تحديد الموقع');
       setValidation(null);
     } finally {
-      setIsLoading(false);
+      setIsLocationLoading(false);
     }
   };
 
   const handleGetCurrentLocation = async () => {
-    setIsLoading(true);
+    setIsLocationLoading(true);
     setError('');
     
     try {
@@ -219,14 +221,14 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       setError(err.message || 'حدث خطأ في تحديد الموقع');
       setValidation(null);
     } finally {
-      setIsLoading(false);
+      setIsLocationLoading(false);
     }
   };
 
   const handleSearchLocation = async () => {
     if (!searchQuery.trim() || !window.google) return;
     
-    setIsLoading(true);
+    setIsLocationLoading(true);
     setError('');
     
     const geocoder = new window.google.maps.Geocoder();
@@ -265,7 +267,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     } catch (err: any) {
       setError(err.message || 'فشل في البحث عن الموقع');
     } finally {
-      setIsLoading(false);
+      setIsLocationLoading(false);
     }
   };
 
@@ -304,7 +306,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       console.error('Error validating area:', error);
       setError('حدث خطأ في التحقق من المنطقة');
     } finally {
-      setIsLoading(false);
+      setIsLocationLoading(false);
     }
   };
 
@@ -337,7 +339,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       console.error('Error validating manual address:', error);
       setError('حدث خطأ في التحقق من العنوان');
     } finally {
-      setIsLoading(false);
+      setIsLocationLoading(false);
     }
   };
 
