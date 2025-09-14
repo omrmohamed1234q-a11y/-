@@ -1072,9 +1072,6 @@ export default function Print() {
     console.log('Files selected via drag & drop:', files.map(f => f.name));
     console.log('URLs received:', urls);
     
-    // إضافة الملفات للملفات الموجودة بدلاً من استبدالها
-    setSelectedFiles(prev => [...prev, ...files]);
-    
     // Create upload results for the UI
     const uploadResults = files.map((file, index) => ({
       name: file.name,
@@ -1084,7 +1081,7 @@ export default function Print() {
       status: 'success'
     }));
     
-    // **KEY FIX: Save uploaded files to pending uploads cart**
+    // **FIXED: Only save to pending uploads (remove selectedFiles duplication)**
     await persistPendingUploads(uploadResults);
     setUploadedUrls(prev => [...prev, ...urls]);
     
@@ -1133,6 +1130,7 @@ export default function Print() {
 
   // دالة لمسح جميع الملفات
   const clearAllFiles = () => {
+    // Clear old system (selectedFiles, uploadResults, etc.)
     setSelectedFiles([]);
     setUploadResults([]);
     setUploadedUrls([]);
@@ -1141,9 +1139,17 @@ export default function Print() {
     setFileSettings({});
     setFileExpandedState({});
     
+    // Clear new system (pending uploads)
+    clearPendingUploadsMutation.mutate(undefined, {
+      onSuccess: () => {
+        // Force immediate cache refresh to update UI
+        queryClient.invalidateQueries({ queryKey: ['/api/pending-uploads'] });
+      }
+    });
+    
     toast({
       title: 'تم مسح جميع الملفات',
-      description: 'تم مسح جميع الملفات من القائمة',
+      description: 'تم مسح جميع الملفات من القائمة وسلة الملفات',
     });
   };
 
@@ -1730,19 +1736,27 @@ export default function Print() {
                                       <span className="text-sm font-medium text-blue-800">تكلفة هذا الملف:</span>
                                       <span className="text-xl font-bold text-blue-600">
                                         {(() => {
-                                          const pricing = calculate_price(
+                                          // Get actual page count (default to 1 for single-page uploads)
+                                          // TODO: Enhance with proper PDF page detection
+                                          const pageCount = upload.pageCount || upload.pages || 1;
+                                          
+                                          // Calculate price for all pages
+                                          const pricingForAllPages = calculate_price(
                                             currentSettings.paperSize,
                                             currentSettings.paperType,
                                             currentSettings.doubleSided ? 'face_back' : 'face',
-                                            currentSettings.copies,
+                                            pageCount,
                                             currentSettings.colorMode === 'grayscale'
                                           );
                                           
-                                          // Add binding cost if book printing is enabled
+                                          // Multiply by number of copies
+                                          const copiesCost = pricingForAllPages.finalPrice * currentSettings.copies;
+                                          
+                                          // Add binding cost ONCE (not per copy)
                                           const bindingCost = upload.bookPrinting ? 
                                             (upload.bindingType === 'book' ? 25 : 20) : 0;
                                           
-                                          const totalPrice = pricing.finalPrice + bindingCost;
+                                          const totalPrice = copiesCost + bindingCost;
                                           return totalPrice.toFixed(2);
                                         })()} جنيه
                                       </span>
@@ -1755,31 +1769,32 @@ export default function Print() {
                                   </div>
 
                                   {/* خيارات طباعة الكتاب */}
-                                  <div className="border-t border-gray-200 pt-4 mt-4">
-                                    <div className="flex items-center space-x-2 space-x-reverse mb-3">
-                                      <input
-                                        id={`book-printing-${upload.id}`}
-                                        type="checkbox"
-                                        checked={upload.bookPrinting || false}
-                                        onChange={(e) => {
-                                          const bookPrinting = e.target.checked;
-                                          const bindingPrice = bookPrinting ? 
-                                            (upload.bindingType === 'book' ? 25 : 20) : 0;
-                                          updatePendingUploadMutation.mutate({
-                                            id: upload.id,
-                                            updates: { 
-                                              bookPrinting,
-                                              bindingPrice
-                                            }
-                                          });
-                                        }}
-                                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                                        data-testid={`checkbox-book-printing-${upload.id}`}
-                                      />
-                                      <Label htmlFor={`book-printing-${upload.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">
-                                        📖 طباعة كتاب
-                                      </Label>
-                                    </div>
+                                  {!['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
+                                    <div className="border-t border-gray-200 pt-4 mt-4">
+                                      <div className="flex items-center space-x-2 space-x-reverse mb-3">
+                                        <input
+                                          id={`book-printing-${upload.id}`}
+                                          type="checkbox"
+                                          checked={upload.bookPrinting || false}
+                                          onChange={(e) => {
+                                            const bookPrinting = e.target.checked;
+                                            const bindingPrice = bookPrinting ? 
+                                              (upload.bindingType === 'book' ? 25 : 20) : 0;
+                                            updatePendingUploadMutation.mutate({
+                                              id: upload.id,
+                                              updates: { 
+                                                bookPrinting,
+                                                bindingPrice
+                                              }
+                                            });
+                                          }}
+                                          className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                          data-testid={`checkbox-book-printing-${upload.id}`}
+                                        />
+                                        <Label htmlFor={`book-printing-${upload.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">
+                                          📖 طباعة كتاب
+                                        </Label>
+                                      </div>
                                     
                                     {upload.bookPrinting && (
                                       <div className="grid grid-cols-2 gap-3 pr-6 bg-blue-50 p-3 rounded-md">
@@ -1829,7 +1844,8 @@ export default function Print() {
                                         </div>
                                       </div>
                                     )}
-                                  </div>
+                                    </div>
+                                  )}
                                 </div>
                                 )}
                               </CardContent>

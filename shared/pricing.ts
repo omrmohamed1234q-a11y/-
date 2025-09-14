@@ -45,16 +45,16 @@ export function calculateSharedPrice(options: SharedPricingOptions): SharedPrici
       } else { // face_back
         if (pages <= 20) pricePerPage = 1.50;
         else if (pages <= 1000) pricePerPage = 0.95;
-        else pricePerPage = 0.35;
+        else pricePerPage = 0.70;
       }
     } else if (paper_type === 'coated') {
       if (pages <= 20) pricePerPage = 6.00;
       else if (pages <= 1000) pricePerPage = 5.00;
       else pricePerPage = 4.50;
     } else if (paper_type === 'glossy') {
-      if (pages <= 20) pricePerPage = 10.00;
-      else if (pages <= 1000) pricePerPage = 9.00;
-      else pricePerPage = 8.00;
+      if (pages <= 20) pricePerPage = 6.00;
+      else if (pages <= 1000) pricePerPage = 5.00;
+      else pricePerPage = 4.50;
     } else if (paper_type === 'sticker') {
       if (pages <= 20) pricePerPage = 12.00;
       else if (pages <= 1000) pricePerPage = 11.00;
@@ -75,8 +75,8 @@ export function calculateSharedPrice(options: SharedPricingOptions): SharedPrici
       if (pages <= 50) pricePerPage = 22.00;
       else pricePerPage = 20.00;
     } else if (paper_type === 'glossy') {
-      if (pages <= 50) pricePerPage = 25.00;
-      else pricePerPage = 22.00;
+      if (pages <= 50) pricePerPage = 22.00;
+      else pricePerPage = 20.00;
     } else if (paper_type === 'sticker') {
       if (pages <= 50) pricePerPage = 22.00;
       else pricePerPage = 18.00;
