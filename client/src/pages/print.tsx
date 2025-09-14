@@ -956,30 +956,38 @@ export default function Print() {
       console.log('Upload results:', results);
       
       // Save successfully uploaded files as pending uploads (Amazon-like cart system)
-      console.log('💾 Saving uploaded files to pending uploads cart...');
-      for (const result of results) {
+      if (results.length > 0) {
+        console.log(`💾 Saving ${results.length} uploaded files to pending uploads cart...`);
         try {
           const uploadSession = `upload_${Date.now()}`;
-          await createPendingUploadMutation.mutateAsync({
-            filename: result.name,
-            originalName: result.name,
-            fileUrl: result.url,
-            fileSize: result.fileSize || 0,
-            fileType: 'application/pdf', // Most uploads are PDFs
-            provider: result.provider || 'google_drive',
-            uploadSession,
-            // Default print settings
-            copies: 1,
-            colorMode: 'grayscale',
-            paperSize: 'A4',
-            paperType: 'plain',
-            doubleSided: false,
-            isExpanded: false
-          });
-          console.log(`📁 Saved ${result.name} to pending uploads cart`);
+          
+          // Use Promise.all to save all files to pending uploads
+          await Promise.all(results.map(async (result) => {
+            console.log(`📁 Saving ${result.name} to pending uploads...`);
+            return await createPendingUploadMutation.mutateAsync({
+              filename: result.name,
+              originalName: result.name,
+              fileUrl: result.url,
+              fileSize: result.fileSize || 0,
+              fileType: 'application/pdf', // Most uploads are PDFs
+              provider: result.provider || 'google_drive',
+              uploadSession,
+              // Default print settings
+              copies: 1,
+              colorMode: 'grayscale',
+              paperSize: 'A4',
+              paperType: 'plain',
+              doubleSided: false,
+              isExpanded: false
+            });
+          }));
+          
+          console.log(`✅ All ${results.length} files saved to pending uploads cart successfully!`);
         } catch (error) {
-          console.error(`Failed to save ${result.name} as pending upload:`, error);
+          console.error('❌ Failed to save files to pending uploads cart:', error);
         }
+      } else {
+        console.log('⚠️ No successful uploads to save to pending uploads cart');
       }
       
       // إضافة النتائج للنتائج الموجودة بدلاً من استبدالها
