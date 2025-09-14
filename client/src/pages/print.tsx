@@ -759,6 +759,9 @@ export default function Print() {
   const { data: pendingUploads = [], refetch: refetchPendingUploads } = useQuery({
     queryKey: ['/api/pending-uploads'],
     enabled: !!user,
+    refetchOnWindowFocus: false, // Prevent auto-refetch on window focus
+    refetchOnReconnect: false,   // Prevent auto-refetch on network reconnect
+    staleTime: 5 * 60 * 1000,    // Consider data fresh for 5 minutes
   });
 
   const createPendingUploadMutation = useMutation({
@@ -802,7 +805,11 @@ export default function Print() {
           paperSize: 'A4',
           paperType: 'plain',
           doubleSided: false,
-          isExpanded: false
+          isExpanded: false,
+          // Book printing defaults
+          bookPrinting: false,
+          bindingType: 'spiral',
+          bindingPrice: 20
         });
       }));
       
@@ -1730,7 +1737,13 @@ export default function Print() {
                                             currentSettings.copies,
                                             currentSettings.colorMode === 'grayscale'
                                           );
-                                          return pricing.finalPrice.toFixed(2);
+                                          
+                                          // Add binding cost if book printing is enabled
+                                          const bindingCost = upload.bookPrinting ? 
+                                            (upload.bindingType === 'book' ? 25 : 20) : 0;
+                                          
+                                          const totalPrice = pricing.finalPrice + bindingCost;
+                                          return totalPrice.toFixed(2);
                                         })()} جنيه
                                       </span>
                                     </div>
@@ -1738,6 +1751,83 @@ export default function Print() {
                                       <p className="text-xs text-green-700 mt-2 flex items-center">
                                         ✓ خصم 10% للطباعة بالأبيض والأسود
                                       </p>
+                                    )}
+                                  </div>
+
+                                  {/* خيارات طباعة الكتاب */}
+                                  <div className="border-t border-gray-200 pt-4 mt-4">
+                                    <div className="flex items-center space-x-2 space-x-reverse mb-3">
+                                      <input
+                                        id={`book-printing-${upload.id}`}
+                                        type="checkbox"
+                                        checked={upload.bookPrinting || false}
+                                        onChange={(e) => {
+                                          const bookPrinting = e.target.checked;
+                                          const bindingPrice = bookPrinting ? 
+                                            (upload.bindingType === 'book' ? 25 : 20) : 0;
+                                          updatePendingUploadMutation.mutate({
+                                            id: upload.id,
+                                            updates: { 
+                                              bookPrinting,
+                                              bindingPrice
+                                            }
+                                          });
+                                        }}
+                                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                        data-testid={`checkbox-book-printing-${upload.id}`}
+                                      />
+                                      <Label htmlFor={`book-printing-${upload.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">
+                                        📖 طباعة كتاب
+                                      </Label>
+                                    </div>
+                                    
+                                    {upload.bookPrinting && (
+                                      <div className="grid grid-cols-2 gap-3 pr-6 bg-blue-50 p-3 rounded-md">
+                                        <div>
+                                          <Label className="text-xs font-medium text-gray-700 mb-1 block">نوع التغليف</Label>
+                                          <Select
+                                            value={upload.bindingType || 'spiral'}
+                                            onValueChange={(value: 'spiral' | 'book') => {
+                                              const bindingPrice = value === 'book' ? 25 : 20;
+                                              updatePendingUploadMutation.mutate({
+                                                id: upload.id,
+                                                updates: { 
+                                                  bindingType: value,
+                                                  bindingPrice
+                                                }
+                                              });
+                                            }}
+                                          >
+                                            <SelectTrigger className="h-9" data-testid={`select-binding-type-${upload.id}`}>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="spiral">
+                                                <div className="flex items-center space-x-2 space-x-reverse">
+                                                  <span>🌀</span>
+                                                  <span>تغليف لولبي</span>
+                                                  <span className="text-green-600 font-medium">(20 جنيه)</span>
+                                                </div>
+                                              </SelectItem>
+                                              <SelectItem value="book">
+                                                <div className="flex items-center space-x-2 space-x-reverse">
+                                                  <span>📘</span>
+                                                  <span>تغليف كتاب</span>
+                                                  <span className="text-green-600 font-medium">(25 جنيه)</span>
+                                                </div>
+                                              </SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        
+                                        <div className="flex items-end">
+                                          <div className="bg-green-100 border border-green-300 rounded-md px-3 py-2 text-xs w-full text-center">
+                                            <span className="text-green-800 font-bold">
+                                              التكلفة الإضافية: {upload.bindingPrice || 20} جنيه
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
                                 </div>

@@ -1289,9 +1289,19 @@ export class MemoryStorage implements IStorage {
     const index = this.pendingUploads.findIndex(upload => upload.id === id);
     if (index === -1) throw new Error('Pending upload not found');
     
+    // Server-side validation: compute binding price from binding type to prevent client tampering
+    const validatedSettings = { ...printSettings };
+    if (validatedSettings.bindingType) {
+      validatedSettings.bindingPrice = validatedSettings.bindingType === 'book' ? 25 : 20;
+    }
+    if (validatedSettings.bookPrinting === false) {
+      validatedSettings.bindingPrice = 0;
+    }
+    
+    // Update the pending upload directly (book printing fields are top-level properties)
     this.pendingUploads[index] = {
       ...this.pendingUploads[index],
-      printSettings: { ...this.pendingUploads[index].printSettings, ...printSettings },
+      ...validatedSettings,
       updatedAt: new Date()
     };
     

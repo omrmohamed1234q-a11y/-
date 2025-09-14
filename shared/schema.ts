@@ -736,6 +736,10 @@ export const pendingUploads = pgTable("pending_uploads", {
   paperSize: text("paper_size").default("A4"), // "A4" | "A3" | "A0" | "A1" | "A2"
   paperType: text("paper_type").default("plain"), // "plain" | "coated" | "glossy" | "sticker"
   doubleSided: boolean("double_sided").default(false),
+  // Book printing settings
+  bookPrinting: boolean("book_printing").default(false),
+  bindingType: text("binding_type").default("spiral"), // "spiral" | "book"
+  bindingPrice: integer("binding_price").default(20), // 20 for spiral, 25 for book
   // Metadata
   isExpanded: boolean("is_expanded").default(false), // UI state
   uploadSession: varchar("upload_session"), // Group files uploaded together
