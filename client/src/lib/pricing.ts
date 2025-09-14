@@ -59,7 +59,7 @@ export function getPricingTiers() {
         face_back: [
           { range: '1-20 صفحة', price: '1.50 جنيه/صفحة' },
           { range: '21-1000 صفحة', price: '0.95 جنيه/صفحة' },
-          { range: '1001+ صفحة', price: '0.35 جنيه/صفحة' }
+          { range: '1001+ صفحة', price: '0.70 جنيه/صفحة' }
         ]
       },
       coated: [
@@ -68,9 +68,9 @@ export function getPricingTiers() {
         { range: '1001+ صفحة', price: '4.5 جنيه/صفحة' }
       ],
       glossy: [
-        { range: '1-20 صفحة', price: '10 جنيه/صفحة' },
-        { range: '21-1000 صفحة', price: '9 جنيه/صفحة' },
-        { range: '1001+ صفحة', price: '8 جنيه/صفحة' }
+        { range: '1-20 صفحة', price: '6 جنيه/صفحة' },
+        { range: '21-1000 صفحة', price: '5 جنيه/صفحة' },
+        { range: '1001+ صفحة', price: '4.5 جنيه/صفحة' }
       ],
       sticker: [
         { range: '1-20 صفحة', price: '10 جنيه/صفحة' },
@@ -94,8 +94,8 @@ export function getPricingTiers() {
         { range: '51+ صفحة', price: '10 جنيه/صفحة' }
       ],
       glossy: [
-        { range: '1-50 صفحة', price: '16 جنيه/صفحة' },
-        { range: '51+ صفحة', price: '14 جنيه/صفحة' }
+        { range: '1-50 صفحة', price: '12 جنيه/صفحة' },
+        { range: '51+ صفحة', price: '10 جنيه/صفحة' }
       ],
       sticker: [
         { range: '1-50 صفحة', price: '20 جنيه/صفحة' },
