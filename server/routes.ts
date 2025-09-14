@@ -2026,6 +2026,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Pending uploads endpoints (temporary file storage like shopping cart)
+  app.get('/api/pending-uploads', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const uploads = await storage.getPendingUploads(userId);
+      res.json(uploads);
+    } catch (error) {
+      console.error("Error fetching pending uploads:", error);
+      res.status(500).json({ message: "Failed to fetch pending uploads" });
+    }
+  });
+
+  app.post('/api/pending-uploads', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      const uploadData = {
+        ...req.body,
+        userId
+      };
+      
+      console.log('Creating pending upload:', uploadData.originalName);
+      const upload = await storage.createPendingUpload(uploadData);
+      res.json(upload);
+    } catch (error) {
+      console.error("Error creating pending upload:", error);
+      res.status(500).json({ message: "Failed to create pending upload" });
+    }
+  });
+
+  app.put('/api/pending-uploads/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const upload = await storage.updatePendingUpload(id, updates);
+      res.json(upload);
+    } catch (error) {
+      console.error("Error updating pending upload:", error);
+      res.status(500).json({ message: "Failed to update pending upload" });
+    }
+  });
+
+  app.put('/api/pending-uploads/:id/settings', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const printSettings = req.body;
+      
+      const upload = await storage.updatePendingUploadSettings(id, printSettings);
+      res.json(upload);
+    } catch (error) {
+      console.error("Error updating pending upload settings:", error);
+      res.status(500).json({ message: "Failed to update pending upload settings" });
+    }
+  });
+
+  app.delete('/api/pending-uploads/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const success = await storage.deletePendingUpload(id);
+      if (success) {
+        res.json({ success: true, message: "Pending upload deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Pending upload not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting pending upload:", error);
+      res.status(500).json({ message: "Failed to delete pending upload" });
+    }
+  });
+
+  app.delete('/api/pending-uploads', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      const success = await storage.clearPendingUploads(userId);
+      res.json({ success, message: success ? "All pending uploads cleared" : "No uploads to clear" });
+    } catch (error) {
+      console.error("Error clearing pending uploads:", error);
+      res.status(500).json({ message: "Failed to clear pending uploads" });
+    }
+  });
 
   // Get all orders for current user
   app.get('/api/orders/user', requireAuth, async (req: any, res) => {
