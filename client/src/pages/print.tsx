@@ -1496,9 +1496,7 @@ export default function Print() {
                                           `${(upload.fileSize / 1024 / 1024).toFixed(1)} MB` : 
                                           'حجم غير محدد'
                                         }
-                                        {upload.provider && (
-                                          <span className="ml-2 text-green-600">• {upload.provider === 'google_drive' ? 'جوجل درايف' : upload.provider}</span>
-                                        )}
+                                        <span className="ml-2 text-green-600">• محفوظ</span>
                                       </p>
                                     </div>
                                   </div>
@@ -1512,17 +1510,23 @@ export default function Print() {
                                         e.stopPropagation();
                                         togglePendingUploadExpanded(upload.id);
                                       }}
-                                      className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1 flex-shrink-0"
+                                      className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 flex-shrink-0 border border-blue-200 rounded-md"
+                                      title={isExpanded ? "إخفاء إعدادات الطباعة" : "عرض إعدادات الطباعة"}
                                     >
-                                      {isExpanded ? (
-                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                        </svg>
-                                      ) : (
-                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                      )}
+                                      <div className="flex items-center space-x-1 space-x-reverse">
+                                        <span className="text-xs font-medium">
+                                          {isExpanded ? "إخفاء" : "إعدادات"}
+                                        </span>
+                                        {isExpanded ? (
+                                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                          </svg>
+                                        ) : (
+                                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                          </svg>
+                                        )}
+                                      </div>
                                     </Button>
                                     
                                     {/* زر الحذف */}
