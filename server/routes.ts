@@ -7081,7 +7081,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data.toString());
-        console.log(`📨 WebSocket message received:`, message);
+        
+        // ⚠️ SECURITY: Redact sensitive token data from logs
+        const safeMessage = { ...message };
+        if (message.type === 'authenticate' && message.data?.token) {
+          safeMessage.data = {
+            ...message.data,
+            token: `${message.data.token.substring(0, 8)}...[REDACTED]`
+          };
+        }
+        console.log(`📨 WebSocket message received:`, safeMessage);
 
         switch (message.type) {
           case 'authenticate':

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './use-auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from './use-toast';
+import { supabase } from '@/lib/supabase';
 
 interface WebSocketMessage {
   type: string;
@@ -33,7 +34,7 @@ interface WebSocketHook {
 }
 
 export function useWebSocket(): WebSocketHook {
-  const { user, getAuthToken } = useAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -87,17 +88,26 @@ export function useWebSocket(): WebSocketHook {
     isConnecting: false
   });
 
-  // إنشاء اتصال WebSocket - TEMPORARILY DISABLED to fix auth loop
+  // Get authentication token for WebSocket connection
+  const getAuthToken = useCallback(async () => {
+    // Check localStorage first (for admin users)
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      return storedToken;
+    }
+    
+    // Fall back to Supabase session for regular users
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      return session?.access_token || null;
+    } catch (error) {
+      console.warn('⚠️ Failed to get auth token:', error);
+      return null;
+    }
+  }, []);
+
+  // إنشاء اتصال WebSocket - RE-ENABLED after fixing auth issues
   const connect = useCallback(() => {
-    console.log('🚫 WebSocket connection TEMPORARILY DISABLED to fix auth loop');
-    console.log('🚫 Will not connect until authentication issues are resolved');
-    setState(prev => ({ 
-      ...prev, 
-      isConnecting: false, 
-      isConnected: false,
-      error: 'WebSocket temporarily disabled - authentication loop fix in progress'
-    }));
-    return;
 
     if (wsRef.current?.readyState === WebSocket.CONNECTING || 
         wsRef.current?.readyState === WebSocket.OPEN) {
@@ -114,7 +124,7 @@ export function useWebSocket(): WebSocketHook {
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
-      ws.onopen = () => {
+      ws.onopen = async () => {
         console.log('✅ WebSocket connected successfully');
         setState(prev => ({
           ...prev,
@@ -128,7 +138,7 @@ export function useWebSocket(): WebSocketHook {
 
         // مصادقة المستخدم إذا كان متاحاً مع JWT token
         if (user) {
-          const token = getAuthToken ? getAuthToken() : null;
+          const token = await getAuthToken();
           
           // Only authenticate if we have a valid JWT token
           if (token && token !== 'temp-token') {
@@ -375,13 +385,14 @@ export function useWebSocket(): WebSocketHook {
     setTimeout(connect, 100);
   }, [disconnect, connect]);
 
-  // تأثيرات الاتصال والتنظيف - GLOBALLY DISABLED to fix auth loop
+  // تأثيرات الاتصال والتنظيف - RE-ENABLED after fixing auth issues
   useEffect(() => {
-    console.log('🚫 useWebSocket GLOBALLY DISABLED - Authentication loop fix in progress');
-    console.log('🚫 Multiple parallel connections detected - fixing architecture');
+    console.log('🔗 useWebSocket connection re-enabled - Authentication issues resolved');
     
-    // TEMPORARILY DISABLE all auto-connections
-    // connect();
+    // Auto-connect when component mounts and user is authenticated
+    if (user) {
+      connect();
+    }
 
     return () => {
       disconnect();
