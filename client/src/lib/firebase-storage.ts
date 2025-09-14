@@ -238,6 +238,8 @@ export function getImagePreviewUrl(downloadUrl: string, size: number = 200): str
   return downloadUrl;
 }
 
+import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE, FILE_TYPE_ERRORS, isValidFileType, isValidFileExtension } from '@shared/file-types';
+
 /**
  * Validate file before upload
  */
@@ -250,40 +252,32 @@ export function validateFile(
   } = {}
 ): { isValid: boolean; error?: string } {
   const {
-    maxSize = 50 * 1024 * 1024, // 50MB default
-    allowedTypes = ['image/*', 'application/pdf', 'application/msword'],
-    allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx']
+    maxSize = MAX_FILE_SIZE,
+    allowedTypes = ALLOWED_FILE_TYPES.PICKER_TYPES,
+    allowedExtensions = ALLOWED_FILE_TYPES.EXTENSIONS
   } = options;
 
   // Check file size
   if (file.size > maxSize) {
     return {
       isValid: false,
-      error: `حجم الملف كبير جداً. الحد الأقصى ${Math.round(maxSize / (1024 * 1024))} ميجابايت`
+      error: FILE_TYPE_ERRORS.FILE_TOO_LARGE
     };
   }
 
-  // Check file type
-  const fileExtension = file.name.split('.').pop()?.toLowerCase();
-  if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+  // Check file extension using shared validation
+  if (!isValidFileExtension(file.name)) {
     return {
       isValid: false,
-      error: `نوع الملف غير مدعوم. الأنواع المدعومة: ${allowedExtensions.join(', ')}`
+      error: FILE_TYPE_ERRORS.INVALID_TYPE
     };
   }
 
-  // Check MIME type
-  const isTypeAllowed = allowedTypes.some(type => {
-    if (type.endsWith('*')) {
-      return file.type.startsWith(type.replace('*', ''));
-    }
-    return file.type === type;
-  });
-
-  if (!isTypeAllowed) {
+  // Check MIME type using shared validation
+  if (!isValidFileType(file)) {
     return {
       isValid: false,
-      error: 'نوع الملف غير مدعوم'
+      error: FILE_TYPE_ERRORS.INVALID_TYPE
     };
   }
 

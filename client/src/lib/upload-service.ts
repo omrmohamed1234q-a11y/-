@@ -218,33 +218,23 @@ export function getFilePreviewUrl(fileUrl: string, provider: 'cloudinary' | 'fir
   }
 }
 
+import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE, FILE_TYPE_ERRORS, isValidFileType } from '@shared/file-types';
+
 // Validate file for upload
 export function validateFile(file: File): { valid: boolean; error?: string } {
-  // Size check (50MB max)
-  const maxSize = 50 * 1024 * 1024;
-  if (file.size > maxSize) {
+  // Size check
+  if (file.size > MAX_FILE_SIZE) {
     return {
       valid: false,
-      error: `حجم الملف كبير جداً (${(file.size / 1024 / 1024).toFixed(1)}MB). الحد الأقصى 50MB`
+      error: `حجم الملف كبير جداً (${(file.size / 1024 / 1024).toFixed(1)}MB). ${FILE_TYPE_ERRORS.FILE_TOO_LARGE}`
     };
   }
 
-  // Type check
-  const allowedTypes = [
-    'application/pdf',
-    'image/jpeg',
-    'image/jpg', 
-    'image/png',
-    'image/gif',
-    'text/plain',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  ];
-
-  if (!allowedTypes.includes(file.type)) {
+  // Type check using shared validation
+  if (!isValidFileType(file)) {
     return {
       valid: false,
-      error: `نوع الملف غير مدعوم: ${file.type}`
+      error: `${FILE_TYPE_ERRORS.INVALID_TYPE}. نوع الملف المرسل: ${file.type}`
     };
   }
 
@@ -261,7 +251,7 @@ if (typeof window !== 'undefined') {
     console.log('Upload Service Status:', status);
     
     // Test file validation
-    const testFile = new File(['test'], 'test.txt', { type: 'text/plain' });
+    const testFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
     const validation = validateFile(testFile);
     console.log('File validation test:', validation);
     

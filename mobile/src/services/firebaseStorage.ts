@@ -85,6 +85,11 @@ export async function deleteFromFirebaseStorage(fileUrl: string): Promise<void> 
 /**
  * Validate file before upload (mobile specific)
  */
+// Note: Mobile app uses local constants since shared/ folder is not accessible
+// Keep these in sync with shared/file-types.ts
+const MOBILE_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
+const MOBILE_MAX_SIZE = 50 * 1024 * 1024; // 50MB to match web app
+
 export function validateMobileFile(
   fileUri: string,
   options: {
@@ -93,8 +98,8 @@ export function validateMobileFile(
   } = {}
 ): { isValid: boolean; error?: string } {
   const {
-    maxSize = 10 * 1024 * 1024, // 10MB default
-    allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf']
+    maxSize = MOBILE_MAX_SIZE,
+    allowedExtensions = MOBILE_ALLOWED_EXTENSIONS
   } = options;
 
   // Check file extension

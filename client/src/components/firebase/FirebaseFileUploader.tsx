@@ -31,7 +31,7 @@ interface FirebaseFileUploaderProps {
 export function FirebaseFileUploader({
   onUploadComplete,
   maxFiles = 5,
-  allowedTypes = ['image/*', 'application/pdf', 'text/*'],
+  allowedTypes = ['image/*', 'application/pdf'],
   maxSize = 10,
   storagePath = 'uploads'
 }: FirebaseFileUploaderProps) {

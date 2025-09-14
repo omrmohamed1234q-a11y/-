@@ -25,7 +25,7 @@ interface EnhancedFileUploaderProps {
 export function EnhancedFileUploader({
   category = 'prints',
   maxFiles = 10,
-  allowedTypes = ['image/*', 'application/pdf', 'text/*'],
+  allowedTypes = ['image/*', 'application/pdf'],
   maxSize = 50,
   onUploadComplete,
   showStats = true

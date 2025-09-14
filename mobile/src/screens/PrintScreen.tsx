@@ -48,7 +48,7 @@ export default function PrintScreen({ navigation, route }: PrintScreenProps) {
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*', 'application/msword'],
+        type: ['application/pdf', 'image/*'], // Supports: PDF, JPG, JPEG, PNG, GIF
         copyToCacheDirectory: true,
       });
 
