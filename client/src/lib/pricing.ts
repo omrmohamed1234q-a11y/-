@@ -18,6 +18,11 @@ export interface PricingResult {
   discount: number;
   finalPrice: number;
   currency: string;
+  isLargeFormat: boolean;
+  meta?: {
+    fullPairs?: number;
+    halfPageApplied?: boolean;
+  };
 }
 
 /**

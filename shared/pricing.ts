@@ -18,6 +18,10 @@ export interface SharedPricingResult {
   finalPrice: number;
   currency: string;
   isLargeFormat: boolean;
+  meta?: {
+    fullPairs?: number;
+    halfPageApplied?: boolean;
+  };
 }
 
 /**
@@ -83,7 +87,24 @@ export function calculateSharedPrice(options: SharedPricingOptions): SharedPrici
     }
   }
 
-  const totalPrice = pricePerPage * pages;
+  // Calculate total price with special handling for double-sided odd pages
+  let totalPrice: number;
+  let pricingMeta: { fullPairs?: number; halfPageApplied?: boolean } | undefined;
+  
+  if (print_type === 'face_back') {
+    // For double-sided printing: full pairs at full price + remainder at half price
+    const fullPairs = Math.floor(pages / 2);
+    const remainder = pages % 2;
+    totalPrice = pricePerPage * (fullPairs * 2) + (remainder ? pricePerPage * 0.5 : 0);
+    
+    pricingMeta = {
+      fullPairs,
+      halfPageApplied: remainder === 1
+    };
+  } else {
+    // For single-sided printing: standard calculation
+    totalPrice = pricePerPage * pages;
+  }
   
   // Apply black and white discount (only for non-large formats)
   let discount = 0;
@@ -99,7 +120,8 @@ export function calculateSharedPrice(options: SharedPricingOptions): SharedPrici
     discount,
     finalPrice,
     currency: 'EGP',
-    isLargeFormat
+    isLargeFormat,
+    meta: pricingMeta
   };
 }
 
