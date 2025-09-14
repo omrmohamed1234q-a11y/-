@@ -1752,11 +1752,11 @@ export default function Print() {
                                           // Multiply by number of copies
                                           const copiesCost = pricingForAllPages.finalPrice * currentSettings.copies;
                                           
-                                          // Add binding cost ONCE (not per copy)
+                                          // Apply binding cost per copy (each copy = separate book)
                                           const bindingCost = upload.bookPrinting ? 
                                             (upload.bindingType === 'book' ? 25 : 20) : 0;
                                           
-                                          const totalPrice = copiesCost + bindingCost;
+                                          const totalPrice = copiesCost + (bindingCost * currentSettings.copies);
                                           return totalPrice.toFixed(2);
                                         })()} جنيه
                                       </span>
