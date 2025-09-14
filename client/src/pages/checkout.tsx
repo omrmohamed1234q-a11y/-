@@ -484,24 +484,47 @@ export default function CheckoutPage() {
                                 {/* Print Job Details */}
                                 {isPrintJob && (
                                   <div className="text-xs text-gray-600 space-y-1 mb-2">
-                                    {printJobData.pages && (
+                                    {/* Filename */}
+                                    {printJobData.filename && (
                                       <div className="flex items-center gap-1">
-                                        <span>📄 {printJobData.pages} صفحة</span>
-                                        {printJobData.copies > 1 && <span>× {printJobData.copies} نسخة</span>}
+                                        <span className="font-medium text-gray-700">📁 {printJobData.filename}</span>
                                       </div>
                                     )}
-                                    {printJobData.colorMode && (
+                                    
+                                    <div className="grid grid-cols-1 gap-1 mt-1">
+                                      {/* Pages and Copies */}
+                                      {printJobData.pages && (
+                                        <div className="flex items-center gap-1">
+                                          <span>📄 {printJobData.pages} صفحة</span>
+                                          {printJobData.copies > 1 && <span>× {printJobData.copies} نسخة</span>}
+                                        </div>
+                                      )}
+                                      
+                                      {/* Paper Size */}
+                                      {printJobData.paperSize && (
+                                        <div className="flex items-center gap-1">
+                                          <span>📏 ورق {printJobData.paperSize}</span>
+                                        </div>
+                                      )}
+                                      
+                                      {/* Color Mode */}
+                                      {printJobData.colorMode && (
+                                        <div className="flex items-center gap-1">
+                                          <span className={printJobData.colorMode === 'color' ? 'text-blue-600' : 'text-gray-600'}>
+                                            {printJobData.colorMode === 'color' ? '🎨 طباعة ملونة' : '⚫ أبيض وأسود'}
+                                          </span>
+                                        </div>
+                                      )}
+                                      
+                                      {/* Single/Double Sided */}
                                       <div className="flex items-center gap-1">
-                                        <span className={printJobData.colorMode === 'color' ? 'text-blue-600' : 'text-gray-600'}>
-                                          {printJobData.colorMode === 'color' ? '🎨 ملون' : '⚫ أبيض وأسود'}
+                                        <span>
+                                          {printJobData.doubleSided || printJobData.double_sided ? 
+                                            '🔄 وش وضهر' : '📄 وش فقط'
+                                          }
                                         </span>
                                       </div>
-                                    )}
-                                    {printJobData.paperSize && (
-                                      <div className="flex items-center gap-1">
-                                        <span>📏 {printJobData.paperSize}</span>
-                                      </div>
-                                    )}
+                                    </div>
                                   </div>
                                 )}
                                 
