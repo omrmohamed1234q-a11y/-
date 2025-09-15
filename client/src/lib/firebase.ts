@@ -6,7 +6,8 @@ import {
   signInWithPhoneNumber,
   PhoneAuthProvider,
   signInWithCredential,
-  RecaptchaVerifier
+  RecaptchaVerifier,
+  signOut
 } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
@@ -67,7 +68,8 @@ export {
   signInWithPhoneNumber,
   PhoneAuthProvider,
   signInWithCredential,
-  RecaptchaVerifier
+  RecaptchaVerifier,
+  signOut
 };
 
 export default app;
