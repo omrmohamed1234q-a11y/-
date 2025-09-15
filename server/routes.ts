@@ -635,11 +635,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: 'تم إرسال الكود بنجاح'
           });
         } else {
-          const errorText = response.messages[0]['error-text'] || 'Unknown error';
+          const message = response.messages[0];
+          const errorText = message.errorText || message['error-text'] || 'Unknown error';
           console.error('❌ Vonage SMS send failed:', {
-            status: response.messages[0].status,
+            status: message.status,
             error: errorText,
-            to: phoneNumber
+            to: phoneNumber,
+            fullResponse: JSON.stringify(response, null, 2)
           });
           
           // Clean up verification code on failure
