@@ -43,7 +43,7 @@ import { UploadStatus } from '@/components/upload/UploadStatus';
 import { PriceGuide } from '@/components/print/PriceGuide';
 import { calculateSharedPrice, convertLegacySettings } from '@shared/pricing';
 import { getPDFInfo } from '@/lib/pdf-tools';
-// Removed new cart imports - unified with existing cart system
+// Unified cart system
 
 type ScanMode = 'color' | 'grayscale' | 'blackwhite'
 type ScanStep = 'capture' | 'preview' | 'processing' | 'complete'
@@ -1631,52 +1631,26 @@ export default function Print() {
                         )}
                       </div>
                       
-                      {/* أزرار السلة الجديدة والقديمة */}
+                      {/* زر إضافة للسلة الموحد */}
                       {uploadResults.length > 0 && (
-                        <div className="space-y-3">
-                          <Button
-                            onClick={addAllFilesToCart}
-                            disabled={addToCartMutation.isPending}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 text-base"
-                            data-testid="add-all-to-cart"
-                          >
-                            {addToCartMutation.isPending ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2"></div>
-                                جاري الإضافة...
-                              </>
-                            ) : (
-                              <>
-                                <ShoppingCart className="h-4 w-4 ml-2" />
-                                إضافة للسلة الجديدة ({uploadResults.length})
-                              </>
-                            )}
-                          </Button>
-                          
-                          {/* تم تبسيط النظام - السلة متاحة من الشريط السفلي */}
-                          
-                          {/* زر السلة القديمة - للتوافق مع النظام الحالي */}
-                          <Button
-                            onClick={addAllFilesToCart}
-                            disabled={addToCartMutation.isPending}
-                            variant="outline"
-                            className="w-full h-10 text-sm"
-                          >
-                            {addToCartMutation.isPending ? (
-                              <>
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500 ml-2"></div>
-                                جاري الإضافة...
-                              </>
-                            ) : (
-                              <>
-                                <svg className="h-4 w-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5h6" />
-                                </svg>
-                                السلة القديمة ({uploadResults.length})
-                              </>
-                            )}
-                          </Button>
-                        </div>
+                        <Button
+                          onClick={addAllFilesToCart}
+                          disabled={addToCartMutation.isPending}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 text-base"
+                          data-testid="add-all-to-cart"
+                        >
+                          {addToCartMutation.isPending ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2"></div>
+                              جاري الإضافة...
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingCart className="h-4 w-4 ml-2" />
+                              إضافة للسلة ({uploadResults.length})
+                            </>
+                          )}
+                        </Button>
                       )}
                     </div>
 

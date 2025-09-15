@@ -7,12 +7,12 @@ import { ShoppingCart, Plus, Minus, Trash2, X, Package, FileText, Eye } from 'lu
 import { useLocation } from 'wouter';
 import { useState } from 'react';
 
-interface NewCartDrawerProps {
+interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
+export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [, setLocation] = useLocation();
   const [expandedPreview, setExpandedPreview] = useState<string | null>(null);
 
@@ -105,7 +105,7 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         className="w-full sm:max-w-md flex flex-col h-full" 
-        data-testid="new-cart-drawer"
+        data-testid="cart-drawer"
       >
         <SheetHeader className="flex-shrink-0">
           <SheetTitle className="flex items-center justify-between">
@@ -183,13 +183,9 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
                             </h4>
                             <div className="text-xs text-gray-500 space-y-1">
                               <div>📄 {item.variant?.pages || 1} صفحة • {item.variant?.paperSize || 'A4'}</div>
-                              <div>
-                                🎨 {item.variant?.paperType || 'عادي'} • {item.variant?.printType === 'face' ? 'وجه واحد' : 'وجهين'} 
-                                {item.variant?.isBlackWhite ? ' • أبيض وأسود' : ' • ملون'}
-                              </div>
-                              <div className="font-medium text-blue-600">
-                                {parseFloat(item.price).toFixed(2)} جنيه/نسخة
-                              </div>
+                              <div>🎨 {item.variant?.colorMode === 'color' ? 'ملون' : item.variant?.colorMode === 'grayscale' ? 'رمادي' : 'أبيض وأسود'}</div>
+                              <div>📋 {item.variant?.paperType === 'plain' ? 'عادي' : item.variant?.paperType === 'photo' ? 'فوتو' : item.variant?.paperType}</div>
+                              {item.variant?.doubleSided && <div>↔️ طباعة على الوجهين</div>}
                             </div>
                           </div>
                           <Button
@@ -197,136 +193,109 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
                             size="sm"
                             onClick={() => removeItem(item.id)}
                             disabled={isRemovingItem}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1"
                             data-testid={`remove-item-${item.id}`}
-                            className="self-start"
                           >
-                            {isRemovingItem ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500"></div>
-                            ) : (
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            )}
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t">
-                          <div className="flex items-center gap-2">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={() => handleQuantityChange(item.id, item.quantity, -1)}
-                              disabled={isUpdatingQuantity}
+                              disabled={isUpdatingQuantity || item.quantity <= 1}
+                              className="h-8 w-8 p-0 hover:bg-white"
                               data-testid={`decrease-quantity-${item.id}`}
                             >
-                              {isUpdatingQuantity ? (
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
-                              ) : (
-                                <Minus className="h-3 w-3" />
-                              )}
+                              <Minus className="h-3 w-3" />
                             </Button>
-                            <span className="w-8 text-center font-medium" data-testid={`quantity-${item.id}`}>
+                            <span className="text-sm font-medium min-w-[2rem] text-center" data-testid={`quantity-${item.id}`}>
                               {item.quantity}
                             </span>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={() => handleQuantityChange(item.id, item.quantity, 1)}
                               disabled={isUpdatingQuantity}
+                              className="h-8 w-8 p-0 hover:bg-white"
                               data-testid={`increase-quantity-${item.id}`}
                             >
-                              {isUpdatingQuantity ? (
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
-                              ) : (
-                                <Plus className="h-3 w-3" />
-                              )}
+                              <Plus className="h-3 w-3" />
                             </Button>
                           </div>
-                          <div className="text-right">
-                            <div className="font-bold text-green-600" data-testid={`item-price-${item.id}`}>
-                              {(parseFloat(item.price) * item.quantity).toFixed(2)} جنيه
+                          
+                          <div className="text-left">
+                            <div className="text-sm font-semibold" data-testid={`item-total-${item.id}`}>
+                              {item.totalPrice?.toFixed(2) || '0.00'} جنيه
                             </div>
-                            <div className="text-xs text-gray-500">
-                              إجمالي {item.quantity} نسخة
-                            </div>
+                            {item.quantity > 1 && (
+                              <div className="text-xs text-gray-500">
+                                {(item.totalPrice / item.quantity).toFixed(2)} × {item.quantity}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
                     </div>
-
-                    {/* Expanded Preview */}
-                    {expandedPreview === item.id && getPreviewUrl(item) && (
-                      <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">معاينة الصفحة الأولى</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setExpandedPreview(null)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <img
-                          src={getPreviewUrl(item)}
-                          alt={`معاينة ${item.productName}`}
-                          className="w-full max-h-48 object-contain rounded border"
-                        />
-                      </div>
-                    )}
                   </div>
                 ))}
+              </div>
+
+              {/* Cart Summary */}
+              <Separator className="my-4" />
+              
+              <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">المجموع الفرعي:</span>
+                  <span className="font-medium" data-testid="cart-subtotal">
+                    {subtotal?.toFixed(2) || '0.00'} جنيه
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">الشحن:</span>
+                  <span className="text-green-600 text-sm font-medium">
+                    مجاني
+                  </span>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between items-center text-lg font-bold">
+                  <span>الإجمالي:</span>
+                  <span data-testid="cart-total">
+                    {subtotal?.toFixed(2) || '0.00'} جنيه
+                  </span>
+                </div>
               </div>
             </>
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer Buttons */}
         {cart?.items && cart.items.length > 0 && (
-          <SheetFooter className="flex-shrink-0 border-t pt-4">
-            <div className="w-full space-y-4">
-              {/* Summary */}
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>إجمالي الملفات:</span>
-                  <span>{cart.items.length} ملف</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>إجمالي النسخ:</span>
-                  <span>{cart.totalQuantity} نسخة</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>إجمالي الصفحات:</span>
-                  <span>{cart.items.reduce((sum, item) => sum + ((item.variant?.pages || 1) * item.quantity), 0)} صفحة</span>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Total */}
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-bold">المجموع النهائي</span>
-                <span className="text-lg font-bold text-green-600" data-testid="cart-subtotal">
-                  {subtotal.toFixed(2)} جنيه
-                </span>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleContinueShopping}
-                  variant="outline"
-                  className="flex-1"
-                  data-testid="continue-shopping-footer-button"
-                >
-                  إضافة ملفات أخرى
-                </Button>
-                <Button
-                  onClick={handleCheckout}
-                  className="flex-1"
-                  data-testid="checkout-button"
-                >
-                  إتمام الطلب
-                </Button>
-              </div>
+          <SheetFooter className="flex-shrink-0 p-4 border-t">
+            <div className="space-y-3 w-full">
+              <Button
+                onClick={handleCheckout}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium h-12 text-lg"
+                data-testid="checkout-button"
+              >
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                المتابعة للدفع ({cart.totalQuantity} عنصر)
+              </Button>
+              
+              <Button
+                onClick={handleContinueShopping}
+                variant="outline"
+                className="w-full"
+                data-testid="continue-shopping-button"
+              >
+                متابعة التسوق
+              </Button>
             </div>
           </SheetFooter>
         )}

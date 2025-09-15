@@ -47,21 +47,13 @@ export interface IStorage {
   clearPendingUploads(userId: string): Promise<boolean>;
   updatePendingUploadSettings(id: string, printSettings: any): Promise<PendingUpload>;
   
-  // Cart operations (legacy product cart)
+  // Unified Cart operations (supports all item types: products, print jobs, partner products)
   getCart(userId: string): Promise<any>;
   addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<CartItem>;
   updateCartItem(itemId: string, quantity: number): Promise<CartItem>;
   removeCartItem(itemId: string): Promise<boolean>;
   clearCart(userId: string): Promise<boolean>;
   getCartItemCount(userId: string): Promise<number>;
-  
-  // New Cart operations (print job cart)
-  getCartItems(userId: string): Promise<CartItem[]>;
-  addCartItem(cartItem: InsertCartItem): Promise<CartItem>;
-  updateCartItemQuantity(itemId: string, quantity: number, userId: string): Promise<CartItem>;
-  removeCartItemById(itemId: string, userId: string): Promise<boolean>; // Different name to avoid conflict
-  clearCartItems(userId: string): Promise<boolean>;
-  getCartTotal(userId: string): Promise<{ subtotal: number; totalItems: number }>;
   
   // Cart Order operations  
   createCartOrder(order: InsertCartOrder): Promise<CartOrder>;
@@ -243,8 +235,7 @@ export class MemoryStorage implements IStorage {
   private users: User[] = [];
   private products: Product[] = [];
   private orders: Order[] = [];
-  private cartItems: CartItem[] = []; // Legacy product cart items
-  private newCartItems: CartItem[] = []; // New print job cart items  
+  private cartItems: CartItem[] = []; // Unified cart items (products, print jobs, partner products)
   private cartOrders: CartOrder[] = []; // Cart orders
   private partners: Partner[] = [];
   private partnerProducts: any[] = [];
@@ -5460,62 +5451,6 @@ class MemStorage implements IStorage {
     return this.sentMessages[index];
   }
 
-  // ===== New Cart Operations (Print Job Cart) =====
-  
-  async getCartItems(userId: string): Promise<CartItem[]> {
-    return this.newCartItems.filter(item => item.userId === userId);
-  }
-
-  async addCartItem(cartItemData: InsertCartItem): Promise<CartItem> {
-    const cartItem: CartItem = {
-      id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      ...cartItemData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.newCartItems.push(cartItem);
-    return cartItem;
-  }
-
-  async updateCartItemQuantity(itemId: string, quantity: number, userId: string): Promise<CartItem> {
-    const index = this.newCartItems.findIndex(item => item.id === itemId && item.userId === userId);
-    if (index === -1) {
-      throw new Error('Cart item not found or access denied');
-    }
-    
-    // Recalculate total price based on new quantity
-    const item = this.newCartItems[index];
-    const newTotalPrice = Number(item.unitPrice) * quantity;
-    
-    this.newCartItems[index] = {
-      ...item,
-      quantity,
-      totalPrice: newTotalPrice.toString(),
-      updatedAt: new Date()
-    };
-    
-    return this.newCartItems[index];
-  }
-
-  async removeCartItemById(itemId: string, userId: string): Promise<boolean> {
-    const index = this.newCartItems.findIndex(item => item.id === itemId && item.userId === userId);
-    if (index === -1) return false;
-    this.newCartItems.splice(index, 1);
-    return true;
-  }
-
-  async clearCartItems(userId: string): Promise<boolean> {
-    const initialLength = this.newCartItems.length;
-    this.newCartItems = this.newCartItems.filter(item => item.userId !== userId);
-    return this.newCartItems.length < initialLength;
-  }
-
-  async getCartTotal(userId: string): Promise<{ subtotal: number; totalItems: number }> {
-    const userItems = await this.getCartItems(userId);
-    const subtotal = userItems.reduce((sum, item) => sum + Number(item.totalPrice), 0);
-    const totalItems = userItems.reduce((sum, item) => sum + item.quantity, 0);
-    return { subtotal, totalItems };
-  }
 
   // ===== Cart Order Operations =====
   

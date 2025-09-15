@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import NewCartDrawer from '@/components/cart/NewCartDrawer';
+import CartDrawer from '@/components/cart/CartDrawer';
 import NotificationCenter from '@/components/NotificationCenter';
 
 export default function Header() {
@@ -82,7 +82,7 @@ export default function Header() {
       </header>
 
       {/* Cart Drawer - unified single cart system */}
-      <NewCartDrawer 
+      <CartDrawer 
         isOpen={isCartOpen} 
         onClose={() => setIsCartOpen(false)} 
       />

@@ -1581,15 +1581,9 @@ export type AddToCartRequest = z.infer<typeof addToCartRequestSchema>;
 export type UpdateCartItemRequest = z.infer<typeof updateCartItemSchema>;
 
 // ===========================================
-// LEGACY CART TYPES (for compatibility)
+// UNIFIED CART TYPES (all item types)
 // ===========================================
 
-// Keep existing cartItems table schema for gradual migration
-export const insertLegacyCartItemSchema = createInsertSchema(cartItems).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type LegacyCartItem = typeof cartItems.$inferSelect;
-export type InsertLegacyCartItem = z.infer<typeof insertLegacyCartItemSchema>;
+// Unified cartItems table schema (supports products, print jobs, partner products)
+// Schema and types defined earlier in file - no duplicates needed
 
