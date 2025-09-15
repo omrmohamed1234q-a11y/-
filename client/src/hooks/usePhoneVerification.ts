@@ -129,41 +129,6 @@ export const usePhoneVerification = () => {
         countdownIntervalRef.current = null;
       }
 
-      // In development, use test phone number for bypass
-      if (import.meta.env.DEV) {
-        const formattedPhone = formatPhoneNumber(phoneNumber);
-        
-        // Simulate successful SMS sending
-        setState(prev => ({ 
-          ...prev, 
-          isSending: false,
-          isLoading: false,
-          verificationId: 'test-verification-id-dev',
-          phoneNumber: formattedPhone,
-          countdown: 60,
-          canResend: false
-        }));
-
-        // Start countdown with proper cleanup
-        countdownIntervalRef.current = setInterval(() => {
-          setState(prev => {
-            if (prev.countdown <= 1) {
-              if (countdownIntervalRef.current) {
-                clearInterval(countdownIntervalRef.current);
-                countdownIntervalRef.current = null;
-              }
-              return { ...prev, countdown: 0, canResend: true };
-            }
-            return { ...prev, countdown: prev.countdown - 1 };
-          });
-        }, 1000);
-
-        console.log('🔧 Development mode: SMS simulation activated');
-        return { 
-          success: true, 
-          verificationId: 'test-verification-id-dev' 
-        };
-      }
 
       // Validate phone number first
       if (!validateEgyptianPhone(phoneNumber)) {
@@ -316,35 +281,6 @@ export const usePhoneVerification = () => {
         error: null 
       }));
 
-      // In development, bypass actual verification
-      if (import.meta.env.DEV && state.verificationId === 'test-verification-id-dev') {
-        // Simulate successful verification with any 6-digit code
-        if (code.length === 6) {
-          setState(prev => ({ 
-            ...prev, 
-            isVerifying: false,
-            isLoading: false
-          }));
-
-          console.log('🔧 Development mode: SMS verification bypassed successfully');
-          return { 
-            success: true, 
-            user: {
-              phoneNumber: state.phoneNumber,
-              uid: 'test-uid-dev'
-            }
-          };
-        } else {
-          const error = 'الكود يجب أن يكون 6 أرقام';
-          setState(prev => ({ 
-            ...prev, 
-            isVerifying: false,
-            isLoading: false,
-            error 
-          }));
-          return { success: false, error };
-        }
-      }
 
       // Create credential and sign in temporarily
       const credential = PhoneAuthProvider.credential(state.verificationId, code);
