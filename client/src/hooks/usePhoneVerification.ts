@@ -78,7 +78,8 @@ export const usePhoneVerification = () => {
     
     if (cleanPhone.length === 11 && cleanPhone.startsWith('01')) {
       // Convert Egyptian mobile to international format
-      return '+20' + cleanPhone;
+      // Remove the leading 0 and add +20 prefix
+      return '+20' + cleanPhone.substring(1);
     }
     
     if (cleanPhone.length === 12 && cleanPhone.startsWith('201')) {
