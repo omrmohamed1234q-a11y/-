@@ -172,48 +172,84 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               {/* Cart Items */}
               <div className="space-y-4">
                 {cart.items.map((item) => (
-                  <div key={item.id} className="p-3 border rounded-lg hover:bg-gray-50 transition-colors" data-testid={`cart-item-${item.id}`}>
-                    <div className="flex gap-3">
+                  <div key={item.id} className="p-4 border border-gray-200 rounded-xl hover:shadow-sm transition-all duration-200 bg-white" data-testid={`cart-item-${item.id}`}>
+                    <div className="flex gap-4">
                       <PreviewImage item={item} />
 
-                      <div className="flex-1 space-y-2">
-                        <div className="flex justify-between">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h4 className="font-medium text-sm mb-1" data-testid={`item-name-${item.id}`}>
+                            <h4 className="font-semibold text-base text-gray-800 mb-2" data-testid={`item-name-${item.id}`}>
                               {item.productName}
                             </h4>
-                            <div className="text-xs text-gray-500 space-y-1">
-                              <div>📄 {item.variant?.pages || 1} صفحة • {item.variant?.paperSize || 'A4'}</div>
-                              <div>🎨 {item.variant?.colorMode === 'color' ? 'ملون' : item.variant?.colorMode === 'grayscale' ? 'رمادي' : 'أبيض وأسود'}</div>
-                              <div>📋 {item.variant?.paperType === 'plain' ? 'عادي' : item.variant?.paperType === 'photo' ? 'فوتو' : item.variant?.paperType}</div>
-                              {item.variant?.doubleSided && <div>↔️ طباعة على الوجهين</div>}
+                            
+                            {/* Enhanced attributes display with badges */}
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              {/* Paper size badge with color coding for large formats */}
+                              <Badge 
+                                variant="secondary" 
+                                className={`text-xs font-medium ${
+                                  ['A0', 'A1', 'A2'].includes(item.variant?.paperSize) 
+                                    ? 'bg-purple-100 text-purple-700 border-purple-200' 
+                                    : 'bg-blue-100 text-blue-700 border-blue-200'
+                                }`}
+                              >
+                                📄 {item.variant?.paperSize || 'A4'} • {item.variant?.pages || 1} صفحة
+                              </Badge>
+                              
+                              {/* Color mode badge */}
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs font-medium ${
+                                  item.variant?.colorMode === 'color' 
+                                    ? 'bg-rainbow-100 text-rainbow-700 border-rainbow-200' 
+                                    : 'bg-gray-100 text-gray-700 border-gray-200'
+                                }`}
+                              >
+                                {item.variant?.colorMode === 'color' ? '🌈 ملون' : '⚫ أبيض وأسود'}
+                              </Badge>
+                              
+                              {/* Paper type badge */}
+                              <Badge variant="outline" className="text-xs font-medium bg-green-100 text-green-700 border-green-200">
+                                📋 {item.variant?.paperType === 'plain' ? 'ورق عادي' : item.variant?.paperType}
+                              </Badge>
                             </div>
+                            
+                            {/* Double sided indicator with icon */}
+                            {item.variant?.doubleSided && (
+                              <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-fit">
+                                <span className="text-blue-500">✅</span>
+                                طباعة على الوجهين
+                              </div>
+                            )}
                           </div>
+                          
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => removeItem(item.id)}
                             disabled={isRemovingItem}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg"
                             data-testid={`remove-item-${item.id}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
 
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                        <div className="flex justify-between items-center pt-2">
+                          {/* Enhanced quantity controls */}
+                          <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1.5 border border-gray-200">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleQuantityChange(item.id, item.quantity, -1)}
                               disabled={isUpdatingQuantity || item.quantity <= 1}
-                              className="h-8 w-8 p-0 hover:bg-white"
+                              className="h-8 w-8 p-0 hover:bg-white rounded-lg text-gray-600 hover:text-gray-800 disabled:opacity-40"
                               data-testid={`decrease-quantity-${item.id}`}
                             >
-                              <Minus className="h-3 w-3" />
+                              <Minus className="h-4 w-4" />
                             </Button>
-                            <span className="text-sm font-medium min-w-[2rem] text-center" data-testid={`quantity-${item.id}`}>
+                            <span className="text-sm font-bold min-w-[2.5rem] text-center text-gray-800" data-testid={`quantity-${item.id}`}>
                               {item.quantity}
                             </span>
                             <Button
@@ -221,19 +257,20 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                               size="sm"
                               onClick={() => handleQuantityChange(item.id, item.quantity, 1)}
                               disabled={isUpdatingQuantity}
-                              className="h-8 w-8 p-0 hover:bg-white"
+                              className="h-8 w-8 p-0 hover:bg-white rounded-lg text-gray-600 hover:text-gray-800"
                               data-testid={`increase-quantity-${item.id}`}
                             >
-                              <Plus className="h-3 w-3" />
+                              <Plus className="h-4 w-4" />
                             </Button>
                           </div>
                           
-                          <div className="text-left">
-                            <div className="text-sm font-semibold" data-testid={`item-total-${item.id}`}>
-                              {formatPrice(item.totalPrice)} جنيه
+                          {/* Enhanced pricing display */}
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-gray-900" data-testid={`item-total-${item.id}`}>
+                              {formatPrice(item.totalPrice)} <span className="text-sm font-medium text-gray-600">جنيه</span>
                             </div>
                             {item.quantity > 1 && (
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 mt-0.5">
                                 {formatPrice(parsePrice(item.totalPrice) / item.quantity)} × {item.quantity}
                               </div>
                             )}
