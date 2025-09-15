@@ -43,6 +43,8 @@ import { UploadStatus } from '@/components/upload/UploadStatus';
 import { PriceGuide } from '@/components/print/PriceGuide';
 import { calculate_price, convertLegacySettings } from '@/lib/pricing';
 import { getPDFInfo } from '@/lib/pdf-tools';
+import { useNewCart } from '@/hooks/useNewCart';
+import NewCartDrawer from '@/components/cart/NewCartDrawer';
 
 type ScanMode = 'color' | 'grayscale' | 'blackwhite'
 type ScanStep = 'capture' | 'preview' | 'processing' | 'complete'
@@ -806,6 +808,10 @@ export default function Print() {
     previewUrl?: string;
     fileSize?: number;
   }>>([]);
+  
+  // New cart system
+  const { addToCart, cart, isAddingToCart } = useNewCart();
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<Array<{
     name: string;
     error: string;
@@ -1024,6 +1030,95 @@ export default function Print() {
       });
     },
   });
+
+  // New cart functionality - add to new cart system with per-file settings
+  const addAllFilesToNewCart = async () => {
+    if (!user || uploadResults.length === 0) {
+      toast({
+        title: 'خطأ',
+        description: 'لا توجد ملفات لإضافتها للسلة'
+      });
+      return;
+    }
+
+    let successCount = 0;
+    
+    for (const result of uploadResults) {
+      const fileName = result.name;
+      
+      // استخدام الإعدادات لكل ملف على حدة (مهم للتسعير الصحيح)
+      const settings = fileSettings[fileName] || {
+        copies: 1,
+        colorMode: 'grayscale' as 'grayscale' | 'color',
+        paperSize: 'A4' as 'A4' | 'A3' | 'A0' | 'A1' | 'A2',
+        paperType: 'plain' as 'plain' | 'coated' | 'glossy' | 'sticker',
+        doubleSided: false,
+      };
+      
+      // حساب عدد الصفحات
+      const pageCount = result.pageCount || result.pages || 1;
+      
+      // حساب السعر باستخدام الإعدادات الصحيحة
+      const pricingResult = calculate_price(
+        settings.paperSize,
+        settings.paperType,
+        settings.doubleSided ? 'face_back' : 'face',
+        pageCount,
+        settings.colorMode === 'grayscale' // خصم 10% للأبيض والأسود
+      );
+      
+      // تنسيق الأسعار بشكل متسق (2 منازل عشرية)
+      const unitPrice = Number(pricingResult.finalPrice).toFixed(2);
+      const totalPrice = (Number(unitPrice) * settings.copies).toFixed(2);
+      
+      // إعداد كائن الطباعة للسلة الجديدة (مع تصحيح enum mismatch)
+      const cartItem = {
+        fileName,
+        fileUrl: result.url,
+        googleDriveFileId: result.fileId || '', // تصحيح API input shape
+        fileType: result.mimeType || 'application/pdf',
+        fileSize: result.fileSize || 0,
+        pages: pageCount,
+        paperSize: settings.paperSize,
+        paperType: settings.paperType,
+        printType: settings.doubleSided ? 'face_back' : 'face', // تصحيح enum ليتطابق مع shared schema
+        isBlackWhite: settings.colorMode === 'grayscale',
+        quantity: settings.copies,
+        unitPrice,
+        totalPrice,
+        uploadTimestamp: new Date().toISOString(),
+        source: 'direct_upload'
+      };
+
+      try {
+        await addToCart(cartItem);
+        successCount++;
+        console.log(`✅ تم إضافة ${fileName} للسلة بسعر ${totalPrice} جنيه`);
+      } catch (error) {
+        console.error(`فشل في إضافة ${fileName} للسلة الجديدة:`, error);
+      }
+    }
+
+    if (successCount > 0) {
+      toast({
+        title: 'تم بنجاح! 🎉',
+        description: `تمت إضافة ${successCount} من ${uploadResults.length} ملفات للسلة الجديدة`
+      });
+      
+      // فتح السلة لإظهار النتائج
+      setCartDrawerOpen(true);
+      
+      // Reset files after successful addition
+      setUploadResults([]);
+      setSelectedFiles([]);
+      setUploadedUrls([]);
+    } else {
+      toast({
+        title: 'خطأ',
+        description: 'فشل في إضافة الملفات للسلة'
+      });
+    }
+  };
 
   // Helper functions for pending uploads (persistent file cart)
   const togglePendingUploadExpanded = (uploadId: string) => {
@@ -1618,27 +1713,62 @@ export default function Print() {
                         )}
                       </div>
                       
-                      {/* زر الإضافة الجماعية للسلة */}
+                      {/* أزرار السلة الجديدة والقديمة */}
                       {uploadResults.length > 0 && (
-                        <Button
-                          onClick={addAllFilesToCart}
-                          disabled={addToCartMutation.isPending}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium h-11 text-base"
-                        >
-                          {addToCartMutation.isPending ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2"></div>
-                              جاري الإضافة...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="h-5 w-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5h6" />
-                              </svg>
-                              إضافة كل الملفات للسلة ({uploadResults.length})
-                            </>
+                        <div className="space-y-3">
+                          <Button
+                            onClick={addAllFilesToNewCart}
+                            disabled={isAddingToCart}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 text-base"
+                            data-testid="add-all-to-new-cart"
+                          >
+                            {isAddingToCart ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2"></div>
+                                جاري الإضافة...
+                              </>
+                            ) : (
+                              <>
+                                <ShoppingCart className="h-4 w-4 ml-2" />
+                                إضافة للسلة الجديدة ({uploadResults.length})
+                              </>
+                            )}
+                          </Button>
+                          
+                          {cart?.items && cart.items.length > 0 && (
+                            <Button
+                              onClick={() => setCartDrawerOpen(true)}
+                              variant="outline"
+                              className="w-full h-11"
+                              data-testid="view-cart"
+                            >
+                              <ShoppingCart className="h-4 w-4 ml-2" />
+                              عرض السلة ({cart.totalQuantity})
+                            </Button>
                           )}
-                        </Button>
+                          
+                          {/* زر السلة القديمة - للتوافق مع النظام الحالي */}
+                          <Button
+                            onClick={addAllFilesToCart}
+                            disabled={addToCartMutation.isPending}
+                            variant="outline"
+                            className="w-full h-10 text-sm"
+                          >
+                            {addToCartMutation.isPending ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500 ml-2"></div>
+                                جاري الإضافة...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="h-4 w-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5h6" />
+                                </svg>
+                                السلة القديمة ({uploadResults.length})
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       )}
                     </div>
 
@@ -2024,6 +2154,12 @@ export default function Print() {
       </main>
       
       <BottomNav />
+      
+      {/* New Cart Drawer */}
+      <NewCartDrawer 
+        isOpen={cartDrawerOpen}
+        onClose={() => setCartDrawerOpen(false)}
+      />
     </div>
   );
 }
