@@ -41,7 +41,7 @@ import { uploadFile, uploadFileToGoogleDrive, validateFile, checkUploadServiceSt
 import { PDFProcessor } from '@/components/pdf/PDFProcessor';
 import { UploadStatus } from '@/components/upload/UploadStatus';
 import { PriceGuide } from '@/components/print/PriceGuide';
-import { calculate_price, convertLegacySettings } from '@/lib/pricing';
+import { calculateSharedPrice, convertLegacySettings } from '@shared/pricing';
 import { getPDFInfo } from '@/lib/pdf-tools';
 // Removed new cart imports - unified with existing cart system
 
@@ -1514,13 +1514,13 @@ export default function Print() {
     const estimatedPages = selectedFiles.length;
     
     // Calculate price using professional pricing function
-    const pricingResult = calculate_price(
-      pricingSettings.paper_size,
-      pricingSettings.paper_type,
-      pricingSettings.print_type,
-      estimatedPages,
-      pricingSettings.is_black_white
-    );
+    const pricingResult = calculateSharedPrice({
+      paper_size: pricingSettings.paper_size,
+      paper_type: pricingSettings.paper_type,
+      print_type: pricingSettings.print_type,
+      pages: estimatedPages,
+      is_black_white: pricingSettings.is_black_white
+    });
     
     // Multiply by copies
     const totalCost = pricingResult.finalPrice * printSettings.copies;
@@ -1918,13 +1918,13 @@ export default function Print() {
                                           const pageCount = upload.pageCount || upload.pages || 1;
                                           
                                           // Calculate price for all pages
-                                          const pricingForAllPages = calculate_price(
-                                            currentSettings.paperSize,
-                                            currentSettings.paperType,
-                                            currentSettings.doubleSided ? 'face_back' : 'face',
-                                            pageCount,
-                                            currentSettings.colorMode === 'grayscale'
-                                          );
+                                          const pricingForAllPages = calculateSharedPrice({
+                                            paper_size: currentSettings.paperSize,
+                                            paper_type: currentSettings.paperType,
+                                            print_type: currentSettings.doubleSided ? 'face_back' : 'face',
+                                            pages: pageCount,
+                                            is_black_white: currentSettings.colorMode === 'grayscale'
+                                          });
                                           
                                           // Multiply by number of copies
                                           const copiesCost = pricingForAllPages.finalPrice * currentSettings.copies;

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getPricingTiers } from '@/lib/pricing';
+import { getPricingTiers } from '@shared/pricing';
 import { FileText, Palette, Star, Sticker, Info } from 'lucide-react';
 
 interface PriceCardProps {
