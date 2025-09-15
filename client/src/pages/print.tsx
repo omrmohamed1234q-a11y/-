@@ -43,8 +43,7 @@ import { UploadStatus } from '@/components/upload/UploadStatus';
 import { PriceGuide } from '@/components/print/PriceGuide';
 import { calculate_price, convertLegacySettings } from '@/lib/pricing';
 import { getPDFInfo } from '@/lib/pdf-tools';
-import { useNewCart } from '@/hooks/useNewCart';
-import NewCartDrawer from '@/components/cart/NewCartDrawer';
+// Removed new cart imports - unified with existing cart system
 
 type ScanMode = 'color' | 'grayscale' | 'blackwhite'
 type ScanStep = 'capture' | 'preview' | 'processing' | 'complete'
@@ -809,9 +808,7 @@ export default function Print() {
     fileSize?: number;
   }>>([]);
   
-  // New cart system
-  const { addToCart, cart, isAddingToCart } = useNewCart();
-  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  // Unified cart system - using working legacy cart only
   const [uploadErrors, setUploadErrors] = useState<Array<{
     name: string;
     error: string;
@@ -1031,94 +1028,7 @@ export default function Print() {
     },
   });
 
-  // New cart functionality - add to new cart system with per-file settings
-  const addAllFilesToNewCart = async () => {
-    if (!user || uploadResults.length === 0) {
-      toast({
-        title: 'خطأ',
-        description: 'لا توجد ملفات لإضافتها للسلة'
-      });
-      return;
-    }
-
-    let successCount = 0;
-    
-    for (const result of uploadResults) {
-      const fileName = result.name;
-      
-      // استخدام الإعدادات لكل ملف على حدة (مهم للتسعير الصحيح)
-      const settings = fileSettings[fileName] || {
-        copies: 1,
-        colorMode: 'grayscale' as 'grayscale' | 'color',
-        paperSize: 'A4' as 'A4' | 'A3' | 'A0' | 'A1' | 'A2',
-        paperType: 'plain' as 'plain' | 'coated' | 'glossy' | 'sticker',
-        doubleSided: false,
-      };
-      
-      // حساب عدد الصفحات
-      const pageCount = result.pageCount || result.pages || 1;
-      
-      // حساب السعر باستخدام الإعدادات الصحيحة
-      const pricingResult = calculate_price(
-        settings.paperSize,
-        settings.paperType,
-        settings.doubleSided ? 'face_back' : 'face',
-        pageCount,
-        settings.colorMode === 'grayscale' // خصم 10% للأبيض والأسود
-      );
-      
-      // تنسيق الأسعار بشكل متسق (2 منازل عشرية)
-      const unitPrice = Number(pricingResult.finalPrice).toFixed(2);
-      const totalPrice = (Number(unitPrice) * settings.copies).toFixed(2);
-      
-      // إعداد كائن الطباعة للسلة الجديدة (مع تصحيح enum mismatch)
-      const cartItem = {
-        fileName,
-        fileUrl: result.url,
-        googleDriveFileId: result.fileId || '', // تصحيح API input shape
-        fileType: result.mimeType || 'application/pdf',
-        fileSize: result.fileSize || 0,
-        pages: pageCount,
-        paperSize: settings.paperSize,
-        paperType: settings.paperType,
-        printType: settings.doubleSided ? 'face_back' : 'face', // تصحيح enum ليتطابق مع shared schema
-        isBlackWhite: settings.colorMode === 'grayscale',
-        quantity: settings.copies,
-        unitPrice,
-        totalPrice,
-        uploadTimestamp: new Date().toISOString(),
-        source: 'direct_upload'
-      };
-
-      try {
-        await addToCart(cartItem);
-        successCount++;
-        console.log(`✅ تم إضافة ${fileName} للسلة بسعر ${totalPrice} جنيه`);
-      } catch (error) {
-        console.error(`فشل في إضافة ${fileName} للسلة الجديدة:`, error);
-      }
-    }
-
-    if (successCount > 0) {
-      toast({
-        title: 'تم بنجاح! 🎉',
-        description: `تمت إضافة ${successCount} من ${uploadResults.length} ملفات للسلة الجديدة`
-      });
-      
-      // فتح السلة لإظهار النتائج
-      setCartDrawerOpen(true);
-      
-      // Reset files after successful addition
-      setUploadResults([]);
-      setSelectedFiles([]);
-      setUploadedUrls([]);
-    } else {
-      toast({
-        title: 'خطأ',
-        description: 'فشل في إضافة الملفات للسلة'
-      });
-    }
-  };
+  // Simplified cart functionality - using working legacy cart system only
 
   // Helper functions for pending uploads (persistent file cart)
   const togglePendingUploadExpanded = (uploadId: string) => {
@@ -1717,10 +1627,10 @@ export default function Print() {
                       {uploadResults.length > 0 && (
                         <div className="space-y-3">
                           <Button
-                            onClick={addAllFilesToNewCart}
-                            disabled={isAddingToCart}
+                            onClick={addAllFilesToCart}
+                            disabled={uploadStatus.uploading}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 text-base"
-                            data-testid="add-all-to-new-cart"
+                            data-testid="add-all-to-cart"
                           >
                             {isAddingToCart ? (
                               <>
@@ -2155,11 +2065,7 @@ export default function Print() {
       
       <BottomNav />
       
-      {/* New Cart Drawer */}
-      <NewCartDrawer 
-        isOpen={cartDrawerOpen}
-        onClose={() => setCartDrawerOpen(false)}
-      />
+      {/* Cart system - using simple working legacy cart */}
     </div>
   );
 }
