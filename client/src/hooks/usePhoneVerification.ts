@@ -163,19 +163,37 @@ export const usePhoneVerification = () => {
           document.body.appendChild(recaptchaContainer);
         }
 
-        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible',
-          callback: () => {
-            // reCAPTCHA solved
-          },
-          'expired-callback': () => {
-            // reCAPTCHA expired - reset verifier
-            if (recaptchaVerifierRef.current) {
-              recaptchaVerifierRef.current.clear();
-              recaptchaVerifierRef.current = null;
+        try {
+          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            size: 'invisible',
+            theme: 'light',
+            callback: (response: string) => {
+              console.log('✅ reCAPTCHA solved invisibly');
+            },
+            'expired-callback': () => {
+              console.log('⏰ reCAPTCHA expired - clearing verifier');
+              if (recaptchaVerifierRef.current) {
+                recaptchaVerifierRef.current.clear();
+                recaptchaVerifierRef.current = null;
+              }
+            },
+            'error-callback': (error: any) => {
+              console.log('❌ reCAPTCHA error:', error);
             }
-          }
-        });
+          });
+
+          // Add onload event to monitor reCAPTCHA initialization
+          recaptchaVerifierRef.current.render().then(() => {
+            console.log('✅ reCAPTCHA rendered successfully (invisible mode)');
+          }).catch((error) => {
+            console.log('❌ reCAPTCHA render failed:', error);
+            // Force invisible mode even if render fails
+          });
+
+        } catch (error) {
+          console.log('❌ reCAPTCHA initialization error:', error);
+          throw error;
+        }
       }
 
       // Send SMS
