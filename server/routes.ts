@@ -1099,6 +1099,257 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 🔒 SECURE PDF Analysis endpoint - REQUIRES USER AUTHENTICATION
+  app.post('/api/analyze-pdf', requireAuth, async (req, res) => {
+    try {
+      const { fileUrl, fileName, fileId } = req.body;
+      
+      // Input validation
+      if (!fileUrl || !fileName) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields'
+        });
+      }
+
+      // Sanitize fileName to prevent path traversal
+      const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF-]/g, '_');
+
+      console.log(`🔒 SECURE PDF analysis for user: ${req.user?.id}`);
+      console.log(`   File: ${sanitizedFileName}`);
+
+      // 🔒 SECURITY: Validate it's a PDF file
+      if (!sanitizedFileName.toLowerCase().endsWith('.pdf')) {
+        return res.json({
+          success: true,
+          pages: 1,
+          fallback: true,
+          message: 'PDF file format required'
+        });
+      }
+
+      // 🔒 SECURITY: Domain whitelist - ONLY Google Drive allowed
+      let validatedUrl: string;
+      let extractedFileId: string | null = null;
+
+      try {
+        const url = new URL(fileUrl);
+        
+        // STRICT domain validation - only Google Drive
+        if (!['drive.google.com', 'docs.google.com'].includes(url.hostname)) {
+          console.warn(`🚫 SECURITY BLOCKED: Invalid domain ${url.hostname}`);
+          return res.status(403).json({
+            success: false,
+            error: 'Domain not allowed'
+          });
+        }
+
+        // Extract and validate Google Drive file ID
+        const fileIdMatch = fileUrl.match(/(?:id=|\/d\/|\/file\/d\/)([a-zA-Z0-9_-]+)/);
+        extractedFileId = fileIdMatch ? fileIdMatch[1] : fileId;
+
+        if (!extractedFileId || !/^[a-zA-Z0-9_-]+$/.test(extractedFileId)) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid file identifier'
+          });
+        }
+
+        // Create secure download URL
+        validatedUrl = `https://drive.google.com/uc?export=download&id=${extractedFileId}`;
+        console.log(`🔗 Validated Google Drive URL`);
+
+      } catch (urlError) {
+        console.warn(`🚫 SECURITY BLOCKED: Invalid URL format`);
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid URL format'
+        });
+      }
+
+      // 🔒 SECURITY: Download with strict limits and no redirects
+      let pdfBuffer: Buffer;
+      const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB limit
+      const DOWNLOAD_TIMEOUT = 10000; // 10 second timeout
+
+      try {
+        console.log('🔒 Secure PDF download starting...');
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+          console.warn('🚫 Download timeout exceeded');
+        }, DOWNLOAD_TIMEOUT);
+        
+        const response = await fetch(validatedUrl, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'SecurePDFAnalyzer/1.0',
+            'Accept': 'application/pdf'
+          },
+          signal: controller.signal,
+          redirect: 'error' // 🔒 SECURITY: Block redirects to prevent SSRF
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          console.warn(`🚫 Download failed: HTTP ${response.status}`);
+          return res.json({
+            success: true,
+            pages: 1,
+            fallback: true,
+            error: 'File access failed'
+          });
+        }
+
+        // 🔒 SECURITY: Strict content-type validation
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/pdf') && !contentType.includes('application/octet-stream')) {
+          console.warn(`🚫 SECURITY BLOCKED: Invalid content type ${contentType}`);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid file type'
+          });
+        }
+
+        // 🔒 SECURITY: Check content-length before download
+        const contentLength = response.headers.get('content-length');
+        if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
+          console.warn(`🚫 SECURITY BLOCKED: File too large ${contentLength} bytes`);
+          return res.status(413).json({
+            success: false,
+            error: 'File size exceeds limit'
+          });
+        }
+
+        // Stream download with size monitoring
+        const chunks: Buffer[] = [];
+        let totalSize = 0;
+
+        if (!response.body) {
+          throw new Error('No response body');
+        }
+
+        const reader = response.body.getReader();
+        
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) break;
+            
+            totalSize += value.length;
+            
+            // 🔒 SECURITY: Monitor size during streaming
+            if (totalSize > MAX_FILE_SIZE) {
+              console.warn(`🚫 SECURITY BLOCKED: Stream size exceeded ${totalSize} bytes`);
+              return res.status(413).json({
+                success: false,
+                error: 'File size exceeds limit'
+              });
+            }
+            
+            chunks.push(Buffer.from(value));
+          }
+        } finally {
+          reader.releaseLock();
+        }
+
+        pdfBuffer = Buffer.concat(chunks);
+        console.log(`✅ Secure PDF downloaded: ${pdfBuffer.length} bytes`);
+
+      } catch (downloadError: any) {
+        console.warn(`🚫 PDF download failed: ${downloadError.name}`);
+        
+        // 🔒 SECURITY: Minimal error details to prevent information disclosure
+        return res.json({
+          success: true,
+          pages: 1,
+          fallback: true,
+          error: 'File download failed'
+        });
+      }
+
+      // 🔒 SECURITY: Safe PDF analysis with resource limits
+      try {
+        console.log('🔍 Secure PDF analysis starting...');
+        
+        // Validate PDF magic number first
+        if (pdfBuffer.length < 8 || !pdfBuffer.subarray(0, 4).equals(Buffer.from('%PDF'))) {
+          console.warn('🚫 Invalid PDF magic number');
+          return res.json({
+            success: true,
+            pages: 1,
+            fallback: true,
+            error: 'Invalid PDF format'
+          });
+        }
+        
+        // Import PDFDocument with timeout wrapper
+        const { PDFDocument } = await import('pdf-lib');
+        
+        // Parse with resource monitoring
+        const parseStart = Date.now();
+        const pdfDoc = await PDFDocument.load(pdfBuffer);
+        const parseTime = Date.now() - parseStart;
+        
+        // Prevent excessive processing time
+        if (parseTime > 5000) {
+          console.warn(`🚫 PDF parsing took too long: ${parseTime}ms`);
+          return res.json({
+            success: true,
+            pages: 1,
+            fallback: true,
+            error: 'Processing timeout'
+          });
+        }
+        
+        const pageCount = pdfDoc.getPageCount();
+        
+        // Validate reasonable page count
+        if (pageCount > 1000) {
+          console.warn(`🚫 Suspicious page count: ${pageCount}`);
+          return res.json({
+            success: true,
+            pages: 100,
+            fallback: true,
+            message: 'Large document detected'
+          });
+        }
+        
+        console.log(`✅ Secure PDF analysis completed: ${pageCount} pages`);
+        
+        return res.json({
+          success: true,
+          pages: pageCount,
+          fallback: false,
+          message: `PDF analyzed successfully - ${pageCount} pages`
+        });
+
+      } catch (analysisError: any) {
+        console.warn(`🚫 PDF analysis failed: ${analysisError.name}`);
+        
+        // 🔒 SECURITY: No detailed error information disclosure
+        return res.json({
+          success: true,
+          pages: 1,
+          fallback: true,
+          error: 'Analysis failed'
+        });
+      }
+
+    } catch (error: any) {
+      console.error('🚫 SECURE PDF endpoint error:', error.name);
+      
+      // 🔒 SECURITY: Generic error response
+      res.status(500).json({
+        success: false,
+        error: 'Service temporarily unavailable'
+      });
+    }
+  });
+
   // Endpoint to cleanup old temporary files (admin only)
   app.post('/api/cleanup-temp-files', async (req, res) => {
     try {

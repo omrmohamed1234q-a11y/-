@@ -763,7 +763,7 @@ export default function Print() {
     refetchOnWindowFocus: false, // Prevent auto-refetch on window focus
     refetchOnReconnect: false,   // Prevent auto-refetch on network reconnect
     staleTime: 5 * 60 * 1000,    // Consider data fresh for 5 minutes
-  });
+  }) as { data: any[], refetch: () => void };
 
   const createPendingUploadMutation = useMutation({
     mutationFn: async (uploadData: any) => {
@@ -778,13 +778,23 @@ export default function Print() {
     },
   });
 
-  // Helper function to persist uploaded files as pending uploads
+  // Prevent duplicate execution with ref flag
+  const isPersistingRef = useRef(false);
+  
+  // Helper function to persist uploaded files as pending uploads  
   const persistPendingUploads = async (uploadedFiles: any[]) => {
     if (!uploadedFiles || uploadedFiles.length === 0) {
       console.log('⚠️ No files to persist to pending uploads');
       return;
     }
 
+    // Prevent duplicate execution (React StrictMode, hot reload)
+    if (isPersistingRef.current) {
+      console.log('🔄 persistPendingUploads already in progress, skipping duplicate call');
+      return;
+    }
+    
+    isPersistingRef.current = true;
     console.log(`💾 Saving ${uploadedFiles.length} uploaded files to pending uploads cart...`);
     try {
       const uploadSession = `upload_${Date.now()}`;
@@ -793,28 +803,59 @@ export default function Print() {
       await Promise.all(uploadedFiles.map(async (file) => {
         console.log(`📁 Saving ${file.name} to pending uploads...`);
         
-        // Analyze PDF for real page count if it's a PDF file
+        // Enhanced PDF analysis using server-side endpoint for Google Drive compatibility
         let actualPages = 1; // Default fallback
         let actualFileType = file.fileType || 'application/pdf';
+        let analysisMessage = '';
+        let usedFallback = false;
         
         if (file.url && file.name.toLowerCase().endsWith('.pdf')) {
           try {
-            console.log(`📄 Analyzing PDF: ${file.name}`);
-            // Download PDF and analyze it
-            const response = await fetch(file.url);
-            if (response.ok) {
-              const blob = await response.blob();
-              const pdfFile = new File([blob], file.name, { type: 'application/pdf' });
-              const pdfInfo = await getPDFInfo(pdfFile);
-              actualPages = pdfInfo.pages;
-              actualFileType = 'application/pdf';
-              console.log(`✅ PDF analyzed: ${file.name} has ${actualPages} pages`);
+            console.log(`📄 Enhanced PDF analysis starting: ${file.name}`);
+            console.log(`🔗 URL: ${file.url}`);
+            console.log(`🆔 File ID: ${file.fileId || 'auto-detect'}`);
+            
+            // Use enhanced PDF analysis that handles Google Drive CORS issues
+            const { smartPDFAnalysis } = await import('@/lib/pdf-tools');
+            
+            const analysisResult = await smartPDFAnalysis({
+              url: file.url,
+              name: file.name,
+              fileId: file.fileId // Pass the Google Drive file ID if available
+            });
+            
+            actualPages = analysisResult.pages;
+            actualFileType = 'application/pdf';
+            usedFallback = analysisResult.fallback;
+            analysisMessage = analysisResult.message || '';
+            
+            if (analysisResult.fallback && analysisResult.error) {
+              console.warn(`⚠️ PDF analysis used fallback for ${file.name}:`, analysisResult.error);
             } else {
-              console.warn(`⚠️ Could not download PDF for analysis: ${file.name}`);
+              console.log(`✅ Enhanced PDF analysis successful: ${file.name} has ${actualPages} pages`);
             }
+            
+            if (analysisResult.message) {
+              console.log(`📋 Analysis message: ${analysisResult.message}`);
+            }
+            
           } catch (error) {
-            console.error(`❌ Error analyzing PDF ${file.name}:`, error);
-            console.log(`⚠️ Using fallback page count (1) for: ${file.name}`);
+            console.error(`❌ Enhanced PDF analysis failed for ${file.name}:`, error);
+            console.log(`🔧 Attempting basic fallback for: ${file.name}`);
+            
+            // Ultimate fallback - try to extract from filename or use 1
+            const filenamePageMatch = file.name.match(/(\d+)\s*(page|صفحة|pages)/i);
+            if (filenamePageMatch) {
+              actualPages = parseInt(filenamePageMatch[1]) || 1;
+              console.log(`📄 Extracted ${actualPages} pages from filename: ${file.name}`);
+              usedFallback = true;
+              analysisMessage = `تم استخراج عدد الصفحات من اسم الملف: ${actualPages}`;
+            } else {
+              actualPages = 1;
+              usedFallback = true;
+              analysisMessage = 'فشل التحليل - استخدام القيمة الافتراضية (1 صفحة)';
+              console.log(`⚠️ Using ultimate fallback (1 page) for: ${file.name}`);
+            }
           }
         }
         
@@ -844,6 +885,9 @@ export default function Print() {
       console.log(`✅ All ${uploadedFiles.length} files saved to pending uploads cart successfully!`);
     } catch (error) {
       console.error('❌ Failed to save files to pending uploads cart:', error);
+    } finally {
+      // Reset flag to allow future executions
+      isPersistingRef.current = false;
     }
   };
 
