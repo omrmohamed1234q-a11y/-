@@ -818,7 +818,7 @@ export default function Print() {
   // Mutation to add print jobs to cart
   const addToCartMutation = useMutation({
     mutationFn: async (printJobData: any) => {
-      const response = await apiRequest('POST', '/api/cart/print-job', printJobData);
+      const response = await apiRequest('POST', '/api/cart/add', printJobData);
       return response;
     },
     onSuccess: (data, variables) => {
@@ -1335,26 +1335,30 @@ export default function Print() {
         doubleSided: false,
       };
 
-      const printJob = {
-        filename: fileName,
-        fileUrl: result.url,
-        pages: 'all',
-        copies: settings.copies,
-        colorMode: settings.colorMode,
-        paperSize: settings.paperSize,
-        paperType: settings.paperType,
-        doubleSided: settings.doubleSided,
-        userId: user.id,
-        displayName: generatePrintJobFilename(settings, fileName),
-        // معلومات المعاينة
-        previewUrl: result.previewUrl,
-        fileId: (result as any).fileId,
-        fileType: (result as any).type || 'application/octet-stream', // استخدام النوع من نتيجة الرفع
-        provider: result.provider
+      // Transform data to match discriminated union format
+      const printJobData = {
+        type: 'print_job' as const,
+        printSettings: {
+          pages: 1, // Default to 1 page for files
+          copies: settings.copies,
+          colorMode: settings.colorMode,
+          paperSize: settings.paperSize,
+          paperType: settings.paperType,
+          doubleSided: settings.doubleSided
+        },
+        fileMeta: {
+          filename: fileName,
+          fileUrl: result.url,
+          googleDriveLink: result.previewUrl, // Use preview URL as drive link if available
+          googleDriveFileId: (result as any).fileId,
+          fileSize: result.fileSize,
+          mimeType: (result as any).type || 'application/octet-stream'
+        },
+        quantity: 1
       };
 
       try {
-        await addToCartMutation.mutateAsync(printJob);
+        await addToCartMutation.mutateAsync(printJobData);
         successCount++;
       } catch (error) {
         console.error(`فشل في إضافة ${fileName} للسلة:`, error);
@@ -1431,22 +1435,26 @@ export default function Print() {
         // إيجاد بيانات الرفع الكاملة للملف
         const uploadResult = uploadResults.find(result => result.name === file.name);
         
+        // Transform data to match discriminated union format
         return {
-          filename: generatePrintJobFilename(printSettings, file.name),
-          fileUrl: uploadedUrls[index],
-          fileSize: file.size,
-          fileType: file.type,
-          pages: 1,
-          copies: printSettings.copies,
-          colorMode: printSettings.colorMode,
-          paperSize: printSettings.paperSize,
-          paperType: printSettings.paperType,
-          doubleSided: printSettings.doubleSided,
-          pageRange: printSettings.pages,
-          // معلومات المعاينة
-          previewUrl: uploadResult?.previewUrl,
-          fileId: (uploadResult as any)?.fileId,
-          provider: uploadResult?.provider
+          type: 'print_job' as const,
+          printSettings: {
+            pages: 1, // Default to 1 page for files
+            copies: printSettings.copies,
+            colorMode: printSettings.colorMode,
+            paperSize: printSettings.paperSize,
+            paperType: printSettings.paperType,
+            doubleSided: printSettings.doubleSided
+          },
+          fileMeta: {
+            filename: generatePrintJobFilename(printSettings, file.name),
+            fileUrl: uploadedUrls[index],
+            googleDriveLink: uploadResult?.previewUrl,
+            googleDriveFileId: (uploadResult as any)?.fileId,
+            fileSize: file.size,
+            mimeType: file.type
+          },
+          quantity: 1
         };
       });
 
