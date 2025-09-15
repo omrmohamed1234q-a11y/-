@@ -24,6 +24,11 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-DEMO"
 };
 
+// Development configuration for Phone Auth
+if (import.meta.env.DEV) {
+  console.log('🔧 Firebase development mode enabled');
+}
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
@@ -31,6 +36,12 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Disable app verification for testing in development
+if (import.meta.env.DEV) {
+  auth.settings.appVerificationDisabledForTesting = true;
+  console.log('🚫 Phone Auth verification disabled for development (no reCAPTCHA)');
+}
 
 // Initialize Analytics (only in browser)
 export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;

@@ -164,35 +164,30 @@ export const usePhoneVerification = () => {
         }
 
         try {
+          // Create reCAPTCHA verifier (bypassed in development)
           recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
             size: 'invisible',
             theme: 'light',
-            callback: (response: string) => {
-              console.log('✅ reCAPTCHA solved invisibly');
+            'hl': 'ar', // Arabic language
+            callback: () => {
+              console.log('✅ reCAPTCHA verification completed');
             },
             'expired-callback': () => {
               console.log('⏰ reCAPTCHA expired - clearing verifier');
               if (recaptchaVerifierRef.current) {
-                recaptchaVerifierRef.current.clear();
-                recaptchaVerifierRef.current = null;
+                try {
+                  recaptchaVerifierRef.current.clear();
+                  recaptchaVerifierRef.current = null;
+                } catch (e) {
+                  // Already cleared
+                }
               }
-            },
-            'error-callback': (error: any) => {
-              console.log('❌ reCAPTCHA error:', error);
             }
           });
 
-          // Add onload event to monitor reCAPTCHA initialization
-          recaptchaVerifierRef.current.render().then(() => {
-            console.log('✅ reCAPTCHA rendered successfully (invisible mode)');
-          }).catch((error) => {
-            console.log('❌ reCAPTCHA render failed:', error);
-            // Force invisible mode even if render fails
-          });
-
         } catch (error) {
-          console.log('❌ reCAPTCHA initialization error:', error);
-          throw error;
+          console.log('❌ reCAPTCHA setup error:', error);
+          throw new Error('حدث خطأ في تهيئة نظام التحقق الأمني');
         }
       }
 
