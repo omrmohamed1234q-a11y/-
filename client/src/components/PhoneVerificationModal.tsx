@@ -218,15 +218,61 @@ const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
           {step === 'sending' ? (
             /* Sending step */
             <div className="text-center space-y-4">
-              <div className="flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              </div>
-              <div>
-                <p className="text-gray-600">جاري إرسال كود التحقق...</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  قد يستغرق هذا بضع ثوانٍ
-                </p>
-              </div>
+              {error ? (
+                /* Error state with skip option */
+                <div className="space-y-4">
+                  <div className="text-red-600 text-sm mb-4">
+                    {error}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={handleSendCode}
+                      disabled={isSending}
+                      className="w-full"
+                      data-testid="button-retry-sending"
+                    >
+                      {isSending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                          جاري المحاولة...
+                        </>
+                      ) : (
+                        <>
+                          <RotateCcw className="w-4 h-4 ml-2" />
+                          المحاولة مرة أخرى
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        onVerificationSuccess(phoneNumber, { phoneVerified: false, skipVerification: true });
+                      }}
+                      className="w-full text-orange-600 hover:text-orange-700"
+                      data-testid="button-skip-verification-sending"
+                    >
+                      تخطي التحقق والمتابعة
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    يمكنك المتابعة بدون تحقق وتفعيله لاحقاً
+                  </p>
+                </div>
+              ) : (
+                /* Loading state */
+                <div>
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-gray-600">جاري إرسال كود التحقق...</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      قد يستغرق هذا بضع ثوانٍ
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* Verification step */
@@ -320,6 +366,25 @@ const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
                 >
                   <X className="w-4 h-4" />
                 </Button>
+              </div>
+              
+              {/* Skip verification option */}
+              <div className="text-center pt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    // Skip verification and continue with the phone number
+                    onVerificationSuccess(phoneNumber, { phoneVerified: false, skipVerification: true });
+                  }}
+                  className="text-orange-600 hover:text-orange-700 text-xs"
+                  data-testid="button-skip-verification"
+                >
+                  تخطي التحقق والمتابعة
+                </Button>
+                <p className="text-xs text-gray-500 mt-1">
+                  (يمكن تفعيل التحقق لاحقاً)
+                </p>
               </div>
             </div>
           )}
