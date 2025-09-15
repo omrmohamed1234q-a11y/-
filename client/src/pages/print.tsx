@@ -697,14 +697,57 @@ export default function Print() {
   const queryClient = useQueryClient();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
-  const [printSettings, setPrintSettings] = useState({
+  
+  // Default print settings (fallback values)
+  const defaultPrintSettings = {
     copies: 1,
     colorMode: 'grayscale',
     paperSize: 'A4',
     paperType: 'plain',
     doubleSided: false,
     pages: 'all',
-  });
+  };
+
+  // Load print settings from localStorage with fallback to defaults
+  const loadPrintSettings = () => {
+    try {
+      const savedSettings = localStorage.getItem('tbaaly_print_settings');
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        // Validate that all required keys exist in saved settings
+        const requiredKeys = Object.keys(defaultPrintSettings);
+        const hasAllKeys = requiredKeys.every(key => key in parsed);
+        
+        if (hasAllKeys) {
+          console.log('✅ Loaded saved print settings:', parsed);
+          return parsed;
+        } else {
+          console.log('⚠️ Saved settings incomplete, using defaults');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading print settings from localStorage:', error);
+    }
+    return defaultPrintSettings;
+  };
+
+  const [printSettings, setPrintSettings] = useState(loadPrintSettings);
+
+  // Save print settings to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('tbaaly_print_settings', JSON.stringify(printSettings));
+      console.log('💾 Saved print settings to localStorage:', printSettings);
+    } catch (error) {
+      console.error('❌ Error saving print settings to localStorage:', error);
+      // Show toast notification to user if saving fails
+      toast({
+        title: "تحذير",
+        description: "لا يمكن حفظ إعدادات الطباعة. قد تحتاج لإعادة تعيينها عند تحديث الصفحة.",
+        variant: "destructive",
+      });
+    }
+  }, [printSettings, toast]);
 
   // Individual file settings - each file gets its own print settings
   const [fileSettings, setFileSettings] = useState<{[fileName: string]: {
