@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
-import { MapPin, Navigation, AlertCircle, CheckCircle, Loader2, Search, Target, Map } from 'lucide-react';
+import { MapPin, Navigation, AlertCircle, CheckCircle, Loader2, Search, Target, Map, Clock, Home } from 'lucide-react';
 import { 
   getCurrentLocation, 
   validateDeliveryLocation, 
@@ -24,7 +24,7 @@ interface MapLocationPickerProps {
 
 declare global {
   interface Window {
-    google: any;
+    google: { maps: any };
     initGoogleMaps?: () => void;
     googleMapsReady?: boolean;
     googleMapsCallback?: () => void;
@@ -284,7 +284,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
   // Handle area selection
   const handleAreaSelect = async (area: typeof suezAreas[0]) => {
-    setIsLoading(true);
+    setIsLocationLoading(true);
     setError('');
     
     try {
@@ -317,7 +317,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       return;
     }
     
-    setIsLoading(true);
+    setIsLocationLoading(true);
     setError('');
     
     try {
@@ -356,246 +356,250 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   };
 
   return (
-    <Card className={`${className} ${getValidationColor()}`}>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between text-lg">
-          <div className="flex items-center gap-2">
-            {getValidationIcon()}
-            تحديد موقع التوصيل بدقة
+    <div className={`${className} ${getValidationColor()}`}>
+      {/* Dark themed location picker matching the provided images */}
+      <div className="bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-700">
+        {/* Header - only show when validation exists */}
+        {validation && (
+          <div className="bg-green-600 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-white" />
+              <span className="text-white font-medium">تحديد موقع التوصيل بدقة</span>
+            </div>
           </div>
-          {!showMap && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowMap(true)}
-              className="flex items-center gap-2"
-            >
-              <Map className="h-4 w-4" />
-              فتح الخريطة
-            </Button>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!showMap ? (
-          /* Simple location picker */
-          <div className="space-y-3">
-            <div className="text-sm text-gray-600 text-center p-3 bg-blue-50 rounded-lg">
-              📍 للحصول على أفضل خدمة توصيل، يرجى تحديد موقعك بدقة على الخريطة
-            </div>
-            
-            <div className="grid grid-cols-1 gap-3">
-              <Button
-                onClick={handleGetCurrentLocation}
-                disabled={isLoading}
-                className="w-full"
-                variant="outline"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                ) : (
-                  <Navigation className="h-4 w-4 ml-2" />
-                )}
-                تحديد موقعي الحالي
-              </Button>
-              
-              <Button
-                onClick={() => setShowMap(true)}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                <Map className="h-4 w-4 ml-2" />
-                اختيار من الخريطة
-              </Button>
-              
-              <Button
-                onClick={() => setShowSimpleLocationPicker(!showSimpleLocationPicker)}
-                className="w-full bg-green-600 hover:bg-green-700"
-                variant="outline"
-              >
-                <MapPin className="h-4 w-4 ml-2" />
-                {showSimpleLocationPicker ? 'إخفاء' : 'عرض'} خيارات أخرى
-              </Button>
-            </div>
+        )}
 
-            {/* Simple location picker alternatives */}
-            {showSimpleLocationPicker && (
-              <div className="space-y-4 border-t pt-4 mt-4">
-                <h4 className="font-medium text-gray-900 text-center">🏠 اختر منطقتك أو اكتب عنوانك</h4>
-                
-                {/* Manual address input */}
-                <div className="space-y-2">
+        <div className="p-6 space-y-4">
+          {!showMap ? (
+            /* Modern dark location search interface */
+            <div className="space-y-4">
+              {/* Search input with dark theme */}
+              <div className="relative">
+                <div className="flex items-center bg-gray-800 rounded-2xl border border-gray-600 overflow-hidden">
+                  <Search className="h-5 w-5 text-gray-400 ml-4" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="أين تريد التوصيل وبكم؟"
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearchLocation()}
+                    className="bg-transparent border-0 text-white placeholder:text-gray-400 text-lg font-medium px-4 py-4 focus:ring-0 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Choose on map option */}
+              <button
+                onClick={() => setShowMap(true)}
+                className="w-full flex items-center gap-3 p-4 hover:bg-gray-800 rounded-xl transition-colors"
+                data-testid="button-choose-map"
+              >
+                <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
+                  <MapPin className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-blue-400 font-medium text-lg">اختر من الخريطة</span>
+              </button>
+
+              {/* Recent locations with dark theme */}
+              <div className="space-y-2">
+                {suezAreas.slice(0, 4).map((area, index) => (
+                  <button
+                    key={area.name}
+                    onClick={() => handleAreaSelect(area)}
+                    disabled={isLocationLoading}
+                    className="w-full flex items-center gap-3 p-4 hover:bg-gray-800 rounded-xl transition-colors text-right"
+                    data-testid={`button-area-${area.name}`}
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 bg-gray-700 rounded-lg">
+                      <Clock className="h-4 w-4 text-gray-300" />
+                    </div>
+                    <div className="flex-1 text-right">
+                      <div className="text-white font-medium">{area.name}</div>
+                      <div className="text-gray-400 text-sm">السويس</div>
+                    </div>
+                  </button>
+                ))}
+
+                {/* Current location option */}
+                <button
+                  onClick={handleGetCurrentLocation}
+                  disabled={isLocationLoading}
+                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-800 rounded-xl transition-colors text-right"
+                  data-testid="button-current-location"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 bg-gray-700 rounded-lg">
+                    {isLocationLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-gray-300" />
+                    ) : (
+                      <Navigation className="h-4 w-4 text-gray-300" />
+                    )}
+                  </div>
+                  <div className="flex-1 text-right">
+                    <div className="text-white font-medium">موقعي الحالي</div>
+                    <div className="text-gray-400 text-sm">
+                      {isLocationLoading ? 'جاري تحديد الموقع...' : 'استخدم GPS'}
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Manual address input option */}
+              {showSimpleLocationPicker && (
+                <div className="space-y-3 pt-4 border-t border-gray-700">
                   <div className="flex gap-2">
                     <Input
                       value={manualAddress}
                       onChange={(e) => setManualAddress(e.target.value)}
                       placeholder="اكتب عنوانك بالتفصيل..."
                       onKeyPress={(e) => e.key === 'Enter' && handleManualAddress()}
-                      className="flex-1"
+                      className="flex-1 bg-gray-800 border-gray-600 text-white placeholder:text-gray-400"
                     />
                     <Button
                       onClick={handleManualAddress}
-                      disabled={isLoading || !manualAddress.trim()}
+                      disabled={isLocationLoading || !manualAddress.trim()}
                       size="sm"
+                      className="bg-blue-600 hover:bg-blue-700"
                     >
                       تأكيد
                     </Button>
                   </div>
                 </div>
+              )}
 
-                {/* Area selection */}
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600 text-center">أو اختر منطقتك:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {suezAreas.map((area) => (
-                      <Button
-                        key={area.name}
-                        onClick={() => handleAreaSelect(area)}
-                        disabled={isLoading}
-                        variant={selectedArea === area.name ? "default" : "outline"}
-                        size="sm"
-                        className="text-sm"
-                      >
-                        {area.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Advanced map picker */
-          <div className="space-y-4">
-            {/* Search bar */}
-            <div className="flex gap-2">
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ابحث عن عنوان أو منطقة في السويس..."
-                onKeyPress={(e) => e.key === 'Enter' && handleSearchLocation()}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleSearchLocation}
-                disabled={isLoading || !searchQuery.trim()}
-                size="sm"
+              {/* Toggle manual input */}
+              <button
+                onClick={() => setShowSimpleLocationPicker(!showSimpleLocationPicker)}
+                className="w-full text-center py-2 text-blue-400 hover:text-blue-300 text-sm font-medium"
               >
-                <Search className="h-4 w-4" />
-              </Button>
+                {showSimpleLocationPicker ? 'إخفاء إدخال يدوي' : 'إدخال عنوان يدوي'}
+              </button>
             </div>
-
-            {/* Map container */}
-            <div className="relative">
-              <div 
-                ref={mapRef} 
-                className="w-full h-80 rounded-lg border"
-                style={{ minHeight: '320px' }}
-              />
-              
-              {/* Map controls overlay */}
-              <div className="absolute top-4 right-4 flex flex-col gap-2">
+          ) : (
+            /* Map interface with dark theme */
+            <div className="space-y-4">
+              {/* Search bar */}
+              <div className="flex gap-2">
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="ابحث عن عنوان أو منطقة في السويس..."
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearchLocation()}
+                  className="flex-1 bg-gray-800 border-gray-600 text-white placeholder:text-gray-400"
+                />
                 <Button
-                  onClick={handleGetCurrentLocation}
-                  disabled={isLoading}
+                  onClick={handleSearchLocation}
+                  disabled={isLocationLoading || !searchQuery.trim()}
                   size="sm"
-                  className="bg-white hover:bg-gray-50 text-gray-700 border shadow-md"
+                  className="bg-blue-600 hover:bg-blue-700"
                 >
-                  <Target className="h-4 w-4" />
+                  <Search className="h-4 w-4" />
                 </Button>
               </div>
 
-              {/* Loading overlay */}
-              {isLoading && (
-                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
-                  <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-lg">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm">جاري تحديد الموقع...</span>
-                  </div>
+              {/* Map container */}
+              <div className="relative">
+                <div 
+                  ref={mapRef} 
+                  className="w-full h-80 rounded-lg border border-gray-600"
+                  style={{ minHeight: '320px' }}
+                />
+                
+                {/* Map controls overlay */}
+                <div className="absolute top-4 right-4 flex flex-col gap-2">
+                  <Button
+                    onClick={handleGetCurrentLocation}
+                    disabled={isLocationLoading}
+                    size="sm"
+                    className="bg-gray-800 hover:bg-gray-700 text-white border-gray-600 shadow-md"
+                  >
+                    <Target className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
-            </div>
 
-            {/* Instructions */}
-            <div className="text-xs text-gray-600 text-center p-2 bg-blue-50 rounded-lg">
-              💡 اضغط على الخريطة أو اسحب العلامة لتحديد الموقع بدقة
-            </div>
+                {/* Loading overlay */}
+                {isLocationLoading && (
+                  <div className="absolute inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center rounded-lg">
+                    <div className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg shadow-lg border border-gray-600">
+                      <Loader2 className="h-4 w-4 animate-spin text-white" />
+                      <span className="text-sm text-white">جاري تحديد الموقع...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setShowMap(false)}
-                variant="outline"
-                className="flex-1"
-              >
-                إغلاق الخريطة
-              </Button>
-              {validation && (
+              {/* Instructions */}
+              <div className="text-xs text-gray-400 text-center p-3 bg-gray-800 rounded-lg border border-gray-600">
+                استخدم ctrl + scroll لتكبير/تصغير الخريطة
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
                 <Button
-                  onClick={handleClearLocation}
+                  onClick={() => setShowMap(false)}
                   variant="outline"
-                  className="px-4"
+                  className="flex-1 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
                 >
-                  مسح
+                  إغلاق الخريطة
                 </Button>
-              )}
+                {validation && (
+                  <Button
+                    onClick={handleClearLocation}
+                    variant="outline"
+                    className="px-4 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+                  >
+                    مسح
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Location validation results */}
-        {validation && (
-          <div className="space-y-3">
-            {validation.isValid ? (
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="space-y-1">
-                    <div className="font-medium text-green-800">✅ موقع صالح للتوصيل</div>
-                    <div className="text-sm text-green-700">
-                      المسافة: {validation.distance.toFixed(1)} كيلومتر
-                    </div>
-                    <div className="text-sm text-green-700">
-                      رسوم التوصيل: {validation.deliveryFee.toFixed(0)} جنيه
-                    </div>
-                    {address && (
-                      <div className="text-sm text-green-700">
-                        العنوان: {address}
-                      </div>
-                    )}
-                  </div>
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="space-y-1">
-                    <div className="font-medium">❌ موقع غير صالح للتوصيل</div>
-                    <div className="text-sm">{validation.message}</div>
-                    {validation.area && (
-                      <div className="text-sm">المنطقة: {validation.area}</div>
-                    )}
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-        )}
-
-        {/* Error message */}
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Service area info */}
-        <div className="text-xs text-gray-500 text-center p-2 bg-gray-50 rounded-lg">
-          🚚 نخدم جميع أنحاء مدينة السويس (عدا منطقة العين السخنة)
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Location validation results with dark theme */}
+      {validation && (
+        <div className="mt-4">
+          {validation.isValid ? (
+            <div className="bg-green-900 border border-green-700 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="h-5 w-5 text-green-400" />
+                <span className="font-medium text-green-100">موقع صالح للتوصيل</span>
+              </div>
+              <div className="space-y-1 text-sm text-green-200">
+                <div>المسافة: {validation.distance.toFixed(1)} كيلومتر</div>
+                <div>رسوم التوصيل: {validation.deliveryFee.toFixed(0)} جنيه</div>
+                {address && <div>العنوان: {address}</div>}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-red-900 border border-red-700 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+                <span className="font-medium text-red-100">موقع غير صالح للتوصيل</span>
+              </div>
+              <div className="space-y-1 text-sm text-red-200">
+                <div>{validation.message}</div>
+                {validation.area && <div>المنطقة: {validation.area}</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Error message with dark theme */}
+      {error && (
+        <div className="mt-4 bg-red-900 border border-red-700 rounded-xl p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-red-400" />
+            <span className="text-red-100">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Service area info with dark theme */}
+      <div className="mt-4 text-xs text-gray-400 text-center p-3 bg-gray-800 rounded-lg border border-gray-700">
+        نخدم جميع أنحاء مدينة السويس (عدا منطقة العين السخنة)
+      </div>
+    </div>
   );
 };
 
