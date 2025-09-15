@@ -1603,7 +1603,7 @@ export default function Print() {
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2 space-x-reverse">
                           <Printer className="h-5 w-5 text-accent" />
-                          <h3 className="text-lg font-bold">سلة الملفات ({pendingUploads.length + uploadResults.length})</h3>
+                          <h3 className="text-lg font-bold">سلة الملفات ({pendingUploads.length})</h3>
                         </div>
                         {(pendingUploads.length > 0 || uploadResults.length > 0) && (
                           <Button
