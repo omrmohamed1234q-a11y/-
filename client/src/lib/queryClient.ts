@@ -85,9 +85,11 @@ export async function apiRequest(
 ): Promise<Response> {
   const authHeaders = await getAuthHeaders();
   
-  // Create timeout controller for long uploads (60 seconds)
+  // Create timeout controller - longer for uploads (5 minutes)
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  const isUploadRequest = url.includes('/upload') || url.includes('/google-drive');
+  const timeout = isUploadRequest ? 300000 : 60000; // 5 min for uploads, 1 min for others
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
   
   try {
     const res = await fetch(url, {
