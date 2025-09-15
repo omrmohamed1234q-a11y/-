@@ -1312,7 +1312,7 @@ export default function Print() {
 
   // دالة الإضافة الجماعية للسلة
   const addAllFilesToCart = async () => {
-    if (!user || uploadResults.length === 0) {
+    if (!user || pendingUploads.length === 0) {
       toast({
         title: 'خطأ',
         description: !user ? 'يرجى تسجيل الدخول أولاً' : 'لا توجد ملفات للإضافة',
@@ -1324,23 +1324,27 @@ export default function Print() {
     let successCount = 0;
     let failureCount = 0;
 
-    // إنشاء print jobs لكل ملف مع إعداداته
-    for (const result of uploadResults) {
-      const fileName = result.name;
-      const settings = fileSettings[fileName] || {
-        copies: 1,
-        colorMode: 'grayscale' as 'grayscale' | 'color',
-        paperSize: 'A4' as 'A4' | 'A3' | 'A0' | 'A1' | 'A2',
-        paperType: 'plain' as 'plain' | 'coated' | 'glossy' | 'sticker',
-        doubleSided: false,
+    // إنشاء print jobs لكل ملف مع إعداداته من pending uploads
+    for (const upload of pendingUploads) {
+      const fileName = upload.originalName || upload.filename;
+      
+      // Use settings directly from pending upload (includes user's actual selections)
+      const settings = {
+        copies: upload.copies || 1,
+        colorMode: upload.colorMode || 'grayscale' as 'grayscale' | 'color',
+        paperSize: upload.paperSize || 'A4' as 'A4' | 'A3' | 'A0' | 'A1' | 'A2',
+        paperType: upload.paperType || 'plain' as 'plain' | 'coated' | 'glossy' | 'sticker',
+        doubleSided: upload.doubleSided || false,
       };
+
+      console.log(`🛒 Adding ${fileName} to cart with ${settings.copies} copies`);
 
       // Transform data to match discriminated union format
       const printJobData = {
         type: 'print_job' as const,
         printSettings: {
-          pages: 1, // Default to 1 page for files
-          copies: settings.copies,
+          pages: upload.pages || 1, // Use pages from upload if available
+          copies: settings.copies, // This now uses the actual user selection!
           colorMode: settings.colorMode,
           paperSize: settings.paperSize,
           paperType: settings.paperType,
@@ -1348,20 +1352,21 @@ export default function Print() {
         },
         fileMeta: {
           filename: fileName,
-          fileUrl: result.url,
-          googleDriveLink: result.previewUrl, // Use preview URL as drive link if available
-          googleDriveFileId: (result as any).fileId,
-          fileSize: result.fileSize,
-          mimeType: (result as any).type || 'application/octet-stream'
+          fileUrl: upload.fileUrl,
+          googleDriveLink: upload.googleDriveLink || upload.previewUrl,
+          googleDriveFileId: upload.googleDriveFileId,
+          fileSize: upload.fileSize,
+          mimeType: upload.mimeType || 'application/octet-stream'
         },
         quantity: 1
       };
 
       try {
         await addToCartMutation.mutateAsync(printJobData);
+        console.log(`✅ Successfully added ${fileName} with ${settings.copies} copies to cart`);
         successCount++;
       } catch (error) {
-        console.error(`فشل في إضافة ${fileName} للسلة:`, error);
+        console.error(`❌ Failed to add ${fileName} to cart:`, error);
         failureCount++;
       }
     }
