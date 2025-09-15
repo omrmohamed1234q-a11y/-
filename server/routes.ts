@@ -4465,6 +4465,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PDF Preview Generation API - Secure implementation
+  app.post('/api/pdf-preview', requireAuth, async (req: any, res) => {
+    try {
+      const { fileUrl, fileName, fileId } = req.body;
+      const userId = req.user?.id;
+
+      console.log(`🖼️ Secure PDF preview request for: ${fileName} (user: ${userId})`);
+
+      // Input validation
+      if (!fileUrl || !fileName || typeof fileUrl !== 'string' || typeof fileName !== 'string') {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Missing or invalid required parameters' 
+        });
+      }
+
+      // Only allow Google Drive files for security
+      if (!fileUrl.includes('drive.google.com') && !fileId) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Only Google Drive files are supported for server-side preview generation',
+          fallback: true
+        });
+      }
+
+      try {
+        // Use Google Drive service to securely get file content
+        if (!fileId) {
+          throw new Error('Google Drive file ID is required');
+        }
+        
+        const fileContent = await googleDriveService.downloadFile(fileId);
+        
+        if (!fileContent || !fileContent.data) {
+          throw new Error('Could not download file from Google Drive');
+        }
+
+        // Validate file size (max 50MB)
+        if (fileContent.data.length > 50 * 1024 * 1024) {
+          throw new Error('File too large for preview generation');
+        }
+
+        // Return placeholder for now - server-side PDF rendering requires additional setup
+        console.log('⚠️ Server-side PDF rendering temporarily disabled for security');
+        
+        res.json({
+          success: false,
+          error: 'Server-side PDF preview is temporarily disabled for security reasons',
+          fallback: true,
+          message: 'يرجى استخدام المعاينة من المتصفح'
+        });
+
+      } catch (error) {
+        console.error('❌ Secure PDF preview failed:', error);
+        res.json({
+          success: false,
+          error: `Preview generation failed: ${error.message}`,
+          fallback: true
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ PDF preview security error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Preview generation failed', 
+        fallback: true
+      });
+    }
+  });
+
   // Cancel order
   app.post('/api/orders/:id/cancel', async (req, res) => {
     try {

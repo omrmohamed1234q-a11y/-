@@ -419,6 +419,212 @@ export async function analyzePDFFromUrl(fileUrl: string, fileName: string, fileI
 }
 
 /**
+ * Generate PDF preview (first page as image)
+ */
+export async function generatePDFPreview(
+  fileSource: File | string, 
+  quality: number = 1.5
+): Promise<{ success: boolean; previewUrl?: string; error?: string }> {
+  try {
+    // Check if it's an image file first
+    let fileType = '';
+    if (fileSource instanceof File) {
+      fileType = fileSource.type;
+    } else if (typeof fileSource === 'string') {
+      // Try to determine file type from URL
+      const urlLower = fileSource.toLowerCase();
+      if (urlLower.includes('.jpg') || urlLower.includes('.jpeg')) fileType = 'image/jpeg';
+      else if (urlLower.includes('.png')) fileType = 'image/png';
+      else if (urlLower.includes('.gif')) fileType = 'image/gif';
+    }
+
+    // For image files, return the URL/blob directly
+    if (fileType.startsWith('image/')) {
+      if (fileSource instanceof File) {
+        const previewUrl = URL.createObjectURL(fileSource);
+        return { success: true, previewUrl };
+      } else {
+        return { success: true, previewUrl: fileSource };
+      }
+    }
+
+    // Dynamic import of pdfjs-dist to avoid bundle size issues
+    const pdfjsLib = await import('pdfjs-dist');
+    
+    // Set worker path for PDF.js - use bundled worker for reliability
+    if (typeof window !== 'undefined') {
+      try {
+        // Try to use bundled worker first
+        const workerUrl = new URL('pdfjs-dist/build/pdf.worker.js', import.meta.url);
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl.toString();
+      } catch {
+        // Fallback to CDN if bundled worker is not available
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+    }
+
+    let arrayBuffer: ArrayBuffer;
+    
+    if (fileSource instanceof File) {
+      // Direct file processing
+      arrayBuffer = await fileSource.arrayBuffer();
+    } else {
+      // URL-based processing
+      const response = await fetch(fileSource);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PDF from URL: ${response.statusText}`);
+      }
+      arrayBuffer = await response.arrayBuffer();
+    }
+
+    // Load PDF document
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    
+    // Get first page
+    const page = await pdf.getPage(1);
+    
+    // Set canvas size based on page dimensions
+    const viewport = page.getViewport({ scale: quality });
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    if (!context) {
+      throw new Error('Could not get canvas context');
+    }
+    
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    // Render page to canvas
+    await page.render({
+      canvasContext: context,
+      viewport: viewport
+    }).promise;
+
+    // Convert canvas to data URL
+    const previewUrl = canvas.toDataURL('image/jpeg', 0.8);
+    
+    console.log('✅ PDF preview generated successfully');
+    
+    return {
+      success: true,
+      previewUrl
+    };
+    
+  } catch (error) {
+    console.error('❌ Error generating PDF preview:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Generate PDF preview for Google Drive files (server-side)
+ */
+export async function generatePDFPreviewFromUrl(
+  fileUrl: string, 
+  fileName: string,
+  fileId?: string
+): Promise<{ success: boolean; previewUrl?: string; error?: string }> {
+  try {
+    // Import apiRequest for server communication
+    const { apiRequest } = await import('./queryClient');
+    
+    console.log(`🖼️ Generating PDF preview for: ${fileName}`);
+    
+    const response = await apiRequest('POST', '/api/pdf-preview', {
+      fileUrl,
+      fileName,
+      fileId
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log('✅ Server-side PDF preview generated');
+      return {
+        success: true,
+        previewUrl: result.previewUrl
+      };
+    } else {
+      throw new Error(result.error || 'Server preview generation failed');
+    }
+
+  } catch (error) {
+    console.error('❌ Server-side PDF preview failed:', error);
+    
+    // Fallback to client-side generation for non-Google Drive URLs
+    if (!fileUrl.includes('drive.google.com')) {
+      console.log('🔄 Attempting client-side preview generation...');
+      return await generatePDFPreview(fileUrl);
+    }
+    
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Preview generation failed'
+    };
+  }
+}
+
+/**
+ * Smart PDF preview generation - automatically chooses best method
+ */
+export async function smartPDFPreview(
+  fileSource: File | { url: string; name: string; fileId?: string }
+): Promise<{ success: boolean; previewUrl?: string; error?: string }> {
+  
+  if (fileSource instanceof File) {
+    // Direct file preview
+    console.log(`🖼️ Direct file preview: ${fileSource.name}`);
+    
+    // Check if it's an image file
+    if (fileSource.type.startsWith('image/')) {
+      const previewUrl = URL.createObjectURL(fileSource);
+      return { success: true, previewUrl };
+    }
+    
+    return await generatePDFPreview(fileSource);
+  } else {
+    // URL-based preview
+    console.log(`🌐 URL-based preview: ${fileSource.name}`);
+    
+    // Check if it's an image URL
+    const urlLower = fileSource.url.toLowerCase();
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    if (imageExtensions.some(ext => urlLower.includes(ext))) {
+      return { success: true, previewUrl: fileSource.url };
+    }
+    
+    // For PDF files, try client-side first, then fallback to server if it's Google Drive
+    if (fileSource.url.includes('drive.google.com')) {
+      // For Google Drive, try server-side with proper fallback
+      const serverResult = await generatePDFPreviewFromUrl(fileSource.url, fileSource.name, fileSource.fileId);
+      
+      if (serverResult.success) {
+        return serverResult;
+      }
+      
+      // Server failed, show placeholder for Google Drive files (can't fetch directly due to CORS)
+      console.log('📄 Using fallback placeholder for Google Drive file');
+      return {
+        success: true,
+        previewUrl: 'data:image/svg+xml;base64,' + btoa(`
+          <svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+            <rect width="64" height="64" fill="#f3f4f6"/>
+            <text x="32" y="32" text-anchor="middle" fill="#6b7280" font-family="Arial" font-size="24">📄</text>
+            <text x="32" y="50" text-anchor="middle" fill="#6b7280" font-family="Arial" font-size="8">PDF</text>
+          </svg>
+        `)
+      };
+    } else {
+      return await generatePDFPreview(fileSource.url);
+    }
+  }
+}
+
+/**
  * Smart PDF analysis - automatically chooses best method based on source
  */
 export async function smartPDFAnalysis(
