@@ -39,6 +39,7 @@ import {
   type InsertTargetingRule
 } from '../shared/smart-notifications-schema';
 import { AutomaticNotificationService } from './automatic-notifications';
+import { Vonage } from '@vonage/server-sdk';
 
 // Using centralized security singleton (no need to create new instance)
 
@@ -71,6 +72,41 @@ function cacheSet(key: string, data: any, ttlSeconds: number = 300): void {
     timestamp: Date.now(),
     ttl: ttlSeconds * 1000
   });
+}
+
+// ==================== VONAGE SMS SETUP ====================
+// Initialize Vonage for SMS verification
+const vonage = new Vonage({
+  apiKey: process.env.VONAGE_API_KEY || '',
+  apiSecret: process.env.VONAGE_API_SECRET || ''
+});
+
+// Temporary storage for SMS verification codes (in production, use Redis or database)
+const verificationCodes = new Map<string, {
+  code: string;
+  phoneNumber: string;
+  expiresAt: number;
+  attempts: number;
+}>();
+
+// Clean up expired verification codes every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, verification] of verificationCodes.entries()) {
+    if (verification.expiresAt < now) {
+      verificationCodes.delete(id);
+    }
+  }
+}, 5 * 60 * 1000);
+
+// Helper function to generate verification code
+function generateVerificationCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Helper function to generate verification ID
+function generateVerificationId(): string {
+  return `vonage_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
 function cacheClear(pattern?: string): void {
@@ -513,6 +549,215 @@ function generateRevenueByCategoryData(orders: any[], products: any[]) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // ==================== SMS RATE LIMITING ====================
+  
+  // SMS rate limiting - Very strict to prevent abuse and cost overrun
+  const smsLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3, // Only 3 SMS sends per hour per IP
+    message: {
+      success: false,
+      error: 'تم تجاوز عدد المحاولات المسموحة لإرسال أكواد التحقق. حاول مرة أخرى بعد ساعة',
+      retryAfter: '1 hour'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // SMS verification code rate limiting - Even stricter
+  const smsVerifyLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 minutes
+    max: 5, // Only 5 verification attempts per 10 minutes per IP
+    message: {
+      success: false,
+      error: 'تم تجاوز عدد محاولات التحقق المسموحة. حاول مرة أخرى بعد 10 دقائق',
+      retryAfter: '10 minutes'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  
+  // ==================== VONAGE SMS ENDPOINTS ====================
+  
+  // Send SMS verification code
+  app.post('/api/sms/send', smsLimiter, async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      // Validate phone number format
+      if (!phoneNumber || typeof phoneNumber !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'رقم الهاتف مطلوب ويجب أن يكون نص صحيح'
+        });
+      }
+
+      // Check if API keys are configured
+      if (!process.env.VONAGE_API_KEY || !process.env.VONAGE_API_SECRET) {
+        console.error('❌ Vonage API keys not configured');
+        return res.status(500).json({
+          success: false,
+          error: 'خدمة الرسائل غير متاحة حالياً. يرجى المحاولة لاحقاً'
+        });
+      }
+
+      // Generate verification code and ID
+      const code = generateVerificationCode();
+      const verificationId = generateVerificationId();
+      const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes
+
+      // Store verification code
+      verificationCodes.set(verificationId, {
+        code,
+        phoneNumber,
+        expiresAt,
+        attempts: 0
+      });
+
+      console.log(`📱 SMS: Sending verification code to ${phoneNumber}`);
+      console.log(`🔑 Verification ID: ${verificationId} (code details hidden for security)`);
+
+      try {
+        // Send SMS via Vonage
+        const response = await vonage.sms.send({
+          to: phoneNumber,
+          from: 'اطبعلي',
+          text: `كود التحقق الخاص بك: ${code}\nصالح لمدة 5 دقائق فقط.\nاطبعلي - خدمة الطباعة الذكية`
+        });
+
+        if (response.messages && response.messages[0].status === '0') {
+          console.log('✅ SMS sent successfully via Vonage');
+          
+          res.json({
+            success: true,
+            verificationId,
+            message: 'تم إرسال الكود بنجاح'
+          });
+        } else {
+          const errorText = response.messages[0]['error-text'] || 'Unknown error';
+          console.error('❌ Vonage SMS send failed:', {
+            status: response.messages[0].status,
+            error: errorText,
+            to: phoneNumber
+          });
+          
+          // Clean up verification code on failure
+          verificationCodes.delete(verificationId);
+          
+          // Provide specific error messages based on status
+          let userError = 'فشل في إرسال الكود';
+          if (response.messages[0].status === '1') {
+            userError = 'فشل الاتصال بخدمة الرسائل';
+          } else if (response.messages[0].status === '2') {
+            userError = 'رقم الهاتف غير صحيح أو غير متاح لاستقبال الرسائل';
+          } else if (response.messages[0].status === '3') {
+            userError = 'الرسالة مرفوضة من المشغل';
+          } else if (response.messages[0].status === '4') {
+            userError = 'رصيد المرسل غير كافي';
+          } else if (response.messages[0].status === '5') {
+            userError = 'عدد الرسائل المسموح تم تجاوزه';
+          }
+          
+          res.status(400).json({
+            success: false,
+            error: userError
+          });
+        }
+      } catch (vonageError: any) {
+        console.error('❌ Vonage API error:', vonageError);
+        
+        // Clean up verification code on error
+        verificationCodes.delete(verificationId);
+        
+        res.status(500).json({
+          success: false,
+          error: 'حدث خطأ في إرسال الكود. حاول مرة أخرى'
+        });
+      }
+
+    } catch (error: any) {
+      console.error('❌ SMS send endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'حدث خطأ غير متوقع. حاول مرة أخرى'
+      });
+    }
+  });
+
+  // Verify SMS code
+  app.post('/api/sms/verify', smsVerifyLimiter, async (req, res) => {
+    try {
+      const { verificationId, code } = req.body;
+      
+      // Validate input
+      if (!verificationId || !code) {
+        return res.status(400).json({
+          success: false,
+          error: 'معرف التحقق والكود مطلوبان'
+        });
+      }
+
+      // Get verification data
+      const verification = verificationCodes.get(verificationId);
+      
+      if (!verification) {
+        return res.status(400).json({
+          success: false,
+          error: 'كود التحقق غير صالح أو منتهي الصلاحية'
+        });
+      }
+
+      // Check if expired
+      if (verification.expiresAt < Date.now()) {
+        verificationCodes.delete(verificationId);
+        return res.status(410).json({
+          success: false,
+          error: 'انتهت صلاحية الكود. أطلب كود جديد'
+        });
+      }
+
+      // Check attempt limit (max 3 attempts)
+      if (verification.attempts >= 3) {
+        verificationCodes.delete(verificationId);
+        return res.status(429).json({
+          success: false,
+          error: 'تم تجاوز عدد المحاولات المسموح. أطلب كود جديد'
+        });
+      }
+
+      // Increment attempts
+      verification.attempts++;
+
+      // Verify code
+      if (verification.code !== code.toString()) {
+        console.log(`❌ Wrong code attempt ${verification.attempts}/3 for ${verification.phoneNumber}`);
+        
+        return res.status(400).json({
+          success: false,
+          error: `الكود غير صحيح. المحاولة ${verification.attempts}/3`
+        });
+      }
+
+      // Success! Clean up and return success
+      verificationCodes.delete(verificationId);
+      
+      console.log(`✅ SMS verification successful for ${verification.phoneNumber}`);
+      
+      res.json({
+        success: true,
+        message: 'تم التحقق بنجاح',
+        phoneNumber: verification.phoneNumber
+      });
+
+    } catch (error: any) {
+      console.error('❌ SMS verify endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'حدث خطأ في التحقق. حاول مرة أخرى'
+      });
+    }
+  });
   
   // ==================== SECURITY MIDDLEWARE ====================
   

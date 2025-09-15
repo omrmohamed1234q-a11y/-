@@ -1,12 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { 
-  auth, 
-  signInWithPhoneNumber, 
-  PhoneAuthProvider, 
-  signInWithCredential,
-  RecaptchaVerifier,
-  signOut
-} from '@/lib/firebase';
 
 interface PhoneVerificationState {
   isLoading: boolean;
@@ -39,7 +31,6 @@ export const usePhoneVerification = () => {
   });
 
   // Refs for lifecycle management
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const resendCountRef = useRef(0);
 
@@ -50,22 +41,6 @@ export const usePhoneVerification = () => {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
-
-    // Clear reCAPTCHA
-    if (recaptchaVerifierRef.current) {
-      try {
-        recaptchaVerifierRef.current.clear();
-      } catch (e) {
-        // Already cleared or not rendered
-      }
-      recaptchaVerifierRef.current = null;
-    }
-
-    // Remove reCAPTCHA container
-    const container = document.getElementById('recaptcha-container');
-    if (container) {
-      container.remove();
-    }
   }, []);
 
   // Cleanup on unmount
@@ -73,62 +48,60 @@ export const usePhoneVerification = () => {
     return cleanup;
   }, [cleanup]);
 
-  // Clear errors
+  // Egyptian phone number validation
+  const validateEgyptianPhone = useCallback((phone: string): boolean => {
+    // Remove all non-digit characters
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Check Egyptian phone patterns
+    // Mobile: 01X XXXX XXXX (11 digits starting with 01)
+    // With country code: +20 1X XXXX XXXX
+    
+    if (cleanPhone.length === 11 && cleanPhone.startsWith('01')) {
+      // Egyptian mobile: 01X (X can be 0,1,2,5)
+      const secondDigit = cleanPhone[2];
+      return ['0', '1', '2', '5'].includes(secondDigit);
+    }
+    
+    if (cleanPhone.length === 12 && cleanPhone.startsWith('201')) {
+      // With +20 prefix: 201X XXXX XXXX (E.164 format is 12 digits)
+      const thirdDigit = cleanPhone[3];
+      return ['0', '1', '2', '5'].includes(thirdDigit);
+    }
+    
+    return false;
+  }, []);
+
+  // Format phone number to international format
+  const formatPhoneNumber = useCallback((phone: string): string => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    if (cleanPhone.length === 11 && cleanPhone.startsWith('01')) {
+      // Convert Egyptian mobile to international format
+      return '+20' + cleanPhone;
+    }
+    
+    if (cleanPhone.length === 12 && cleanPhone.startsWith('201')) {
+      // Already in international format
+      return '+' + cleanPhone;
+    }
+    
+    return phone; // Return as-is if format is unclear
+  }, []);
+
+  // Clear error message
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
-  // Validate Egyptian phone number format
-  const validateEgyptianPhone = useCallback((phoneNumber: string): boolean => {
-    // Egyptian phone format: +201[0-2,5]xxxxxxxx (total 13 digits with +20)
-    const egyptianPhoneRegex = /^(\+?20|0)?1[0-2,5]\d{8}$/;
-    const digits = phoneNumber.replace(/\D/g, '');
-    
-    // Check for 0020 prefix (handle international format)
-    if (digits.startsWith('0020')) {
-      return egyptianPhoneRegex.test(digits.slice(2)); // Remove 00, keep 20
-    }
-    
-    return egyptianPhoneRegex.test(digits);
-  }, []);
-
-  // Format phone number for international format
-  const formatPhoneNumber = useCallback((phoneNumber: string): string => {
-    // Remove all non-digits
-    const digits = phoneNumber.replace(/\D/g, '');
-    
-    // Handle 0020 international prefix
-    if (digits.startsWith('0020')) {
-      return `+${digits.slice(2)}`; // Remove 00, keep 20
-    }
-    
-    // If it starts with 0, replace with +20 (Egypt)
-    if (digits.startsWith('0')) {
-      return `+20${digits.slice(1)}`;
-    }
-    
-    // If it starts with 20, add +
-    if (digits.startsWith('20')) {
-      return `+${digits}`;
-    }
-    
-    // If it doesn't start with +, assume Egypt
-    if (!phoneNumber.startsWith('+')) {
-      return `+20${digits}`;
-    }
-    
-    return phoneNumber;
-  }, []);
-
-  // Send SMS verification code
+  // Send verification code via Vonage API
   const sendVerificationCode = useCallback(async (phoneNumber: string): Promise<PhoneVerificationResult> => {
     try {
-      // Clear any existing interval first
+      // Clear any existing countdown
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
         countdownIntervalRef.current = null;
       }
-
 
       // Validate phone number first
       if (!validateEgyptianPhone(phoneNumber)) {
@@ -153,53 +126,32 @@ export const usePhoneVerification = () => {
 
       const formattedPhone = formatPhoneNumber(phoneNumber);
       
-      // Reuse or create reCAPTCHA verifier
-      if (!recaptchaVerifierRef.current) {
-        // Create a hidden div for reCAPTCHA if it doesn't exist
-        let recaptchaContainer = document.getElementById('recaptcha-container');
-        if (!recaptchaContainer) {
-          recaptchaContainer = document.createElement('div');
-          recaptchaContainer.id = 'recaptcha-container';
-          recaptchaContainer.style.display = 'none';
-          document.body.appendChild(recaptchaContainer);
-        }
+      // Call Vonage SMS API via backend
+      const response = await fetch('/api/sms/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: formattedPhone
+        })
+      });
 
-        try {
-          // Create reCAPTCHA verifier (bypassed in development)
-          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            size: 'invisible',
-            theme: 'light',
-            'hl': 'ar', // Arabic language
-            callback: () => {
-              console.log('✅ reCAPTCHA verification completed');
-            },
-            'expired-callback': () => {
-              console.log('⏰ reCAPTCHA expired - clearing verifier');
-              if (recaptchaVerifierRef.current) {
-                try {
-                  recaptchaVerifierRef.current.clear();
-                  recaptchaVerifierRef.current = null;
-                } catch (e) {
-                  // Already cleared
-                }
-              }
-            }
-          });
-
-        } catch (error) {
-          console.log('❌ reCAPTCHA setup error:', error);
-          throw new Error('حدث خطأ في تهيئة نظام التحقق الأمني');
-        }
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Send SMS
-      const confirmationResult = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifierRef.current);
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'فشل في إرسال الكود');
+      }
       
       setState(prev => ({ 
         ...prev, 
         isSending: false,
         isLoading: false,
-        verificationId: confirmationResult.verificationId,
+        verificationId: result.verificationId,
         phoneNumber: formattedPhone,
         countdown: 60,
         canResend: false
@@ -224,34 +176,23 @@ export const usePhoneVerification = () => {
 
       return { 
         success: true, 
-        verificationId: confirmationResult.verificationId 
+        verificationId: result.verificationId 
       };
 
     } catch (error: any) {
       let errorMessage = 'حدث خطأ في إرسال الكود';
       
-      // Enhanced error handling
-      switch (error.code) {
-        case 'auth/too-many-requests':
-          errorMessage = 'تم إرسال كثير من الطلبات. حاول مرة أخرى لاحقاً';
-          break;
-        case 'auth/invalid-phone-number':
-          errorMessage = 'رقم الهاتف غير صحيح';
-          break;
-        case 'auth/quota-exceeded':
-          errorMessage = 'تم تجاوز الحد المسموح اليوم. حاول غداً';
-          break;
-        case 'auth/missing-recaptcha-token':
-          errorMessage = 'حدث خطأ في التحقق الأمني. حاول مرة أخرى';
-          break;
-        case 'auth/invalid-app-credential':
-          errorMessage = 'خطأ في إعدادات التطبيق. تواصل مع الدعم';
-          break;
-        case 'auth/captcha-check-failed':
-          errorMessage = 'فشل التحقق الأمني. حاول مرة أخرى';
-          break;
-        default:
-          errorMessage = 'حدث خطأ في إرسال الكود. تأكد من اتصال الإنترنت';
+      // Enhanced error handling for common scenarios
+      if (error.message.includes('HTTP 429')) {
+        errorMessage = 'تم إرسال كثير من الطلبات. حاول مرة أخرى لاحقاً';
+      } else if (error.message.includes('HTTP 400')) {
+        errorMessage = 'رقم الهاتف غير صحيح';
+      } else if (error.message.includes('HTTP 401')) {
+        errorMessage = 'خطأ في إعدادات التطبيق. تواصل مع الدعم';
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+        errorMessage = 'تأكد من اتصال الإنترنت وحاول مرة أخرى';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       setState(prev => ({ 
@@ -265,7 +206,7 @@ export const usePhoneVerification = () => {
     }
   }, [formatPhoneNumber, validateEgyptianPhone]);
 
-  // Verify SMS code
+  // Verify SMS code via Vonage API
   const verifyCode = useCallback(async (code: string): Promise<PhoneVerificationResult> => {
     if (!state.verificationId) {
       const error = 'لا يوجد كود تحقق للتأكيد';
@@ -281,13 +222,27 @@ export const usePhoneVerification = () => {
         error: null 
       }));
 
+      // Call Vonage verification API via backend
+      const response = await fetch('/api/sms/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          verificationId: state.verificationId,
+          code: code
+        })
+      });
 
-      // Create credential and sign in temporarily
-      const credential = PhoneAuthProvider.credential(state.verificationId, code);
-      const userCredential = await signInWithCredential(auth, credential);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
-      // Immediately sign out to avoid dual session with Supabase
-      await signOut(auth);
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'الكود غير صحيح');
+      }
 
       setState(prev => ({ 
         ...prev, 
@@ -298,8 +253,9 @@ export const usePhoneVerification = () => {
       return { 
         success: true, 
         user: {
-          phoneNumber: userCredential.user.phoneNumber,
-          uid: userCredential.user.uid
+          phoneNumber: state.phoneNumber,
+          verified: true,
+          verificationId: state.verificationId
         }
       };
 
@@ -307,21 +263,16 @@ export const usePhoneVerification = () => {
       let errorMessage = 'الكود غير صحيح';
       
       // Enhanced error handling for verification
-      switch (error.code) {
-        case 'auth/invalid-verification-code':
-          errorMessage = 'الكود غير صحيح. تأكد من الأرقام';
-          break;
-        case 'auth/code-expired':
-          errorMessage = 'انتهت صلاحية الكود. أطلب كود جديد';
-          break;
-        case 'auth/session-cookie-expired':
-          errorMessage = 'انتهت جلسة التحقق. أطلب كود جديد';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'محاولات كثيرة. انتظر قليلاً ثم حاول مرة أخرى';
-          break;
-        default:
-          errorMessage = 'حدث خطأ في التحقق. تأكد من الكود وحاول مرة أخرى';
+      if (error.message.includes('HTTP 400')) {
+        errorMessage = 'الكود غير صحيح. تأكد من الأرقام';
+      } else if (error.message.includes('HTTP 410')) {
+        errorMessage = 'انتهت صلاحية الكود. أطلب كود جديد';
+      } else if (error.message.includes('HTTP 429')) {
+        errorMessage = 'محاولات كثيرة. انتظر قليلاً ثم حاول مرة أخرى';
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+        errorMessage = 'تأكد من اتصال الإنترنت وحاول مرة أخرى';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       setState(prev => ({ 
