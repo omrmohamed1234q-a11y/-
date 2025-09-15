@@ -1645,17 +1645,7 @@ export default function Print() {
                             )}
                           </Button>
                           
-                          {cart?.items && cart.items.length > 0 && (
-                            <Button
-                              onClick={() => setCartDrawerOpen(true)}
-                              variant="outline"
-                              className="w-full h-11"
-                              data-testid="view-cart"
-                            >
-                              <ShoppingCart className="h-4 w-4 ml-2" />
-                              عرض السلة ({cart.totalQuantity})
-                            </Button>
-                          )}
+                          {/* تم تبسيط النظام - السلة متاحة من الشريط السفلي */}
                           
                           {/* زر السلة القديمة - للتوافق مع النظام الحالي */}
                           <Button
