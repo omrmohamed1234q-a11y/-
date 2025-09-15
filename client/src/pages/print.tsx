@@ -1804,30 +1804,10 @@ export default function Print() {
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="plain">
-                                              <div className="flex items-center space-x-2 space-x-reverse">
-                                                <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
-                                                <span>عادي</span>
-                                              </div>
-                                            </SelectItem>
-                                            <SelectItem value="coated">
-                                              <div className="flex items-center space-x-2 space-x-reverse">
-                                                <div className="w-3 h-3 bg-gradient-to-r from-white to-gray-200 border border-gray-400 rounded shadow-sm"></div>
-                                                <span>كوشيه</span>
-                                              </div>
-                                            </SelectItem>
-                                            <SelectItem value="glossy">
-                                              <div className="flex items-center space-x-2 space-x-reverse">
-                                                <div className="w-3 h-3 bg-gradient-to-r from-purple-100 to-purple-200 border border-purple-400 rounded shadow-lg"></div>
-                                                <span>جلوسي</span>
-                                              </div>
-                                            </SelectItem>
-                                            <SelectItem value="sticker">
-                                              <div className="flex items-center space-x-2 space-x-reverse">
-                                                <div className="w-3 h-3 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
-                                                <span>لاصق</span>
-                                              </div>
-                                            </SelectItem>
+                                            <SelectItem value="plain">عادي</SelectItem>
+                                            <SelectItem value="coated">كوشيه</SelectItem>
+                                            <SelectItem value="glossy">جلوسي</SelectItem>
+                                            <SelectItem value="sticker">لاصق</SelectItem>
                                           </SelectContent>
                                         </Select>
                                       </div>
