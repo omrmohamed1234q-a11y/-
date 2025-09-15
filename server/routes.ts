@@ -1186,7 +1186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Validate initial host against allowlist
-        const ALLOWED_HOSTS = ['drive.google.com', 'docs.google.com', 'googleusercontent.com'];
+        const ALLOWED_HOSTS = ['drive.google.com', 'docs.google.com', 'googleusercontent.com', 'drive.usercontent.google.com'];
         const initialHost = initialUrl.hostname.toLowerCase();
         const isAllowedInitialHost = ALLOWED_HOSTS.some(allowedHost => 
           initialHost === allowedHost || initialHost.endsWith('.' + allowedHost)
@@ -1223,7 +1223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB limit
       const DOWNLOAD_TIMEOUT = 10000; // 10 second timeout
       const MAX_REDIRECTS = 3;
-      const ALLOWED_HOSTS = ['drive.google.com', 'docs.google.com', 'googleusercontent.com']; // Same as initial validation
+      const ALLOWED_HOSTS = ['drive.google.com', 'docs.google.com', 'googleusercontent.com', 'drive.usercontent.google.com']; // Same as initial validation
 
       try {
         console.log('🔒 Secure PDF download starting...');
