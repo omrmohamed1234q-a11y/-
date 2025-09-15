@@ -1430,7 +1430,7 @@ export const printSettingsSchema = z.object({
   copies: z.number().int().min(1).max(100).default(1),
   colorMode: z.enum(["color", "grayscale"]),
   paperSize: z.enum(["A4", "A3", "A0", "A1", "A2"]).default("A4"),
-  paperType: z.enum(["plain", "glossy", "matte", "sticker"]).default("plain"),
+  paperType: z.enum(["plain", "glossy", "matte", "sticker", "coated"]).default("plain"),
   doubleSided: z.boolean().default(false),
 });
 

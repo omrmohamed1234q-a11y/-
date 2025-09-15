@@ -293,13 +293,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   </span>
                 </div>
                 
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">الشحن:</span>
-                  <span className="text-green-600 text-sm font-medium">
-                    مجاني
-                  </span>
-                </div>
-                
                 <Separator />
                 
                 <div className="flex justify-between items-center text-lg font-bold">

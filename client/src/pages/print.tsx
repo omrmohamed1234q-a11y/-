@@ -70,19 +70,16 @@ const ScanModeSelector = ({
     { 
       value: 'color' as ScanMode, 
       label: 'ملون', 
-      icon: '🌈', 
       description: 'احتفظ بالألوان الأصلية'
     },
     { 
       value: 'grayscale' as ScanMode, 
       label: 'رمادي', 
-      icon: '⚫', 
       description: 'تحويل إلى رمادي للوضوح'
     },
     { 
       value: 'blackwhite' as ScanMode, 
       label: 'أبيض وأسود', 
-      icon: '⚪', 
       description: 'نص واضح وحاد'
     }
   ]
@@ -105,8 +102,7 @@ const ScanModeSelector = ({
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
           `}
         >
-          <div className="text-2xl mb-2">{mode.icon}</div>
-          <div className="font-semibold text-sm mb-1">{mode.label}</div>
+          <div className="font-semibold text-base mb-1">{mode.label}</div>
           <div className="text-xs text-gray-500">{mode.description}</div>
         </motion.button>
       ))}
