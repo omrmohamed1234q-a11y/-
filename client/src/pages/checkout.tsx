@@ -15,6 +15,7 @@ import { ShoppingBag, MapPin, CreditCard, Truck, Gift, Star, Package } from 'luc
 import PaymentMethods from '@/components/PaymentMethods';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import type { LocationData, DeliveryValidation } from '@/utils/locationUtils';
+import { formatPrice, parsePrice } from '@/lib/utils';
 
 export default function CheckoutPage() {
   const [, setLocation] = useLocation();
@@ -531,7 +532,7 @@ export default function CheckoutPage() {
                                 <div className="flex items-center justify-between">
                                   <Badge variant="secondary" className="text-xs">{item.quantity}×</Badge>
                                   <span className="text-sm font-bold text-green-600">
-                                    {(parseFloat(item.price) * item.quantity).toFixed(2)} جنيه
+                                    {formatPrice(parsePrice(item.price) * item.quantity)} جنيه
                                   </span>
                                 </div>
                               </div>
@@ -554,7 +555,7 @@ export default function CheckoutPage() {
                         <span>المجموع الفرعي</span>
                         <span className="text-green-600" data-testid="checkout-subtotal">
                           <span className="currency-display">
-                            <span className="arabic-nums">{subtotal.toFixed(2)}</span> جنيه
+                            <span className="arabic-nums">{formatPrice(subtotal)}</span> جنيه
                           </span>
                         </span>
                       </div>
@@ -569,7 +570,7 @@ export default function CheckoutPage() {
                         <span>المجموع الفرعي</span>
                         <span data-testid="checkout-subtotal">
                           <span className="currency-display">
-                            <span className="arabic-nums">{subtotal.toFixed(2)}</span> جنيه
+                            <span className="arabic-nums">{formatPrice(subtotal)}</span> جنيه
                           </span>
                         </span>
                       </div>
@@ -577,14 +578,14 @@ export default function CheckoutPage() {
                         <div className="flex justify-between text-sm">
                           <span>رسوم التوصيل</span>
                           <span data-testid="checkout-delivery">
-                            {deliveryFee.toFixed(2)} جنيه
+                            {formatPrice(deliveryFee)} جنيه
                           </span>
                         </div>
                       )}
                       <div className="flex justify-between text-sm">
                         <span>رسوم الخدمة (5% + 5 ج.م)</span>
                         <span data-testid="service-fee">
-                          {serviceFee.toFixed(2)} جنيه
+                          {formatPrice(serviceFee)} جنيه
                         </span>
                       </div>
                       {pointsDiscount > 0 && (
@@ -597,7 +598,7 @@ export default function CheckoutPage() {
                       <div className="flex justify-between font-bold text-lg">
                         <span>الإجمالي</span>
                         <span className="text-green-600" data-testid="checkout-total">
-                          {total.toFixed(2)} جنيه
+                          {formatPrice(total)} جنيه
                         </span>
                       </div>
                     </>

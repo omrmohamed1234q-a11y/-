@@ -1,5 +1,6 @@
 import React from 'react';
 import { Order } from '@shared/schema';
+import { formatPrice } from '@/lib/utils';
 
 interface InvoicePrintableProps {
   order: any; // Using any for now to include printFiles
@@ -250,7 +251,7 @@ export const InvoicePrintable: React.FC<InvoicePrintableProps> = ({ order }) => 
                   </tr>
                   <tr>
                     <td className="border border-gray-300 p-3 text-right font-medium">ضريبة القيمة المضافة (14%):</td>
-                    <td className="border border-gray-300 p-3 text-center">{tax.toFixed(2)} جنيه</td>
+                    <td className="border border-gray-300 p-3 text-center">{formatPrice(tax)} جنيه</td>
                   </tr>
                   {order.pointsUsed && order.pointsUsed > 0 && (
                     <tr>
@@ -260,7 +261,7 @@ export const InvoicePrintable: React.FC<InvoicePrintableProps> = ({ order }) => 
                   )}
                   <tr className="bg-blue-50">
                     <td className="border border-gray-300 p-3 text-right font-bold text-lg">المبلغ الإجمالي:</td>
-                    <td className="border border-gray-300 p-3 text-center font-bold text-lg">{total.toFixed(2)} جنيه</td>
+                    <td className="border border-gray-300 p-3 text-center font-bold text-lg">{formatPrice(total)} جنيه</td>
                   </tr>
                 </tbody>
               </table>

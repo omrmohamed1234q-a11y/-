@@ -7,6 +7,7 @@ import PaymentMethods from '@/components/PaymentMethods';
 import { CreditCard, Receipt, ArrowLeft } from 'lucide-react';
 import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
+import { formatPrice } from '@/lib/utils';
 
 interface CartItem {
   id: string;
@@ -43,7 +44,7 @@ export default function PaymentPage() {
     console.log('Payment successful:', paymentData);
     toast({
       title: 'تم الدفع بنجاح!',
-      description: `تم إتمام الدفعة بمبلغ ${total.toFixed(2)} جنيه مصري`
+      description: `تم إتمام الدفعة بمبلغ ${formatPrice(total)} جنيه مصري`
     });
     // Redirect to success page or update UI
   };
@@ -92,7 +93,7 @@ export default function PaymentPage() {
                       </Badge>
                     </div>
                     <div className="text-left">
-                      <p className="font-semibold">{(item.price * item.quantity).toFixed(2)} جنيه</p>
+                      <p className="font-semibold">{formatPrice(item.price * item.quantity)} جنيه</p>
                     </div>
                   </div>
                 ))}
@@ -102,16 +103,16 @@ export default function PaymentPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>المجموع الفرعي:</span>
-                    <span>{subtotal.toFixed(2)} جنيه</span>
+                    <span>{formatPrice(subtotal)} جنيه</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>الضريبة (14%):</span>
-                    <span>{tax.toFixed(2)} جنيه</span>
+                    <span>{formatPrice(tax)} جنيه</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>الإجمالي:</span>
-                    <span className="text-green-600">{total.toFixed(2)} جنيه</span>
+                    <span className="text-green-600">{formatPrice(total)} جنيه</span>
                   </div>
                 </div>
               </CardContent>

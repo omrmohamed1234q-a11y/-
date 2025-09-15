@@ -588,11 +588,19 @@ export class MemoryStorage implements IStorage {
   // Cart operations
   async getCart(userId: string): Promise<any> {
     const items = this.cartItems.filter(item => item.userId === userId);
-    const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
-    const subtotal = items.reduce((sum, item) => sum + parseFloat(item.price.toString()) * (item.quantity || 0), 0);
+    
+    // Convert all item prices to numbers and calculate totalPrice for each item
+    const itemsWithNumericPrices = items.map(item => ({
+      ...item,
+      price: parseFloat(item.price.toString()),
+      totalPrice: parseFloat(item.price.toString()) * (item.quantity || 0)
+    }));
+    
+    const totalQuantity = itemsWithNumericPrices.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const subtotal = itemsWithNumericPrices.reduce((sum, item) => sum + item.totalPrice, 0);
     
     return {
-      items,
+      items: itemsWithNumericPrices,
       totalQuantity,
       subtotal,
       currency: 'جنيه'

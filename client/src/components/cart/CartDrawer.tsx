@@ -6,6 +6,7 @@ import { useCart } from '@/hooks/useCart';
 import { ShoppingCart, Plus, Minus, Trash2, X, Package, FileText, Eye } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useState } from 'react';
+import { formatPrice, parsePrice } from '@/lib/utils';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -229,11 +230,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           
                           <div className="text-left">
                             <div className="text-sm font-semibold" data-testid={`item-total-${item.id}`}>
-                              {item.totalPrice?.toFixed(2) || '0.00'} جنيه
+                              {formatPrice(item.totalPrice)} جنيه
                             </div>
                             {item.quantity > 1 && (
                               <div className="text-xs text-gray-500">
-                                {(item.totalPrice / item.quantity).toFixed(2)} × {item.quantity}
+                                {formatPrice(parsePrice(item.totalPrice) / item.quantity)} × {item.quantity}
                               </div>
                             )}
                           </div>
@@ -251,7 +252,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">المجموع الفرعي:</span>
                   <span className="font-medium" data-testid="cart-subtotal">
-                    {subtotal?.toFixed(2) || '0.00'} جنيه
+                    {formatPrice(subtotal)} جنيه
                   </span>
                 </div>
                 
@@ -267,7 +268,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 <div className="flex justify-between items-center text-lg font-bold">
                   <span>الإجمالي:</span>
                   <span data-testid="cart-total">
-                    {subtotal?.toFixed(2) || '0.00'} جنيه
+                    {formatPrice(subtotal)} جنيه
                   </span>
                 </div>
               </div>
