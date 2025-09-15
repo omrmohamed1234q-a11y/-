@@ -1419,3 +1419,88 @@ export const insertPendingUploadSchema = createInsertSchema(pendingUploads).omit
 // Export types for pending uploads
 export type PendingUpload = typeof pendingUploads.$inferSelect;
 export type InsertPendingUpload = z.infer<typeof insertPendingUploadSchema>;
+
+// ===== Cart and Print Job System =====
+
+// Print Job model - unified printing specification
+export const cartItems = pgTable("cart_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // File information
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileType: text("file_type").notNull(), // "pdf", "jpg", "png", etc.
+  googleDriveFileId: text("google_drive_file_id"), // For Google Drive files
+  pages: integer("pages").notNull(),
+  
+  // Print options
+  paperSize: text("paper_size").notNull(), // "A4" | "A3" | "A0" | "A1" | "A2"
+  paperType: text("paper_type").notNull(), // "plain" | "coated" | "glossy" | "sticker"
+  printType: text("print_type").notNull(), // "face" | "face_back"
+  isBlackWhite: boolean("is_black_white").default(false),
+  quantity: integer("quantity").default(1),
+  
+  // Pricing
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(), // Price per unit (calculated)
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(), // Total for this item
+  
+  // Preview and metadata
+  previewUrl: text("preview_url"), // First page preview for PDFs, or thumbnail for images
+  metadata: jsonb("metadata").default({}), // Additional data (dimensions, etc.)
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Order model - simplified for cart checkout
+export const cartOrders = pgTable("cart_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  orderNumber: text("order_number").notNull().unique(),
+  
+  // Order details
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
+  discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  
+  // Status tracking
+  status: text("status").notNull().default("pending"), // "pending" | "confirmed" | "printing" | "ready" | "delivered" | "cancelled"
+  statusText: text("status_text"), // Arabic status text
+  
+  // Payment
+  paymentMethod: text("payment_method"), // "cash" | "card" | "vodafone_cash"
+  paymentStatus: text("payment_status").default("pending"), // "pending" | "paid" | "failed"
+  
+  // Delivery
+  deliveryMethod: text("delivery_method"), // "pickup" | "delivery"
+  deliveryAddress: text("delivery_address"),
+  estimatedDelivery: text("estimated_delivery"), // "1-2 hours", "today", etc.
+  
+  // Admin tracking
+  adminNotes: text("admin_notes"),
+  assignedTo: varchar("assigned_to"), // Staff/admin who handles this order
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Create insert schemas
+export const insertCartItemSchema = createInsertSchema(cartItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCartOrderSchema = createInsertSchema(cartOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Export types
+export type CartItem = typeof cartItems.$inferSelect;
+export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
+export type CartOrder = typeof cartOrders.$inferSelect;
+export type InsertCartOrder = z.infer<typeof insertCartOrderSchema>;
