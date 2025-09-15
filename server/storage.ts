@@ -1,4 +1,4 @@
-import { users, products, orders, printJobs, cartItems, drivers, announcements, partners, partnerProducts, secureAdmins, secureDrivers, securityLogs, pendingUploads, type User, type Product, type Order, type PrintJob, type CartItem, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct, type SecureAdmin, type InsertSecureAdmin, type SecureDriver, type InsertSecureDriver, type SecurityLog, type InsertSecurityLog, type PendingUpload, type InsertPendingUpload } from "@shared/schema";
+import { users, products, orders, printJobs, cartItems, cartOrders, drivers, announcements, partners, partnerProducts, secureAdmins, secureDrivers, securityLogs, pendingUploads, type User, type Product, type Order, type PrintJob, type CartItem, type CartOrder, type InsertCartItem, type InsertCartOrder, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct, type SecureAdmin, type InsertSecureAdmin, type SecureDriver, type InsertSecureDriver, type SecurityLog, type InsertSecurityLog, type PendingUpload, type InsertPendingUpload } from "@shared/schema";
 import { type SmartCampaign, type InsertSmartCampaign, type TargetingRule, type InsertTargetingRule, type SentMessage, type InsertSentMessage, type UserBehavior, type InsertUserBehavior, type MessageTemplate, type InsertMessageTemplate, type ScheduledJob, type InsertScheduledJob } from "@shared/smart-notifications-schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
@@ -47,13 +47,28 @@ export interface IStorage {
   clearPendingUploads(userId: string): Promise<boolean>;
   updatePendingUploadSettings(id: string, printSettings: any): Promise<PendingUpload>;
   
-  // Cart operations
+  // Cart operations (legacy product cart)
   getCart(userId: string): Promise<any>;
   addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<CartItem>;
   updateCartItem(itemId: string, quantity: number): Promise<CartItem>;
   removeCartItem(itemId: string): Promise<boolean>;
   clearCart(userId: string): Promise<boolean>;
   getCartItemCount(userId: string): Promise<number>;
+  
+  // New Cart operations (print job cart)
+  getCartItems(userId: string): Promise<CartItem[]>;
+  addCartItem(cartItem: InsertCartItem): Promise<CartItem>;
+  updateCartItemQuantity(itemId: string, quantity: number): Promise<CartItem>;
+  removeCartItemById(itemId: string): Promise<boolean>; // Different name to avoid conflict
+  clearCartItems(userId: string): Promise<boolean>;
+  getCartTotal(userId: string): Promise<{ subtotal: number; totalItems: number }>;
+  
+  // Cart Order operations  
+  createCartOrder(order: InsertCartOrder): Promise<CartOrder>;
+  getAllCartOrders(): Promise<CartOrder[]>;
+  getCartOrder(orderId: string): Promise<CartOrder | undefined>;
+  updateCartOrder(orderId: string, updates: Partial<CartOrder>): Promise<CartOrder>;
+  getUserCartOrders(userId: string): Promise<CartOrder[]>;
   
   // Admin statistics
   getAdminStats(): Promise<any>;
@@ -228,7 +243,9 @@ export class MemoryStorage implements IStorage {
   private users: User[] = [];
   private products: Product[] = [];
   private orders: Order[] = [];
-  private cartItems: CartItem[] = [];
+  private cartItems: CartItem[] = []; // Legacy product cart items
+  private newCartItems: CartItem[] = []; // New print job cart items  
+  private cartOrders: CartOrder[] = []; // Cart orders
   private partners: Partner[] = [];
   private partnerProducts: any[] = [];
   private announcements: Announcement[] = [];
@@ -5441,6 +5458,107 @@ class MemStorage implements IStorage {
     };
     
     return this.sentMessages[index];
+  }
+
+  // ===== New Cart Operations (Print Job Cart) =====
+  
+  async getCartItems(userId: string): Promise<CartItem[]> {
+    return this.newCartItems.filter(item => item.userId === userId);
+  }
+
+  async addCartItem(cartItemData: InsertCartItem): Promise<CartItem> {
+    const cartItem: CartItem = {
+      id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...cartItemData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.newCartItems.push(cartItem);
+    return cartItem;
+  }
+
+  async updateCartItemQuantity(itemId: string, quantity: number): Promise<CartItem> {
+    const index = this.newCartItems.findIndex(item => item.id === itemId);
+    if (index === -1) {
+      throw new Error('Cart item not found');
+    }
+    
+    // Recalculate total price based on new quantity
+    const item = this.newCartItems[index];
+    const newTotalPrice = Number(item.unitPrice) * quantity;
+    
+    this.newCartItems[index] = {
+      ...item,
+      quantity,
+      totalPrice: newTotalPrice.toString(),
+      updatedAt: new Date()
+    };
+    
+    return this.newCartItems[index];
+  }
+
+  async removeCartItemById(itemId: string): Promise<boolean> {
+    const index = this.newCartItems.findIndex(item => item.id === itemId);
+    if (index === -1) return false;
+    this.newCartItems.splice(index, 1);
+    return true;
+  }
+
+  async clearCartItems(userId: string): Promise<boolean> {
+    const initialLength = this.newCartItems.length;
+    this.newCartItems = this.newCartItems.filter(item => item.userId !== userId);
+    return this.newCartItems.length < initialLength;
+  }
+
+  async getCartTotal(userId: string): Promise<{ subtotal: number; totalItems: number }> {
+    const userItems = await this.getCartItems(userId);
+    const subtotal = userItems.reduce((sum, item) => sum + Number(item.totalPrice), 0);
+    const totalItems = userItems.reduce((sum, item) => sum + item.quantity, 0);
+    return { subtotal, totalItems };
+  }
+
+  // ===== Cart Order Operations =====
+  
+  async createCartOrder(orderData: InsertCartOrder): Promise<CartOrder> {
+    const order: CartOrder = {
+      id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...orderData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.cartOrders.push(order);
+    return order;
+  }
+
+  async getAllCartOrders(): Promise<CartOrder[]> {
+    return [...this.cartOrders].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  async getCartOrder(orderId: string): Promise<CartOrder | undefined> {
+    return this.cartOrders.find(order => order.id === orderId);
+  }
+
+  async updateCartOrder(orderId: string, updates: Partial<CartOrder>): Promise<CartOrder> {
+    const index = this.cartOrders.findIndex(order => order.id === orderId);
+    if (index === -1) {
+      throw new Error('Cart order not found');
+    }
+    
+    this.cartOrders[index] = {
+      ...this.cartOrders[index],
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    return this.cartOrders[index];
+  }
+
+  async getUserCartOrders(userId: string): Promise<CartOrder[]> {
+    return this.cartOrders
+      .filter(order => order.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 }
 
