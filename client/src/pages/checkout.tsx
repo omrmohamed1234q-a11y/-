@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ShoppingBag, MapPin, CreditCard, Truck, Gift, Star, Package, Tag, ShoppingCart, Calculator, Info, Heart, Settings, Ticket } from 'lucide-react';
 import PaymentMethods from '@/components/PaymentMethods';
 import MapLocationPicker from '@/components/MapLocationPicker';
+import PhoneVerificationModal from '@/components/PhoneVerificationModal';
 import type { LocationData, DeliveryValidation } from '@/utils/locationUtils';
 import { formatPrice, parsePrice } from '@/lib/utils';
 
@@ -46,6 +47,11 @@ export default function CheckoutPage() {
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
   const [orderCreated, setOrderCreated] = useState(false);
   const [showOrderSummary, setShowOrderSummary] = useState(false);
+
+  // Phone verification states
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [verifiedPhoneNumber, setVerifiedPhoneNumber] = useState<string | null>(null);
 
   // Coupon states
   const [couponCode, setCouponCode] = useState('');
@@ -218,6 +224,55 @@ export default function CheckoutPage() {
     });
   };
 
+  // Phone verification handlers
+  const handlePhoneVerificationSuccess = (phoneNumber: string, user: any) => {
+    setIsPhoneVerified(true);
+    setVerifiedPhoneNumber(phoneNumber);
+    setShowPhoneVerification(false);
+    
+    toast({
+      title: "تم التحقق من الهاتف",
+      description: "تم التحقق من رقم هاتفك بنجاح",
+    });
+
+    // Continue with checkout after verification
+    proceedWithCheckout();
+  };
+
+  const handlePhoneVerificationClose = () => {
+    setShowPhoneVerification(false);
+  };
+
+  // Proceed with actual checkout
+  const proceedWithCheckout = () => {
+    // Format address
+    const fullAddress = formData.deliveryMethod === 'delivery' 
+      ? `${formData.deliveryAddress}${formData.buildingNumber ? `, مبنى رقم ${formData.buildingNumber}` : ''}${formData.floor ? `, الطابق ${formData.floor}` : ''}${formData.apartment ? `, شقة ${formData.apartment}` : ''}${formData.landmarks ? `. علامات مميزة: ${formData.landmarks}` : ''}`
+      : 'استلام من الفرع';
+
+    const checkoutData = {
+      ...formData,
+      customerPhone: verifiedPhoneNumber || formData.customerPhone,
+      deliveryAddress: fullAddress,
+      phoneVerified: isPhoneVerified,
+      appliedCoupon: appliedCoupon ? {
+        code: appliedCoupon.code,
+        discountAmount: appliedCoupon.discountAmount,
+        type: appliedCoupon.type || 'fixed'
+      } : null,
+    };
+
+    checkout(checkoutData, {
+      onSuccess: () => {
+        toast({
+          title: "تم إنشاء الطلب بنجاح",
+          description: "سيتم التواصل معك قريباً لتأكيد الطلب",
+        });
+        setLocation('/orders');
+      },
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -275,31 +330,15 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Format address
-    const fullAddress = formData.deliveryMethod === 'delivery' 
-      ? `${formData.deliveryAddress}${formData.buildingNumber ? `, مبنى رقم ${formData.buildingNumber}` : ''}${formData.floor ? `, الطابق ${formData.floor}` : ''}${formData.apartment ? `, شقة ${formData.apartment}` : ''}${formData.landmarks ? `. علامات مميزة: ${formData.landmarks}` : ''}`
-      : 'استلام من الفرع';
+    // Check if phone is already verified
+    if (isPhoneVerified) {
+      // Phone already verified, proceed with checkout
+      proceedWithCheckout();
+      return;
+    }
 
-    const checkoutData = {
-      ...formData,
-      deliveryAddress: fullAddress,
-      appliedCoupon: appliedCoupon ? {
-        code: appliedCoupon.code,
-        discountAmount: appliedCoupon.discountAmount,
-        type: appliedCoupon.type || 'fixed'
-      } : null,
-    };
-
-    // TEMPORARY: Direct checkout without payment methods
-    checkout(checkoutData, {
-      onSuccess: () => {
-        toast({
-          title: "تم إنشاء الطلب بنجاح",
-          description: "سيتم التواصل معك قريباً لتأكيد الطلب",
-        });
-        setLocation('/orders');
-      },
-    });
+    // Show phone verification modal
+    setShowPhoneVerification(true);
   };
 
   const handlePaymentSuccess = (result: any) => {
@@ -1035,6 +1074,16 @@ export default function CheckoutPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Phone Verification Modal */}
+        {showPhoneVerification && (
+          <PhoneVerificationModal
+            isOpen={showPhoneVerification}
+            onClose={handlePhoneVerificationClose}
+            onVerificationSuccess={handlePhoneVerificationSuccess}
+            phoneNumber={formData.customerPhone}
+          />
         )}
       </div>
     </div>

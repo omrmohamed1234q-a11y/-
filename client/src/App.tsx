@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Router } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -78,7 +78,7 @@ import CaptainDashboard from '@/pages/captain/dashboard';
 import StorageDashboard from '@/pages/storage-dashboard';
 
 
-function Router() {
+function AppRouter() {
   const { user, loading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
 
@@ -112,68 +112,70 @@ function Router() {
   // Show landing page if not authenticated
   if (!user) {
     return (
-      <Switch>
-        <Route path="/auth/signup" component={Signup} />
-        <Route path="/auth/admin-signup" component={AdminSignup} />
-        <Route path="/auth/callback" component={AuthCallback} />
-        
-        {/* Hidden secure routes - direct access only */}
-        <Route path="/admin/secure-login" component={SecureAdminLogin} />
-        <Route path="/secure-admin-login" component={SecureAdminLogin} />
-        <Route path="/captain/secure-login" component={CaptainSecureLogin} />
-        <Route path="/captain/dashboard" component={CaptainDashboard} />
-        <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
-        <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
-        <Route path="/admin/store" component={() => <AdminProtectedRoute><AdminStore /></AdminProtectedRoute>} />
-        <Route path="/admin/products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
-        <Route path="/admin-products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
-        <Route path="/admin/inventory" component={() => <AdminProtectedRoute><AdminInventory /></AdminProtectedRoute>} />
-        <Route path="/admin/teachers-corner" component={() => <AdminProtectedRoute><TeachersCorner /></AdminProtectedRoute>} />
-        <Route path="/admin/users" component={() => <AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
-        <Route path="/admin/coupons" component={() => <AdminProtectedRoute><AdminCoupons /></AdminProtectedRoute>} />
-        <Route path="/admin/inquiries" component={() => <AdminProtectedRoute><AdminInquiries /></AdminProtectedRoute>} />
-        <Route path="/admin/announcements" component={() => <AdminProtectedRoute><AdminAnnouncements /></AdminProtectedRoute>} />
-        <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
-        <Route path="/admin/orders" component={() => <AdminProtectedRoute><AdminOrders /></AdminProtectedRoute>} />
-        <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
-        <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
-        <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
-        <Route path="/admin/security-dashboard" component={() => <AdminProtectedRoute><SecureSecurityDashboard /></AdminProtectedRoute>} />
-        <Route path="/admin/two-factor-settings" component={() => <AdminProtectedRoute><TwoFactorSettings /></AdminProtectedRoute>} />
-        <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
-        <Route path="/admin/terms-management" component={() => <AdminProtectedRoute><TermsManagement /></AdminProtectedRoute>} />
-        <Route path="/admin/privacy-policy-management" component={() => <AdminProtectedRoute><PrivacyPolicyManagement /></AdminProtectedRoute>} />
-        <Route path="/admin/smart-notifications" component={() => <AdminProtectedRoute><SmartNotifications /></AdminProtectedRoute>} />
-        <Route path="/quick-access" component={QuickAccess} />
+      <Router>
+        <Switch>
+          <Route path="/auth/signup" component={Signup} />
+          <Route path="/auth/admin-signup" component={AdminSignup} />
+          <Route path="/auth/callback" component={AuthCallback} />
+          
+          {/* Hidden secure routes - direct access only */}
+          <Route path="/admin/secure-login" component={SecureAdminLogin} />
+          <Route path="/secure-admin-login" component={SecureAdminLogin} />
+          <Route path="/captain/secure-login" component={CaptainSecureLogin} />
+          <Route path="/captain/dashboard" component={CaptainDashboard} />
+          <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+          <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
+          <Route path="/admin/store" component={() => <AdminProtectedRoute><AdminStore /></AdminProtectedRoute>} />
+          <Route path="/admin/products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
+          <Route path="/admin-products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
+          <Route path="/admin/inventory" component={() => <AdminProtectedRoute><AdminInventory /></AdminProtectedRoute>} />
+          <Route path="/admin/teachers-corner" component={() => <AdminProtectedRoute><TeachersCorner /></AdminProtectedRoute>} />
+          <Route path="/admin/users" component={() => <AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
+          <Route path="/admin/coupons" component={() => <AdminProtectedRoute><AdminCoupons /></AdminProtectedRoute>} />
+          <Route path="/admin/inquiries" component={() => <AdminProtectedRoute><AdminInquiries /></AdminProtectedRoute>} />
+          <Route path="/admin/announcements" component={() => <AdminProtectedRoute><AdminAnnouncements /></AdminProtectedRoute>} />
+          <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
+          <Route path="/admin/orders" component={() => <AdminProtectedRoute><AdminOrders /></AdminProtectedRoute>} />
+          <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
+          <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
+          <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
+          <Route path="/admin/security-dashboard" component={() => <AdminProtectedRoute><SecureSecurityDashboard /></AdminProtectedRoute>} />
+          <Route path="/admin/two-factor-settings" component={() => <AdminProtectedRoute><TwoFactorSettings /></AdminProtectedRoute>} />
+          <Route path="/admin/api-documentation" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
+          <Route path="/admin/terms-management" component={() => <AdminProtectedRoute><TermsManagement /></AdminProtectedRoute>} />
+          <Route path="/admin/privacy-policy-management" component={() => <AdminProtectedRoute><PrivacyPolicyManagement /></AdminProtectedRoute>} />
+          <Route path="/admin/smart-notifications" component={() => <AdminProtectedRoute><SmartNotifications /></AdminProtectedRoute>} />
+          <Route path="/quick-access" component={QuickAccess} />
 
-        <Route path="/test-signup" component={TestSignup} />
-        <Route path="/cloudinary-test" component={CloudinaryTest} />
-        <Route path="/websocket-test" component={WebSocketTest} />
-        <Route path="/maps-test" component={MapsTest} />
-        <Route path="/driver-location-test" component={DriverLocationTest} />
-        <Route path="/security-test" component={SecurityTest} />
-        <Route path="/setup-complete" component={SetupComplete} />
-        <Route path="/api-test" component={ApiConnectionTest} />
-        <Route path="/connectivity" component={ConnectivityDashboard} />
-        <Route path="/sql-generator" component={SQLGenerator} />
-        <Route path="/paymob-test" component={PaymobTestPage} />
-        <Route path="/paymob-setup" component={PaymobSetupPage} />
+          <Route path="/test-signup" component={TestSignup} />
+          <Route path="/cloudinary-test" component={CloudinaryTest} />
+          <Route path="/websocket-test" component={WebSocketTest} />
+          <Route path="/maps-test" component={MapsTest} />
+          <Route path="/driver-location-test" component={DriverLocationTest} />
+          <Route path="/security-test" component={SecurityTest} />
+          <Route path="/setup-complete" component={SetupComplete} />
+          <Route path="/api-test" component={ApiConnectionTest} />
+          <Route path="/connectivity" component={ConnectivityDashboard} />
+          <Route path="/sql-generator" component={SQLGenerator} />
+          <Route path="/paymob-test" component={PaymobTestPage} />
+          <Route path="/paymob-setup" component={PaymobSetupPage} />
 
-        <Route path="/article/:id" component={ArticlePage} />
-        <Route path="/donations" component={DonationsPage} />
-        <Route path="/terms-and-conditions" component={TermsAndConditions} />
-        <Route path="/terms" component={TermsAndConditions} />
-        <Route path="/privacy-policy" component={PrivacyPolicy} />
-        
-        <Route path="/" component={EnhancedLanding} />
-        <Route component={NotFound} />
-      </Switch>
+          <Route path="/article/:id" component={ArticlePage} />
+          <Route path="/donations" component={DonationsPage} />
+          <Route path="/terms-and-conditions" component={TermsAndConditions} />
+          <Route path="/terms" component={TermsAndConditions} />
+          <Route path="/privacy-policy" component={PrivacyPolicy} />
+          
+          <Route path="/" component={EnhancedLanding} />
+          <Route component={NotFound} />
+        </Switch>
+      </Router>
     );
   }
 
   // Show authenticated app
   return (
-    <>
+    <Router>
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/home" component={Home} />
@@ -242,7 +244,7 @@ function Router() {
         
         <Route component={NotFound} />
       </Switch>
-    </>
+    </Router>
   );
 }
 
@@ -251,7 +253,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-background font-arabic text-foreground" dir="rtl">
         <Toaster />
-        <Router />
+        <AppRouter />
       </div>
     </QueryClientProvider>
   );
