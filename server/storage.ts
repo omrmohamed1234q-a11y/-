@@ -58,8 +58,8 @@ export interface IStorage {
   // New Cart operations (print job cart)
   getCartItems(userId: string): Promise<CartItem[]>;
   addCartItem(cartItem: InsertCartItem): Promise<CartItem>;
-  updateCartItemQuantity(itemId: string, quantity: number): Promise<CartItem>;
-  removeCartItemById(itemId: string): Promise<boolean>; // Different name to avoid conflict
+  updateCartItemQuantity(itemId: string, quantity: number, userId: string): Promise<CartItem>;
+  removeCartItemById(itemId: string, userId: string): Promise<boolean>; // Different name to avoid conflict
   clearCartItems(userId: string): Promise<boolean>;
   getCartTotal(userId: string): Promise<{ subtotal: number; totalItems: number }>;
   
@@ -5477,10 +5477,10 @@ class MemStorage implements IStorage {
     return cartItem;
   }
 
-  async updateCartItemQuantity(itemId: string, quantity: number): Promise<CartItem> {
-    const index = this.newCartItems.findIndex(item => item.id === itemId);
+  async updateCartItemQuantity(itemId: string, quantity: number, userId: string): Promise<CartItem> {
+    const index = this.newCartItems.findIndex(item => item.id === itemId && item.userId === userId);
     if (index === -1) {
-      throw new Error('Cart item not found');
+      throw new Error('Cart item not found or access denied');
     }
     
     // Recalculate total price based on new quantity
@@ -5497,8 +5497,8 @@ class MemStorage implements IStorage {
     return this.newCartItems[index];
   }
 
-  async removeCartItemById(itemId: string): Promise<boolean> {
-    const index = this.newCartItems.findIndex(item => item.id === itemId);
+  async removeCartItemById(itemId: string, userId: string): Promise<boolean> {
+    const index = this.newCartItems.findIndex(item => item.id === itemId && item.userId === userId);
     if (index === -1) return false;
     this.newCartItems.splice(index, 1);
     return true;

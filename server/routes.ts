@@ -22,8 +22,10 @@ import { isAuthenticated } from './replitAuth';
 import { 
   insertTermsAndConditionsSchema, 
   insertUserTermsAcceptanceSchema,
+  insertCartItemSchema,
   type InsertTermsAndConditions,
-  type InsertUserTermsAcceptance 
+  type InsertUserTermsAcceptance,
+  type InsertCartItem 
 } from '../shared/schema';
 import {
   insertSmartCampaignSchema,
@@ -3348,6 +3350,302 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting cart count:", error);
       res.status(500).json({ message: "Failed to get cart count" });
+    }
+  });
+
+  // ===== New Cart API Routes (Print Job Cart) =====
+  
+  // Get new cart items
+  app.get('/api/new-cart', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      console.log(`🔍 API: Getting new cart items for user ${userId}`);
+      
+      const items = await storage.getCartItems(userId);
+      const { subtotal, totalItems } = await storage.getCartTotal(userId);
+      
+      console.log(`📋 API: Returning new cart with ${items.length} items, total: ${subtotal} EGP`);
+      
+      // Prevent caching for real-time data
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
+      res.json({ 
+        success: true,
+        items,
+        subtotal,
+        totalItems,
+        currency: 'EGP'
+      });
+    } catch (error) {
+      console.error("Error fetching new cart:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch cart" });
+    }
+  });
+
+  // Add item to new cart
+  app.post('/api/new-cart/items', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      // Validate request body with Zod schema
+      const validationResult = insertCartItemSchema.safeParse({ ...req.body, userId });
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "بيانات غير صحيحة",
+          errors: validationResult.error.errors
+        });
+      }
+      
+      const cartItemData = validationResult.data;
+      
+      // Additional validation for file types
+      const allowedFileTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif'];
+      if (!allowedFileTypes.includes(cartItemData.fileType.toLowerCase())) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "نوع الملف غير مدعوم. الأنواع المدعومة: PDF, JPG, PNG, GIF" 
+        });
+      }
+      
+      // Validate quantity limits
+      if (cartItemData.quantity < 1 || cartItemData.quantity > 1000) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "الكمية يجب أن تكون بين 1 و 1000" 
+        });
+      }
+      
+      console.log(`➕ Adding new cart item for user ${userId}:`, cartItemData.fileName);
+      
+      const cartItem = await storage.addCartItem(cartItemData);
+      
+      res.json({ 
+        success: true, 
+        cartItem,
+        message: "تمت إضافة العنصر للسلة بنجاح" 
+      });
+    } catch (error) {
+      console.error("Error adding to new cart:", error);
+      res.status(400).json({ 
+        success: false, 
+        message: error.message || "Failed to add to cart" 
+      });
+    }
+  });
+
+  // Update cart item quantity
+  app.put('/api/new-cart/items/:itemId/quantity', requireAuth, async (req: any, res) => {
+    try {
+      const { itemId } = req.params;
+      const { quantity } = req.body;
+      const userId = req.user?.id;
+
+      // Validate quantity
+      if (!quantity || !Number.isInteger(quantity) || quantity <= 0 || quantity > 1000) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "الكمية يجب أن تكون رقم صحيح بين 1 و 1000" 
+        });
+      }
+
+      console.log(`🔄 Updating new cart item ${itemId} to quantity ${quantity} for user ${userId}`);
+      const updatedItem = await storage.updateCartItemQuantity(itemId, quantity, userId);
+      
+      res.json({ 
+        success: true, 
+        cartItem: updatedItem, 
+        message: "تم تحديث الكمية بنجاح" 
+      });
+    } catch (error) {
+      console.error("Error updating new cart item:", error);
+      const statusCode = error.message.includes('not found') || error.message.includes('access denied') ? 404 : 500;
+      res.status(statusCode).json({ 
+        success: false, 
+        message: error.message || "Failed to update cart item" 
+      });
+    }
+  });
+
+  // Remove item from new cart
+  app.delete('/api/new-cart/items/:itemId', requireAuth, async (req: any, res) => {
+    try {
+      const { itemId } = req.params;
+      const userId = req.user?.id;
+
+      console.log(`🗑️ Removing new cart item ${itemId} for user ${userId}`);
+      const success = await storage.removeCartItemById(itemId, userId);
+      
+      if (success) {
+        res.json({ success: true, message: "تم حذف العنصر من السلة بنجاح" });
+      } else {
+        res.status(404).json({ success: false, message: "العنصر غير موجود أو ليس لديك صلاحية" });
+      }
+    } catch (error) {
+      console.error("Error removing new cart item:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || "Failed to remove cart item" 
+      });
+    }
+  });
+
+  // Clear new cart
+  app.delete('/api/new-cart/clear', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      console.log(`🗑️ Clearing new cart for user ${userId}`);
+      
+      const success = await storage.clearCartItems(userId);
+      
+      if (success) {
+        res.json({ success: true, message: "تم تفريغ السلة بنجاح" });
+      } else {
+        res.status(500).json({ success: false, message: "Failed to clear cart" });
+      }
+    } catch (error) {
+      console.error("Error clearing new cart:", error);
+      res.status(500).json({ success: false, message: "Failed to clear cart" });
+    }
+  });
+
+  // Get new cart total
+  app.get('/api/new-cart/total', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const { subtotal, totalItems } = await storage.getCartTotal(userId);
+      
+      console.log(`💰 API: New cart total for user ${userId}: ${subtotal} EGP (${totalItems} items)`);
+      
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
+      res.json({ 
+        success: true,
+        subtotal,
+        totalItems,
+        currency: 'EGP'
+      });
+    } catch (error) {
+      console.error("Error getting new cart total:", error);
+      res.status(500).json({ success: false, message: "Failed to get cart total" });
+    }
+  });
+
+  // Checkout new cart (create order)
+  app.post('/api/new-cart/checkout', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const { customerInfo, paymentMethod, notes } = req.body;
+      
+      console.log(`🛒 Processing checkout for user ${userId}`);
+      
+      // Get cart items and total
+      const cartItems = await storage.getCartItems(userId);
+      if (cartItems.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "السلة فارغة - لا يمكن إنشاء طلب" 
+        });
+      }
+      
+      const { subtotal, totalItems } = await storage.getCartTotal(userId);
+      
+      // Create order
+      const orderData = {
+        userId,
+        cartItems: JSON.stringify(cartItems),
+        totalAmount: subtotal.toString(),
+        totalItems,
+        status: 'pending',
+        customerInfo: JSON.stringify(customerInfo || {}),
+        paymentMethod: paymentMethod || 'cash',
+        notes: notes || '',
+        orderDate: new Date().toISOString()
+      };
+      
+      const order = await storage.createCartOrder(orderData);
+      
+      // Clear cart after successful order
+      await storage.clearCartItems(userId);
+      
+      console.log(`✅ Order created successfully: ${order.id} for ${subtotal} EGP`);
+      
+      res.json({ 
+        success: true, 
+        order,
+        message: "تم إنشاء الطلب بنجاح" 
+      });
+    } catch (error) {
+      console.error("Error processing checkout:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || "Failed to process checkout" 
+      });
+    }
+  });
+
+  // Get user's orders
+  app.get('/api/new-cart/orders', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const orders = await storage.getUserCartOrders(userId);
+      
+      console.log(`📋 API: Returning ${orders.length} orders for user ${userId}`);
+      
+      res.json({ 
+        success: true,
+        orders 
+      });
+    } catch (error) {
+      console.error("Error fetching user orders:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch orders" });
+    }
+  });
+
+  // Admin: Get all orders
+  app.get('/api/admin/cart-orders', requireAuth, async (req: any, res) => {
+    try {
+      // TODO: Add admin permission check
+      const orders = await storage.getAllCartOrders();
+      
+      console.log(`📋 Admin: Returning ${orders.length} total cart orders`);
+      
+      res.json({ 
+        success: true,
+        orders 
+      });
+    } catch (error) {
+      console.error("Error fetching all cart orders:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch orders" });
+    }
+  });
+
+  // Admin: Update order status
+  app.put('/api/admin/cart-orders/:orderId', requireAuth, async (req: any, res) => {
+    try {
+      // TODO: Add admin permission check
+      const { orderId } = req.params;
+      const updates = req.body;
+      
+      console.log(`🔄 Admin: Updating order ${orderId}:`, updates);
+      
+      const updatedOrder = await storage.updateCartOrder(orderId, updates);
+      
+      res.json({ 
+        success: true, 
+        order: updatedOrder,
+        message: "تم تحديث الطلب بنجاح" 
+      });
+    } catch (error) {
+      console.error("Error updating cart order:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || "Failed to update order" 
+      });
     }
   });
 
