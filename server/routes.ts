@@ -1167,29 +1167,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // 🔒 SECURITY: Download with strict limits and no redirects
+      // 🔒 SECURITY: Validate initial URL before any network call
+      try {
+        const initialUrl = new URL(validatedUrl);
+        
+        // Enforce HTTPS
+        if (initialUrl.protocol !== 'https:') {
+          console.warn(`🚫 SECURITY BLOCKED: Non-HTTPS initial URL ${initialUrl.protocol}`);
+          return res.status(400).json({
+            success: false,
+            error: 'Only HTTPS URLs are allowed'
+          });
+        }
+
+        // Validate initial host against allowlist
+        const ALLOWED_HOSTS = ['drive.google.com', 'docs.google.com', 'googleusercontent.com'];
+        const initialHost = initialUrl.hostname.toLowerCase();
+        const isAllowedInitialHost = ALLOWED_HOSTS.some(allowedHost => 
+          initialHost === allowedHost || initialHost.endsWith('.' + allowedHost)
+        );
+        
+        if (!isAllowedInitialHost) {
+          console.warn(`🚫 SECURITY BLOCKED: Unauthorized initial host ${initialHost}`);
+          return res.status(400).json({
+            success: false,
+            error: 'Only Google Drive URLs are allowed'
+          });
+        }
+
+        // Block IP address literals
+        if (/^\d+\.\d+\.\d+\.\d+$/.test(initialHost) || /^\[.*\]$/.test(initialHost)) {
+          console.warn(`🚫 SECURITY BLOCKED: IP address literal ${initialHost}`);
+          return res.status(400).json({
+            success: false,
+            error: 'IP address URLs are not allowed'
+          });
+        }
+
+        console.log(`✅ Initial URL security validated: ${initialHost}`);
+      } catch (urlValidationError) {
+        console.warn(`🚫 SECURITY BLOCKED: Initial URL validation failed`);
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid URL'
+        });
+      }
+
+      // 🔒 SECURITY: Download with strict limits and controlled redirects
       let pdfBuffer: Buffer;
       const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB limit
       const DOWNLOAD_TIMEOUT = 10000; // 10 second timeout
+      const MAX_REDIRECTS = 3;
+      const ALLOWED_HOSTS = ['drive.google.com', 'docs.google.com', 'googleusercontent.com']; // Same as initial validation
 
       try {
         console.log('🔒 Secure PDF download starting...');
+        
+        let currentUrl = validatedUrl;
+        let redirectCount = 0;
+        let response: Response;
         
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
           controller.abort();
           console.warn('🚫 Download timeout exceeded');
         }, DOWNLOAD_TIMEOUT);
-        
-        const response = await fetch(validatedUrl, {
-          method: 'GET',
-          headers: {
-            'User-Agent': 'SecurePDFAnalyzer/1.0',
-            'Accept': 'application/pdf'
-          },
-          signal: controller.signal,
-          redirect: 'error' // 🔒 SECURITY: Block redirects to prevent SSRF
-        });
+
+        // Manual redirect handling for security
+        while (redirectCount <= MAX_REDIRECTS) {
+          response = await fetch(currentUrl, {
+            method: 'GET',
+            headers: {
+              'User-Agent': 'SecurePDFAnalyzer/1.0',
+              'Accept': 'application/pdf'
+            },
+            signal: controller.signal,
+            redirect: 'manual' // 🔒 SECURITY: Manual redirect for host validation
+          });
+
+          // Check if this is a redirect
+          if (response.status >= 300 && response.status < 400) {
+            const location = response.headers.get('location');
+            if (!location) {
+              throw new Error('Redirect without location header');
+            }
+
+            // 🔒 SECURITY: Validate redirect URL host
+            try {
+              const redirectUrl = new URL(location, currentUrl);
+              const redirectHost = redirectUrl.hostname.toLowerCase();
+              
+              // Check if redirect host is allowed
+              const isAllowedHost = ALLOWED_HOSTS.some(allowedHost => 
+                redirectHost === allowedHost || redirectHost.endsWith('.' + allowedHost)
+              );
+              
+              if (!isAllowedHost) {
+                console.warn(`🚫 SECURITY BLOCKED: Redirect to unauthorized host ${redirectHost}`);
+                throw new Error('Unauthorized redirect destination');
+              }
+
+              // Ensure HTTPS
+              if (redirectUrl.protocol !== 'https:') {
+                console.warn(`🚫 SECURITY BLOCKED: Non-HTTPS redirect ${redirectUrl.protocol}`);
+                throw new Error('Non-HTTPS redirect blocked');
+              }
+
+              currentUrl = redirectUrl.href;
+              redirectCount++;
+              console.log(`🔀 Following redirect ${redirectCount}/${MAX_REDIRECTS} to ${redirectHost}`);
+              continue;
+            } catch (urlError) {
+              console.warn(`🚫 SECURITY BLOCKED: Invalid redirect URL ${location}`);
+              throw new Error('Invalid redirect URL');
+            }
+          }
+
+          // Not a redirect, proceed with response
+          break;
+        }
+
+        if (redirectCount > MAX_REDIRECTS) {
+          console.warn(`🚫 SECURITY BLOCKED: Too many redirects (${redirectCount})`);
+          throw new Error('Too many redirects');
+        }
         
         clearTimeout(timeoutId);
 
