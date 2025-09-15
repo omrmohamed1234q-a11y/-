@@ -172,8 +172,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               {/* Cart Items */}
               <div className="space-y-4">
                 {cart.items.map((item) => (
-                  <div key={item.id} className="p-4 border border-gray-200 rounded-xl hover:shadow-sm transition-all duration-200 bg-white" data-testid={`cart-item-${item.id}`}>
-                    <div className="flex gap-4">
+                  <div key={item.id} className="p-3 border border-gray-200 rounded-lg hover:shadow-sm transition-all duration-200 bg-white" data-testid={`cart-item-${item.id}`}>
+                    <div className="flex gap-3">
                       <PreviewImage item={item} />
 
                       <div className="flex-1 space-y-3">
@@ -183,8 +183,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                               {item.productName}
                             </h4>
                             
-                            {/* Enhanced attributes display with badges */}
-                            <div className="flex flex-wrap gap-2 mb-2">
+                            {/* Clean attributes display with badges */}
+                            <div className="flex flex-wrap gap-1.5 mb-2">
                               {/* Paper size badge with color coding for large formats */}
                               <Badge 
                                 variant="secondary" 
@@ -194,7 +194,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                     : 'bg-blue-100 text-blue-700 border-blue-200'
                                 }`}
                               >
-                                📄 {item.variant?.paperSize || 'A4'} • {item.variant?.pages || 1} صفحة
+                                {item.variant?.paperSize || 'A4'} • {item.variant?.pages || 1} صفحة
                               </Badge>
                               
                               {/* Color mode badge */}
@@ -202,23 +202,22 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 variant="outline" 
                                 className={`text-xs font-medium ${
                                   item.variant?.colorMode === 'color' 
-                                    ? 'bg-rainbow-100 text-rainbow-700 border-rainbow-200' 
+                                    ? 'bg-pink-100 text-pink-700 border-pink-200' 
                                     : 'bg-gray-100 text-gray-700 border-gray-200'
                                 }`}
                               >
-                                {item.variant?.colorMode === 'color' ? '🌈 ملون' : '⚫ أبيض وأسود'}
+                                {item.variant?.colorMode === 'color' ? 'ملون' : 'أبيض وأسود'}
                               </Badge>
                               
                               {/* Paper type badge */}
                               <Badge variant="outline" className="text-xs font-medium bg-green-100 text-green-700 border-green-200">
-                                📋 {item.variant?.paperType === 'plain' ? 'ورق عادي' : item.variant?.paperType}
+                                {item.variant?.paperType === 'plain' ? 'ورق عادي' : item.variant?.paperType}
                               </Badge>
                             </div>
                             
-                            {/* Double sided indicator with icon */}
+                            {/* Double sided indicator */}
                             {item.variant?.doubleSided && (
                               <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-fit">
-                                <span className="text-blue-500">✅</span>
                                 طباعة على الوجهين
                               </div>
                             )}
@@ -256,9 +255,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleQuantityChange(item.id, item.quantity, 1)}
-                              disabled={isUpdatingQuantity}
-                              className="h-8 w-8 p-0 hover:bg-white rounded-lg text-gray-600 hover:text-gray-800"
+                              disabled={isUpdatingQuantity || (item.variant?.paperSize !== undefined)} // Disable for print jobs
+                              className="h-8 w-8 p-0 hover:bg-white rounded-lg text-gray-600 hover:text-gray-800 disabled:opacity-40"
                               data-testid={`increase-quantity-${item.id}`}
+                              title={item.variant?.paperSize ? "عدد النسخ يتم تحديده من إعدادات الملف" : "زيادة العدد"}
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
