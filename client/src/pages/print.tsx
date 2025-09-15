@@ -31,7 +31,10 @@ import {
   RotateCcwIcon,
   Eye,
   Info,
-  Palette
+  Palette,
+  File as FileIcon,
+  Image as ImageIcon,
+  FileType as FileTypeIcon
 } from 'lucide-react';
 import { DragDropUpload } from '@/components/upload/DragDropUpload';
 import { uploadFile, uploadFileToGoogleDrive, validateFile, checkUploadServiceStatus } from '@/lib/upload-service';
@@ -748,6 +751,32 @@ export default function Print() {
       });
     }
   }, [printSettings, toast]);
+
+  // دالة للحصول على الأيقونة المناسبة حسب نوع الملف
+  const getFileIcon = (fileName: string, fileType?: string) => {
+    const extension = fileName.toLowerCase().split('.').pop();
+    const mimeType = fileType?.toLowerCase();
+    
+    // PDF files
+    if (extension === 'pdf' || mimeType === 'application/pdf') {
+      return FileText;
+    }
+    
+    // Image files
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension || '') ||
+        mimeType?.startsWith('image/')) {
+      return ImageIcon;
+    }
+    
+    // Document files
+    if (['doc', 'docx', 'txt', 'rtf'].includes(extension || '') ||
+        mimeType?.includes('document') || mimeType?.includes('text')) {
+      return FileTypeIcon;
+    }
+    
+    // Default file icon
+    return FileIcon;
+  };
 
   // Individual file settings - each file gets its own print settings
   const [fileSettings, setFileSettings] = useState<{[fileName: string]: {
@@ -1642,7 +1671,10 @@ export default function Print() {
                                 {/* Header مع اسم الملف وأزرار التحكم */}
                                 <div className="flex items-center justify-between p-3 border-b bg-gray-50 cursor-pointer" onClick={() => togglePendingUploadExpanded(upload.id)}>
                                   <div className="flex items-center space-x-2 space-x-reverse flex-1 min-w-0">
-                                    <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                    {(() => {
+                                      const IconComponent = getFileIcon(fileName, upload.fileType);
+                                      return <IconComponent className="h-4 w-4 text-blue-500 flex-shrink-0" />;
+                                    })()}
                                     <div className="min-w-0 flex-1">
                                       <p className="font-medium text-sm text-gray-800 truncate">{fileName}</p>
                                       <p className="text-xs text-gray-500">
