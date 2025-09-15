@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ShoppingBag, MapPin, CreditCard, Truck, Gift, Star, Package, Tag } from 'lucide-react';
+import { ShoppingBag, MapPin, CreditCard, Truck, Gift, Star, Package, Tag, ShoppingCart, Calculator, Info, Heart, Settings, Ticket } from 'lucide-react';
 import PaymentMethods from '@/components/PaymentMethods';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import type { LocationData, DeliveryValidation } from '@/utils/locationUtils';
@@ -744,78 +744,191 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Pricing Summary */}
-                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                  {!showOrderSummary ? (
-                    /* Initial view - only subtotal */
-                    <>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-700 font-medium">المجموع الفرعي</span>
-                        <span className="text-xl font-bold text-gray-900" data-testid="checkout-subtotal">
-                          <span className="currency-display">
-                            <span className="arabic-nums">{formatPrice(subtotal)}</span> جنيه
-                          </span>
-                        </span>
+                {/* Enhanced Pricing Summary */}
+                <div className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white/20 p-2 rounded-lg">
+                        <ShoppingCart className="h-5 w-5 text-white" />
                       </div>
-                      <div className="text-xs text-gray-500 text-center mt-2 p-2 bg-blue-50 rounded border border-blue-200">
-                        💼 رسوم التوصيل والخدمة ستظهر عند إتمام الطلب
+                      <div>
+                        <h3 className="text-white font-bold text-lg">ملخص الطلب</h3>
+                        <p className="text-blue-100 text-sm">مراجعة التكلفة النهائية</p>
                       </div>
-                    </>
-                  ) : (
-                    /* After clicking submit - show all fees */
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">المجموع الفرعي</span>
-                        <span className="font-medium" data-testid="checkout-subtotal">
-                          <span className="currency-display">
-                            <span className="arabic-nums">{formatPrice(subtotal)}</span> جنيه
-                          </span>
-                        </span>
-                      </div>
-                      {formData.deliveryMethod === 'delivery' && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">🚚 رسوم التوصيل</span>
-                          <span className="font-medium" data-testid="checkout-delivery">
-                            {formatPrice(deliveryFee)} جنيه
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">⚙️ رسوم الخدمة (5% + 5 ج.م)</span>
-                        <span className="font-medium" data-testid="service-fee">
-                          {formatPrice(serviceFee)} جنيه
-                        </span>
-                      </div>
-                      {pointsDiscount > 0 && (
-                        <div className="flex justify-between text-sm text-green-600">
-                          <span>⭐ خصم النقاط</span>
-                          <span className="font-medium">-{pointsDiscount} جنيه</span>
-                        </div>
-                      )}
-                      {couponDiscount > 0 && (
-                        <div className="flex justify-between text-sm text-orange-600">
-                          <span>🎟️ خصم الكوبون ({appliedCoupon?.code})</span>
-                          <span className="font-medium">-{couponDiscount} جنيه</span>
-                        </div>
-                      )}
-                      <Separator className="bg-gray-300" />
-                      <div className="flex justify-between items-center font-bold text-lg">
-                        <span className="text-gray-800">الإجمالي</span>
-                        <span className="text-green-600 text-xl" data-testid="checkout-total">
-                          {formatPrice(total)} جنيه
-                        </span>
-                      </div>
-                    </>
-                  )}
-                  
-                  {/* Palestine Support Section */}
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2 text-sm text-green-700">
-                      <span className="text-lg">🇵🇸</span>
-                      <span className="font-semibold">بطلبك أنت بتدعم فلسطين</span>
                     </div>
-                    <div className="text-xs text-green-600 mt-1">
-                      جزء من أرباحنا يذهب لدعم الشعب الفلسطيني
+                  </div>
+
+                  <div className="p-6 space-y-4">
+                    {!showOrderSummary ? (
+                      /* Initial view - Professional subtotal card */
+                      <>
+                        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-5 rounded-xl border-2 border-dashed border-gray-300">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-blue-100 p-2 rounded-lg">
+                                <Calculator className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <span className="text-gray-700 font-semibold text-lg">المجموع الفرعي</span>
+                                <p className="text-gray-500 text-xs">قيمة المنتجات</p>
+                              </div>
+                            </div>
+                            <div className="text-left">
+                              <span className="text-2xl font-bold text-gray-900" data-testid="checkout-subtotal">
+                                <span className="currency-display">
+                                  <span className="arabic-nums">{formatPrice(subtotal)}</span>
+                                </span>
+                              </span>
+                              <span className="text-lg font-medium text-gray-600 mr-2">جنيه</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-2 text-blue-700">
+                            <div className="bg-blue-100 p-1 rounded">
+                              <Info className="h-4 w-4" />
+                            </div>
+                            <span className="font-medium text-sm">معلومة هامة</span>
+                          </div>
+                          <p className="text-blue-600 text-xs mt-2 leading-relaxed">
+                            رسوم التوصيل والخدمة ستحسب تلقائياً حسب العنوان المختار عند إتمام الطلب
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      /* Detailed pricing breakdown */
+                      <>
+                        {/* Subtotal Section */}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <div className="bg-gray-200 p-1.5 rounded">
+                                <Package className="h-4 w-4 text-gray-600" />
+                              </div>
+                              <span className="text-gray-700 font-medium">المجموع الفرعي</span>
+                            </div>
+                            <span className="font-semibold text-gray-900" data-testid="checkout-subtotal">
+                              <span className="currency-display">
+                                <span className="arabic-nums">{formatPrice(subtotal)}</span> جنيه
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Fees Section */}
+                        <div className="space-y-3">
+                          {formData.deliveryMethod === 'delivery' && (
+                            <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                  <div className="bg-amber-100 p-1.5 rounded">
+                                    <Truck className="h-4 w-4 text-amber-600" />
+                                  </div>
+                                  <span className="text-amber-800 font-medium text-sm">رسوم التوصيل</span>
+                                </div>
+                                <span className="font-semibold text-amber-900" data-testid="checkout-delivery">
+                                  {formatPrice(deliveryFee)} جنيه
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <div className="bg-blue-100 p-1.5 rounded">
+                                  <Settings className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <div>
+                                  <span className="text-blue-800 font-medium text-sm">رسوم الخدمة</span>
+                                  <p className="text-blue-600 text-xs">(5% + 5 ج.م)</p>
+                                </div>
+                              </div>
+                              <span className="font-semibold text-blue-900" data-testid="service-fee">
+                                {formatPrice(serviceFee)} جنيه
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Discounts Section */}
+                        {(pointsDiscount > 0 || couponDiscount > 0) && (
+                          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="bg-green-100 p-1.5 rounded">
+                                <Tag className="h-4 w-4 text-green-600" />
+                              </div>
+                              <span className="text-green-800 font-semibold">الخصومات المطبقة</span>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {pointsDiscount > 0 && (
+                                <div className="flex justify-between items-center p-2 bg-green-100 rounded">
+                                  <div className="flex items-center gap-2">
+                                    <Star className="h-4 w-4 text-yellow-500" />
+                                    <span className="text-green-700 text-sm">خصم النقاط</span>
+                                  </div>
+                                  <span className="font-semibold text-green-800">-{pointsDiscount} جنيه</span>
+                                </div>
+                              )}
+                              
+                              {couponDiscount > 0 && (
+                                <div className="flex justify-between items-center p-2 bg-orange-100 rounded">
+                                  <div className="flex items-center gap-2">
+                                    <Ticket className="h-4 w-4 text-orange-500" />
+                                    <div>
+                                      <span className="text-orange-700 text-sm">كوبون الخصم</span>
+                                      <p className="text-orange-600 text-xs">({appliedCoupon?.code})</p>
+                                    </div>
+                                  </div>
+                                  <span className="font-semibold text-orange-800">-{couponDiscount} جنيه</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Total Section */}
+                        <div className="bg-gradient-to-r from-green-500 to-green-600 p-5 rounded-xl text-white">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-white/20 p-2 rounded-lg">
+                                <CreditCard className="h-6 w-6" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-xl">إجمالي المبلغ</h4>
+                                <p className="text-green-100 text-sm">المبلغ النهائي المطلوب دفعه</p>
+                              </div>
+                            </div>
+                            <div className="text-left">
+                              <span className="text-3xl font-bold" data-testid="checkout-total">
+                                {formatPrice(total)}
+                              </span>
+                              <span className="text-xl font-medium mr-2">جنيه</span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Palestine Support Section */}
+                    <div className="bg-gradient-to-r from-green-50 via-white to-red-50 p-4 rounded-lg border-2 border-green-200">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="bg-green-100 p-2 rounded-full">
+                          <Heart className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-green-800 flex items-center gap-2">
+                            <span>🇵🇸</span>
+                            بطلبك أنت بتدعم فلسطين
+                          </h4>
+                          <p className="text-green-600 text-xs">
+                            جزء من أرباحنا يذهب لدعم الشعب الفلسطيني الصامد
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
