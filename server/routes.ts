@@ -4875,182 +4875,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Note: Duplicate cart endpoints removed - using auth-protected ones above
 
-  // Add print job to cart
+  // Add print job to cart (LEGACY WRAPPER - DEPRECATED)
   app.post('/api/cart/print-job', requireAuth, async (req: any, res) => {
     try {
+      console.log('⚠️  DEPRECATED: /api/cart/print-job endpoint called - use /api/cart/add with type: "print_job" instead');
+      
       const printJobData = req.body;
-      const userId = req.user?.id; // Get actual user ID from auth
-      console.log('Received print job data:', printJobData);
-      console.log('Adding print job for user:', userId);
+      const userId = req.user?.id;
       
-      // Extract data from the request - frontend sends individual print job objects
-      const filename = printJobData.filename || 'طباعة جديدة';
-      const fileUrl = printJobData.fileUrl;
+      console.log('🔄 Converting legacy print job format to discriminated union format');
+      console.log('📥 Legacy print job data:', printJobData);
       
-      if (!fileUrl) {
-        return res.status(400).json({ message: 'No file URL provided for printing' });
-      }
-      
-      // Calculate print job cost with safe defaults using advanced pricing system
+      // Transform legacy format to discriminated union format
       // Handle pages - convert "all" to 1 for images, extract number for PDFs
-      let pages = 1; // Default for images
+      let pages = 1;
       if (printJobData.pages && printJobData.pages !== 'all') {
         pages = parseInt(printJobData.pages) || 1;
       } else if (printJobData.pages === 'all') {
-        // For images or when pages is "all", assume 1 page
         pages = 1;
-        console.log('📄 Pages field was "all", assuming 1 page for pricing');
+        console.log('📄 Pages field was "all", converting to 1 page');
       }
       
-      const copies = printJobData.copies || 1;
-      const colorMode = printJobData.colorMode || 'grayscale';
-      const paperSize = printJobData.paperSize || 'A4';
-      const doubleSided = printJobData.doubleSided || false;
-      const paperType = printJobData.paperType || 'plain';
-      
-      console.log(`📊 Pricing calculation: ${pages} pages, ${copies} copies, ${colorMode}, ${paperSize}, ${paperType}`);
-      
-      // Import the advanced pricing calculation (simple fallback for server-side)
-      // Convert to pricing system format - handle A0, A1, A2 as large format
-      let paper_size_typed = 'A4';
-      let isLargeFormat = false;
-      
-      if (['A0', 'A1', 'A2'].includes(paperSize)) {
-        paper_size_typed = 'large'; // A0, A1, A2 are large formats
-        isLargeFormat = true;
-      } else if (paperSize === 'A3') {
-        paper_size_typed = 'A3';
-      } else {
-        paper_size_typed = 'A4';
-      }
-      
-      // For large formats (A0, A1, A2), only plain paper is available
-      const paper_type_typed = isLargeFormat ? 'plain' : 
-        (['plain', 'glossy', 'matte', 'sticker'].includes(paperType) ? paperType : 'plain');
-      const print_type = doubleSided ? 'face_back' : 'face';
-      const is_black_white = colorMode === 'grayscale';
-      
-      // Calculate price per page using advanced pricing rules
-      let pricePerPage = 1.0; // Default fallback
-      
-      // Pricing Rules (simplified server-side version)
-      if (paper_size_typed === 'large') {
-        if (['A0', 'A1'].includes(paperSize)) {
-          // A0, A1: Fixed 30 EGP
-          pricePerPage = 30.00;
-        } else if (paperSize === 'A2') {
-          // A2: Fixed 25 EGP  
-          pricePerPage = 25.00;
-        }
-        console.log(`📏 Large format pricing (${paperSize}): ${pricePerPage} جنيه/صفحة`);
-      } else if (paper_size_typed === 'A4') {
-        if (paper_type_typed === 'plain') {
-          if (print_type === 'face') {
-            pricePerPage = pages <= 20 ? 1.00 : pages <= 1000 ? 0.70 : 0.60;
-          } else {
-            pricePerPage = pages <= 20 ? 1.50 : pages <= 1000 ? 0.95 : 0.35;
-          }
-        } else if (paper_type_typed === 'glossy' || paper_type_typed === 'matte') {
-          pricePerPage = pages <= 20 ? 8.00 : pages <= 1000 ? 7.00 : 6.00;
-        } else if (paper_type_typed === 'sticker') {
-          pricePerPage = pages <= 20 ? 10.00 : pages <= 1000 ? 9.00 : 8.00;
-        }
-      } else { // A3
-        if (paper_type_typed === 'plain') {
-          if (print_type === 'face') {
-            pricePerPage = pages <= 30 ? 5.00 : 3.00;
-          } else {
-            pricePerPage = pages <= 30 ? 6.00 : 5.00;
-          }
-        } else if (paper_type_typed === 'glossy' || paper_type_typed === 'matte') {
-          pricePerPage = pages <= 50 ? 14.00 : 12.00;
-        } else if (paper_type_typed === 'sticker') {
-          pricePerPage = pages <= 50 ? 20.00 : 18.00;
-        }
-      }
-      
-      // Calculate base total with validation
-      const baseTotal = pricePerPage * pages * copies;
-      
-      // Validate calculation
-      if (isNaN(baseTotal) || baseTotal <= 0) {
-        console.error(`❌ Invalid pricing calculation: ${pricePerPage} * ${pages} * ${copies} = ${baseTotal}`);
-        return res.status(400).json({ message: 'خطأ في حساب التكلفة' });
-      }
-      
-      // Apply 10% discount for black and white printing (NOT for large formats)
-      const discount = (is_black_white && !isLargeFormat) ? baseTotal * 0.10 : 0;
-      const totalCost = parseFloat((baseTotal - discount).toFixed(2));
-      
-      if (isLargeFormat) {
-        console.log(`🚫 No B&W discount for large format ${paperSize}`);
-      }
-      
-      console.log(`💰 Pricing breakdown: ${pricePerPage}/page * ${pages} pages * ${copies} copies = ${baseTotal} - ${discount} discount = ${totalCost} جنيه`);
+      // Map legacy format to discriminated union format
+      const discriminatedUnionRequest = {
+        type: 'print_job' as const,
+        printSettings: {
+          pages: pages,
+          copies: printJobData.copies || 1,
+          colorMode: (printJobData.colorMode || 'grayscale') as 'color' | 'grayscale',
+          paperSize: (printJobData.paperSize || 'A4') as 'A4' | 'A3',
+          paperType: (printJobData.paperType || 'plain') as 'plain' | 'glossy' | 'matte' | 'sticker',
+          doubleSided: printJobData.doubleSided || false,
+        },
+        fileMeta: {
+          filename: printJobData.filename || 'طباعة جديدة',
+          fileUrl: printJobData.fileUrl,
+          googleDriveLink: printJobData.googleDriveLink,
+          googleDriveFileId: printJobData.googleDriveFileId,
+          fileSize: printJobData.fileSize,
+          mimeType: printJobData.fileType || printJobData.mimeType,
+        },
+        quantity: 1, // Legacy endpoint treats each print job as quantity 1
+        notes: printJobData.notes,
+      };
 
-      // Create print job record with actual user ID
+      console.log('🔄 Transformed to unified format:', discriminatedUnionRequest);
+
+      // Validate the discriminated union request
+      let validatedRequest;
+      try {
+        validatedRequest = addToCartRequestSchema.parse(discriminatedUnionRequest);
+      } catch (parseError: any) {
+        console.error("❌ Legacy format transformation failed validation:", parseError.errors);
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid print job format",
+          errors: parseError.errors 
+        });
+      }
+
+      // Call the unified print job logic from /api/cart/add
+      const { printSettings, fileMeta, quantity, notes } = validatedRequest;
+      console.log(`🖨️  [Legacy Wrapper] Adding print job ${fileMeta.filename} (qty: ${quantity}) to cart`);
+      
+      // Extract print settings for pricing calculation
+      const { pages: validatedPages, copies, colorMode, paperSize, doubleSided, paperType } = printSettings;
+      const { filename, fileUrl, fileSize, mimeType } = fileMeta;
+
+      // Validate required fields
+      if (!fileUrl) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'No file URL provided for printing' 
+        });
+      }
+
+      // Map print settings to shared pricing format
+      const pricingOptions: SharedPricingOptions = {
+        paper_size: paperSize as any,
+        paper_type: paperType as any,
+        print_type: doubleSided ? 'face_back' : 'face',
+        pages: validatedPages,
+        is_black_white: colorMode === 'grayscale'
+      };
+
+      // Calculate pricing using shared/pricing.ts
+      const pricingResult = calculateSharedPrice(pricingOptions);
+      const unitPrice = pricingResult.finalPrice;
+      const totalCost = unitPrice * quantity * copies;
+
+      console.log(`💰 Print job pricing: ${pricingResult.pricePerPage}/page * ${validatedPages} pages * ${copies} copies * ${quantity} quantity = ${totalCost} ${pricingResult.currency}`);
+
+      // Create print job record for admin panel
       const printJobRecord = {
-        userId: userId, // Use actual authenticated user ID
+        userId: userId,
         filename: filename,
         fileUrl: fileUrl,
-        fileSize: printJobData.fileSize || 0,
-        fileType: printJobData.fileType || 'application/pdf',
-        pages: pages,
+        fileSize: fileSize || 0,
+        fileType: mimeType || 'application/pdf',
+        pages: validatedPages,
         copies: copies,
-        colorMode: colorMode, // This will map to color_mode in DB
-        paperSize: paperSize, // This will map to paper_size in DB
-        doubleSided: doubleSided, // This will map to double_sided in DB
-        pageRange: printJobData.pageRange || 'all',
-        cost: totalCost.toString(), // Convert to string for decimal field
+        colorMode: colorMode,
+        paperSize: paperSize,
+        doubleSided: doubleSided,
+        pageRange: 'all',
+        cost: totalCost.toString(),
         status: 'pending',
         priority: 'normal'
       };
 
-      // Save print job to storage (this will make it appear in admin panel)
+      // Save print job to storage (admin panel)
       const createdPrintJob = await storage.createPrintJob(printJobRecord);
-      console.log('Print job created in admin panel:', createdPrintJob);
+      console.log('📄 Print job created in admin panel:', createdPrintJob.id);
 
-      // Add print job to user's cart using storage method - pass totalCost as price
-      const cartItem = await storage.addToCart(userId, 'print-service', 1, {
+      // Add print job to user's cart
+      const cartItem = await storage.addToCart(userId, 'print-service', quantity, {
         isPrintJob: true,
         printJobId: createdPrintJob.id,
         printJob: {
-          filename: printJobData.filename,
-          fileUrl: printJobData.fileUrl,
-          fileSize: printJobData.fileSize,
-          fileType: printJobData.fileType,
-          pages: printJobData.pages,
-          copies: printJobData.copies,
-          colorMode: printJobData.colorMode,
-          paperSize: printJobData.paperSize,
-          doubleSided: printJobData.doubleSided,
-          pageRange: printJobData.pageRange,
+          filename: filename,
+          fileUrl: fileUrl,
+          fileSize: fileSize,
+          fileType: mimeType,
+          pages: validatedPages,
+          copies: copies,
+          colorMode: colorMode,
+          paperSize: paperSize,
+          doubleSided: doubleSided,
+          pageRange: 'all',
           cost: totalCost.toString(),
-          calculatedPrice: totalCost.toString() // Add this for cart pricing
+          calculatedPrice: totalCost.toString()
         },
-        productName: `طباعة: ${printJobData.filename}`,
+        productName: `طباعة: ${filename}`,
         productImage: '/print-icon.png',
-        copies: printJobData.copies,
-        colorMode: printJobData.colorMode === 'color' ? 'ملون' : 'أبيض وأسود',
-        paperSize: printJobData.paperSize,
-        doubleSided: printJobData.doubleSided ? 'وجهين' : 'وجه واحد'
-      }, totalCost.toString()); // Pass the calculated price as custom price
+        copies: copies,
+        colorMode: colorMode === 'color' ? 'ملون' : 'أبيض وأسود',
+        paperSize: paperSize,
+        doubleSided: doubleSided ? 'وجهين' : 'وجه واحد',
+        notes: notes
+      }, totalCost.toString());
 
-      console.log('✅ Print job added to cart successfully:', cartItem.id);
-      console.log('📋 Print job also saved to admin panel:', createdPrintJob.id);
-      console.log('💰 Calculated price:', totalCost, 'EGP for', pages, 'pages,', copies, 'copies, color:', colorMode);
-      console.log('🛒 Cart item price check:', cartItem.price, 'vs calculated:', totalCost);
+      console.log('✅ [Legacy Wrapper] Print job added to cart successfully:', cartItem.id);
       
+      // Return legacy-compatible response format
       res.json({ 
         success: true, 
-        cartItem,
+        cartItem: cartItem,
         printJob: createdPrintJob,
         message: 'تمت إضافة مهمة الطباعة للسلة ولوحة الإدارة بنجاح'
       });
       
     } catch (error) {
-      console.error('Error adding print job to cart:', error);
-      res.status(500).json({ message: 'Failed to add print job to cart' });
+      console.error('Error in legacy print job wrapper:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to add print job to cart' 
+      });
     }
   });
 
