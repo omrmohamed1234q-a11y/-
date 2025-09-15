@@ -150,6 +150,11 @@ export function useCart() {
       paymentMethod?: string;
       notes?: string;
       usePoints?: boolean;
+      appliedCoupon?: {
+        code: string;
+        discountAmount: number;
+        type: string;
+      } | null;
     }) => {
       const response = await apiRequest('POST', '/api/checkout', checkoutData);
       return response;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useCart } from '@/hooks/useCart';
+import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ShoppingBag, MapPin, CreditCard, Truck, Gift, Star, Package } from 'lucide-react';
+import { ShoppingBag, MapPin, CreditCard, Truck, Gift, Star, Package, Tag } from 'lucide-react';
 import PaymentMethods from '@/components/PaymentMethods';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import type { LocationData, DeliveryValidation } from '@/utils/locationUtils';
@@ -20,6 +21,7 @@ import { formatPrice, parsePrice } from '@/lib/utils';
 export default function CheckoutPage() {
   const [, setLocation] = useLocation();
   const { cart, isLoading, checkout, isCheckingOut } = useCart();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -45,6 +47,12 @@ export default function CheckoutPage() {
   const [orderCreated, setOrderCreated] = useState(false);
   const [showOrderSummary, setShowOrderSummary] = useState(false);
 
+  // Coupon states
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
   // Check if cart is empty and redirect
   useEffect(() => {
     if (!isLoading && (!cart?.items || cart.items.length === 0)) {
@@ -56,6 +64,72 @@ export default function CheckoutPage() {
       setLocation('/');
     }
   }, [cart, isLoading, setLocation, toast]);
+
+  // Coupon revalidation when cart changes (security feature)
+  useEffect(() => {
+    if (appliedCoupon && cart?.subtotal !== undefined) {
+      // If cart subtotal has changed since coupon was applied, revalidate
+      const currentSubtotal = cart.subtotal || 0;
+      
+      if (appliedCoupon.originalSubtotal && appliedCoupon.originalSubtotal !== currentSubtotal) {
+        console.log('🔄 Cart changed, revalidating coupon...');
+        
+        // Automatically revalidate the coupon with new cart total
+        const revalidateCoupon = async () => {
+          try {
+            const response = await fetch('/api/coupons/validate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                code: appliedCoupon.code,
+                orderTotal: currentSubtotal,
+                userId: user?.id || '',
+              }),
+            });
+
+            if (response.ok) {
+              const couponData = await response.json();
+              // Update coupon with new discount amount for new cart total
+              setAppliedCoupon({
+                ...couponData,
+                originalSubtotal: currentSubtotal
+              });
+              setCouponDiscount(couponData.discountAmount);
+              toast({
+                title: "تم تحديث الكوبون",
+                description: `تم إعادة حساب الخصم: ${couponData.discountAmount} جنيه`,
+              });
+            } else {
+              // Coupon no longer valid for new cart total
+              setAppliedCoupon(null);
+              setCouponDiscount(0);
+              setCouponCode('');
+              toast({
+                title: "انتهت صلاحية الكوبون",
+                description: "الكوبون لم يعد صالحاً بعد تعديل السلة",
+                variant: "destructive",
+              });
+            }
+          } catch (error) {
+            console.error('Error revalidating coupon:', error);
+            // Clear coupon on error to be safe
+            setAppliedCoupon(null);
+            setCouponDiscount(0);
+            setCouponCode('');
+            toast({
+              title: "خطأ في التحقق من الكوبون",
+              description: "تم إلغاء الكوبون احتياطياً",
+              variant: "destructive",
+            });
+          }
+        };
+
+        revalidateCoupon();
+      }
+    }
+  }, [cart?.subtotal, appliedCoupon, user?.id, toast]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -77,6 +151,71 @@ export default function CheckoutPage() {
     setSelectedLocation(null);
     setLocationValidation(null);
     handleInputChange('deliveryAddress', '');
+  };
+
+  // Coupon handling functions
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال كود الخصم",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    try {
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: couponCode,
+          orderTotal: subtotal,
+          userId: user?.id || '', // Real authenticated user ID
+        }),
+      });
+
+      if (response.ok) {
+        const couponData = await response.json();
+        setAppliedCoupon({
+          ...couponData,
+          originalSubtotal: subtotal // Store original subtotal for revalidation
+        });
+        setCouponDiscount(couponData.discountAmount);
+        toast({
+          title: "تم تطبيق الكوبون",
+          description: `تم خصم ${couponData.discountAmount} جنيه`,
+        });
+      } else {
+        const error = await response.json();
+        toast({
+          title: "كوبون غير صالح",
+          description: error.message || "كود الخصم غير صحيح أو منتهي الصلاحية",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تطبيق الكوبون",
+        variant: "destructive",
+      });
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCouponCode('');
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    toast({
+      title: "تم إلغاء الكوبون",
+      description: "تم إلغاء كود الخصم",
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -144,6 +283,11 @@ export default function CheckoutPage() {
     const checkoutData = {
       ...formData,
       deliveryAddress: fullAddress,
+      appliedCoupon: appliedCoupon ? {
+        code: appliedCoupon.code,
+        discountAmount: appliedCoupon.discountAmount,
+        type: appliedCoupon.type || 'fixed'
+      } : null,
     };
 
     // TEMPORARY: Direct checkout without payment methods
@@ -205,8 +349,8 @@ export default function CheckoutPage() {
   
   const pointsDiscount = formData.usePoints ? Math.min(50, Math.floor(subtotal * 0.05)) : 0;
   
-  // New Total: Order Value + Delivery Fee + Service Fee
-  const total = subtotal + deliveryFee + serviceFee - pointsDiscount;
+  // New Total: Order Value + Delivery Fee + Service Fee - Discounts
+  const total = subtotal + deliveryFee + serviceFee - pointsDiscount - couponDiscount;
   
   // Check minimum order amount and location validity for delivery
   const canDeliver = formData.deliveryMethod !== 'delivery' || 
@@ -546,29 +690,83 @@ export default function CheckoutPage() {
 
                 <Separator />
 
+                {/* Coupon Code Section */}
+                <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border border-orange-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Tag className="h-4 w-4 text-orange-600" />
+                    <span className="font-medium text-orange-800">كوبون الخصم</span>
+                  </div>
+                  
+                  {!appliedCoupon ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value)}
+                        placeholder="أدخل كود الخصم"
+                        className="flex-1 px-3 py-2 border border-orange-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        data-testid="coupon-input"
+                        onKeyPress={(e) => e.key === 'Enter' && applyCoupon()}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={applyCoupon}
+                        disabled={isApplyingCoupon || !couponCode.trim()}
+                        className="border-orange-300 text-orange-700 hover:bg-orange-100 disabled:opacity-50"
+                        data-testid="apply-coupon-button"
+                      >
+                        {isApplyingCoupon ? 'جاري التطبيق...' : 'تطبيق'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 bg-green-100 border border-green-300 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-700 font-medium">✅ {appliedCoupon.code}</span>
+                        <span className="text-green-600 text-sm">
+                          خصم {couponDiscount} جنيه
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={removeCoupon}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        data-testid="remove-coupon-button"
+                      >
+                        إلغاء
+                      </Button>
+                    </div>
+                  )}
+                  
+                  <div className="text-xs text-orange-600 mt-2">
+                    💡 احصل على خصم إضافي باستخدام كود الخصم
+                  </div>
+                </div>
+
                 {/* Pricing Summary */}
-                <div className="space-y-2">
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                   {!showOrderSummary ? (
                     /* Initial view - only subtotal */
                     <>
-                      <div className="flex justify-between font-bold text-lg">
-                        <span>المجموع الفرعي</span>
-                        <span className="text-green-600" data-testid="checkout-subtotal">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700 font-medium">المجموع الفرعي</span>
+                        <span className="text-xl font-bold text-gray-900" data-testid="checkout-subtotal">
                           <span className="currency-display">
                             <span className="arabic-nums">{formatPrice(subtotal)}</span> جنيه
                           </span>
                         </span>
                       </div>
-                      <div className="text-xs text-gray-500 text-center mt-2">
-                        رسوم التوصيل والخدمة ستظهر عند إتمام الطلب
+                      <div className="text-xs text-gray-500 text-center mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                        💼 رسوم التوصيل والخدمة ستظهر عند إتمام الطلب
                       </div>
                     </>
                   ) : (
                     /* After clicking submit - show all fees */
                     <>
                       <div className="flex justify-between text-sm">
-                        <span>المجموع الفرعي</span>
-                        <span data-testid="checkout-subtotal">
+                        <span className="text-gray-600">المجموع الفرعي</span>
+                        <span className="font-medium" data-testid="checkout-subtotal">
                           <span className="currency-display">
                             <span className="arabic-nums">{formatPrice(subtotal)}</span> جنيه
                           </span>
@@ -576,37 +774,48 @@ export default function CheckoutPage() {
                       </div>
                       {formData.deliveryMethod === 'delivery' && (
                         <div className="flex justify-between text-sm">
-                          <span>رسوم التوصيل</span>
-                          <span data-testid="checkout-delivery">
+                          <span className="text-gray-600">🚚 رسوم التوصيل</span>
+                          <span className="font-medium" data-testid="checkout-delivery">
                             {formatPrice(deliveryFee)} جنيه
                           </span>
                         </div>
                       )}
                       <div className="flex justify-between text-sm">
-                        <span>رسوم الخدمة (5% + 5 ج.م)</span>
-                        <span data-testid="service-fee">
+                        <span className="text-gray-600">⚙️ رسوم الخدمة (5% + 5 ج.م)</span>
+                        <span className="font-medium" data-testid="service-fee">
                           {formatPrice(serviceFee)} جنيه
                         </span>
                       </div>
                       {pointsDiscount > 0 && (
                         <div className="flex justify-between text-sm text-green-600">
-                          <span>خصم النقاط</span>
-                          <span>-{pointsDiscount} جنيه</span>
+                          <span>⭐ خصم النقاط</span>
+                          <span className="font-medium">-{pointsDiscount} جنيه</span>
                         </div>
                       )}
-                      <Separator />
-                      <div className="flex justify-between font-bold text-lg">
-                        <span>الإجمالي</span>
-                        <span className="text-green-600" data-testid="checkout-total">
+                      {couponDiscount > 0 && (
+                        <div className="flex justify-between text-sm text-orange-600">
+                          <span>🎟️ خصم الكوبون ({appliedCoupon?.code})</span>
+                          <span className="font-medium">-{couponDiscount} جنيه</span>
+                        </div>
+                      )}
+                      <Separator className="bg-gray-300" />
+                      <div className="flex justify-between items-center font-bold text-lg">
+                        <span className="text-gray-800">الإجمالي</span>
+                        <span className="text-green-600 text-xl" data-testid="checkout-total">
                           {formatPrice(total)} جنيه
                         </span>
                       </div>
                     </>
                   )}
-                  <div className="bg-green-50 p-2 rounded-lg">
+                  
+                  {/* Palestine Support Section */}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-200">
                     <div className="flex items-center gap-2 text-sm text-green-700">
-                      <span>🇵🇸</span>
-                      <span className="font-medium">بطلبك انت بتدعم فلسطين</span>
+                      <span className="text-lg">🇵🇸</span>
+                      <span className="font-semibold">بطلبك أنت بتدعم فلسطين</span>
+                    </div>
+                    <div className="text-xs text-green-600 mt-1">
+                      جزء من أرباحنا يذهب لدعم الشعب الفلسطيني
                     </div>
                   </div>
                 </div>

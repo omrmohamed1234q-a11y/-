@@ -3537,6 +3537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentMethod = 'cash',
         notes,
         usePoints = false,
+        appliedCoupon, // Coupon data from client
         tempFileInfo // Information about temporary uploaded files
       } = req.body;
 
@@ -3654,6 +3655,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pointsEarned: Math.floor(cart.subtotal * 0.05),
       };
 
+      // Server-side coupon validation and application
+      let finalSubtotal = cart.subtotal;
+      let couponDiscount = 0;
+      let appliedCouponData = null;
+
+      if (appliedCoupon && appliedCoupon.code) {
+        console.log('🎫 Validating coupon server-side:', appliedCoupon.code);
+        
+        try {
+          // Re-validate coupon on server to ensure security
+          const validation = await storage.validateCoupon(appliedCoupon.code, cart.subtotal, userId);
+          
+          if (validation.valid) {
+            console.log('✅ Coupon valid on server, applying discount:', validation.discountAmount);
+            
+            // Apply the coupon and mark as used
+            const applyResult = await storage.applyCoupon(appliedCoupon.code, orderData.orderNumber, cart.subtotal, userId);
+            
+            if (applyResult.success) {
+              couponDiscount = validation.discountAmount;
+              finalSubtotal = cart.subtotal - couponDiscount;
+              appliedCouponData = {
+                code: appliedCoupon.code,
+                discountAmount: couponDiscount,
+                type: validation.type || 'fixed'
+              };
+              console.log('🎫 Coupon applied successfully. Final subtotal:', finalSubtotal);
+            } else {
+              console.log('⚠️ Failed to apply coupon:', applyResult.error);
+            }
+          } else {
+            console.log('❌ Coupon validation failed on server:', validation.error);
+          }
+        } catch (error) {
+          console.error('❌ Error validating/applying coupon on server:', error);
+        }
+      }
+
+      // Update order data with server-validated totals
+      orderData.subtotal = finalSubtotal.toString();
+      orderData.totalAmount = finalSubtotal.toString();
+      orderData.discount = couponDiscount.toString();
+      
+      // Store applied coupon data in items metadata
+      if (appliedCouponData) {
+        orderData.items = orderData.items.map((item: any) => ({
+          ...item,
+          _couponApplied: appliedCouponData
+        }));
+      }
+
       const order = await storage.createOrder(orderData);
       console.log('✅ Order created in checkout:', order.id, 'for user:', userId);
 
@@ -3669,12 +3721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           moveResult = await googleDriveService.moveFilesToPermanentLocation(
             tempFileInfo.tempFolderId,
             tempFileInfo.customerName,
-            uploadDate,
-            {
-              orderNumber: order.orderNumber,
-              totalAmount: order.totalAmount,
-              paymentMethod: paymentMethod
-            }
+            uploadDate
           );
 
           if (moveResult.success) {
@@ -6118,7 +6165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!driver || driver.role !== 'driver') {
         // Log failed attempt to memory storage
-        await memorySecurityStorage.createSecurityLog({
+        await securityStorage.createSecurityLog({
           user_id: 'unknown',
           action: 'محاولة دخول سائق فاشلة',
           ip_address: req.ip || 'unknown',
@@ -6136,7 +6183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if driver is active (from memory storage validation)
       if (!driver.is_active) {
-        await memorySecurityStorage.createSecurityLog({
+        await securityStorage.createSecurityLog({
           user_id: driver.id,
           action: 'محاولة دخول لحساب غير نشط',
           ip_address: req.ip || 'unknown',
@@ -6153,7 +6200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Password is already verified by validateUserCredentials
       // Update driver last login in memory
-      await memorySecurityStorage.updateSecurityUserStatus(driver.id, true);
+      await securityStorage.updateSecurityUserStatus(driver.id, true);
 
       // Generate secure JWT token instead of simple token
       const secretKey = process.env.JWT_SECRET_KEY || 'fallback-dev-key-change-in-production-URGENT';
@@ -6175,7 +6222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Log successful login to memory storage
-      await memorySecurityStorage.createSecurityLog({
+      await securityStorage.createSecurityLog({
         user_id: driver.id,
         action: 'تسجيل دخول سائق ناجح',
         ip_address: req.ip || 'unknown',
@@ -6312,10 +6359,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Save to memory storage temporarily
-      await memorySecurityStorage.createTwoFactorAuth(twoFARecord);
+      await securityStorage.createTwoFactorAuth(twoFARecord);
 
       // Log setup attempt
-      await memorySecurityStorage.createSecurityLog({
+      await securityStorage.createSecurityLog({
         user_id: userId,
         action: 'إعداد 2FA - تم توليد سر جديد',
         ip_address: req.ip || 'unknown',
@@ -6355,7 +6402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get 2FA record
-      const twoFARecord = await memorySecurityStorage.getTwoFactorAuth(userId, userType);
+      const twoFARecord = await securityStorage.getTwoFactorAuth(userId, userType);
       if (!twoFARecord) {
         return res.status(404).json({
           success: false,
@@ -6372,7 +6419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!verified) {
-        await memorySecurityStorage.createSecurityLog({
+        await securityStorage.createSecurityLog({
           user_id: userId,
           action: 'فشل في تفعيل 2FA - رمز خاطئ',
           ip_address: req.ip || 'unknown',
@@ -6395,10 +6442,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Enable 2FA
-      await memorySecurityStorage.enableTwoFactorAuth(userId, userType, backupCodes);
+      await securityStorage.enableTwoFactorAuth(userId, userType, backupCodes);
 
       // Log successful activation
-      await memorySecurityStorage.createSecurityLog({
+      await securityStorage.createSecurityLog({
         user_id: userId,
         action: 'تم تفعيل 2FA بنجاح',
         ip_address: req.ip || 'unknown',
@@ -6436,7 +6483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get 2FA record
-      const twoFARecord = await memorySecurityStorage.getTwoFactorAuth(userId, userType);
+      const twoFARecord = await securityStorage.getTwoFactorAuth(userId, userType);
       if (!twoFARecord || !twoFARecord.isEnabled) {
         return res.status(404).json({
           success: false,
@@ -6451,7 +6498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         verified = twoFARecord.backupCodes && twoFARecord.backupCodes.includes(token);
         if (verified) {
           // Remove used backup code
-          await memorySecurityStorage.useBackupCode(userId, userType, token);
+          await securityStorage.useBackupCode(userId, userType, token);
         }
       } else {
         // Verify TOTP token
@@ -6464,7 +6511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log verification attempt
-      await memorySecurityStorage.createSecurityLog({
+      await securityStorage.createSecurityLog({
         user_id: userId,
         action: `محاولة التحقق من 2FA - ${isBackupCode ? 'كود طوارئ' : 'TOTP'}`,
         ip_address: req.ip || 'unknown',
@@ -6476,7 +6523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (verified) {
         // Update last used timestamp
-        await memorySecurityStorage.updateTwoFactorAuthLastUsed(userId, userType);
+        await securityStorage.updateTwoFactorAuthLastUsed(userId, userType);
       }
 
       res.json({
@@ -6506,7 +6553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get 2FA record
-      const twoFARecord = await memorySecurityStorage.getTwoFactorAuth(userId, userType);
+      const twoFARecord = await securityStorage.getTwoFactorAuth(userId, userType);
       if (!twoFARecord || !twoFARecord.isEnabled) {
         return res.status(404).json({
           success: false,
@@ -6523,7 +6570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!verified) {
-        await memorySecurityStorage.createSecurityLog({
+        await securityStorage.createSecurityLog({
           user_id: userId,
           action: 'فشل في إلغاء 2FA - رمز خاطئ',
           ip_address: req.ip || 'unknown',
@@ -6540,10 +6587,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Disable 2FA
-      await memorySecurityStorage.disableTwoFactorAuth(userId, userType);
+      await securityStorage.disableTwoFactorAuth(userId, userType);
 
       // Log successful deactivation
-      await memorySecurityStorage.createSecurityLog({
+      await securityStorage.createSecurityLog({
         user_id: userId,
         action: 'تم إلغاء 2FA بنجاح',
         ip_address: req.ip || 'unknown',
@@ -6572,7 +6619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId, userType } = req.params;
       
-      const twoFARecord = await memorySecurityStorage.getTwoFactorAuth(userId, userType);
+      const twoFARecord = await securityStorage.getTwoFactorAuth(userId, userType);
       
       res.json({
         success: true,
@@ -6806,8 +6853,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/security-dashboard/users', async (req, res) => {
     try {
       // Get both admin and driver users from memory storage
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const allUsers = await memorySecurityStorage.getAllSecurityUsers();
+      const { securityStorage } = await import('./memory-security-storage');
+      const allUsers = await securityStorage.getAllSecurityUsers();
       
       res.json(allUsers);
     } catch (error) {
@@ -6831,8 +6878,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Security dashboard endpoint (replacing /admin/drivers)
   app.get('/api/admin/security-dashboard/users', async (req, res) => {
     try {
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const users = await memorySecurityStorage.getAllSecurityUsers();
+      const { securityStorage } = await import('./memory-security-storage');
+      const users = await securityStorage.getAllSecurityUsers();
       res.json(users);
     } catch (error) {
       console.error('Error fetching security users:', error);
@@ -6897,7 +6944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Log the creation (Memory Storage)
         try {
-          await memorySecurityStorage.createSecurityLog({
+          await securityStorage.createSecurityLog({
             user_id: 'admin',
             action: `Created new admin: ${userData.username}`,
             ip_address: req.ip || 'unknown',
@@ -6939,7 +6986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Log the creation (Memory Storage)
         try {
-          await memorySecurityStorage.createSecurityLog({
+          await securityStorage.createSecurityLog({
             user_id: 'admin',
             action: `Created new driver: ${userData.username} (${userData.driverCode})`,
             ip_address: req.ip || 'unknown',
@@ -6960,8 +7007,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log the failed attempt (Memory Storage)
       try {
-        const { memorySecurityStorage } = await import('./memory-security-storage');
-        await memorySecurityStorage.createSecurityLog({
+        const { securityStorage } = await import('./memory-security-storage');
+        await securityStorage.createSecurityLog({
           user_id: 'admin',
           action: `Failed to create ${req.body.role}: ${req.body.username}`,
           ip_address: req.ip || 'unknown',
@@ -7387,8 +7434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check token with memory security storage
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const user = await memorySecurityStorage.getSecurityUserByToken(token);
+      const { securityStorage } = await import('./memory-security-storage');
+      const user = await securityStorage.getSecurityUserByToken(token);
       
       console.log('🔍 Token verification:', { 
         token: token.substring(0, 10) + '...', 
@@ -7434,9 +7481,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const { securityStorage } = await import('./memory-security-storage');
       
-      const existingUser = await memorySecurityStorage.getUserById(userId);
+      const existingUser = await securityStorage.getUserById(userId);
       if (!existingUser) {
         return res.status(404).json({
           success: false,
@@ -7445,7 +7492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if username or email conflicts with other users
-      const conflictUser = await memorySecurityStorage.getUserByUsernameOrEmail(username, email);
+      const conflictUser = await securityStorage.getUserByUsernameOrEmail(username, email);
       if (conflictUser && conflictUser.id !== userId) {
         return res.status(400).json({
           success: false,
@@ -7472,10 +7519,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.password_hash = await bcrypt.hash(password, 10);
       }
 
-      const updatedUser = await memorySecurityStorage.updateUser(userId, updateData);
+      const updatedUser = await securityStorage.updateUser(userId, updateData);
 
       // Log update
-      await memorySecurityStorage.createSecurityLog({
+      await securityStorage.createSecurityLog({
         user_id: userId,
         action: 'تم تحديث بيانات المستخدم',
         ip_address: req.ip || '127.0.0.1',
@@ -7501,9 +7548,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.params.id;
       
-      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const { securityStorage } = await import('./memory-security-storage');
       
-      const existingUser = await memorySecurityStorage.getUserById(userId);
+      const existingUser = await securityStorage.getUserById(userId);
       if (!existingUser) {
         return res.status(404).json({
           success: false,
@@ -7511,10 +7558,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      await memorySecurityStorage.deleteUser(userId);
+      await securityStorage.deleteUser(userId);
 
       // Log deletion
-      await memorySecurityStorage.createSecurityLog({
+      await securityStorage.createSecurityLog({
         user_id: userId,
         action: 'تم حذف المستخدم',
         ip_address: req.ip || '127.0.0.1',
@@ -7539,8 +7586,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/security-dashboard/user/:id', async (req, res) => {
     try {
       const userId = req.params.id;
-      const { memorySecurityStorage } = await import('./memory-security-storage');
-      const user = await memorySecurityStorage.getUserById(userId);
+      const { securityStorage } = await import('./memory-security-storage');
+      const user = await securityStorage.getUserById(userId);
       
       if (!user) {
         return res.status(404).json({
@@ -7572,9 +7619,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { memorySecurityStorage } = await import('./memory-security-storage');
+      const { securityStorage } = await import('./memory-security-storage');
       
-      const existingUser = await memorySecurityStorage.getUserById(userId);
+      const existingUser = await securityStorage.getUserById(userId);
       if (!existingUser) {
         return res.status(404).json({
           success: false,
@@ -7583,13 +7630,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await memorySecurityStorage.updateUser(userId, { 
+      await securityStorage.updateUser(userId, { 
         password_hash: hashedPassword,
         updated_at: new Date()
       });
 
       // Log password reset
-      await memorySecurityStorage.createSecurityLog({
+      await securityStorage.createSecurityLog({
         user_id: userId,
         action: 'تم إعادة تعيين كلمة المرور',
         ip_address: req.ip || '127.0.0.1',
