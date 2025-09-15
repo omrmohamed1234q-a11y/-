@@ -1628,11 +1628,11 @@ export default function Print() {
                         <div className="space-y-3">
                           <Button
                             onClick={addAllFilesToCart}
-                            disabled={uploadStatus.uploading}
+                            disabled={addToCartMutation.isPending}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 text-base"
                             data-testid="add-all-to-cart"
                           >
-                            {isAddingToCart ? (
+                            {addToCartMutation.isPending ? (
                               <>
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2"></div>
                                 جاري الإضافة...
