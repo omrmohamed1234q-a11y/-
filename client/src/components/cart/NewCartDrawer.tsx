@@ -2,7 +2,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useNewCart } from '@/hooks/useNewCart';
+import { useCart } from '@/hooks/useCart';
 import { ShoppingCart, Plus, Minus, Trash2, X, Package, FileText, Eye } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useState } from 'react';
@@ -22,10 +22,24 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
     updateQuantity, 
     removeItem,
     isUpdatingQuantity,
-    isRemovingItem,
-    getPreviewUrl,
-    getFileTypeIcon
-  } = useNewCart();
+    isRemovingItem
+  } = useCart();
+
+  // Helper functions for file preview and icons
+  const getPreviewUrl = (item: any) => {
+    return item.productImage || null;
+  };
+
+  const getFileTypeIcon = (fileType: string) => {
+    switch (fileType?.toLowerCase()) {
+      case 'pdf': return '📄';
+      case 'doc': case 'docx': return '📝';
+      case 'xls': case 'xlsx': return '📊';
+      case 'ppt': case 'pptx': return '📈';
+      case 'jpg': case 'jpeg': case 'png': case 'gif': return '🖼️';
+      default: return '📄';
+    }
+  };
 
   const handleQuantityChange = (itemId: string, currentQty: number, change: number) => {
     const newQty = currentQty + change;
@@ -38,7 +52,7 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
 
   const handleCheckout = () => {
     onClose();
-    setLocation('/new-checkout');
+    setLocation('/checkout');
   };
 
   const handleContinueShopping = () => {
@@ -46,20 +60,11 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
     setLocation('/print');
   };
 
-  const calculateSubtotal = () => {
-    if (!cart?.items) return 0;
-    
-    return cart.items.reduce((sum, item) => {
-      const price = parseFloat(item.totalPrice);
-      return sum + price;
-    }, 0);
-  };
-
-  const subtotal = calculateSubtotal();
+  const subtotal = cart?.subtotal || 0;
 
   const PreviewImage = ({ item }: { item: any }) => {
     const previewUrl = getPreviewUrl(item);
-    const fileIcon = getFileTypeIcon(item.fileType);
+    const fileIcon = getFileTypeIcon(item.variant?.fileType || 'pdf');
     const isExpanded = expandedPreview === item.id;
 
     if (previewUrl) {
@@ -67,7 +72,7 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
         <div className="relative w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
           <img
             src={previewUrl}
-            alt={item.fileName}
+            alt={item.productName}
             className={`w-full h-full object-cover cursor-pointer transition-all duration-200 ${
               isExpanded ? 'scale-105' : 'hover:scale-105'
             }`}
@@ -89,7 +94,7 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
         <div className="text-center">
           <div className="text-lg">{fileIcon}</div>
           <div className="text-xs text-gray-500 mt-1">
-            {item.fileType.toUpperCase()}
+            {(item.variant?.fileType || 'PDF').toUpperCase()}
           </div>
         </div>
       </div>
@@ -174,16 +179,16 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
                         <div className="flex justify-between">
                           <div className="flex-1">
                             <h4 className="font-medium text-sm mb-1" data-testid={`item-name-${item.id}`}>
-                              {item.fileName}
+                              {item.productName}
                             </h4>
                             <div className="text-xs text-gray-500 space-y-1">
-                              <div>📄 {item.pages} صفحة • {item.paperSize}</div>
+                              <div>📄 {item.variant?.pages || 1} صفحة • {item.variant?.paperSize || 'A4'}</div>
                               <div>
-                                🎨 {item.paperType} • {item.printType === 'face' ? 'وجه واحد' : 'وجهين'} 
-                                {item.isBlackWhite ? ' • أبيض وأسود' : ' • ملون'}
+                                🎨 {item.variant?.paperType || 'عادي'} • {item.variant?.printType === 'face' ? 'وجه واحد' : 'وجهين'} 
+                                {item.variant?.isBlackWhite ? ' • أبيض وأسود' : ' • ملون'}
                               </div>
                               <div className="font-medium text-blue-600">
-                                {parseFloat(item.unitPrice).toFixed(2)} جنيه/نسخة
+                                {parseFloat(item.price).toFixed(2)} جنيه/نسخة
                               </div>
                             </div>
                           </div>
@@ -237,7 +242,7 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
                           </div>
                           <div className="text-right">
                             <div className="font-bold text-green-600" data-testid={`item-price-${item.id}`}>
-                              {parseFloat(item.totalPrice).toFixed(2)} جنيه
+                              {(parseFloat(item.price) * item.quantity).toFixed(2)} جنيه
                             </div>
                             <div className="text-xs text-gray-500">
                               إجمالي {item.quantity} نسخة
@@ -262,7 +267,7 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
                         </div>
                         <img
                           src={getPreviewUrl(item)}
-                          alt={`معاينة ${item.fileName}`}
+                          alt={`معاينة ${item.productName}`}
                           className="w-full max-h-48 object-contain rounded border"
                         />
                       </div>
@@ -290,7 +295,7 @@ export default function NewCartDrawer({ isOpen, onClose }: NewCartDrawerProps) {
                 </div>
                 <div className="flex justify-between">
                   <span>إجمالي الصفحات:</span>
-                  <span>{cart.items.reduce((sum, item) => sum + (item.pages * item.quantity), 0)} صفحة</span>
+                  <span>{cart.items.reduce((sum, item) => sum + ((item.variant?.pages || 1) * item.quantity), 0)} صفحة</span>
                 </div>
               </div>
 

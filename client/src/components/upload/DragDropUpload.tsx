@@ -20,7 +20,7 @@ export function DragDropUpload({
   onUpload,
   maxFiles = 5,
   maxSize = 10 * 1024 * 1024, // 10MB
-  acceptedTypes = ['image/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  acceptedTypes = ['image/*', 'application/pdf'],
   currentCartSize = 0,
   maxCartSize = 50 * 1024 * 1024 // 50MB
 }: DragDropUploadProps) {
@@ -67,11 +67,7 @@ export function DragDropUpload({
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    console.log('🔥 DEBUG: onDrop called with files:', acceptedFiles.map(f => f.name));
-    if (acceptedFiles.length === 0) {
-      console.log('🔥 DEBUG: No files accepted, returning early');
-      return;
-    }
+    if (acceptedFiles.length === 0) return;
 
     // Check cart size limit
     const newFilesSize = calculateTotalSize(acceptedFiles);
