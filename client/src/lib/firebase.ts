@@ -1,6 +1,13 @@
 // Firebase Configuration for اطبعلي Platform
 import { initializeApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { 
+  getAuth, 
+  connectAuthEmulator,
+  signInWithPhoneNumber,
+  PhoneAuthProvider,
+  signInWithCredential,
+  RecaptchaVerifier
+} from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getAnalytics } from 'firebase/analytics';
@@ -54,5 +61,13 @@ if (import.meta.env.VITE_FIREBASE_USE_EMULATORS === 'true') {
 } else {
   console.log('🔥 Using production Firebase services');
 }
+
+// Phone verification functions export
+export { 
+  signInWithPhoneNumber,
+  PhoneAuthProvider,
+  signInWithCredential,
+  RecaptchaVerifier
+};
 
 export default app;
