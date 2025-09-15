@@ -8,6 +8,7 @@ export interface SharedPricingOptions {
   paper_type: 'plain' | 'coated' | 'glossy' | 'sticker';
   print_type: 'face' | 'face_back';
   pages: number;
+  copies?: number;  // Add copies to pricing calculation
   is_black_white?: boolean;
 }
 
@@ -28,7 +29,7 @@ export interface SharedPricingResult {
  * Centralized pricing logic - used by both frontend and backend
  */
 export function calculateSharedPrice(options: SharedPricingOptions): SharedPricingResult {
-  const { paper_size, paper_type, print_type, pages, is_black_white = false } = options;
+  const { paper_size, paper_type, print_type, pages, copies = 1, is_black_white = false } = options;
   
   let pricePerPage = 0;
   const isLargeFormat = LARGE_FORMAT_SIZES.includes(paper_size as any);
@@ -112,12 +113,14 @@ export function calculateSharedPrice(options: SharedPricingOptions): SharedPrici
     discount = totalPrice * 0.10; // 10% discount
   }
   
-  const finalPrice = totalPrice - discount;
+  // Multiply by number of copies to get total cost
+  const priceAfterDiscount = totalPrice - discount;
+  const finalPrice = priceAfterDiscount * copies;
 
   return {
     totalPrice,
     pricePerPage,
-    discount,
+    discount: discount * copies, // Discount also multiplied by copies
     finalPrice,
     currency: 'EGP',
     isLargeFormat,
@@ -230,6 +233,7 @@ export function convertLegacySettings(settings: {
   paperSize: string;
   doubleSided: boolean;
   copies: number;
+  pages?: number;  // Add optional pages parameter
 }) {
   return {
     paper_size: settings.paperSize === 'A3' ? 'A3' : 
@@ -239,6 +243,7 @@ export function convertLegacySettings(settings: {
     paper_type: 'plain' as 'plain',
     print_type: settings.doubleSided ? 'face_back' : 'face' as 'face' | 'face_back',
     is_black_white: settings.colorMode === 'grayscale',
-    pages: settings.copies
+    pages: settings.pages || 1,  // Use actual pages, not copies
+    copies: settings.copies      // Keep copies separate
   };
 }
