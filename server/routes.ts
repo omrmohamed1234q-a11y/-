@@ -23,10 +23,13 @@ import {
   insertTermsAndConditionsSchema, 
   insertUserTermsAcceptanceSchema,
   insertCartItemSchema,
+  addToCartRequestSchema,
   type InsertTermsAndConditions,
   type InsertUserTermsAcceptance,
-  type InsertCartItem 
+  type InsertCartItem,
+  type AddToCartRequest 
 } from '../shared/schema';
+import { calculateSharedPrice, type SharedPricingOptions } from '../shared/pricing';
 import {
   insertSmartCampaignSchema,
   insertMessageTemplateSchema,
@@ -3221,24 +3224,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/cart/add', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user?.id;
-      const { productId, quantity = 1, variant } = req.body;
+      const requestBody = req.body;
 
-      if (!productId) {
-        return res.status(400).json({ success: false, message: "Product ID is required" });
-      }
-
-      if (quantity < 1 || quantity > 100) {
-        return res.status(400).json({ success: false, message: "Quantity must be between 1 and 100" });
-      }
-
-      console.log(`➕ Adding product ${productId} (qty: ${quantity}) to cart for user ${userId}`);
-      const cartItem = await storage.addToCart(userId, productId, quantity, variant);
+      // Detect request format: legacy vs discriminated union
+      const isLegacyFormat = requestBody.productId && !requestBody.type;
       
-      res.json({ 
-        success: true, 
-        item: cartItem, 
-        message: "Item added to cart successfully" 
-      });
+      if (isLegacyFormat) {
+        // Handle legacy format: { productId, quantity, variant }
+        const { productId, quantity = 1, variant } = requestBody;
+        
+        if (!productId) {
+          return res.status(400).json({ success: false, message: "Product ID is required" });
+        }
+
+        if (quantity < 1 || quantity > 100) {
+          return res.status(400).json({ success: false, message: "Quantity must be between 1 and 100" });
+        }
+
+        console.log(`➕ [Legacy] Adding product ${productId} (qty: ${quantity}) to cart for user ${userId}`);
+        const cartItem = await storage.addToCart(userId, productId, quantity, variant);
+        
+        return res.json({ 
+          success: true, 
+          item: cartItem, 
+          message: "Item added to cart successfully" 
+        });
+      }
+
+      // Handle discriminated union format
+      let validatedRequest: AddToCartRequest;
+      try {
+        validatedRequest = addToCartRequestSchema.parse(requestBody);
+      } catch (parseError: any) {
+        console.error("❌ Request validation failed:", parseError.errors);
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid request format",
+          errors: parseError.errors 
+        });
+      }
+
+      console.log(`➕ [New] Adding ${validatedRequest.type} to cart for user ${userId}`);
+
+      // Route by discriminated union type
+      switch (validatedRequest.type) {
+        case 'product':
+          {
+            const { productId, quantity, variant, notes } = validatedRequest;
+            console.log(`📦 Adding product ${productId} (qty: ${quantity}) to cart`);
+            
+            const cartItem = await storage.addToCart(userId, productId, quantity, variant);
+            
+            return res.json({ 
+              success: true, 
+              item: cartItem, 
+              message: "Product added to cart successfully" 
+            });
+          }
+
+        case 'partner_product':
+          {
+            const { productId, partnerId, quantity, variant, notes } = validatedRequest;
+            console.log(`🏪 Adding partner product ${productId} from partner ${partnerId} (qty: ${quantity}) to cart`);
+            
+            const cartItem = await storage.addToCart(userId, productId, quantity, { 
+              partnerId: partnerId,
+              notes: notes 
+            });
+            
+            return res.json({ 
+              success: true, 
+              item: cartItem, 
+              message: "Partner product added to cart successfully" 
+            });
+          }
+
+        case 'print_job':
+          {
+            const { printSettings, fileMeta, quantity, notes } = validatedRequest;
+            console.log(`🖨️ Adding print job ${fileMeta.filename} (qty: ${quantity}) to cart`);
+            
+            // Extract print settings for pricing calculation
+            const { pages, copies, colorMode, paperSize, doubleSided, paperType } = printSettings;
+            const { filename, fileUrl, fileSize, mimeType } = fileMeta;
+
+            // Validate required fields
+            if (!fileUrl) {
+              return res.status(400).json({ 
+                success: false, 
+                message: 'No file URL provided for printing' 
+              });
+            }
+
+            // Map print settings to shared pricing format
+            const pricingOptions: SharedPricingOptions = {
+              paper_size: paperSize as any, // Should be A4, A3, A0, A1, A2
+              paper_type: paperType as any, // Should be plain, coated, glossy, sticker
+              print_type: doubleSided ? 'face_back' : 'face',
+              pages: pages,
+              is_black_white: colorMode === 'grayscale'
+            };
+
+            // Calculate pricing using shared/pricing.ts
+            const pricingResult = calculateSharedPrice(pricingOptions);
+            const unitPrice = pricingResult.finalPrice;
+            const totalCost = unitPrice * quantity * copies;
+
+            console.log(`💰 Print job pricing: ${pricingResult.pricePerPage}/page * ${pages} pages * ${copies} copies * ${quantity} quantity = ${totalCost} ${pricingResult.currency}`);
+
+            // Create print job record for admin panel
+            const printJobRecord = {
+              userId: userId,
+              filename: filename,
+              fileUrl: fileUrl,
+              fileSize: fileSize || 0,
+              fileType: mimeType || 'application/pdf',
+              pages: pages,
+              copies: copies,
+              colorMode: colorMode,
+              paperSize: paperSize,
+              doubleSided: doubleSided,
+              pageRange: 'all', // Default for new API
+              cost: totalCost.toString(),
+              status: 'pending',
+              priority: 'normal'
+            };
+
+            // Save print job to storage (admin panel)
+            const createdPrintJob = await storage.createPrintJob(printJobRecord);
+            console.log('📄 Print job created in admin panel:', createdPrintJob.id);
+
+            // Add print job to user's cart
+            const cartItem = await storage.addToCart(userId, 'print-service', quantity, {
+              isPrintJob: true,
+              printJobId: createdPrintJob.id,
+              printJob: {
+                filename: filename,
+                fileUrl: fileUrl,
+                fileSize: fileSize,
+                fileType: mimeType,
+                pages: pages,
+                copies: copies,
+                colorMode: colorMode,
+                paperSize: paperSize,
+                doubleSided: doubleSided,
+                pageRange: 'all',
+                cost: totalCost.toString(),
+                calculatedPrice: totalCost.toString()
+              },
+              productName: `طباعة: ${filename}`,
+              productImage: '/print-icon.png',
+              copies: copies,
+              colorMode: colorMode === 'color' ? 'ملون' : 'أبيض وأسود',
+              paperSize: paperSize,
+              doubleSided: doubleSided ? 'وجهين' : 'وجه واحد',
+              notes: notes
+            }, totalCost.toString());
+
+            console.log('✅ Print job added to cart successfully:', cartItem.id);
+            
+            return res.json({ 
+              success: true, 
+              item: cartItem,
+              printJob: createdPrintJob,
+              pricing: {
+                unitPrice: unitPrice,
+                totalPrice: totalCost,
+                currency: pricingResult.currency,
+                breakdown: {
+                  pricePerPage: pricingResult.pricePerPage,
+                  pages: pages,
+                  copies: copies,
+                  quantity: quantity,
+                  discount: pricingResult.discount
+                }
+              },
+              message: "Print job added to cart successfully" 
+            });
+          }
+
+        default:
+          return res.status(400).json({ 
+            success: false, 
+            message: "Unknown item type" 
+          });
+      }
+      
     } catch (error) {
       console.error("Error adding to cart:", error);
       res.status(400).json({ 
