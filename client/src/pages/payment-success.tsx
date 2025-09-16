@@ -33,7 +33,7 @@ export default function PaymentSuccess() {
         // 🔒 SECURE: Fetch order from server using authenticated API
         // The server should verify payment status with Paymob before returning order details
         const response = await apiRequest('GET', `/api/orders/verify-payment/${orderId}`);
-        const result = await response.json();
+        const result = await response.json(); // apiRequest returns Response object
 
         if (result.success && result.order) {
           setOrderDetails(result.order);

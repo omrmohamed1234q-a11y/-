@@ -1,7 +1,7 @@
 // Primary Cloudinary Upload Service
 // Integrated with user account API for tracking and management
 import { uploadToCloudinary, testCloudinaryConnection } from './cloudinary';
-import { apiRequest } from './queryClient';
+import { apiRequest, getAuthHeaders } from './queryClient'; // 🔒 SECURITY: Import auth headers
 
 export interface UploadResult {
   success: boolean;
@@ -65,35 +65,45 @@ export async function uploadFile(file: File): Promise<UploadResult> {
   }
 }
 
-// Primary Cloud Upload for /print page - Cost Optimization
+// 🚀 OPTIMIZED: Fast upload with FormData instead of base64
 export async function uploadFileToGoogleDrive(file: File, printSettings?: any): Promise<UploadResult> {
   console.log(`🚀 Cloud Priority Upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
   
   try {
-    // Convert file to base64 for server upload
-    const fileBuffer = await fileToBuffer(file);
-    
     console.log('📁 Uploading to Cloud Storage (Primary)...');
     
-    // Add customer information from user context if available
-    let uploadData = {
-      fileName: file.name,
-      fileBuffer: fileBuffer,
-      mimeType: file.type,
-      printSettings: printSettings
-    };
+    // 🚀 PERFORMANCE: Use FormData instead of base64 conversion
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('fileName', file.name);
+    formData.append('mimeType', file.type);
+    
+    if (printSettings) {
+      formData.append('printSettings', JSON.stringify(printSettings));
+    }
 
     // Try to get user info for better folder organization
     try {
       const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
       if (userInfo.id) {
-        (uploadData as any).customerName = userInfo.displayName || userInfo.fullName || userInfo.id;
+        formData.append('customerName', userInfo.displayName || userInfo.fullName || userInfo.id);
       }
     } catch (error) {
       console.log('⚠️ Could not get user info for folder naming, using default');
     }
 
-    const response = await apiRequest('POST', '/api/upload/google-drive-primary', uploadData);
+    // 🚀 PERFORMANCE: FormData upload with authentication and error handling
+    // Note: apiRequest doesn't support FormData yet, using fetch with auth headers
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch('/api/upload/google-drive-primary', {
+      method: 'POST',
+      headers: {
+        ...authHeaders, // 🔒 SECURITY: Include authentication headers
+        // Don't set Content-Type - let browser set it with boundary for FormData
+      },
+      body: formData,
+      credentials: 'include',
+    });
 
     const result = await response.json();
     
@@ -138,20 +148,7 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
   }
 }
 
-// Helper function to convert File to base64 buffer
-async function fileToBuffer(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Remove data URL prefix and get base64 string
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+// 🚀 REMOVED: fileToBuffer function - no longer needed with FormData approach
 
 // Notify server about file upload for account integration
 async function notifyServerUpload(file: File, result: UploadResult): Promise<void> {

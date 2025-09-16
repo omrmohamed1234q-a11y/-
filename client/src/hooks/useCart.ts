@@ -54,7 +54,7 @@ export function useCart() {
         quantity,
         variant,
       });
-      return response;
+      return await response.json(); // 🔒 FIXED: Parse JSON from Response
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -77,7 +77,7 @@ export function useCart() {
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ itemId, quantity }: { itemId: string; quantity: number }) => {
       const response = await apiRequest('PUT', `/api/cart/items/${itemId}`, { quantity });
-      return response;
+      return await response.json(); // 🔒 FIXED: Parse JSON from Response
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -100,7 +100,7 @@ export function useCart() {
   const removeItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
       const response = await apiRequest('DELETE', `/api/cart/items/${itemId}`);
-      return response;
+      return await response.json(); // 🔒 FIXED: Parse JSON from Response
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -123,7 +123,7 @@ export function useCart() {
   const clearCartMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('DELETE', '/api/cart/clear');
-      return response;
+      return await response.json(); // 🔒 FIXED: Parse JSON from Response
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -157,7 +157,7 @@ export function useCart() {
       } | null;
     }) => {
       const response = await apiRequest('POST', '/api/checkout', checkoutData);
-      return response;
+      return await response.json(); // 🔒 FIXED: Parse JSON from Response
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
