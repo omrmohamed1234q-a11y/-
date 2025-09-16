@@ -675,6 +675,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Final Fallback: Use Vonage if all else fails
       if (!process.env.VONAGE_API_KEY || !process.env.VONAGE_API_SECRET) {
         console.error('❌ All SMS providers failed or not configured');
+        
+        // Development bypass when no providers are configured
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🧪 DEV MODE: No SMS providers configured, using development bypass');
+          
+          const devCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
+          const devVerificationId = `dev_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Store in memory for verification (matching existing type structure)
+          verificationCodes.set(devVerificationId, {
+            phoneNumber,
+            code: devCode,
+            expiresAt: Date.now() + (5 * 60 * 1000), // 5 minutes
+            attempts: 0
+          });
+          
+          console.log(`🧪 DEV BYPASS: Code ${devCode} generated for ${phoneNumber} (ID: ${devVerificationId})`);
+          
+          return res.json({
+            success: true,
+            verificationId: devVerificationId,
+            message: 'كود التحقق جاهز (وضع التطوير)',
+            provider: 'development',
+            devCode: devCode // Only in development
+          });
+        }
+        
         return res.status(500).json({
           success: false,
           error: 'خدمة الرسائل غير متاحة حالياً. يرجى المحاولة لاحقاً'
@@ -730,6 +757,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Clean up verification code on failure
           verificationCodes.delete(verificationId);
           
+          // Development bypass for Vonage non-throw errors
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🧪 DEV MODE: Vonage error status, using development bypass');
+            
+            const devCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
+            const devVerificationId = `dev_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            // Replace the failed verification with dev bypass
+            verificationCodes.set(devVerificationId, {
+              phoneNumber,
+              code: devCode,
+              expiresAt: Date.now() + (5 * 60 * 1000), // 5 minutes
+              attempts: 0
+            });
+            
+            // Clean up original failed verification
+            verificationCodes.delete(verificationId);
+            
+            console.log(`🧪 DEV BYPASS: Code ${devCode} generated for ${phoneNumber} (ID: ${devVerificationId})`);
+            
+            return res.json({
+              success: true,
+              verificationId: devVerificationId,
+              message: 'كود التحقق جاهز (وضع التطوير)',
+              provider: 'development',
+              devCode: devCode // Only in development
+            });
+          }
+          
           // Provide specific error messages based on status
           let userError = 'فشل في إرسال الكود';
           if (response.messages[0].status === '1') {
@@ -777,6 +833,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           verificationCodes.delete(verificationId);
         }
         
+        // Development bypass when Vonage throws errors
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🧪 DEV MODE: Vonage exception, using development bypass');
+          
+          // Generate new verification for dev mode
+          const devCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
+          const devVerificationId = `dev_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Store in memory for verification (matching existing type structure)
+          verificationCodes.set(devVerificationId, {
+            phoneNumber,
+            code: devCode,
+            expiresAt: Date.now() + (5 * 60 * 1000), // 5 minutes
+            attempts: 0
+          });
+          
+          console.log(`🧪 DEV BYPASS: Code ${devCode} generated for ${phoneNumber} (ID: ${devVerificationId})`);
+          
+          return res.json({
+            success: true,
+            verificationId: devVerificationId,
+            message: 'كود التحقق جاهز (وضع التطوير)',
+            provider: 'development',
+            devCode: devCode // Only in development
+          });
+        }
+        
         res.status(500).json({
           success: false,
           error: 'فشل في إرسال الكود عبر جميع الخدمات. حاول مرة أخرى'
@@ -785,6 +868,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error: any) {
       console.error('❌ SMS send endpoint error:', error);
+      
+      // Final development bypass for unexpected exceptions
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🧪 DEV MODE: Unexpected exception, using final development bypass');
+        
+        const { phoneNumber } = req.body;
+        const devCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
+        const devVerificationId = `dev_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Store in memory for verification
+        verificationCodes.set(devVerificationId, {
+          phoneNumber,
+          code: devCode,
+          expiresAt: Date.now() + (5 * 60 * 1000), // 5 minutes
+          attempts: 0
+        });
+        
+        console.log(`🧪 DEV BYPASS: Final Code ${devCode} generated for ${phoneNumber} (ID: ${devVerificationId})`);
+        
+        return res.json({
+          success: true,
+          verificationId: devVerificationId,
+          message: 'كود التحقق جاهز (وضع التطوير النهائي)',
+          provider: 'development-final',
+          devCode: devCode // Only in development
+        });
+      }
+      
       res.status(500).json({
         success: false,
         error: 'حدث خطأ غير متوقع. حاول مرة أخرى'
