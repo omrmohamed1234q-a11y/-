@@ -579,6 +579,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     standardHeaders: true,
     legacyHeaders: false,
   });
+
+  // ==================== SMS DIAGNOSTICS (ADMIN ONLY) ====================
+  
+  // SMS Provider Diagnostics - Admin only for debugging (PROTECTED)
+  app.get('/api/sms/diagnostics', isAdminAuthenticated, async (req, res) => {
+    try {
+      const diagnostics = {
+        timestamp: new Date().toISOString(),
+        twilio: {
+          configured: twilioSMSService.isEnabled(),
+          accountSid: process.env.TWILIO_ACCOUNT_SID ? 
+            `${process.env.TWILIO_ACCOUNT_SID.substring(0, 8)}...` : 'Not configured',
+          hasFromNumber: !!process.env.TWILIO_PHONE_NUMBER,
+          fromNumber: process.env.TWILIO_PHONE_NUMBER ? 
+            `${process.env.TWILIO_PHONE_NUMBER.substring(0, 6)}...` : 'Not configured',
+          stats: twilioSMSService.getServiceStats()
+        },
+        vonage: {
+          configured: !!(process.env.VONAGE_API_KEY && process.env.VONAGE_API_SECRET),
+          hasApiKey: !!process.env.VONAGE_API_KEY,
+          hasApiSecret: !!process.env.VONAGE_API_SECRET,
+          apiKey: process.env.VONAGE_API_KEY ? 
+            `${process.env.VONAGE_API_KEY.substring(0, 8)}...` : 'Not configured',
+          sender: 'VONAGE'
+        },
+        rateLimit: {
+          windowMs: '15 minutes',
+          maxAttempts: 10,
+          verificationWindow: '10 minutes', 
+          maxVerificationAttempts: 5
+        },
+        lastUpdated: 'September 16, 2025 - Latest Fixes Applied'
+      };
+
+      console.log('📊 SMS Diagnostics requested:', {
+        twilio: diagnostics.twilio.configured,
+        vonage: diagnostics.vonage.configured,
+        timestamp: diagnostics.timestamp
+      });
+
+      res.json(diagnostics);
+      
+    } catch (error: any) {
+      console.error('❌ SMS diagnostics error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve diagnostics'
+      });
+    }
+  });
   
   // ==================== SMS ENDPOINTS (Multi-Provider) ====================
   
@@ -613,14 +663,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             provider: 'twilio'
           });
         } else {
-          console.warn('⚠️ Twilio failed, trying Message Central fallback:', twilioResult.error);
+          console.warn('⚠️ Twilio failed, trying Vonage fallback:', twilioResult.error);
         }
       } else {
-        console.log('⚠️ Twilio not configured, trying Message Central');
+        console.log('⚠️ Twilio not configured, trying Vonage fallback');
       }
 
-      // Secondary: Message Central temporarily disabled (missing API keys)
-      console.log('⚠️ Message Central not configured, skipping to Vonage fallback');
+      // Fallback: Use Vonage SMS service
+      console.log('🔄 Switching to Vonage SMS service as fallback');
 
       // Final Fallback: Use Vonage if all else fails
       if (!process.env.VONAGE_API_KEY || !process.env.VONAGE_API_SECRET) {
@@ -648,12 +698,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔑 Verification ID: ${verificationId} (code details hidden for security)`);
 
       try {
-        // Send SMS via Vonage (fallback) - using numeric sender for Egypt
+        // Send SMS via Vonage (fallback) - using region-aware sender
+        const vonageSender = phoneNumber.startsWith('+20') ? '12345' : 'VONAGE'; // Numeric for Egypt, branded for others
         const response = await vonage.sms.send({
           to: phoneNumber,
-          from: '12345', // Numeric sender (more reliable for Egypt than alphanumeric)
+          from: vonageSender,
           text: `كود التحقق الخاص بك: ${code}\nصالح لمدة 5 دقائق فقط.\nاطبعلي - خدمة الطباعة الذكية`
         });
+        
+        console.log(`📧 Vonage sender used: ${vonageSender} (region-aware for ${phoneNumber})`);
 
         if (response.messages && response.messages[0].status === '0') {
           console.log('✅ SMS sent successfully via Vonage (fallback)');
@@ -786,83 +839,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Check if this is a Message Central verification ID
-      if (verificationId.startsWith('mc_')) {
-        console.log('💰 Using Message Central verification service');
+      // Check if this is a Vonage verification ID
+      if (verificationId.startsWith('vonage_')) {
+        console.log('🔄 Using Vonage verification service');
         
-        const messageCentralResult = await messageCentralService.verifyCode(verificationId, code);
+        const verification = verificationCodes.get(verificationId);
         
-        if (messageCentralResult.success) {
-          console.log('✅ Message Central SMS verification successful');
-          
-          return res.json({
-            success: true,
-            message: 'تم التحقق بنجاح عبر Message Central',
-            provider: 'messagecentral'
+        if (!verification) {
+          return res.status(400).json({
+            success: false,
+            error: 'كود التحقق غير صالح أو منتهي الصلاحية'
           });
-        } else {
-          console.log(`❌ Message Central verification failed: ${messageCentralResult.error}`);
+        }
+
+        // Check if expired
+        if (verification.expiresAt < Date.now()) {
+          verificationCodes.delete(verificationId);
+          return res.status(410).json({
+            success: false,
+            error: 'انتهت صلاحية الكود. أطلب كود جديد'
+          });
+        }
+
+        // Check attempt limit (max 3 attempts)
+        if (verification.attempts >= 3) {
+          verificationCodes.delete(verificationId);
+          return res.status(429).json({
+            success: false,
+            error: 'تم تجاوز عدد المحاولات المسموح. أطلب كود جديد'
+          });
+        }
+
+        // Increment attempts
+        verification.attempts++;
+
+        // Verify code
+        if (verification.code !== code.toString()) {
+          console.log(`❌ Wrong code attempt ${verification.attempts}/3 for ${verification.phoneNumber}`);
           
           return res.status(400).json({
             success: false,
-            error: messageCentralResult.error || 'الكود غير صحيح'
+            error: `الكود غير صحيح. المحاولة ${verification.attempts}/3`
           });
         }
-      }
 
-      // Handle Vonage verification (legacy support)
-      console.log('🔄 Using Vonage verification service (legacy)');
-      
-      const verification = verificationCodes.get(verificationId);
-      
-      if (!verification) {
-        return res.status(400).json({
-          success: false,
-          error: 'كود التحقق غير صالح أو منتهي الصلاحية'
-        });
-      }
-
-      // Check if expired
-      if (verification.expiresAt < Date.now()) {
+        // Success! Clean up and return success
         verificationCodes.delete(verificationId);
-        return res.status(410).json({
-          success: false,
-          error: 'انتهت صلاحية الكود. أطلب كود جديد'
-        });
-      }
-
-      // Check attempt limit (max 3 attempts)
-      if (verification.attempts >= 3) {
-        verificationCodes.delete(verificationId);
-        return res.status(429).json({
-          success: false,
-          error: 'تم تجاوز عدد المحاولات المسموح. أطلب كود جديد'
-        });
-      }
-
-      // Increment attempts
-      verification.attempts++;
-
-      // Verify code
-      if (verification.code !== code.toString()) {
-        console.log(`❌ Wrong code attempt ${verification.attempts}/3 for ${verification.phoneNumber}`);
         
-        return res.status(400).json({
-          success: false,
-          error: `الكود غير صحيح. المحاولة ${verification.attempts}/3`
+        console.log(`✅ Vonage SMS verification successful for ${verification.phoneNumber}`);
+        
+        return res.json({
+          success: true,
+          message: 'تم التحقق بنجاح عبر Vonage',
+          phoneNumber: verification.phoneNumber,
+          provider: 'vonage'
         });
       }
 
-      // Success! Clean up and return success
-      verificationCodes.delete(verificationId);
+      // Handle unknown verification ID format
+      console.log(`❌ Unknown verification ID format: ${verificationId}`);
       
-      console.log(`✅ Vonage SMS verification successful for ${verification.phoneNumber}`);
-      
-      res.json({
-        success: true,
-        message: 'تم التحقق بنجاح عبر Vonage',
-        phoneNumber: verification.phoneNumber,
-        provider: 'vonage'
+      return res.status(400).json({
+        success: false,
+        error: 'معرف التحقق غير صالح أو غير مدعوم'
       });
 
     } catch (error: any) {
