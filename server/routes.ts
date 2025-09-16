@@ -41,7 +41,7 @@ import {
 import { AutomaticNotificationService } from './automatic-notifications';
 import { Vonage } from '@vonage/server-sdk';
 import { twilioSMSService } from './twilio-service';
-import { messageCentralService } from './messagecentral-service';
+// import { messageCentralService } from './messagecentral-service'; // Temporarily disabled - missing API keys
 
 // Using centralized security singleton (no need to create new instance)
 
@@ -619,27 +619,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('⚠️ Twilio not configured, trying Message Central');
       }
 
-      // Secondary: Try Message Central (cost-effective alternative)
-      try {
-        console.log('💰 Using Message Central SMS service (cost-effective)');
-        
-        const messageCentralResult = await messageCentralService.sendVerificationCode(phoneNumber);
-        
-        if (messageCentralResult.success) {
-          console.log('✅ SMS sent successfully via Message Central');
-          
-          return res.json({
-            success: true,
-            verificationId: messageCentralResult.verificationId,
-            message: 'تم إرسال الكود بنجاح عبر Message Central',
-            provider: 'messagecentral'
-          });
-        } else {
-          console.warn('⚠️ Message Central failed, trying Vonage fallback:', messageCentralResult.error);
-        }
-      } catch (error: any) {
-        console.warn('⚠️ Message Central error, trying Vonage fallback:', error.message);
-      }
+      // Secondary: Message Central temporarily disabled (missing API keys)
+      console.log('⚠️ Message Central not configured, skipping to Vonage fallback');
 
       // Final Fallback: Use Vonage if all else fails
       if (!process.env.VONAGE_API_KEY || !process.env.VONAGE_API_SECRET) {
