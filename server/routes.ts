@@ -556,12 +556,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // SMS rate limiting - Very strict to prevent abuse and cost overrun
   const smsLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3, // Only 3 SMS sends per hour per IP
+    windowMs: 15 * 60 * 1000, // 15 minutes (reduced for testing)
+    max: 10, // Increased to 10 attempts for testing
     message: {
       success: false,
-      error: 'تم تجاوز عدد المحاولات المسموحة لإرسال أكواد التحقق. حاول مرة أخرى بعد ساعة',
-      retryAfter: '1 hour'
+      error: 'تم تجاوز عدد المحاولات المسموحة لإرسال أكواد التحقق. حاول مرة أخرى بعد 15 دقيقة',
+      retryAfter: '15 minutes'
     },
     standardHeaders: true,
     legacyHeaders: false,
@@ -648,10 +648,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔑 Verification ID: ${verificationId} (code details hidden for security)`);
 
       try {
-        // Send SMS via Vonage (fallback) - fixed sender name
+        // Send SMS via Vonage (fallback) - using numeric sender for Egypt
         const response = await vonage.sms.send({
           to: phoneNumber,
-          from: 'Itbaali', // Alphanumeric sender name (Vonage requires non-Arabic)
+          from: '12345', // Numeric sender (more reliable for Egypt than alphanumeric)
           text: `كود التحقق الخاص بك: ${code}\nصالح لمدة 5 دقائق فقط.\nاطبعلي - خدمة الطباعة الذكية`
         });
 
@@ -697,7 +697,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       } catch (vonageError: any) {
-        console.error('❌ Both Twilio and Vonage failed:', vonageError);
+        console.error('❌ Vonage SMS detailed error:', {
+          error: vonageError.message,
+          response: vonageError.response,
+          stack: vonageError.stack
+        });
+        
+        if (vonageError.response && vonageError.response.messages) {
+          vonageError.response.messages.forEach((msg: any, index: number) => {
+            console.error(`❌ Vonage Message ${index + 1}:`, {
+              to: msg.to,
+              status: msg.status,
+              errorText: msg.errorText || msg['error-text'],
+              messageId: msg.messageId,
+              remainingBalance: msg.remainingBalance,
+              messagePrice: msg.messagePrice,
+              network: msg.network
+            });
+          });
+        }
+        
+        console.error('❌ Both Twilio and Vonage failed:', vonageError.message);
         
         // Clean up verification code on error
         if (verificationId) {
