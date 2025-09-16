@@ -14,6 +14,29 @@ export interface UploadResult {
   folderLink?: string;
 }
 
+// 🚀 CHUNKED UPLOAD: Interfaces for high-speed parallel upload
+export interface ChunkUploadProgress {
+  chunkIndex: number;
+  totalChunks: number;
+  uploadedBytes: number;
+  totalBytes: number;
+  percentage: number;
+}
+
+export interface ChunkedUploadResult extends UploadResult {
+  chunks?: number;
+  uploadTime?: number;
+  averageSpeed?: string;
+}
+
+export interface ChunkInfo {
+  index: number;
+  size: number;
+  start: number;
+  end: number;
+  data: Blob;
+}
+
 // Upload file using Cloudinary with account integration
 export async function uploadFile(file: File): Promise<UploadResult> {
   console.log(`📤 Uploading to Cloudinary: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
@@ -148,7 +171,220 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
   }
 }
 
-// 🚀 REMOVED: fileToBuffer function - no longer needed with FormData approach
+// 🚀 CHUNKED UPLOAD: Constants and utility functions
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks for optimal speed
+const MAX_PARALLEL_CHUNKS = 3; // Prevent overwhelming the server
+const CHUNK_TIMEOUT = 30000; // 30 seconds per chunk
+
+// 🚀 CHUNKED UPLOAD: Split file into optimized chunks
+function createChunks(file: File): ChunkInfo[] {
+  const chunks: ChunkInfo[] = [];
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(start + CHUNK_SIZE, file.size);
+    const chunkData = file.slice(start, end);
+    
+    chunks.push({
+      index: i,
+      size: end - start,
+      start,
+      end,
+      data: chunkData
+    });
+  }
+  
+  console.log(`📊 Created ${totalChunks} chunks for ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+  return chunks;
+}
+
+// 🚀 CHUNKED UPLOAD: Upload single chunk with retry logic
+async function uploadChunk(
+  chunk: ChunkInfo, 
+  sessionId: string, 
+  fileName: string,
+  totalChunks: number,
+  onProgress?: (progress: ChunkUploadProgress) => void
+): Promise<boolean> {
+  const maxRetries = 3;
+  let attempt = 0;
+  
+  while (attempt < maxRetries) {
+    try {
+      const formData = new FormData();
+      formData.append('chunk', chunk.data);
+      formData.append('chunkIndex', chunk.index.toString());
+      formData.append('totalChunks', totalChunks.toString());
+      formData.append('sessionId', sessionId);
+      formData.append('fileName', fileName);
+      
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch('/api/upload/chunk', {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          'X-Request-Timeout': CHUNK_TIMEOUT.toString()
+        },
+        body: formData,
+        signal: AbortSignal.timeout(CHUNK_TIMEOUT)
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          // Update progress
+          onProgress?.({
+            chunkIndex: chunk.index,
+            totalChunks,
+            uploadedBytes: chunk.size,
+            totalBytes: chunk.size * totalChunks, 
+            percentage: ((chunk.index + 1) / totalChunks) * 100
+          });
+          
+          console.log(`✅ Chunk ${chunk.index + 1}/${totalChunks} uploaded successfully`);
+          return true;
+        }
+      }
+      
+      throw new Error(`Chunk ${chunk.index} upload failed: ${response.status}`);
+      
+    } catch (error) {
+      attempt++;
+      console.warn(`⚠️ Chunk ${chunk.index} attempt ${attempt} failed:`, error);
+      
+      if (attempt >= maxRetries) {
+        throw new Error(`Chunk ${chunk.index} failed after ${maxRetries} attempts`);
+      }
+      
+      // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+    }
+  }
+  
+  return false;
+}
+
+// 🚀 CHUNKED UPLOAD: Main chunked upload function
+export async function uploadFileWithChunks(
+  file: File, 
+  printSettings?: any,
+  onProgress?: (progress: ChunkUploadProgress) => void
+): Promise<ChunkedUploadResult> {
+  const startTime = Date.now();
+  console.log(`🚀 Starting chunked upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+  
+  try {
+    // Validate file size for chunking (only chunk files > 10MB)
+    if (file.size <= 10 * 1024 * 1024) {
+      console.log('📁 File under 10MB, using standard upload');
+      return await uploadFileToGoogleDrive(file, printSettings);
+    }
+    
+    // Create session ID for this upload
+    const sessionId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const chunks = createChunks(file);
+    
+    // Upload chunks in parallel batches
+    const uploadPromises: Promise<boolean>[] = [];
+    let completedChunks = 0;
+    
+    for (let i = 0; i < chunks.length; i += MAX_PARALLEL_CHUNKS) {
+      const batch = chunks.slice(i, i + MAX_PARALLEL_CHUNKS);
+      
+      const batchPromises = batch.map(chunk => 
+        uploadChunk(chunk, sessionId, file.name, chunks.length, (progress) => {
+          completedChunks++;
+          const overallProgress = {
+            ...progress,
+            percentage: (completedChunks / chunks.length) * 100
+          };
+          onProgress?.(overallProgress);
+        })
+      );
+      
+      const batchResults = await Promise.all(batchPromises);
+      uploadPromises.push(...batchPromises);
+      
+      // Check if any chunk in this batch failed
+      if (batchResults.some(result => !result)) {
+        throw new Error('One or more chunks failed to upload');
+      }
+      
+      console.log(`✅ Batch ${Math.floor(i / MAX_PARALLEL_CHUNKS) + 1} completed`);
+    }
+    
+    // Merge chunks on server
+    console.log('🔗 Merging chunks on server...');
+    const authHeaders = await getAuthHeaders();
+    const mergeResponse = await fetch('/api/upload/merge-chunks', {
+      method: 'POST',
+      headers: {
+        ...authHeaders,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sessionId,
+        fileName: file.name,
+        totalChunks: chunks.length,
+        fileSize: file.size,
+        mimeType: file.type,
+        printSettings
+      })
+    });
+    
+    const mergeResult = await mergeResponse.json();
+    
+    if (!mergeResult.success) {
+      throw new Error(mergeResult.error || 'Failed to merge chunks');
+    }
+    
+    const uploadTime = (Date.now() - startTime) / 1000;
+    const averageSpeed = ((file.size / 1024 / 1024) / uploadTime).toFixed(2);
+    
+    console.log(`🎉 Chunked upload completed in ${uploadTime.toFixed(2)}s (${averageSpeed}MB/s)`);
+    
+    const result: ChunkedUploadResult = {
+      success: true,
+      url: mergeResult.url,
+      downloadUrl: mergeResult.downloadUrl,
+      previewUrl: mergeResult.previewUrl,
+      provider: 'google_drive' as const,
+      fileId: mergeResult.fileId,
+      folderLink: mergeResult.folderLink,
+      chunks: chunks.length,
+      uploadTime,
+      averageSpeed: `${averageSpeed}MB/s`
+    };
+    
+    // Notify server about successful upload
+    await notifyServerUpload(file, result);
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Chunked upload failed:', error);
+    
+    // Cleanup failed upload session
+    try {
+      await fetch('/api/upload/cleanup-chunks', {
+        method: 'POST',
+        headers: {
+          ...(await getAuthHeaders()),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ sessionId: `upload_${Date.now()}` })
+      });
+    } catch (cleanupError) {
+      console.warn('⚠️ Failed to cleanup chunks:', cleanupError);
+    }
+    
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Chunked upload failed',
+      provider: undefined
+    };
+  }
+}
 
 // Notify server about file upload for account integration
 async function notifyServerUpload(file: File, result: UploadResult): Promise<void> {

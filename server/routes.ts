@@ -4744,6 +4744,223 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 🚀 CHUNKED UPLOAD: Store for managing chunk sessions
+  const chunkSessions = new Map<string, {
+    chunks: Map<number, Buffer>;
+    totalChunks: number;
+    fileName: string;
+    fileSize?: number;
+    mimeType?: string;
+    uploadedChunks: number;
+    printSettings?: any;
+    createdAt: Date;
+  }>();
+
+  // 🚀 CHUNKED UPLOAD: Receive individual file chunks
+  app.post('/api/upload/chunk', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const { sessionId, chunkIndex, totalChunks, fileName } = req.body;
+      const chunkFile = req.files?.chunk;
+
+      if (!chunkFile || !sessionId || chunkIndex === undefined || !totalChunks || !fileName) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required chunk data'
+        });
+      }
+
+      const chunkIndexNum = parseInt(chunkIndex);
+      const totalChunksNum = parseInt(totalChunks);
+
+      // Initialize session if not exists
+      if (!chunkSessions.has(sessionId)) {
+        chunkSessions.set(sessionId, {
+          chunks: new Map<number, Buffer>(),
+          totalChunks: totalChunksNum,
+          fileName,
+          uploadedChunks: 0,
+          createdAt: new Date()
+        });
+        console.log(`🚀 Started chunked upload session: ${sessionId} for ${fileName}`);
+      }
+
+      const session = chunkSessions.get(sessionId)!;
+
+      // Store chunk data
+      let chunkBuffer: Buffer;
+      if (Array.isArray(chunkFile)) {
+        chunkBuffer = Buffer.from(chunkFile[0].data);
+      } else {
+        chunkBuffer = Buffer.from(chunkFile.data);
+      }
+
+      session.chunks.set(chunkIndexNum, chunkBuffer);
+      session.uploadedChunks++;
+
+      console.log(`✅ Chunk ${chunkIndexNum + 1}/${totalChunksNum} received for ${fileName} (${chunkBuffer.length} bytes)`);
+
+      // Check if all chunks are received
+      const isComplete = session.uploadedChunks === totalChunksNum;
+
+      res.json({
+        success: true,
+        chunkIndex: chunkIndexNum,
+        totalChunks: totalChunksNum,
+        uploadedChunks: session.uploadedChunks,
+        isComplete,
+        message: `Chunk ${chunkIndexNum + 1}/${totalChunksNum} uploaded successfully`
+      });
+
+    } catch (error) {
+      console.error('❌ Chunk upload error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to upload chunk'
+      });
+    }
+  });
+
+  // 🚀 CHUNKED UPLOAD: Merge chunks into final file
+  app.post('/api/upload/merge-chunks', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const { sessionId, fileName, totalChunks, fileSize, mimeType, printSettings } = req.body;
+
+      if (!sessionId || !fileName || !totalChunks) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required merge data'
+        });
+      }
+
+      const session = chunkSessions.get(sessionId);
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          error: 'Upload session not found'
+        });
+      }
+
+      if (session.uploadedChunks !== totalChunks) {
+        return res.status(400).json({
+          success: false,
+          error: `Incomplete upload: ${session.uploadedChunks}/${totalChunks} chunks received`
+        });
+      }
+
+      console.log(`🔗 Merging ${totalChunks} chunks for ${fileName}...`);
+
+      // Merge chunks in order
+      const mergedBuffers: Buffer[] = [];
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = session.chunks.get(i);
+        if (!chunk) {
+          throw new Error(`Missing chunk ${i}`);
+        }
+        mergedBuffers.push(chunk);
+      }
+
+      const finalBuffer = Buffer.concat(mergedBuffers);
+      console.log(`✅ Merged file size: ${(finalBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+
+      // Get user info for folder organization
+      let customerName = 'عميل غير محدد';
+      try {
+        const userInfo = JSON.parse(JSON.stringify(req.user || {}));
+        if (userInfo.displayName || userInfo.fullName) {
+          customerName = userInfo.displayName || userInfo.fullName;
+        }
+      } catch (error) {
+        console.log('⚠️ Could not get user info for folder naming');
+      }
+
+      // Upload merged file to Google Drive
+      const uploadResult = await hybridUploadService.uploadBuffer(
+        finalBuffer,
+        fileName,
+        mimeType || 'application/octet-stream',
+        customerName,
+        undefined, // googleDriveFolder
+        userId,
+        sessionId,
+        true // useTemporaryStorage
+      );
+
+      // Clean up session
+      chunkSessions.delete(sessionId);
+      console.log(`🧹 Cleaned up chunk session: ${sessionId}`);
+
+      if (uploadResult.googleDrive?.success) {
+        res.json({
+          success: true,
+          url: uploadResult.googleDrive.folderLink || uploadResult.primaryUrl,
+          downloadUrl: uploadResult.googleDrive.directDownloadLink,
+          previewUrl: uploadResult.googleDrive.webViewLink,
+          fileId: uploadResult.googleDrive.fileId,
+          folderLink: uploadResult.googleDrive.folderLink,
+          message: 'Chunked upload completed successfully'
+        });
+      } else {
+        throw new Error(uploadResult.googleDrive?.error || 'Google Drive upload failed');
+      }
+
+    } catch (error) {
+      console.error('❌ Chunk merge error:', error);
+      
+      // Clean up session on error
+      if (req.body.sessionId) {
+        chunkSessions.delete(req.body.sessionId);
+      }
+
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to merge chunks'
+      });
+    }
+  });
+
+  // 🚀 CHUNKED UPLOAD: Cleanup failed upload sessions
+  app.post('/api/upload/cleanup-chunks', requireAuth, async (req: any, res) => {
+    try {
+      const { sessionId } = req.body;
+
+      if (sessionId && chunkSessions.has(sessionId)) {
+        chunkSessions.delete(sessionId);
+        console.log(`🧹 Cleaned up failed chunk session: ${sessionId}`);
+      }
+
+      // Also cleanup old sessions (> 1 hour)
+      const now = new Date();
+      let cleanedCount = 0;
+      
+      for (const [id, session] of chunkSessions.entries()) {
+        const ageMinutes = (now.getTime() - session.createdAt.getTime()) / (1000 * 60);
+        if (ageMinutes > 60) {
+          chunkSessions.delete(id);
+          cleanedCount++;
+        }
+      }
+
+      if (cleanedCount > 0) {
+        console.log(`🧹 Cleaned up ${cleanedCount} old chunk sessions`);
+      }
+
+      res.json({
+        success: true,
+        message: 'Cleanup completed',
+        sessionsCleaned: cleanedCount + (sessionId && chunkSessions.has(sessionId) ? 0 : 1)
+      });
+
+    } catch (error) {
+      console.error('❌ Cleanup error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to cleanup chunks'
+      });
+    }
+  });
+
   // Analytics endpoints
   app.get('/api/admin/analytics', async (req: any, res) => {
     try {
