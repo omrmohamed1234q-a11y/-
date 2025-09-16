@@ -22,6 +22,10 @@ import {
   type DeliveryValidation 
 } from '@/utils/locationUtils';
 import { useToast } from '@/hooks/use-toast';
+import { useGooglePlaces, type PlaceResult } from '@/hooks/useGooglePlaces';
+import { locationSearchService, type SearchResult } from '@/services/locationSearchService';
+// إزالة مؤقتة لـ GoogleMapsLoader لحل المشكلة
+// import { GoogleMapsLoader } from '@/lib/googleMapsLoader';
 
 export interface SelectedDeliveryLocation {
   type: 'fixed' | 'gps' | 'search' | 'manual';
@@ -45,67 +49,130 @@ const DeliveryLocationSelector: React.FC<DeliveryLocationSelectorProps> = ({
   className = ''
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<FixedLocation[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualAddress, setManualAddress] = useState('');
+  const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
   const { toast } = useToast();
+  const { searchPlaces, isLoading: isPlacesLoading } = useGooglePlaces();
 
-  // البحث في الأماكن الثابتة
-  const searchLocations = useCallback((query: string) => {
-    if (!query.trim()) {
-      setSearchResults(getPopularLocations());
-      return;
+  // البحث المحسن مع دمج Google Places
+  const searchLocations = useCallback(async (query: string) => {
+    setIsLoading(true);
+    
+    try {
+      // البحث في الخدمة المحلية أولاً
+      const localResults = await locationSearchService.searchLocations(query, {
+        userLocation,
+        maxResults: 8,
+        sortBy: userLocation ? 'distance' : 'popularity'
+      });
+
+      // إذا كان النص طويل، ابحث أيضاً في Google Places
+      if (query.trim().length > 2) {
+        try {
+          const placesResults = await searchPlaces(query, {
+            location: userLocation || { lat: 30.0964396, lng: 32.4642696 },
+            radius: 50000
+          });
+
+          // تحويل نتائج Google Places إلى SearchResult
+          const convertedPlaces: SearchResult[] = placesResults.map(place => ({
+            id: place.place_id,
+            name: place.name,
+            address: place.formatted_address,
+            coordinates: place.geometry.location,
+            distance: userLocation ? calculateDistance(
+              userLocation.lat,
+              userLocation.lng,
+              place.geometry.location.lat,
+              place.geometry.location.lng
+            ) : undefined,
+            deliveryFee: 15, // رسوم افتراضية للأماكن من Google
+            zone: 'mixed',
+            isFixed: false,
+            isPopular: false,
+            source: 'places' as const
+          }));
+
+          // دمج النتائج وترتيبها
+          const allResults = [...localResults, ...convertedPlaces];
+          const uniqueResults = allResults.filter((result, index, array) => 
+            array.findIndex(r => r.name === result.name && r.address === result.address) === index
+          );
+
+          setSearchResults(uniqueResults.slice(0, 10));
+        } catch (placesError) {
+          console.warn('فشل في البحث في Google Places:', placesError);
+          setSearchResults(localResults);
+        }
+      } else {
+        setSearchResults(localResults);
+      }
+    } catch (error) {
+      console.error('خطأ في البحث:', error);
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
     }
-
-    const filtered = FIXED_LOCATIONS.filter(location =>
-      location.name.includes(query) ||
-      location.city.includes(query)
-    );
-
-    // ترتيب حسب الشعبية أولاً
-    const sorted = filtered.sort((a, b) => {
-      if (a.isPopular && !b.isPopular) return -1;
-      if (!a.isPopular && b.isPopular) return 1;
-      return a.deliveryFee - b.deliveryFee;
-    });
-
-    setSearchResults(sorted);
-  }, []);
+  }, [userLocation, searchPlaces]);
 
   // تحديث البحث عند تغيير النص
   useEffect(() => {
     searchLocations(searchQuery);
   }, [searchQuery, searchLocations]);
 
-  // تحميل الأماكن الشائعة في البداية
+  // تحميل أماكن شائعة في البداية (بدون Google Maps مؤقتاً)
   useEffect(() => {
-    setSearchResults(getPopularLocations());
-  }, []);
+    const initializeService = async () => {
+      try {
+        // تحميل الأماكن الشائعة من الخدمة المحلية
+        const popular = await locationSearchService.searchLocations('', {
+          userLocation,
+          includePopularOnly: true,
+          maxResults: 6
+        });
+        setSearchResults(popular);
+        
+        // TODO: إضافة تحميل Google Maps API لاحقاً
+        console.log('🎯 نظام اختيار الموقع جاهز مع البحث المحلي');
+      } catch (error) {
+        console.error('فشل في تهيئة خدمة المواقع:', error);
+        // fallback للأماكن الثابتة
+        setSearchResults([]);
+      }
+    };
+    
+    initializeService();
+  }, [userLocation]);
 
-  // اختيار مكان ثابت
-  const handleFixedLocationSelect = async (fixedLocation: FixedLocation) => {
+  // اختيار موقع من النتائج
+  const handleLocationSelect = async (searchResult: SearchResult) => {
     const locationData: LocationData = {
-      latitude: fixedLocation.coordinates.lat,
-      longitude: fixedLocation.coordinates.lng,
-      address: `${fixedLocation.name}, ${fixedLocation.city}`
+      latitude: searchResult.coordinates.lat,
+      longitude: searchResult.coordinates.lng,
+      address: searchResult.address
     };
 
     const validation = validateDeliveryLocation(locationData);
 
     const selection: SelectedDeliveryLocation = {
-      type: 'fixed',
+      type: searchResult.source === 'fixed' ? 'fixed' : 'search',
       location: locationData,
       validation,
-      fixedLocationData: fixedLocation,
-      displayName: fixedLocation.name
+      displayName: searchResult.name
     };
+
+    // إضافة للبحثات الحديثة
+    locationSearchService.addToRecentSearches(searchResult);
 
     onLocationSelect(selection);
     toast({
       title: "تم اختيار الموقع",
-      description: `${fixedLocation.name} - رسوم التوصيل: ${fixedLocation.deliveryFee} جنيه`,
+      description: `${searchResult.name} - رسوم التوصيل: ${validation.deliveryFee} جنيه`,
+      variant: validation.isValid ? "default" : "destructive"
     });
   };
 
@@ -115,6 +182,13 @@ const DeliveryLocationSelector: React.FC<DeliveryLocationSelectorProps> = ({
     
     try {
       const location = await getCurrentLocation();
+      
+      // حفظ موقع المستخدم للاستخدام في البحث
+      setUserLocation({
+        lat: location.latitude,
+        lng: location.longitude
+      });
+      
       const validation = validateDeliveryLocation(location);
       
       // الحصول على العنوان
@@ -254,28 +328,64 @@ const DeliveryLocationSelector: React.FC<DeliveryLocationSelectorProps> = ({
 
         {/* قائمة الأماكن */}
         <div className="space-y-2 mb-4">
-          {searchResults.map((location) => (
-            <Button
-              key={location.id}
-              variant="ghost"
-              className="w-full h-16 justify-between p-4 hover:bg-gray-50"
-              onClick={() => handleFixedLocationSelect(location)}
-              data-testid={`location-${location.id}`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100">
-                  <Clock className="h-4 w-4 text-gray-600" />
+          {isLoading || isPlacesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <span className="mr-2 text-gray-600">جاري البحث...</span>
+            </div>
+          ) : searchResults.length > 0 ? (
+            searchResults.map((location) => (
+              <Button
+                key={location.id}
+                variant="ghost"
+                className="w-full h-16 justify-between p-4 hover:bg-gray-50"
+                onClick={() => handleLocationSelect(location)}
+                data-testid={`location-${location.id}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100">
+                    {location.source === 'fixed' ? (
+                      <Clock className="h-4 w-4 text-gray-600" />
+                    ) : (
+                      <MapPin className="h-4 w-4 text-green-600" />
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-gray-900">{location.name}</p>
+                    <p className="text-sm text-gray-500">
+                      {location.address}
+                      {location.distance && (
+                        <span className="text-blue-600 mr-2">
+                          • {location.distance.toFixed(1)} كم
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-900">{location.name}</p>
-                  <p className="text-sm text-gray-500">{location.city}</p>
+                <div className="flex items-center gap-2">
+                  {location.isPopular && (
+                    <Badge variant="secondary" className="text-xs">
+                      شائع
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="text-blue-600">
+                    {location.deliveryFee} جنيه
+                  </Badge>
                 </div>
-              </div>
-              <Badge variant="outline" className="text-blue-600">
-                {location.deliveryFee} جنيه
-              </Badge>
-            </Button>
-          ))}
+              </Button>
+            ))
+          ) : searchQuery.trim() ? (
+            <div className="text-center py-8 text-gray-500">
+              <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <p>لا توجد نتائج للبحث "{searchQuery}"</p>
+              <p className="text-sm mt-1">جرب كلمات مختلفة أو استخدم موقعك الحالي</p>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <p>ابدأ بكتابة اسم المكان أو استخدم موقعك الحالي</p>
+            </div>
+          )}
         </div>
 
         {/* إدخال عنوان يدوي */}
