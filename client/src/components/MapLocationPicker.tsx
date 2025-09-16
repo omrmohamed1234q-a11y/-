@@ -43,9 +43,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const [mapCenter, setMapCenter] = useState({ lat: 30.0964396, lng: 32.4642696 }); // Default to Suez center
   const [selectedPosition, setSelectedPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [showMap, setShowMap] = useState(false);
-  const [showSimpleLocationPicker, setShowSimpleLocationPicker] = useState(false);
-  const [manualAddress, setManualAddress] = useState('');
-  const [selectedArea, setSelectedArea] = useState('');
+  const [selectedResult, setSelectedResult] = useState<any>(null);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
   const [error, setError] = useState<string>('');
   
@@ -60,17 +58,9 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
 
-  // Predefined areas in Suez with coordinates
-  const suezAreas = [
-    { name: 'الأربعين', lat: 30.0964396, lng: 32.4642696 },
-    { name: 'السويس الجديدة', lat: 30.0456789, lng: 32.5123456 },
-    { name: 'الجناين', lat: 30.0612345, lng: 32.4789012 },
-    { name: 'فيصل', lat: 30.0834567, lng: 32.4567890 },
-    { name: 'الضواحي', lat: 30.0723456, lng: 32.4901234 },
-    { name: 'المدينة المنورة', lat: 30.0545678, lng: 32.4812345 },
-    { name: 'الصدر', lat: 30.0767890, lng: 32.4656789 },
-    { name: 'الشيخ زايد', lat: 30.0890123, lng: 32.4734567 }
-  ];
+  // Search results from Google Places
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Load Google Maps when user wants to show map
   useEffect(() => {
@@ -226,49 +216,64 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   };
 
   const handleSearchLocation = async () => {
-    if (!searchQuery.trim() || !window.google) return;
+    if (!searchQuery.trim() || !isMapLoaded) return;
     
-    setIsLocationLoading(true);
+    setIsSearching(true);
     setError('');
     
-    const geocoder = new window.google.maps.Geocoder();
-    
     try {
-      const results = await new Promise((resolve, reject) => {
-        geocoder.geocode({
-          address: searchQuery + ', السويس, مصر',
-          region: 'EG'
-        }, (results: any, status: any) => {
-          if (status === 'OK') {
-            resolve(results);
-          } else {
-            reject(new Error('لم يتم العثور على الموقع'));
-          }
-        });
-      });
+      const service = new window.google.maps.places.PlacesService(mapInstanceRef.current || document.createElement('div'));
       
-      if (Array.isArray(results) && results.length > 0) {
-        const result = results[0];
-        const lat = result.geometry.location.lat();
-        const lng = result.geometry.location.lng();
+      const request = {
+        query: searchQuery,
+        location: new window.google.maps.LatLng(30.0964396, 32.4642696), // Suez center
+        radius: 50000, // 50km radius
+        language: 'ar'
+      };
+      
+      service.textSearch(request, (results: any[], status: any) => {
+        setIsSearching(false);
         
-        const newCenter = { lat, lng };
-        setMapCenter(newCenter);
-        setSelectedPosition(newCenter);
-        
-        if (mapInstanceRef.current && markerRef.current) {
-          mapInstanceRef.current.setCenter(newCenter);
-          mapInstanceRef.current.setZoom(16);
-          markerRef.current.setPosition(newCenter);
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+          setSearchResults(results.slice(0, 5)); // Show top 5 results
+        } else if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+          setSearchResults([]);
+          setError('لم يتم العثور على نتائج للبحث');
+        } else {
+          setError('خطأ في البحث، حاول مرة أخرى');
+          setSearchResults([]);
         }
-        
-        await handleLocationSelection(lat, lng);
-      }
+      });
     } catch (err: any) {
-      setError(err.message || 'فشل في البحث عن الموقع');
-    } finally {
-      setIsLocationLoading(false);
+      setIsSearching(false);
+      setError('خطأ في البحث');
+      setSearchResults([]);
     }
+  };
+
+  // Handle search result selection
+  const handleResultSelect = async (place: any) => {
+    const location: LocationData = {
+      latitude: place.geometry.location.lat(),
+      longitude: place.geometry.location.lng(),
+      address: place.formatted_address || place.name
+    };
+    
+    const validation = validateDeliveryLocation(location);
+    setValidation(validation);
+    setSelectedResult(place);
+    setAddress(location.address);
+    setSelectedPosition({ lat: location.latitude, lng: location.longitude });
+    
+    // Update map if loaded
+    if (mapInstanceRef.current) {
+      const newPos = { lat: location.latitude, lng: location.longitude };
+      mapInstanceRef.current.setCenter(newPos);
+      markerRef.current?.setPosition(newPos);
+    }
+    
+    onLocationSelect(location, validation);
+    setSearchResults([]); // Hide results after selection
   };
 
   const handleClearLocation = () => {
@@ -376,7 +381,11 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
               {/* Search input with dark theme */}
               <div className="relative">
                 <div className="flex items-center bg-gray-800 rounded-2xl border border-gray-600 overflow-hidden">
-                  <Search className="h-5 w-5 text-gray-400 ml-4" />
+                  {isSearching ? (
+                    <Loader2 className="h-5 w-5 text-blue-400 animate-spin ml-4" />
+                  ) : (
+                    <Search className="h-5 w-5 text-gray-400 ml-4" />
+                  )}
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -399,79 +408,49 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                 <span className="text-blue-400 font-medium text-lg">اختر من الخريطة</span>
               </button>
 
-              {/* Recent locations with dark theme */}
-              <div className="space-y-2">
-                {suezAreas.slice(0, 4).map((area, index) => (
-                  <button
-                    key={area.name}
-                    onClick={() => handleAreaSelect(area)}
-                    disabled={isLocationLoading}
-                    className="w-full flex items-center gap-3 p-4 hover:bg-gray-800 rounded-xl transition-colors text-right"
-                    data-testid={`button-area-${area.name}`}
-                  >
-                    <div className="flex items-center justify-center w-8 h-8 bg-gray-700 rounded-lg">
-                      <Clock className="h-4 w-4 text-gray-300" />
-                    </div>
-                    <div className="flex-1 text-right">
-                      <div className="text-white font-medium">{area.name}</div>
-                      <div className="text-gray-400 text-sm">السويس</div>
-                    </div>
-                  </button>
-                ))}
-
-                {/* Current location option */}
-                <button
-                  onClick={handleGetCurrentLocation}
-                  disabled={isLocationLoading}
-                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-800 rounded-xl transition-colors text-right"
-                  data-testid="button-current-location"
-                >
-                  <div className="flex items-center justify-center w-8 h-8 bg-gray-700 rounded-lg">
-                    {isLocationLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-gray-300" />
-                    ) : (
-                      <Navigation className="h-4 w-4 text-gray-300" />
-                    )}
-                  </div>
-                  <div className="flex-1 text-right">
-                    <div className="text-white font-medium">موقعي الحالي</div>
-                    <div className="text-gray-400 text-sm">
-                      {isLocationLoading ? 'جاري تحديد الموقع...' : 'استخدم GPS'}
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              {/* Manual address input option */}
-              {showSimpleLocationPicker && (
-                <div className="space-y-3 pt-4 border-t border-gray-700">
-                  <div className="flex gap-2">
-                    <Input
-                      value={manualAddress}
-                      onChange={(e) => setManualAddress(e.target.value)}
-                      placeholder="اكتب عنوانك بالتفصيل..."
-                      onKeyPress={(e) => e.key === 'Enter' && handleManualAddress()}
-                      className="flex-1 bg-gray-800 border-gray-600 text-white placeholder:text-gray-400"
-                    />
-                    <Button
-                      onClick={handleManualAddress}
-                      disabled={isLocationLoading || !manualAddress.trim()}
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700"
+              {/* Search Results */}
+              {searchResults.length > 0 && (
+                <div className="space-y-2">
+                  {searchResults.map((place, index) => (
+                    <button
+                      key={place.place_id || index}
+                      onClick={() => handleResultSelect(place)}
+                      className="w-full flex items-center gap-3 p-4 hover:bg-gray-800 rounded-xl transition-colors text-right"
                     >
-                      تأكيد
-                    </Button>
-                  </div>
+                      <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
+                        <MapPin className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1 text-right">
+                        <div className="text-white font-medium">{place.name}</div>
+                        <div className="text-gray-400 text-sm">{place.formatted_address || place.vicinity}</div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
 
-              {/* Toggle manual input */}
+              {/* Current location option */}
               <button
-                onClick={() => setShowSimpleLocationPicker(!showSimpleLocationPicker)}
-                className="w-full text-center py-2 text-blue-400 hover:text-blue-300 text-sm font-medium"
+                onClick={handleGetCurrentLocation}
+                disabled={isLocationLoading}
+                className="w-full flex items-center gap-3 p-4 hover:bg-gray-800 rounded-xl transition-colors text-right"
+                data-testid="button-current-location"
               >
-                {showSimpleLocationPicker ? 'إخفاء إدخال يدوي' : 'إدخال عنوان يدوي'}
+                <div className="flex items-center justify-center w-8 h-8 bg-gray-700 rounded-lg">
+                  {isLocationLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-300" />
+                  ) : (
+                    <Navigation className="h-4 w-4 text-gray-300" />
+                  )}
+                </div>
+                <div className="flex-1 text-right">
+                  <div className="text-white font-medium">موقعي الحالي</div>
+                  <div className="text-gray-400 text-sm">
+                    {isLocationLoading ? 'جاري تحديد الموقع...' : 'استخدم GPS'}
+                  </div>
+                </div>
               </button>
+
             </div>
           ) : (
             /* Map interface with dark theme */
@@ -487,7 +466,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                 />
                 <Button
                   onClick={handleSearchLocation}
-                  disabled={isLocationLoading || !searchQuery.trim()}
+                  disabled={isSearching || !searchQuery.trim()}
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700"
                 >

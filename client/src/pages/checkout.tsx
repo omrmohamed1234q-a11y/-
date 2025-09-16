@@ -14,10 +14,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ShoppingBag, MapPin, CreditCard, Truck, Gift, Star, Package, Tag, ShoppingCart, Calculator, Info, Heart, Settings, Ticket } from 'lucide-react';
 import PaymentMethods from '@/components/PaymentMethods';
-import DeliveryLocationSelector from '@/components/DeliveryLocationSelector';
+import MapLocationPicker from '@/components/MapLocationPicker';
 import PhoneVerificationModal from '@/components/PhoneVerificationModal';
 import type { LocationData, DeliveryValidation } from '@/utils/locationUtils';
-import type { SelectedDeliveryLocation } from '@/components/DeliveryLocationSelector';
 import { formatPrice, parsePrice } from '@/lib/utils';
 
 export default function CheckoutPage() {
@@ -142,15 +141,14 @@ export default function CheckoutPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Handle enhanced location selection from DeliveryLocationSelector
-  const handleLocationSelect = (selection: SelectedDeliveryLocation) => {
-    setSelectedLocation(selection.location);
-    setLocationValidation(selection.validation);
+  // Handle location selection
+  const handleLocationSelect = (location: LocationData, validation: DeliveryValidation) => {
+    setSelectedLocation(location);
+    setLocationValidation(validation);
     
-    // Auto-fill delivery address with smart display name
-    const displayAddress = selection.displayName || selection.location.address;
-    if (displayAddress && selection.validation.isValid) {
-      handleInputChange('deliveryAddress', displayAddress);
+    // Auto-fill delivery address if available
+    if (location.address && validation.isValid) {
+      handleInputChange('deliveryAddress', location.address);
     }
   };
 
@@ -490,17 +488,12 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
 
-              {/* Enhanced Delivery Location Selector - Only show if delivery is selected */}
+              {/* Enhanced Map Location Picker - Only show if delivery is selected */}
               {formData.deliveryMethod === 'delivery' && (
-                <DeliveryLocationSelector
+                <MapLocationPicker
                   onLocationSelect={handleLocationSelect}
                   onLocationClear={handleLocationClear}
-                  currentSelection={selectedLocation ? {
-                    type: 'gps',
-                    location: selectedLocation,
-                    validation: locationValidation || { isValid: false, distance: 0, deliveryFee: 0, message: '' },
-                    displayName: selectedLocation.address || 'موقع محدد'
-                  } : undefined}
+                  currentLocation={selectedLocation || undefined}
                   className="mb-6"
                 />
               )}
