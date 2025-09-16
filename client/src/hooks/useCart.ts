@@ -7,7 +7,7 @@ export interface CartItem {
   productId: string;
   productName: string;
   productImage: string;
-  price: string;
+  price: number; // 🔒 FIXED: Changed from string to number for consistent calculations
   quantity: number;
   variant?: {
     size?: string;
@@ -47,7 +47,7 @@ export function useCart() {
     mutationFn: async ({ productId, quantity = 1, variant }: {
       productId: string;
       quantity?: number;
-      variant?: any;
+      variant?: { size?: string; color?: string; }; // 🔒 FIXED: Replaced 'any' with proper type
     }) => {
       const response = await apiRequest('POST', '/api/cart/add', {
         productId,

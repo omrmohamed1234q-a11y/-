@@ -22,81 +22,54 @@ export default function PaymentSuccess() {
   const paymentMethod = urlParams.get('payment_method') || 'vodafone_cash';
 
   useEffect(() => {
-    const createOrderFromPayment = async () => {
+    const verifyAndFetchOrder = async () => {
       try {
-        setCreatingOrder(true);
+        setLoading(true);
         
-        // Create order from payment success
-        const orderData = {
-          paymentId: orderId || `PMT-${Date.now()}`,
-          amount: parseFloat(amount),
-          paymentMethod: paymentMethod === 'vodafone_cash' ? 'vodafone_cash' : 'card',
-          customerName: 'العميل الكريم', // This should come from form
-          customerPhone: '01234567890', // This should come from form
-          deliveryAddress: 'العنوان المحدد', // This should come from form
-          deliveryMethod: 'delivery',
-          items: [
-            {
-              name: 'خدمة الطباعة',
-              quantity: 1,
-              price: parseFloat(amount) - 2
-            }
-          ]
-        };
-
-        const response = await apiRequest('POST', '/api/orders/create-from-payment', orderData);
+        if (!orderId) {
+          throw new Error('معرف الطلب مفقود');
+        }
+        
+        // 🔒 SECURE: Fetch order from server using authenticated API
+        // The server should verify payment status with Paymob before returning order details
+        const response = await apiRequest('GET', `/api/orders/verify-payment/${orderId}`);
         const result = await response.json();
 
-        if (result.success) {
+        if (result.success && result.order) {
           setOrderDetails(result.order);
           toast({
-            title: "تم إنشاء الطلب بنجاح",
+            title: "تم التحقق من الدفع بنجاح",
             description: `رقم الطلب: ${result.order.orderNumber}`,
           });
         } else {
-          throw new Error(result.message || 'فشل في إنشاء الطلب');
+          throw new Error(result.message || 'فشل في التحقق من حالة الطلب');
         }
 
       } catch (error: any) {
-        console.error('Error creating order:', error);
+        console.error('Error verifying payment:', error);
         toast({
-          title: "خطأ في إنشاء الطلب",
-          description: error.message || 'حدث خطأ أثناء إنشاء الطلب',
+          title: "خطأ في التحقق من الدفع",
+          description: error.message || 'لا يمكن التحقق من حالة الدفع',
           variant: "destructive",
         });
         
-        // Fallback order details for demo
-        setOrderDetails({
-          id: `order-${Date.now()}`,
-          orderNumber: `ORD-2024-${String(Date.now()).slice(-6)}`,
-          amount: amount,
-          status: 'new',
-          statusText: 'مش مستلمة من الموظف',
-          paymentMethod: paymentMethod === 'vodafone_cash' ? 'فودافون كاش' : 'بطاقة ائتمانية',
-          deliveryMethod: 'delivery',
-          deliveryAddress: 'العنوان المحدد',
-          customerName: 'العميل الكريم',
-          customerPhone: '01234567890',
-          timeline: [
-            {
-              event: 'تم تأكيد الدفع',
-              timestamp: new Date().toISOString()
-            }
-          ]
-        });
+        // 🔒 SECURE: Don't create fake orders on error
+        // Redirect to home or show error instead
+        setTimeout(() => {
+          setLocation('/');
+        }, 3000);
       } finally {
-        setCreatingOrder(false);
         setLoading(false);
       }
     };
 
     // Delay to show loading state
     const timer = setTimeout(() => {
-      createOrderFromPayment();
+      verifyAndFetchOrder();
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [orderId, amount, paymentMethod, toast]);
+  }, [orderId, setLocation, toast]);
 
   const copyOrderNumber = () => {
     if (orderDetails?.orderNumber) {
