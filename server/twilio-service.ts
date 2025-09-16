@@ -89,11 +89,19 @@ export class TwilioSMSService {
       // تحديد نص الرسالة
       const messageBody = `كود التحقق الخاص بك في اطبعلي: ${code}\nهذا الكود صالح لمدة 10 دقائق`;
 
+      // Normalize phone number to E.164 format
+      const normalizedPhone = this.normalizePhoneNumber(phoneNumber);
+      
+      // For trial accounts, FROM number is required
+      if (!this.fromNumber) {
+        throw new Error('TWILIO_PHONE_NUMBER is required for trial accounts');
+      }
+
       // إرسال الرسالة عبر Twilio
       const message = await this.client!.messages.create({
         body: messageBody,
-        from: this.fromNumber || undefined, // إذا لم يكن محدد، Twilio سيختار رقم مجاني
-        to: phoneNumber
+        from: this.fromNumber, // Required for trial accounts
+        to: normalizedPhone
       });
 
       console.log(`✅ SMS sent successfully to ${phoneNumber} (Message ID: ${message.sid})`);
@@ -200,6 +208,32 @@ export class TwilioSMSService {
         }
       }
     }, 5 * 60 * 1000); // كل 5 دقائق
+  }
+
+  /**
+   * Normalize phone number to E.164 format for better delivery
+   */
+  private normalizePhoneNumber(phoneNumber: string): string {
+    // Remove all non-digit characters
+    let cleaned = phoneNumber.replace(/\D/g, '');
+    
+    // If it starts with 0, remove it (Egyptian mobile numbers)
+    if (cleaned.startsWith('0')) {
+      cleaned = cleaned.substring(1);
+    }
+    
+    // If it doesn't start with country code, add Egypt country code (+20)
+    if (!cleaned.startsWith('20')) {
+      cleaned = '20' + cleaned;
+    }
+    
+    // Add + prefix for E.164 format
+    if (!cleaned.startsWith('+')) {
+      cleaned = '+' + cleaned;
+    }
+    
+    console.log(`📞 Phone normalized: ${phoneNumber} → ${cleaned}`);
+    return cleaned;
   }
 
   /**
