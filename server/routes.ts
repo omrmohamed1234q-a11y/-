@@ -41,6 +41,7 @@ import {
 import { AutomaticNotificationService } from './automatic-notifications';
 import { Vonage } from '@vonage/server-sdk';
 import { twilioSMSService } from './twilio-service';
+import { initializeMessageCentralSMS } from './message-central-service';
 // import { messageCentralService } from './messagecentral-service'; // Temporarily disabled - missing API keys
 
 // Using centralized security singleton (no need to create new instance)
@@ -77,8 +78,13 @@ function cacheSet(key: string, data: any, ttlSeconds: number = 300): void {
 }
 
 // ==================== SMS SETUP ====================
-// Primary: Twilio SMS service (cost-effective & reliable)
-// Fallback: Keep Vonage for compatibility (optional)
+// Priority 1: Message Central SMS service (FREE!)
+// Priority 2: Twilio SMS service (cost-effective & reliable) 
+// Priority 3: Vonage SMS fallback (compatibility)
+
+// Initialize Message Central SMS service (highest priority)
+const messageCentralSMSService = initializeMessageCentralSMS();
+
 const vonage = new Vonage({
   apiKey: process.env.VONAGE_API_KEY || '',
   apiSecret: process.env.VONAGE_API_SECRET || ''
@@ -361,6 +367,19 @@ import crypto from 'crypto';
 // Google Pay configuration
 const GOOGLE_PAY_MERCHANT_ID = process.env.GOOGLE_PAY_MERCHANT_ID || 'merchant.com.atbaalee';
 
+// Utility function to safely mask phone numbers for logging
+function maskPhoneNumber(phoneNumber: string): string {
+  if (!phoneNumber) return 'N/A';
+  if (phoneNumber.length <= 4) return '*'.repeat(phoneNumber.length);
+  
+  // Keep first 2 and last 2 digits, mask the rest
+  const start = phoneNumber.slice(0, 2);
+  const end = phoneNumber.slice(-2);
+  const middleMask = '*'.repeat(Math.max(0, phoneNumber.length - 4));
+  
+  return `${start}${middleMask}${end}`;
+}
+
 // Helper functions for analytics data generation
 function generateUserActivityData(users: any[]) {
   const hours = ['00:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
@@ -587,6 +606,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const diagnostics = {
         timestamp: new Date().toISOString(),
+        messageCentral: messageCentralSMSService ? {
+          ...messageCentralSMSService.getDiagnostics(),
+          priority: '1 (Primary - FREE)',
+          status: messageCentralSMSService.isConfigured() ? 'Active' : 'Not configured'
+        } : {
+          configured: false,
+          status: 'Not initialized',
+          error: 'Service not available'
+        },
         twilio: {
           configured: twilioSMSService.isEnabled(),
           accountSid: process.env.TWILIO_ACCOUNT_SID ? 
@@ -594,7 +622,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hasFromNumber: !!process.env.TWILIO_PHONE_NUMBER,
           fromNumber: process.env.TWILIO_PHONE_NUMBER ? 
             `${process.env.TWILIO_PHONE_NUMBER.substring(0, 6)}...` : 'Not configured',
-          stats: twilioSMSService.getServiceStats()
+          stats: twilioSMSService.getServiceStats(),
+          priority: '2 (Secondary - Paid)',
+          status: twilioSMSService.isEnabled() ? 'Active' : 'Not configured'
         },
         vonage: {
           configured: !!(process.env.VONAGE_API_KEY && process.env.VONAGE_API_SECRET),
@@ -602,7 +632,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hasApiSecret: !!process.env.VONAGE_API_SECRET,
           apiKey: process.env.VONAGE_API_KEY ? 
             `${process.env.VONAGE_API_KEY.substring(0, 8)}...` : 'Not configured',
-          sender: 'VONAGE'
+          sender: 'VONAGE',
+          priority: '3 (Fallback - Paid)',
+          status: !!(process.env.VONAGE_API_KEY && process.env.VONAGE_API_SECRET) ? 'Active' : 'Not configured'
         },
         rateLimit: {
           windowMs: '15 minutes',
@@ -610,7 +642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           verificationWindow: '10 minutes', 
           maxVerificationAttempts: 5
         },
-        lastUpdated: 'September 16, 2025 - Latest Fixes Applied'
+        lastUpdated: 'September 16, 2025 - Message Central Verification ID Fix Applied'
       };
 
       console.log('📊 SMS Diagnostics requested:', {
@@ -645,11 +677,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`📱 SMS: Attempting to send verification code to ${phoneNumber}`);
+      console.log(`📱 SMS: Attempting to send verification code to ${maskPhoneNumber(phoneNumber)}`);
 
-      // Primary: Try Twilio first (reliable but trial limitations)
+      // Priority 1: Try Message Central first (FREE!)
+      if (messageCentralSMSService && messageCentralSMSService.isConfigured()) {
+        console.log('🎯 Using Message Central SMS service (primary - FREE!)');
+        
+        const messageCentralResult = await messageCentralSMSService.sendVerificationCode(phoneNumber);
+        
+        if (messageCentralResult.success) {
+          console.log('✅ SMS sent successfully via Message Central');
+          
+          return res.json({
+            success: true,
+            verificationId: messageCentralResult.verificationId,
+            message: 'تم إرسال الكود بنجاح عبر Message Central',
+            provider: 'message-central'
+          });
+        } else {
+          console.warn('⚠️ Message Central failed, trying Twilio fallback:', messageCentralResult.error);
+        }
+      } else {
+        console.log('⚠️ Message Central not configured, trying Twilio...');
+      }
+
+      // Priority 2: Try Twilio (reliable but trial limitations)
       if (twilioSMSService.isEnabled()) {
-        console.log('🚀 Using Twilio SMS service (primary)');
+        console.log('🚀 Using Twilio SMS service (secondary)');
         
         const twilioResult = await twilioSMSService.sendVerificationCode(phoneNumber);
         
@@ -691,7 +745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attempts: 0
           });
           
-          console.log(`🧪 DEV BYPASS: Code ${devCode} generated for ${phoneNumber} (ID: ${devVerificationId})`);
+          console.log(`🧪 DEV BYPASS: Code ${devCode} generated for ${maskPhoneNumber(phoneNumber)} (ID: ${devVerificationId})`);
           
           return res.json({
             success: true,
@@ -733,7 +787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           text: `كود التحقق الخاص بك: ${code}\nصالح لمدة 5 دقائق فقط.\nاطبعلي - خدمة الطباعة الذكية`
         });
         
-        console.log(`📧 Vonage sender used: ${vonageSender} (region-aware for ${phoneNumber})`);
+        console.log(`📧 Vonage sender used: ${vonageSender} (region-aware for ${maskPhoneNumber(phoneNumber)})`);
 
         if (response.messages && response.messages[0].status === '0') {
           console.log('✅ SMS sent successfully via Vonage (fallback)');
@@ -775,7 +829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Clean up original failed verification
             verificationCodes.delete(verificationId);
             
-            console.log(`🧪 DEV BYPASS: Code ${devCode} generated for ${phoneNumber} (ID: ${devVerificationId})`);
+            console.log(`🧪 DEV BYPASS: Code ${devCode} generated for ${maskPhoneNumber(phoneNumber)} (ID: ${devVerificationId})`);
             
             return res.json({
               success: true,
@@ -849,7 +903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attempts: 0
           });
           
-          console.log(`🧪 DEV BYPASS: Code ${devCode} generated for ${phoneNumber} (ID: ${devVerificationId})`);
+          console.log(`🧪 DEV BYPASS: Code ${devCode} generated for ${maskPhoneNumber(phoneNumber)} (ID: ${devVerificationId})`);
           
           return res.json({
             success: true,
@@ -885,7 +939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           attempts: 0
         });
         
-        console.log(`🧪 DEV BYPASS: Final Code ${devCode} generated for ${phoneNumber} (ID: ${devVerificationId})`);
+        console.log(`🧪 DEV BYPASS: Final Code ${devCode} generated for ${maskPhoneNumber(phoneNumber)} (ID: ${devVerificationId})`);
         
         return res.json({
           success: true,
@@ -918,7 +972,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🔍 Verifying code for session: ${verificationId}`);
 
-      // Check if this is a Twilio verification ID
+      // Priority 1: Check if this is a Message Central verification ID
+      if (verificationId.startsWith('msgcenter_')) {
+        console.log('🎯 Using Message Central verification service');
+        
+        if (messageCentralSMSService && messageCentralSMSService.isConfigured()) {
+          const messageCentralResult = await messageCentralSMSService.verifyCode(verificationId, code);
+          
+          if (messageCentralResult.success) {
+            console.log('✅ Message Central SMS verification successful');
+            
+            return res.json({
+              success: true,
+              message: 'تم التحقق بنجاح عبر Message Central',
+              provider: 'message-central'
+            });
+          } else {
+            console.log(`❌ Message Central verification failed: ${messageCentralResult.error}`);
+            
+            // Map Message Central errors to user-friendly Arabic messages
+            let userError = 'الكود غير صحيح';
+            if (messageCentralResult.error?.includes('expired') || messageCentralResult.error?.includes('انتهت')) {
+              userError = 'انتهت صلاحية الكود. أطلب كود جديد';
+            } else if (messageCentralResult.error?.includes('attempts') || messageCentralResult.error?.includes('محاولات')) {
+              userError = 'تم تجاوز عدد المحاولات المسموح. أطلب كود جديد';
+            }
+            
+            return res.status(400).json({
+              success: false,
+              error: userError
+            });
+          }
+        } else {
+          console.log('⚠️ Message Central not configured for verification');
+          return res.status(500).json({
+            success: false,
+            error: 'خطأ في نظام التحقق'
+          });
+        }
+      }
+
+      // Priority 2: Check if this is a Twilio verification ID
       if (verificationId.startsWith('twilio_')) {
         console.log('🚀 Using Twilio verification service');
         
@@ -986,7 +1080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Verify code
         if (verification.code !== code.toString()) {
-          console.log(`❌ Wrong code attempt ${verification.attempts}/3 for ${verification.phoneNumber}`);
+          console.log(`❌ Wrong code attempt ${verification.attempts}/3 for ${maskPhoneNumber(verification.phoneNumber)}`);
           
           return res.status(400).json({
             success: false,
@@ -997,7 +1091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Success! Clean up and return success
         verificationCodes.delete(verificationId);
         
-        console.log(`✅ Vonage SMS verification successful for ${verification.phoneNumber}`);
+        console.log(`✅ Vonage SMS verification successful for ${maskPhoneNumber(verification.phoneNumber)}`);
         
         return res.json({
           success: true,
@@ -1051,7 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Verify code
         if (verification.code !== code.toString()) {
-          console.log(`❌ Wrong dev code attempt ${verification.attempts}/3 for ${verification.phoneNumber}`);
+          console.log(`❌ Wrong dev code attempt ${verification.attempts}/3 for ${maskPhoneNumber(verification.phoneNumber)}`);
           
           return res.status(400).json({
             success: false,
@@ -1062,7 +1156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Success! Clean up and return success
         verificationCodes.delete(verificationId);
         
-        console.log(`✅ Development SMS verification successful for ${verification.phoneNumber}`);
+        console.log(`✅ Development SMS verification successful for ${maskPhoneNumber(verification.phoneNumber)}`);
         
         return res.json({
           success: true,
