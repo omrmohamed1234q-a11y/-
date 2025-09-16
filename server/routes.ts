@@ -41,6 +41,7 @@ import {
 import { AutomaticNotificationService } from './automatic-notifications';
 import { Vonage } from '@vonage/server-sdk';
 import { twilioSMSService } from './twilio-service';
+import { messageCentralService } from './messagecentral-service';
 
 // Using centralized security singleton (no need to create new instance)
 
@@ -579,9 +580,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     legacyHeaders: false,
   });
   
-  // ==================== TWILIO SMS ENDPOINTS ====================
+  // ==================== SMS ENDPOINTS (Multi-Provider) ====================
   
-  // Send SMS verification code - Now using Twilio (primary) with Vonage fallback
+  // Send SMS verification code - Multi-provider with smart fallback
   app.post('/api/sms/send', smsLimiter, async (req, res) => {
     try {
       const { phoneNumber } = req.body;
@@ -596,7 +597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`📱 SMS: Attempting to send verification code to ${phoneNumber}`);
 
-      // Primary: Try Twilio first (cost-effective & reliable)
+      // Primary: Try Twilio first (reliable but trial limitations)
       if (twilioSMSService.isEnabled()) {
         console.log('🚀 Using Twilio SMS service (primary)');
         
@@ -612,15 +613,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
             provider: 'twilio'
           });
         } else {
-          console.warn('⚠️ Twilio failed, trying Vonage fallback:', twilioResult.error);
+          console.warn('⚠️ Twilio failed, trying Message Central fallback:', twilioResult.error);
         }
       } else {
-        console.log('⚠️ Twilio not configured, using Vonage fallback');
+        console.log('⚠️ Twilio not configured, trying Message Central');
       }
 
-      // Fallback: Use Vonage if Twilio fails or not configured
+      // Secondary: Try Message Central (cost-effective alternative)
+      try {
+        console.log('💰 Using Message Central SMS service (cost-effective)');
+        
+        const messageCentralResult = await messageCentralService.sendVerificationCode(phoneNumber);
+        
+        if (messageCentralResult.success) {
+          console.log('✅ SMS sent successfully via Message Central');
+          
+          return res.json({
+            success: true,
+            verificationId: messageCentralResult.verificationId,
+            message: 'تم إرسال الكود بنجاح عبر Message Central',
+            provider: 'messagecentral'
+          });
+        } else {
+          console.warn('⚠️ Message Central failed, trying Vonage fallback:', messageCentralResult.error);
+        }
+      } catch (error: any) {
+        console.warn('⚠️ Message Central error, trying Vonage fallback:', error.message);
+      }
+
+      // Final Fallback: Use Vonage if all else fails
       if (!process.env.VONAGE_API_KEY || !process.env.VONAGE_API_SECRET) {
-        console.error('❌ Neither Twilio nor Vonage API keys configured');
+        console.error('❌ All SMS providers failed or not configured');
         return res.status(500).json({
           success: false,
           error: 'خدمة الرسائل غير متاحة حالياً. يرجى المحاولة لاحقاً'
@@ -758,6 +781,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({
             success: false,
             error: userError
+          });
+        }
+      }
+
+      // Check if this is a Message Central verification ID
+      if (verificationId.startsWith('mc_')) {
+        console.log('💰 Using Message Central verification service');
+        
+        const messageCentralResult = await messageCentralService.verifyCode(verificationId, code);
+        
+        if (messageCentralResult.success) {
+          console.log('✅ Message Central SMS verification successful');
+          
+          return res.json({
+            success: true,
+            message: 'تم التحقق بنجاح عبر Message Central',
+            provider: 'messagecentral'
+          });
+        } else {
+          console.log(`❌ Message Central verification failed: ${messageCentralResult.error}`);
+          
+          return res.status(400).json({
+            success: false,
+            error: messageCentralResult.error || 'الكود غير صحيح'
           });
         }
       }
