@@ -40,6 +40,7 @@ import {
 } from '../shared/smart-notifications-schema';
 import { AutomaticNotificationService } from './automatic-notifications';
 import { Vonage } from '@vonage/server-sdk';
+import { twilioSMSService } from './twilio-service';
 
 // Using centralized security singleton (no need to create new instance)
 
@@ -74,14 +75,15 @@ function cacheSet(key: string, data: any, ttlSeconds: number = 300): void {
   });
 }
 
-// ==================== VONAGE SMS SETUP ====================
-// Initialize Vonage for SMS verification
+// ==================== SMS SETUP ====================
+// Primary: Twilio SMS service (cost-effective & reliable)
+// Fallback: Keep Vonage for compatibility (optional)
 const vonage = new Vonage({
   apiKey: process.env.VONAGE_API_KEY || '',
   apiSecret: process.env.VONAGE_API_SECRET || ''
 });
 
-// Temporary storage for SMS verification codes (in production, use Redis or database)
+// Legacy Vonage storage (keeping for fallback compatibility)
 const verificationCodes = new Map<string, {
   code: string;
   phoneNumber: string;
@@ -99,12 +101,11 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-// Helper function to generate verification code
+// Legacy Vonage helper functions (keeping for fallback)
 function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Helper function to generate verification ID
 function generateVerificationId(): string {
   return `vonage_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
@@ -578,9 +579,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     legacyHeaders: false,
   });
   
-  // ==================== VONAGE SMS ENDPOINTS ====================
+  // ==================== TWILIO SMS ENDPOINTS ====================
   
-  // Send SMS verification code
+  // Send SMS verification code - Now using Twilio (primary) with Vonage fallback
   app.post('/api/sms/send', smsLimiter, async (req, res) => {
     try {
       const { phoneNumber } = req.body;
@@ -593,16 +594,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if API keys are configured
+      console.log(`📱 SMS: Attempting to send verification code to ${phoneNumber}`);
+
+      // Primary: Try Twilio first (cost-effective & reliable)
+      if (twilioSMSService.isEnabled()) {
+        console.log('🚀 Using Twilio SMS service (primary)');
+        
+        const twilioResult = await twilioSMSService.sendVerificationCode(phoneNumber);
+        
+        if (twilioResult.success) {
+          console.log('✅ SMS sent successfully via Twilio');
+          
+          return res.json({
+            success: true,
+            verificationId: twilioResult.verificationId,
+            message: 'تم إرسال الكود بنجاح عبر Twilio',
+            provider: 'twilio'
+          });
+        } else {
+          console.warn('⚠️ Twilio failed, trying Vonage fallback:', twilioResult.error);
+        }
+      } else {
+        console.log('⚠️ Twilio not configured, using Vonage fallback');
+      }
+
+      // Fallback: Use Vonage if Twilio fails or not configured
       if (!process.env.VONAGE_API_KEY || !process.env.VONAGE_API_SECRET) {
-        console.error('❌ Vonage API keys not configured');
+        console.error('❌ Neither Twilio nor Vonage API keys configured');
         return res.status(500).json({
           success: false,
           error: 'خدمة الرسائل غير متاحة حالياً. يرجى المحاولة لاحقاً'
         });
       }
 
-      // Generate verification code and ID
+      // Generate verification code and ID for Vonage
       const code = generateVerificationCode();
       const verificationId = generateVerificationId();
       const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes
@@ -615,11 +640,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         attempts: 0
       });
 
-      console.log(`📱 SMS: Sending verification code to ${phoneNumber}`);
+      console.log(`🔄 Fallback: Using Vonage SMS service`);
       console.log(`🔑 Verification ID: ${verificationId} (code details hidden for security)`);
 
       try {
-        // Send SMS via Vonage
+        // Send SMS via Vonage (fallback)
         const response = await vonage.sms.send({
           to: phoneNumber,
           from: 'اطبعلي',
@@ -627,12 +652,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         if (response.messages && response.messages[0].status === '0') {
-          console.log('✅ SMS sent successfully via Vonage');
+          console.log('✅ SMS sent successfully via Vonage (fallback)');
           
           res.json({
             success: true,
             verificationId,
-            message: 'تم إرسال الكود بنجاح'
+            message: 'تم إرسال الكود بنجاح عبر Vonage',
+            provider: 'vonage'
           });
         } else {
           const message = response.messages[0];
@@ -667,14 +693,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       } catch (vonageError: any) {
-        console.error('❌ Vonage API error:', vonageError);
+        console.error('❌ Both Twilio and Vonage failed:', vonageError);
         
         // Clean up verification code on error
-        verificationCodes.delete(verificationId);
+        if (verificationId) {
+          verificationCodes.delete(verificationId);
+        }
         
         res.status(500).json({
           success: false,
-          error: 'حدث خطأ في إرسال الكود. حاول مرة أخرى'
+          error: 'فشل في إرسال الكود عبر جميع الخدمات. حاول مرة أخرى'
         });
       }
 
@@ -687,7 +715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Verify SMS code
+  // Verify SMS code - Smart verification (Twilio + Vonage support)
   app.post('/api/sms/verify', smsVerifyLimiter, async (req, res) => {
     try {
       const { verificationId, code } = req.body;
@@ -700,7 +728,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get verification data
+      console.log(`🔍 Verifying code for session: ${verificationId}`);
+
+      // Check if this is a Twilio verification ID
+      if (verificationId.startsWith('twilio_')) {
+        console.log('🚀 Using Twilio verification service');
+        
+        const twilioResult = await twilioSMSService.verifyCode(verificationId, code);
+        
+        if (twilioResult.success) {
+          console.log('✅ Twilio SMS verification successful');
+          
+          return res.json({
+            success: true,
+            message: 'تم التحقق بنجاح عبر Twilio',
+            provider: 'twilio'
+          });
+        } else {
+          console.log(`❌ Twilio verification failed: ${twilioResult.error}`);
+          
+          // Map Twilio errors to user-friendly Arabic messages
+          let userError = 'الكود غير صحيح';
+          if (twilioResult.error?.includes('expired')) {
+            userError = 'انتهت صلاحية الكود. أطلب كود جديد';
+          } else if (twilioResult.error?.includes('Too many')) {
+            userError = 'تم تجاوز عدد المحاولات المسموح. أطلب كود جديد';
+          }
+          
+          return res.status(400).json({
+            success: false,
+            error: userError
+          });
+        }
+      }
+
+      // Handle Vonage verification (legacy support)
+      console.log('🔄 Using Vonage verification service (legacy)');
+      
       const verification = verificationCodes.get(verificationId);
       
       if (!verification) {
@@ -744,12 +808,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Success! Clean up and return success
       verificationCodes.delete(verificationId);
       
-      console.log(`✅ SMS verification successful for ${verification.phoneNumber}`);
+      console.log(`✅ Vonage SMS verification successful for ${verification.phoneNumber}`);
       
       res.json({
         success: true,
-        message: 'تم التحقق بنجاح',
-        phoneNumber: verification.phoneNumber
+        message: 'تم التحقق بنجاح عبر Vonage',
+        phoneNumber: verification.phoneNumber,
+        provider: 'vonage'
       });
 
     } catch (error: any) {
