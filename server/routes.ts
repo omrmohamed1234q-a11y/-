@@ -1007,8 +1007,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if this is a Development verification ID
+      // Check if this is a Development verification ID (ONLY in development)
       if (verificationId.startsWith('dev_')) {
+        if (process.env.NODE_ENV === 'production') {
+          console.log('🚨 SECURITY: dev_ verification IDs rejected in production');
+          return res.status(403).json({
+            success: false,
+            error: 'معرف التحقق غير صالح'
+          });
+        }
+        
         console.log('🧪 Using Development verification service');
         
         const verification = verificationCodes.get(verificationId);
