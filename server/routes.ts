@@ -648,10 +648,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔑 Verification ID: ${verificationId} (code details hidden for security)`);
 
       try {
-        // Send SMS via Vonage (fallback)
+        // Send SMS via Vonage (fallback) - fixed sender name
         const response = await vonage.sms.send({
           to: phoneNumber,
-          from: 'اطبعلي',
+          from: 'Itbaali', // Alphanumeric sender name (Vonage requires non-Arabic)
           text: `كود التحقق الخاص بك: ${code}\nصالح لمدة 5 دقائق فقط.\nاطبعلي - خدمة الطباعة الذكية`
         });
 
