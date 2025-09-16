@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Upload, FileText, Image, X, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { uploadFileToGoogleDrive, uploadFile } from '@/lib/upload-service';
+import { uploadFileToGoogleDrive, uploadFile, uploadFileWithChunks, ChunkUploadProgress } from '@/lib/upload-service';
 
 interface DragDropUploadProps {
   onUpload: (files: File[], urls: string[]) => void;
@@ -27,22 +27,89 @@ export function DragDropUpload({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<{ file: File; url: string; provider?: string }[]>([]);
+  
+  // 🚀 CHUNKED UPLOAD: Enhanced progress tracking
+  const [chunkProgress, setChunkProgress] = useState<{
+    currentFile: string;
+    totalFiles: number;
+    currentFileIndex: number;
+    chunks?: {
+      current: number;
+      total: number;
+      percentage: number;
+    };
+    isChunked: boolean;
+    speed?: string;
+  } | null>(null);
+  
   const { toast } = useToast();
 
-  // Smart upload function with Cloud Storage primary and Cloudinary fallback
+  // 🚀 ENHANCED: Smart upload with chunked support for large files
   const smartUpload = async (file: File, fileIndex: number, totalFiles: number): Promise<{ file: File; url: string; provider: string }> => {
-    console.log(`📤 Smart upload ${fileIndex + 1}/${totalFiles}: ${file.name}`);
+    console.log(`📤 Smart upload ${fileIndex + 1}/${totalFiles}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
     
-    // Try Cloud Storage first
-    let result = await uploadFileToGoogleDrive(file);
+    // Update progress state
+    setChunkProgress({
+      currentFile: file.name,
+      totalFiles,
+      currentFileIndex: fileIndex + 1,
+      isChunked: file.size > 10 * 1024 * 1024, // Files > 10MB use chunked upload
+    });
     
+    let result;
+    
+    // 🚀 CHUNKED UPLOAD: Use chunked upload for large files (>10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      console.log(`🚀 Using chunked upload for large file: ${file.name}`);
+      
+      result = await uploadFileWithChunks(
+        file,
+        undefined, // printSettings
+        (chunkProgressData: ChunkUploadProgress) => {
+          // Update chunk-specific progress
+          setChunkProgress(prev => prev ? {
+            ...prev,
+            chunks: {
+              current: chunkProgressData.chunkIndex + 1,
+              total: chunkProgressData.totalChunks,
+              percentage: chunkProgressData.percentage
+            }
+          } : null);
+          
+          // Update overall progress
+          const overallProgress = ((fileIndex + (chunkProgressData.percentage / 100)) / totalFiles) * 100;
+          setProgress(overallProgress);
+        }
+      );
+      
+      if (!result.success) {
+        console.log('🔄 Chunked upload failed, trying standard Google Drive...');
+        result = await uploadFileToGoogleDrive(file);
+      }
+    } else {
+      // Standard upload for smaller files
+      console.log(`📁 Using standard upload for file: ${file.name}`);
+      result = await uploadFileToGoogleDrive(file);
+    }
+    
+    // Fallback to Cloudinary if Google Drive fails
     if (!result.success) {
       console.log('🔄 Cloud Storage failed, trying Cloudinary fallback...');
       result = await uploadFile(file);
     }
     
     if (!result.success) {
-      throw new Error(result.error || 'Upload failed on both services');
+      throw new Error(result.error || 'Upload failed on all services');
+    }
+    
+    // Display upload performance info
+    if ('chunks' in result && result.chunks) {
+      console.log(`✅ Chunked upload completed: ${result.chunks} chunks, ${result.averageSpeed || 'N/A'}`);
+      
+      setChunkProgress(prev => prev ? {
+        ...prev,
+        speed: result.averageSpeed || undefined
+      } : null);
     }
     
     return {
@@ -140,6 +207,7 @@ export function DragDropUpload({
     } finally {
       setUploading(false);
       setProgress(0);
+      setChunkProgress(null); // 🚀 CHUNKED UPLOAD: Reset chunk progress
     }
   }, [onUpload, toast]);
 
@@ -209,12 +277,57 @@ export function DragDropUpload({
           </div>
           
           {uploading && (
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-3">
+              {/* Overall Progress */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">جاري الرفع...</span>
+                <span className="text-sm text-gray-600">
+                  {chunkProgress ? `${chunkProgress.currentFileIndex}/${chunkProgress.totalFiles}` : 'جاري الرفع...'}
+                </span>
                 <span className="text-sm text-gray-600">{Math.round(progress)}%</span>
               </div>
               <Progress value={progress} className="w-full" />
+              
+              {/* Current File Info */}
+              {chunkProgress && (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-blue-900">
+                      📄 {chunkProgress.currentFile}
+                    </span>
+                    {chunkProgress.speed && (
+                      <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                        ⚡ {chunkProgress.speed}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Chunked Upload Details */}
+                  {chunkProgress.isChunked && chunkProgress.chunks && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-blue-700">
+                        <span>🚀 رفع متقطع عالي السرعة</span>
+                        <span>
+                          جزء {chunkProgress.chunks.current}/{chunkProgress.chunks.total}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={chunkProgress.chunks.percentage} 
+                        className="h-2 bg-blue-100"
+                      />
+                      <div className="text-xs text-blue-600 text-center">
+                        {Math.round(chunkProgress.chunks.percentage)}% من الجزء الحالي
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Standard Upload */}
+                  {!chunkProgress.isChunked && (
+                    <div className="text-xs text-blue-700">
+                      📁 رفع عادي للملفات الصغيرة
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </CardContent>
