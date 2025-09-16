@@ -12,7 +12,6 @@ import {
   Map,
   Edit
 } from 'lucide-react';
-import { FIXED_LOCATIONS, getPopularLocations, type FixedLocation } from '@/data/fixedLocations';
 import { 
   getCurrentLocation, 
   validateDeliveryLocation, 
@@ -24,14 +23,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useGooglePlaces, type PlaceResult } from '@/hooks/useGooglePlaces';
 import { locationSearchService, type SearchResult } from '@/services/locationSearchService';
-// إزالة مؤقتة لـ GoogleMapsLoader لحل المشكلة
-// import { GoogleMapsLoader } from '@/lib/googleMapsLoader';
 
 export interface SelectedDeliveryLocation {
   type: 'fixed' | 'gps' | 'search' | 'manual';
   location: LocationData;
   validation: DeliveryValidation;
-  fixedLocationData?: FixedLocation;
   displayName: string;
 }
 
@@ -60,6 +56,11 @@ const DeliveryLocationSelector: React.FC<DeliveryLocationSelectorProps> = ({
 
   // البحث المحسن مع دمج Google Places
   const searchLocations = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -123,30 +124,6 @@ const DeliveryLocationSelector: React.FC<DeliveryLocationSelectorProps> = ({
   useEffect(() => {
     searchLocations(searchQuery);
   }, [searchQuery, searchLocations]);
-
-  // تحميل أماكن شائعة في البداية (بدون Google Maps مؤقتاً)
-  useEffect(() => {
-    const initializeService = async () => {
-      try {
-        // تحميل الأماكن الشائعة من الخدمة المحلية
-        const popular = await locationSearchService.searchLocations('', {
-          userLocation,
-          includePopularOnly: true,
-          maxResults: 6
-        });
-        setSearchResults(popular);
-        
-        // TODO: إضافة تحميل Google Maps API لاحقاً
-        console.log('🎯 نظام اختيار الموقع جاهز مع البحث المحلي');
-      } catch (error) {
-        console.error('فشل في تهيئة خدمة المواقع:', error);
-        // fallback للأماكن الثابتة
-        setSearchResults([]);
-      }
-    };
-    
-    initializeService();
-  }, [userLocation]);
 
   // اختيار موقع من النتائج
   const handleLocationSelect = async (searchResult: SearchResult) => {
@@ -237,177 +214,200 @@ const DeliveryLocationSelector: React.FC<DeliveryLocationSelectorProps> = ({
       return;
     }
 
-    setIsLoading(true);
+    const location: LocationData = {
+      latitude: 30.0964396, // موقع افتراضي في السويس
+      longitude: 32.4642696,
+      address: manualAddress.trim()
+    };
+
+    const validation = validateDeliveryLocation(location);
+
+    const selection: SelectedDeliveryLocation = {
+      type: 'manual',
+      location,
+      validation,
+      displayName: manualAddress.trim()
+    };
+
+    onLocationSelect(selection);
+    setShowManualInput(false);
+    setManualAddress('');
     
-    try {
-      // محاولة البحث عن العنوان (يمكن تطوير هذا لاحقاً باستخدام Google Places API)
-      // حالياً سنستخدم الإحداثيات الافتراضية للسويس
-      const locationData: LocationData = {
-        latitude: 30.0964396,
-        longitude: 32.4642696,
-        address: manualAddress
-      };
-
-      const validation = validateDeliveryLocation(locationData);
-
-      const selection: SelectedDeliveryLocation = {
-        type: 'manual',
-        location: locationData,
-        validation,
-        displayName: manualAddress
-      };
-
-      onLocationSelect(selection);
-      setShowManualInput(false);
-      setManualAddress('');
-      
-      toast({
-        title: "تم إضافة العنوان",
-        description: validation.isValid 
-          ? `رسوم التوصيل: ${validation.deliveryFee} جنيه`
-          : validation.message,
-        variant: validation.isValid ? "default" : "destructive"
-      });
-      
-    } catch (error: any) {
-      toast({
-        title: "خطأ",
-        description: "تعذر معالجة العنوان",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "تم إضافة العنوان",
+      description: `تم إضافة العنوان اليدوي - رسوم التوصيل: ${validation.deliveryFee} جنيه`,
+      variant: validation.isValid ? "default" : "destructive"
+    });
   };
 
   return (
     <Card className={className}>
       <CardContent className="p-6">
+        {/* الموقع المحدد حالياً */}
+        {currentSelection && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100">
+                  <MapPin className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-green-900">{currentSelection.displayName}</p>
+                  <p className="text-sm text-green-700">
+                    رسوم التوصيل: {currentSelection.validation.deliveryFee} جنيه
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onLocationClear}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                data-testid="button-clear-location"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* شريط البحث */}
-        <div className="relative mb-6">
-          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+        <div className="relative mb-4">
           <Input
-            placeholder="أين تريد التوصيل"
+            type="text"
+            placeholder="أين تريد التوصيل وبكم؟"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-4 pr-12 h-12 text-lg"
-            data-testid="search-delivery-location"
+            className="w-full h-12 pr-12 text-right placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            data-testid="input-delivery-search"
           />
+          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
         </div>
 
-        {/* الأزرار السريعة */}
-        <div className="space-y-3 mb-6">
-          {/* اختر من الخريطة */}
-          <Button
-            variant="outline"
-            className="w-full h-12 justify-start gap-3"
-            disabled={isLoading}
-            data-testid="button-choose-from-map"
-          >
-            <MapPin className="h-5 w-5 text-blue-500" />
-            <span>اختر من الخريطة</span>
-          </Button>
+        {/* زر اختر من الخريطة */}
+        <Button
+          variant="default"
+          className="w-full h-12 mb-4 bg-blue-600 hover:bg-blue-700 text-white"
+          data-testid="button-choose-from-map"
+        >
+          <Map className="h-5 w-5 ml-2" />
+          اختر من الخريطة
+        </Button>
 
-          {/* موقعي الحالي */}
+        {/* نتائج البحث - تظهر فقط عند البحث */}
+        {searchQuery.trim() && (
+          <div className="space-y-2 mb-4">
+            {isLoading || isPlacesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                <span className="mr-2 text-gray-600">جاري البحث...</span>
+              </div>
+            ) : searchResults.length > 0 ? (
+              searchResults.map((location) => (
+                <Button
+                  key={location.id}
+                  variant="ghost"
+                  className="w-full h-16 justify-between p-4 hover:bg-gray-50"
+                  onClick={() => handleLocationSelect(location)}
+                  data-testid={`location-${location.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100">
+                      {location.source === 'fixed' ? (
+                        <Clock className="h-4 w-4 text-gray-600" />
+                      ) : (
+                        <MapPin className="h-4 w-4 text-green-600" />
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">{location.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {location.address}
+                        {location.distance && (
+                          <span className="text-blue-600 mr-2">
+                            • {location.distance.toFixed(1)} كم
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {location.isPopular && (
+                      <Badge variant="secondary" className="text-xs">
+                        شائع
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="text-blue-600">
+                      {location.deliveryFee} جنيه
+                    </Badge>
+                  </div>
+                </Button>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <p>لا توجد نتائج للبحث "{searchQuery}"</p>
+                <p className="text-sm mt-1">جرب كلمات مختلفة أو استخدم موقعك الحالي</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* أزرار الخيارات الإضافية */}
+        <div className="space-y-3">
+          {/* زر الموقع الحالي */}
           <Button
             variant="outline"
-            className="w-full h-12 justify-start gap-3"
+            className="w-full h-12 border-gray-300 hover:bg-gray-50"
             onClick={handleGetCurrentLocation}
             disabled={isGettingLocation}
             data-testid="button-current-location"
           >
-            {isGettingLocation ? (
-              <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-            ) : (
-              <Navigation className="h-5 w-5 text-blue-500" />
-            )}
-            <span>موقعي الحالي</span>
-            <span className="text-sm text-gray-500">استخدم GPS</span>
+            <div className="flex items-center justify-between w-full">
+              <span className="text-gray-900">موقعي الحالي</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">استخدم GPS</span>
+                {isGettingLocation ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                ) : (
+                  <Navigation className="h-4 w-4 text-blue-600" />
+                )}
+              </div>
+            </div>
+          </Button>
+
+          {/* زر إدخال عنوان يدوي */}
+          <Button
+            variant="outline"
+            className="w-full h-12 border-gray-300 hover:bg-gray-50"
+            onClick={() => setShowManualInput(!showManualInput)}
+            data-testid="button-manual-address"
+          >
+            <div className="flex items-center justify-between w-full">
+              <span className="text-gray-900">إدخال عنوان يدوي</span>
+              <Edit className="h-4 w-4 text-blue-600" />
+            </div>
           </Button>
         </div>
 
-        {/* قائمة الأماكن */}
-        <div className="space-y-2 mb-4">
-          {isLoading || isPlacesLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-              <span className="mr-2 text-gray-600">جاري البحث...</span>
-            </div>
-          ) : searchResults.length > 0 ? (
-            searchResults.map((location) => (
-              <Button
-                key={location.id}
-                variant="ghost"
-                className="w-full h-16 justify-between p-4 hover:bg-gray-50"
-                onClick={() => handleLocationSelect(location)}
-                data-testid={`location-${location.id}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100">
-                    {location.source === 'fixed' ? (
-                      <Clock className="h-4 w-4 text-gray-600" />
-                    ) : (
-                      <MapPin className="h-4 w-4 text-green-600" />
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium text-gray-900">{location.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {location.address}
-                      {location.distance && (
-                        <span className="text-blue-600 mr-2">
-                          • {location.distance.toFixed(1)} كم
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {location.isPopular && (
-                    <Badge variant="secondary" className="text-xs">
-                      شائع
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="text-blue-600">
-                    {location.deliveryFee} جنيه
-                  </Badge>
-                </div>
-              </Button>
-            ))
-          ) : searchQuery.trim() ? (
-            <div className="text-center py-8 text-gray-500">
-              <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-              <p>لا توجد نتائج للبحث "{searchQuery}"</p>
-              <p className="text-sm mt-1">جرب كلمات مختلفة أو استخدم موقعك الحالي</p>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-              <p>ابدأ بكتابة اسم المكان أو استخدم موقعك الحالي</p>
-            </div>
-          )}
-        </div>
-
         {/* إدخال عنوان يدوي */}
-        {showManualInput ? (
-          <div className="space-y-3 pt-4 border-t">
+        {showManualInput && (
+          <div className="mt-4 space-y-3 pt-4 border-t">
             <Input
-              placeholder="اكتب عنوانك بالتفصيل"
+              type="text"
+              placeholder="اكتب عنوانك بالتفصيل..."
               value={manualAddress}
               onChange={(e) => setManualAddress(e.target.value)}
-              className="h-12"
-              data-testid="manual-address-input"
+              className="w-full text-right"
+              data-testid="input-manual-address"
             />
             <div className="flex gap-2">
               <Button
+                variant="default"
                 onClick={handleManualAddressSubmit}
-                disabled={isLoading || !manualAddress.trim()}
-                className="flex-1"
-                data-testid="submit-manual-address"
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                data-testid="button-submit-manual"
               >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                ) : null}
                 تأكيد العنوان
               </Button>
               <Button
@@ -416,45 +416,10 @@ const DeliveryLocationSelector: React.FC<DeliveryLocationSelectorProps> = ({
                   setShowManualInput(false);
                   setManualAddress('');
                 }}
-                data-testid="cancel-manual-address"
+                data-testid="button-cancel-manual"
               >
                 إلغاء
               </Button>
-            </div>
-          </div>
-        ) : (
-          <Button
-            variant="ghost"
-            className="w-full h-12 justify-start gap-3 text-blue-600"
-            onClick={() => setShowManualInput(true)}
-            data-testid="button-manual-address"
-          >
-            <Edit className="h-5 w-5" />
-            <span>إدخال عنوان يدوي</span>
-          </Button>
-        )}
-
-        {/* عرض الموقع المحدد */}
-        {currentSelection && (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-blue-900">{currentSelection.displayName}</p>
-                <p className="text-sm text-blue-700">
-                  رسوم التوصيل: {currentSelection.validation.deliveryFee} جنيه
-                </p>
-              </div>
-              {onLocationClear && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onLocationClear}
-                  className="text-blue-600 hover:text-blue-700"
-                  data-testid="clear-selected-location"
-                >
-                  تغيير
-                </Button>
-              )}
             </div>
           </div>
         )}
