@@ -1007,6 +1007,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Check if this is a Development verification ID
+      if (verificationId.startsWith('dev_')) {
+        console.log('🧪 Using Development verification service');
+        
+        const verification = verificationCodes.get(verificationId);
+        
+        if (!verification) {
+          return res.status(400).json({
+            success: false,
+            error: 'كود التحقق غير صالح أو منتهي الصلاحية'
+          });
+        }
+
+        // Check if expired
+        if (verification.expiresAt < Date.now()) {
+          verificationCodes.delete(verificationId);
+          return res.status(410).json({
+            success: false,
+            error: 'انتهت صلاحية الكود. أطلب كود جديد'
+          });
+        }
+
+        // Check attempt limit (max 3 attempts)
+        if (verification.attempts >= 3) {
+          verificationCodes.delete(verificationId);
+          return res.status(429).json({
+            success: false,
+            error: 'تم تجاوز عدد المحاولات المسموح. أطلب كود جديد'
+          });
+        }
+
+        // Increment attempts
+        verification.attempts++;
+
+        // Verify code
+        if (verification.code !== code.toString()) {
+          console.log(`❌ Wrong dev code attempt ${verification.attempts}/3 for ${verification.phoneNumber}`);
+          
+          return res.status(400).json({
+            success: false,
+            error: `الكود غير صحيح. المحاولة ${verification.attempts}/3`
+          });
+        }
+
+        // Success! Clean up and return success
+        verificationCodes.delete(verificationId);
+        
+        console.log(`✅ Development SMS verification successful for ${verification.phoneNumber}`);
+        
+        return res.json({
+          success: true,
+          message: 'تم التحقق بنجاح (وضع التطوير)',
+          phoneNumber: verification.phoneNumber,
+          provider: 'development'
+        });
+      }
+
       // Handle unknown verification ID format
       console.log(`❌ Unknown verification ID format: ${verificationId}`);
       
