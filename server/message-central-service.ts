@@ -149,7 +149,7 @@ export class MessageCentralSMSService {
         hasVerificationId: !!(responseData?.data?.verificationId)
       });
 
-      if (response.ok && responseData.responseCode === '200') {
+      if (response.ok && (responseData.responseCode === '200' || responseData.responseCode === 200)) {
         const realVerificationId = responseData.data?.verificationId;
         
         if (!realVerificationId) {
@@ -254,7 +254,7 @@ export class MessageCentralSMSService {
         responseCode: responseData?.responseCode
       });
 
-      if (response.ok && responseData.responseCode === '200') {
+      if (response.ok && (responseData.responseCode === '200' || responseData.responseCode === 200)) {
         console.log(`✅ Message Central verification successful`);
         
         // Clean up the successful verification ID
