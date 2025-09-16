@@ -28,7 +28,7 @@ export function DragDropUpload({
   const [progress, setProgress] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<{ file: File; url: string; provider?: string }[]>([]);
   
-  // 🚀 CHUNKED UPLOAD: Enhanced progress tracking
+  // 🚀 CHUNKED UPLOAD: Enhanced progress tracking with recovery info
   const [chunkProgress, setChunkProgress] = useState<{
     currentFile: string;
     totalFiles: number;
@@ -40,6 +40,8 @@ export function DragDropUpload({
     };
     isChunked: boolean;
     speed?: string;
+    retryAttempt?: number; // 🔧 FIX: Add retry tracking
+    failedChunks?: number[]; // 🔧 FIX: Add failed chunks tracking
   } | null>(null);
   
   const { toast } = useToast();
@@ -66,14 +68,16 @@ export function DragDropUpload({
         file,
         undefined, // printSettings
         (chunkProgressData: ChunkUploadProgress) => {
-          // Update chunk-specific progress
+          // 🔧 FIX: Update chunk-specific progress with recovery info
           setChunkProgress(prev => prev ? {
             ...prev,
             chunks: {
               current: chunkProgressData.chunkIndex + 1,
               total: chunkProgressData.totalChunks,
               percentage: chunkProgressData.percentage
-            }
+            },
+            retryAttempt: chunkProgressData.retryAttempt, // 🔧 FIX: Wire retry info
+            failedChunks: chunkProgressData.failedChunks // 🔧 FIX: Wire failed chunks
           } : null);
           
           // Update overall progress
@@ -305,7 +309,9 @@ export function DragDropUpload({
                   {chunkProgress.isChunked && chunkProgress.chunks && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs text-blue-700">
-                        <span>🚀 رفع متقطع عالي السرعة</span>
+                        <span>
+                          {chunkProgress.retryAttempt ? '🔄 إعادة محاولة الرفع' : '🚀 رفع متقطع عالي السرعة'}
+                        </span>
                         <span>
                           جزء {chunkProgress.chunks.current}/{chunkProgress.chunks.total}
                         </span>
@@ -317,6 +323,21 @@ export function DragDropUpload({
                       <div className="text-xs text-blue-600 text-center">
                         {Math.round(chunkProgress.chunks.percentage)}% من الجزء الحالي
                       </div>
+                      
+                      {/* 🔄 RECOVERY: Show retry information */}
+                      {chunkProgress.retryAttempt && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mt-2">
+                          <div className="flex items-center justify-between text-xs text-yellow-800">
+                            <span>🔄 محاولة رقم {chunkProgress.retryAttempt}</span>
+                            {chunkProgress.failedChunks && chunkProgress.failedChunks.length > 0 && (
+                              <span>{chunkProgress.failedChunks.length} أجزاء فاشلة</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-yellow-700 mt-1">
+                            يتم إعادة رفع الأجزاء المتعثرة تلقائياً
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   
