@@ -62,13 +62,26 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Load Google Maps when user wants to show map
+  // Auto search when typing
   useEffect(() => {
-    if (showMap && !isMapLoaded && !isLoading) {
-      console.log('🗺️ User requested map - loading Google Maps...');
+    if (searchQuery.trim().length > 2 && isMapLoaded) {
+      const timeoutId = setTimeout(() => {
+        handleSearchLocation();
+      }, 500); // Wait 500ms after user stops typing
+      
+      return () => clearTimeout(timeoutId);
+    } else if (searchQuery.trim().length === 0) {
+      setSearchResults([]);
+    }
+  }, [searchQuery, isMapLoaded]);
+
+  // Load Google Maps early for search functionality
+  useEffect(() => {
+    if (!isMapLoaded && !isLoading) {
+      console.log('🗺️ Loading Google Maps for search functionality...');
       loadMaps();
     }
-  }, [showMap, isMapLoaded, isLoading, loadMaps]);
+  }, [isMapLoaded, isLoading, loadMaps]);
 
   // Initialize map when loaded
   useEffect(() => {
