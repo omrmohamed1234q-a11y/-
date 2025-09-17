@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/hooks/useCart';
 import { ShoppingCart, Plus, Star, BookOpen, FileText } from 'lucide-react';
+import { useProgress } from '@/contexts/ProgressContext';
 
 interface Product {
   id: string;
@@ -29,6 +30,7 @@ interface ProductCardProps {
 export default function ProductCard({ product, compact = false }: ProductCardProps) {
   const { addToCart, isAddingToCart } = useCart();
   const [imageError, setImageError] = useState(false);
+  const { progress } = useProgress();
 
   const handleAddToCart = () => {
     addToCart({ productId: product.id, quantity: 1 });
@@ -165,7 +167,7 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
           {isAddingToCart ? (
             <>
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              جاري الإضافة...
+              {progress.isActive && progress.currentStep?.message ? progress.currentStep.message : 'جاري الإضافة...'}
             </>
           ) : (
             <>

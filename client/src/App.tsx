@@ -2,6 +2,8 @@ import { Switch, Route, Router } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { ProgressProvider } from "@/contexts/ProgressContext";
+import { DetailedProgress } from "@/components/progress/DetailedProgress";
 // import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, lazy } from "react";
@@ -251,10 +253,21 @@ function AppRouter() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-background font-arabic text-foreground" dir="rtl">
-        <Toaster />
-        <AppRouter />
-      </div>
+      <ProgressProvider>
+        <div className="min-h-screen bg-background font-arabic text-foreground" dir="rtl">
+          <Toaster />
+          <AppRouter />
+          
+          {/* 🎯 GLOBAL PROGRESS OVERLAY: Shows detailed progress for all operations */}
+          <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+            <DetailedProgress 
+              className="bg-white dark:bg-gray-900 border shadow-lg rounded-lg p-4"
+              showSteps={true}
+              showTimeEstimate={true}
+            />
+          </div>
+        </div>
+      </ProgressProvider>
     </QueryClientProvider>
   );
 }
