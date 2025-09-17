@@ -26,7 +26,9 @@ import {
   ChevronRight,
   Eye,
   ShoppingBag,
-  Home
+  Home,
+  BarChart3,
+  History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -81,10 +83,20 @@ export default function RewardsNew() {
   const [, setLocation] = useLocation();
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [showRewardModal, setShowRewardModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('rewards');
 
   const handleGoHome = () => {
     setLocation('/home');
   };
+
+  // Define tabs for sub-navigation
+  const tabs = [
+    { id: 'rewards', label: 'المكافآت', icon: Trophy },
+    { id: 'challenges', label: 'التحديات', icon: Target },
+    { id: 'history', label: 'السجل', icon: History },
+    { id: 'stats', label: 'الإحصائيات', icon: BarChart3 },
+    { id: 'profile', label: 'الملف الشخصي', icon: Users }
+  ];
 
   // Fetch available rewards
   const { data: rewards = [], isLoading: rewardsLoading } = useQuery({
@@ -148,13 +160,11 @@ export default function RewardsNew() {
     }
 
     try {
-      // Here you would call the redeem API
       toast({
         title: '🎉 تم الاستبدال بنجاح!',
         description: `تم استبدال ${reward.name} بنجاح`,
       });
       
-      // Update user points (في النسخة الحقيقية سيتم عبر API)
       console.log(`تم استبدال ${reward.name} بـ ${reward.points_cost} نقطة`);
       
     } catch (error) {
@@ -166,6 +176,299 @@ export default function RewardsNew() {
     }
   };
 
+  // Render functions for each tab
+  const renderRewardsContent = () => (
+    <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+      <CardHeader className="bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-t-lg">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <Gift className="h-6 w-6" />
+          كتالوج المكافآت
+          <Badge variant="secondary" className="ml-auto bg-white/20 text-white">
+            {rewards.length}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        {rewardsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+          </div>
+        ) : rewards.length === 0 ? (
+          <div className="text-center py-8">
+            <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">لا توجد مكافآت متاحة حالياً</p>
+          </div>
+        ) : (
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {rewards.map((reward: Reward, index: number) => {
+              const canRedeem = currentPoints >= reward.points_cost && reward.available;
+              
+              return (
+                <motion.div
+                  key={reward.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  className="group relative overflow-hidden"
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-r rounded-lg transform scale-0 group-hover:scale-100 transition-transform duration-300 ${
+                    canRedeem 
+                      ? 'from-green-500/10 to-emerald-500/10' 
+                      : 'from-gray-500/10 to-gray-500/10'
+                  }`}></div>
+                  <div className={`relative p-4 border rounded-lg transition-all duration-300 ${
+                    canRedeem 
+                      ? 'border-green-200 hover:border-green-400 hover:shadow-lg' 
+                      : 'border-gray-200 opacity-75'
+                  }`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${
+                          canRedeem ? 'bg-green-100' : 'bg-gray-100'
+                        }`}>
+                          <RewardTypeIcon type={reward.reward_type} />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-800">{reward.name}</h4>
+                          <p className="text-sm text-gray-600">{reward.description}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-lg font-bold ${
+                          canRedeem ? 'text-green-600' : 'text-gray-500'
+                        }`}>
+                          {reward.points_cost} نقطة
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Badge variant={reward.available ? "default" : "secondary"}>
+                        {reward.available ? "متاح" : "غير متاح"}
+                      </Badge>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedReward(reward);
+                            setShowRewardModal(true);
+                          }}
+                          data-testid={`button-view-reward-${reward.id}`}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          تفاصيل
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => redeemReward(reward)}
+                          disabled={!canRedeem}
+                          className={canRedeem ? 'bg-green-600 hover:bg-green-700' : ''}
+                          data-testid={`button-redeem-reward-${reward.id}`}
+                        >
+                          <ShoppingBag className="h-4 w-4 mr-1" />
+                          استبدال
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderChallengesContent = () => (
+    <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+      <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-t-lg">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <Target className="h-6 w-6" />
+          التحديات النشطة
+          <Badge variant="secondary" className="ml-auto bg-white/20 text-white">
+            {activeChallenges.length}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        {challengesLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          </div>
+        ) : activeChallenges.length === 0 ? (
+          <div className="text-center py-8">
+            <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">لا توجد تحديات متاحة حالياً</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {activeChallenges.map((challenge: Challenge, index: number) => (
+              <motion.div
+                key={challenge.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="group relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg transform scale-0 group-hover:scale-100 transition-transform duration-300"></div>
+                <div className="relative p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <ChallengeTypeIcon type={challenge.type} />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-800">{challenge.name}</h4>
+                        <p className="text-sm text-gray-600">{challenge.description}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={challenge.is_daily ? "default" : "secondary"}>
+                        {challenge.is_daily ? "يومي" : "عام"}
+                      </Badge>
+                      <p className="text-lg font-bold text-blue-600 mt-1">
+                        +{challenge.points_reward} نقطة
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <span>الهدف: {challenge.target_value} {challenge.type}</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderHistoryContent = () => (
+    <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+      <CardHeader className="bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-t-lg">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <History className="h-6 w-6" />
+          سجل المكافآت
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        <div className="text-center py-8">
+          <History className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">لا يوجد سجل للمكافآت حتى الآن</p>
+          <p className="text-sm text-gray-400 mt-2">ابدأ بجمع النقاط واستبدال المكافآت!</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderStatsContent = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <BarChart3 className="h-6 w-6" />
+            إحصائيات النقاط
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span>إجمالي النقاط:</span>
+              <span className="font-bold text-lg">{currentPoints.toLocaleString('ar-EG')}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>المستوى الحالي:</span>
+              <Badge className="bg-purple-600">{currentLevel}</Badge>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>نقاط للمستوى التالي:</span>
+              <span className="font-medium">{pointsToNextLevel}</span>
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span>التقدم:</span>
+                <span>{Math.round(progressPercentage)}%</span>
+              </div>
+              <Progress value={progressPercentage} className="h-2" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-t-lg">
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <TrendingUp className="h-6 w-6" />
+            إحصائيات النشاط
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span>عدد الطباعات:</span>
+              <span className="font-bold text-lg">{user?.totalPrints?.toLocaleString('ar-EG') || '0'}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>الإحالات:</span>
+              <span className="font-bold text-lg">{user?.totalReferrals || '0'}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>المكافآت المستبدلة:</span>
+              <span className="font-bold text-lg">0</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>التحديات المكتملة:</span>
+              <span className="font-bold text-lg">0</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderProfileContent = () => (
+    <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+      <CardHeader className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-t-lg">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <Users className="h-6 w-6" />
+          ملف المكافآت
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        <div className="text-center space-y-6">
+          <div className="relative inline-block">
+            <div className="w-24 h-24 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+              {user?.fullName?.charAt(0) || 'ز'}
+            </div>
+            <Badge className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-amber-500 text-white">
+              المستوى {currentLevel}
+            </Badge>
+          </div>
+          
+          <div>
+            <h3 className="text-xl font-bold text-gray-800">{user?.fullName || 'زائر'}</h3>
+            <p className="text-gray-600">{user?.email}</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 mt-6">
+            <div className="bg-amber-50 rounded-lg p-4">
+              <Coins className="h-8 w-8 text-amber-600 mx-auto mb-2" />
+              <p className="text-sm text-gray-600">النقاط الحالية</p>
+              <p className="text-xl font-bold text-amber-600">{currentPoints.toLocaleString('ar-EG')}</p>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-4">
+              <Crown className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+              <p className="text-sm text-gray-600">المستوى</p>
+              <p className="text-xl font-bold text-purple-600">{currentLevel}</p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-orange-50">
       {/* Animated Background */}
@@ -174,8 +477,7 @@ export default function RewardsNew() {
         <div className="absolute -bottom-1/2 -left-1/2 w-96 h-96 bg-gradient-to-tr from-blue-200/30 to-green-200/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-8 space-y-8">
-        
+      <div className="relative z-10">
         {/* زر الرئيسية */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
@@ -188,17 +490,19 @@ export default function RewardsNew() {
             variant="outline"
             size="sm"
             className="bg-white/90 backdrop-blur-sm border-blue-200 hover:bg-blue-50 hover:border-blue-300 shadow-lg transition-all duration-300 group"
+            data-testid="button-home"
           >
             <Home className="h-4 w-4 mr-2 text-blue-500 group-hover:text-blue-600 transition-colors" />
             <span className="text-blue-600 font-medium">الرئيسية</span>
           </Button>
         </motion.div>
+
         {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center space-y-6"
+          className="text-center space-y-6 pt-20 pb-8"
         >
           <div className="relative inline-block">
             <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-purple-500 rounded-full blur-lg opacity-30 animate-pulse"></div>
@@ -220,6 +524,7 @@ export default function RewardsNew() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
+          className="container mx-auto px-4 mb-8"
         >
           <Card className="bg-gradient-to-r from-orange-500 to-purple-600 text-white shadow-2xl border-0">
             <CardContent className="p-8">
@@ -242,7 +547,6 @@ export default function RewardsNew() {
                 <div className="text-center">
                   <div className="relative w-32 h-32 mx-auto">
                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                      {/* Background circle */}
                       <circle
                         cx="50"
                         cy="50"
@@ -251,7 +555,6 @@ export default function RewardsNew() {
                         stroke="rgba(255,255,255,0.2)"
                         strokeWidth="8"
                       />
-                      {/* Progress circle */}
                       <circle
                         cx="50"
                         cy="50"
@@ -301,287 +604,148 @@ export default function RewardsNew() {
           </Card>
         </motion.div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          {/* Active Challenges */}
+        {/* شريط التنقل الفرعي */}
+        <div className="container mx-auto px-4 py-6">
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-2"
           >
-            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <Target className="h-6 w-6" />
-                  التحديات النشطة
-                  <Badge variant="secondary" className="ml-auto bg-white/20 text-white">
-                    {activeChallenges.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {challengesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                  </div>
-                ) : activeChallenges.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">لا توجد تحديات متاحة حالياً</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {activeChallenges.map((challenge: Challenge, index: number) => (
-                      <motion.div
-                        key={challenge.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                        className="group relative overflow-hidden"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg transform scale-0 group-hover:scale-100 transition-transform duration-300"></div>
-                        <div className="relative p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-blue-100 rounded-lg">
-                                <ChallengeTypeIcon type={challenge.type} />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-gray-800">{challenge.name}</h4>
-                                <p className="text-sm text-gray-600">{challenge.description}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <Badge variant={challenge.is_daily ? "default" : "secondary"}>
-                                {challenge.is_daily ? "يومي" : "عام"}
-                              </Badge>
-                              <p className="text-lg font-bold text-blue-600 mt-1">
-                                +{challenge.points_reward} نقطة
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>الهدف: {challenge.target_value} {challenge.type}</span>
-                            <ChevronRight className="h-4 w-4" />
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Rewards Catalog */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-          >
-            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <Gift className="h-6 w-6" />
-                  كتالوج المكافآت
-                  <Badge variant="secondary" className="ml-auto bg-white/20 text-white">
-                    {rewards.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {rewardsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
-                  </div>
-                ) : rewards.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">لا توجد مكافآت متاحة حالياً</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {rewards.map((reward: Reward, index: number) => {
-                      const canRedeem = currentPoints >= reward.points_cost && reward.available;
-                      
-                      return (
-                        <motion.div
-                          key={reward.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.1 }}
-                          className="group relative overflow-hidden"
-                        >
-                          <div className={`absolute inset-0 bg-gradient-to-r rounded-lg transform scale-0 group-hover:scale-100 transition-transform duration-300 ${
-                            canRedeem 
-                              ? 'from-green-500/10 to-emerald-500/10' 
-                              : 'from-gray-500/10 to-gray-500/10'
-                          }`}></div>
-                          <div className={`relative p-4 border rounded-lg transition-all duration-300 ${
-                            canRedeem 
-                              ? 'border-green-200 hover:border-green-400 hover:shadow-lg' 
-                              : 'border-gray-200 opacity-75'
-                          }`}>
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-lg ${
-                                  canRedeem ? 'bg-green-100' : 'bg-gray-100'
-                                }`}>
-                                  <RewardTypeIcon type={reward.reward_type} />
-                                </div>
-                                <div>
-                                  <h4 className="font-semibold text-gray-800">{reward.name}</h4>
-                                  <p className="text-sm text-gray-600">{reward.description}</p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className={`text-lg font-bold ${
-                                  canRedeem ? 'text-green-600' : 'text-gray-500'
-                                }`}>
-                                  {reward.points_cost} نقطة
-                                </p>
-                                {reward.limit_per_user && (
-                                  <p className="text-xs text-gray-500">
-                                    حد أقصى: {reward.limit_per_user}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Badge variant={reward.available ? "default" : "secondary"}>
-                                {reward.available ? "متاح" : "غير متاح"}
-                              </Badge>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedReward(reward);
-                                    setShowRewardModal(true);
-                                  }}
-                                >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  تفاصيل
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => redeemReward(reward)}
-                                  disabled={!canRedeem}
-                                  className={canRedeem ? 'bg-green-600 hover:bg-green-700' : ''}
-                                >
-                                  <ShoppingBag className="h-4 w-4 mr-1" />
-                                  استبدال
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-around">
+              {tabs.map((tab) => {
+                const IconComponent = tab.icon;
+                const isActive = activeTab === tab.id;
+                
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    data-testid={`tab-${tab.id}`}
+                    className={`
+                      flex flex-col items-center px-3 py-3 rounded-lg transition-all duration-300 min-w-[70px]
+                      ${isActive 
+                        ? 'bg-gradient-to-r from-orange-500 to-purple-600 text-white shadow-lg scale-105' 
+                        : 'text-gray-600 hover:text-orange-500 hover:bg-orange-50'
+                      }
+                    `}
+                  >
+                    <IconComponent className={`h-6 w-6 mb-1 ${isActive ? 'text-white' : ''}`} />
+                    <span className={`text-xs font-medium ${isActive ? 'text-white' : ''}`}>
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </motion.div>
         </div>
 
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.8 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
-        >
-          <Card className="bg-gradient-to-br from-blue-500 to-purple-600 text-white border-0 shadow-xl">
-            <CardContent className="p-6 text-center">
-              <TrendingUp className="h-12 w-12 mx-auto mb-4 text-blue-200" />
-              <h3 className="text-xl font-bold mb-2">ارفع مستواك</h3>
-              <p className="text-blue-100 mb-4">اطبع أكثر واجمع نقاط إضافية</p>
-              <Button variant="secondary" className="bg-white text-blue-600 hover:bg-blue-50">
-                ابدأ الطباعة
-              </Button>
-            </CardContent>
-          </Card>
+        {/* محتوى التبويبات */}
+        <div className="container mx-auto px-4 pb-8">
+          <AnimatePresence mode="wait">
+            {activeTab === 'rewards' && (
+              <motion.div
+                key="rewards"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderRewardsContent()}
+              </motion.div>
+            )}
 
-          <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0 shadow-xl">
-            <CardContent className="p-6 text-center">
-              <Users className="h-12 w-12 mx-auto mb-4 text-green-200" />
-              <h3 className="text-xl font-bold mb-2">ادع أصدقاءك</h3>
-              <p className="text-green-100 mb-4">احصل على نقاط مقابل كل دعوة</p>
-              <Button variant="secondary" className="bg-white text-green-600 hover:bg-green-50">
-                مشاركة الرابط
-              </Button>
-            </CardContent>
-          </Card>
+            {activeTab === 'challenges' && (
+              <motion.div
+                key="challenges"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderChallengesContent()}
+              </motion.div>
+            )}
 
-          <Card className="bg-gradient-to-br from-orange-500 to-red-600 text-white border-0 shadow-xl">
-            <CardContent className="p-6 text-center">
-              <Sparkles className="h-12 w-12 mx-auto mb-4 text-orange-200" />
-              <h3 className="text-xl font-bold mb-2">مكافآت يومية</h3>
-              <p className="text-orange-100 mb-4">استلم مكافأة تسجيل الدخول اليومي</p>
-              <Button variant="secondary" className="bg-white text-orange-600 hover:bg-orange-50">
-                استلام المكافأة
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
+            {activeTab === 'history' && (
+              <motion.div
+                key="history"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderHistoryContent()}
+              </motion.div>
+            )}
 
-        {/* Reward Details Modal */}
-        <Dialog open={showRewardModal} onOpenChange={setShowRewardModal}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {selectedReward && <RewardTypeIcon type={selectedReward.reward_type} />}
-                تفاصيل المكافأة
-              </DialogTitle>
-            </DialogHeader>
-            {selectedReward && (
-              <div className="space-y-4">
-                <div className="text-center">
-                  <h3 className="text-xl font-bold">{selectedReward.name}</h3>
-                  <p className="text-gray-600">{selectedReward.description}</p>
+            {activeTab === 'stats' && (
+              <motion.div
+                key="stats"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderStatsContent()}
+              </motion.div>
+            )}
+
+            {activeTab === 'profile' && (
+              <motion.div
+                key="profile"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderProfileContent()}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Modal للمكافآت */}
+      <Dialog open={showRewardModal} onOpenChange={setShowRewardModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>تفاصيل المكافأة</DialogTitle>
+          </DialogHeader>
+          {selectedReward && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <RewardTypeIcon type={selectedReward.reward_type} />
                 </div>
-                
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span>التكلفة:</span>
-                    <span className="font-bold text-orange-600">{selectedReward.points_cost} نقطة</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span>النوع:</span>
-                    <Badge>{selectedReward.reward_type}</Badge>
-                  </div>
-                  {selectedReward.limit_per_user && (
-                    <div className="flex justify-between items-center">
-                      <span>الحد الأقصى:</span>
-                      <span>{selectedReward.limit_per_user} مرة</span>
-                    </div>
-                  )}
+                <h3 className="text-xl font-bold">{selectedReward.name}</h3>
+                <p className="text-gray-600">{selectedReward.description}</p>
+              </div>
+              
+              <div className="bg-orange-50 rounded-lg p-4">
+                <div className="flex justify-between items-center">
+                  <span>التكلفة:</span>
+                  <span className="font-bold text-orange-600">{selectedReward.points_cost} نقطة</span>
                 </div>
-
-                <div className="flex gap-3">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowRewardModal(false)}
-                    className="flex-1"
-                  >
-                    إغلاق
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      redeemReward(selectedReward);
-                      setShowRewardModal(false);
-                    }}
-                    disabled={currentPoints < selectedReward.points_cost}
-                    className="flex-1 bg-orange-600 hover:bg-orange-700"
-                  >
-                    استبدال الآن
-                  </Button>
+                <div className="flex justify-between items-center mt-2">
+                  <span>نقاطك الحالية:</span>
+                  <span className="font-bold">{currentPoints} نقطة</span>
                 </div>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
+              
+              <Button 
+                className="w-full" 
+                onClick={() => redeemReward(selectedReward)}
+                disabled={currentPoints < selectedReward.points_cost}
+                data-testid="button-redeem-modal"
+              >
+                {currentPoints >= selectedReward.points_cost ? 'استبدال المكافأة' : 'نقاط غير كافية'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
