@@ -47,16 +47,19 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
       };
     }
 
-    // Fallback to Supabase session for regular users
+    // Primary method: Supabase session for regular users (most important!)
     const { supabase } = await import('./supabase');
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session?.access_token) {
+      console.log(`🔑 Using Supabase authentication for user: ${session.user.email} (${session.user.id})`);
       return {
         'Authorization': `Bearer ${session.access_token}`,
         'X-User-ID': session.user.id,
         'X-User-Role': session.user.user_metadata?.role || 'customer',
       };
+    } else {
+      console.log('❌ No valid Supabase session found');
     }
   } catch (error) {
     console.warn('Failed to get authentication headers:', error);
