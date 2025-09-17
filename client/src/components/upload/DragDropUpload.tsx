@@ -170,6 +170,10 @@ export function DragDropUpload({
     let result;
     setUploadProvider('🔄 جاري التحديد...'); // Initial state
     
+    // 📊 IDM STATS: Start tracking upload progress for this file
+    const fileStartTime = Date.now();
+    let progressInterval: NodeJS.Timeout | null = null;
+    
     // 🚀 CHUNKED UPLOAD: Use chunked upload for large files (>10MB)
     if (file.size > 10 * 1024 * 1024) {
       console.log(`🚀 Using chunked upload for large file: ${file.name}`);
@@ -203,10 +207,43 @@ export function DragDropUpload({
         result = await uploadFileToGoogleDrive(file);
       }
     } else {
-      // Standard upload for smaller files
+      // Standard upload for smaller files with progress simulation
       console.log(`📁 Using standard upload for file: ${file.name}`);
       setUploadProvider('🔵 رفع سريع');
+      
+      // 📊 IDM STATS: Simulate progress for standard uploads
+      const simulateProgress = () => {
+        let simulatedProgress = 0;
+        progressInterval = setInterval(() => {
+          simulatedProgress += Math.random() * 15 + 5; // 5-20% increments
+          if (simulatedProgress > 95) simulatedProgress = 95; // Stop at 95%
+          
+          const currentBytes = Math.floor((simulatedProgress / 100) * file.size);
+          updateSpeed(sessionStats.bytesUploaded + currentBytes);
+          
+          // Update session progress
+          setSessionStats(prev => ({
+            ...prev,
+            bytesUploaded: prev.bytesUploaded - (lastProgressUpdate?.bytes || 0) + currentBytes
+          }));
+          
+          setLastProgressUpdate({ time: Date.now(), bytes: currentBytes });
+          
+          if (simulatedProgress >= 95 && progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+          }
+        }, 500); // Update every 500ms
+      };
+      
+      simulateProgress();
       result = await uploadFileToGoogleDrive(file);
+      
+      // Clear progress interval when upload completes
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
     }
     
     // Fallback to Cloudinary if Google Drive fails
@@ -371,6 +408,11 @@ export function DragDropUpload({
       setSpeedSamples([]);
       setEta(0);
       setLastProgressUpdate(null);
+      
+      // Clear any remaining progress intervals
+      if (typeof progressInterval === 'number') {
+        clearInterval(progressInterval);
+      }
     }
   }, [onUpload, toast]);
 
