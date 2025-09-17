@@ -60,33 +60,14 @@ export function DragDropUpload({
   };
 
   // 📊 IDM STATS: Helper functions for speed and ETA calculation
-  const updateSpeed = useCallback((bytesUploaded: number) => {
+  const updateSpeed = useCallback((totalBytesUploaded: number, sessionStartTime: number) => {
     const now = Date.now();
-    const newSample = { time: now, bytes: bytesUploaded };
+    const elapsedTimeSeconds = (now - sessionStartTime) / 1000;
     
-    setSpeedSamples(prevSamples => {
-      // Keep only last 10 samples (last 10 seconds for smooth calculation)
-      const filteredSamples = prevSamples.filter(sample => now - sample.time < 10000);
-      const updatedSamples = [...filteredSamples, newSample];
-      
-      // Calculate speed using EMA (Exponential Moving Average)
-      if (updatedSamples.length >= 2) {
-        const firstSample = updatedSamples[0];
-        const lastSample = updatedSamples[updatedSamples.length - 1];
-        const timeDiff = (lastSample.time - firstSample.time) / 1000; // seconds
-        const bytesDiff = lastSample.bytes - firstSample.bytes;
-        
-        if (timeDiff > 0) {
-          const instantSpeed = bytesDiff / timeDiff; // bytes per second
-          setCurrentSpeed(prevSpeed => {
-            // EMA with alpha = 0.2 for smooth speed calculation
-            return prevSpeed === 0 ? instantSpeed : prevSpeed * 0.8 + instantSpeed * 0.2;
-          });
-        }
-      }
-      
-      return updatedSamples;
-    });
+    if (elapsedTimeSeconds > 0 && totalBytesUploaded > 0) {
+      const instantSpeed = totalBytesUploaded / elapsedTimeSeconds; // bytes per second
+      setCurrentSpeed(instantSpeed);
+    }
   }, []);
 
   const calculateETA = useCallback((totalBytes: number, uploadedBytes: number, speed: number): number => {
@@ -214,26 +195,38 @@ export function DragDropUpload({
       // 📊 IDM STATS: Simulate progress for standard uploads
       const simulateProgress = () => {
         let simulatedProgress = 0;
+        let currentFileBytes = 0;
+        
         progressInterval = setInterval(() => {
-          simulatedProgress += Math.random() * 15 + 5; // 5-20% increments
+          simulatedProgress += Math.random() * 10 + 5; // 5-15% increments
           if (simulatedProgress > 95) simulatedProgress = 95; // Stop at 95%
           
-          const currentBytes = Math.floor((simulatedProgress / 100) * file.size);
-          updateSpeed(sessionStats.bytesUploaded + currentBytes);
+          currentFileBytes = Math.floor((simulatedProgress / 100) * file.size);
           
-          // Update session progress
-          setSessionStats(prev => ({
-            ...prev,
-            bytesUploaded: prev.bytesUploaded - (lastProgressUpdate?.bytes || 0) + currentBytes
-          }));
-          
-          setLastProgressUpdate({ time: Date.now(), bytes: currentBytes });
+          // Update session progress correctly
+          setSessionStats(prev => {
+            const previousFilesBytes = prev.bytesTotal - file.size; // bytes from completed files
+            const newTotalUploaded = previousFilesBytes + currentFileBytes;
+            
+            // Update speed calculation
+            updateSpeed(newTotalUploaded, fileStartTime);
+            
+            // Calculate ETA
+            const remaining = prev.bytesTotal - newTotalUploaded;
+            const newEta = currentSpeed > 0 ? Math.round(remaining / currentSpeed) : 0;
+            setEta(newEta);
+            
+            return {
+              ...prev,
+              bytesUploaded: newTotalUploaded
+            };
+          });
           
           if (simulatedProgress >= 95 && progressInterval) {
             clearInterval(progressInterval);
             progressInterval = null;
           }
-        }, 500); // Update every 500ms
+        }, 300); // Update every 300ms for smoother animation
       };
       
       simulateProgress();
@@ -341,13 +334,8 @@ export function DragDropUpload({
         
         // 📊 IDM STATS: Update session statistics for completed file
         setSessionStats(prev => {
-          const newBytesUploaded = prev.bytesUploaded + file.size;
           const newFilesCompleted = prev.filesCompleted + 1;
-          
-          // Update speed and ETA based on total progress
-          updateSpeed(newBytesUploaded);
-          const newEta = calculateETA(prev.bytesTotal, newBytesUploaded, currentSpeed);
-          setEta(newEta);
+          const newBytesUploaded = prev.bytesTotal * (newFilesCompleted / prev.filesTotal); // Proportional completion
           
           return {
             ...prev,
@@ -355,6 +343,10 @@ export function DragDropUpload({
             bytesUploaded: newBytesUploaded,
           };
         });
+        
+        // Reset ETA to 0 when file is complete
+        setEta(0);
+        setCurrentSpeed(0);
         
         console.log(`✅ File ${i + 1} uploaded via ${uploadResult.provider}`);
       }
@@ -485,14 +477,8 @@ export function DragDropUpload({
             <div className="mt-4 space-y-3">
               {/* 📊 IDM STATS: Advanced upload statistics display */}
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
-                {/* Header Row: Time, Provider, Speed */}
+                {/* Header Row: Provider and Speed */}
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3 space-x-reverse">
-                    <Clock className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800" data-testid="text-elapsed-time">
-                      {formatTime(elapsedTime)}
-                    </span>
-                  </div>
                   <div className="text-sm font-medium text-purple-700" data-testid="text-provider-status">
                     {uploadProvider || '🔄 جاري التحديد...'}
                   </div>
@@ -507,10 +493,10 @@ export function DragDropUpload({
                     📁 {sessionStats.filesCompleted}/{sessionStats.filesTotal} ملف
                   </div>
                   <div className="text-xs text-purple-600" data-testid="text-session-size">
-                    📦 {formatFileSize(sessionStats.bytesUploaded)} / {formatFileSize(sessionStats.bytesTotal)}
+                    📦 {formatFileSize(Math.min(sessionStats.bytesUploaded, sessionStats.bytesTotal))} / {formatFileSize(sessionStats.bytesTotal)}
                   </div>
                   <div className="text-xs text-green-600" data-testid="text-eta">
-                    ⏱️ {formatETA(eta)}
+                    ⏱️ {eta > 0 ? `باقي ${formatETA(eta)}` : 'اكتمل'}
                   </div>
                 </div>
 
@@ -520,19 +506,19 @@ export function DragDropUpload({
                     التقدم الإجمالي
                   </span>
                   <span className="text-sm font-bold text-blue-700" data-testid="text-progress-percentage">
-                    {Math.round((sessionStats.bytesUploaded / sessionStats.bytesTotal) * 100 || 0)}%
+                    {Math.min(100, Math.round((sessionStats.bytesUploaded / sessionStats.bytesTotal) * 100) || 0)}%
                   </span>
                 </div>
               </div>
               
-              {/* Overall Progress */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">
-                  {chunkProgress ? `${chunkProgress.currentFileIndex}/${chunkProgress.totalFiles}` : 'جاري الرفع...'}
-                </span>
-                <span className="text-sm text-gray-600">{Math.round(progress)}%</span>
+              {/* Overall Progress Bar */}
+              <div className="mt-2">
+                <Progress 
+                  value={Math.min(100, Math.round((sessionStats.bytesUploaded / sessionStats.bytesTotal) * 100) || 0)} 
+                  className="w-full h-3" 
+                  data-testid="progress-overall"
+                />
               </div>
-              <Progress value={progress} className="w-full" />
               
               {/* Current File Info */}
               {chunkProgress && (
