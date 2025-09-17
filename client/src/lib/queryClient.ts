@@ -14,7 +14,20 @@ async function throwIfResNotOk(res: Response, url?: string) {
 // Helper to get authentication headers
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
-    // First try admin authentication (for admin routes)
+    // PRIMARY: Always check Supabase session first for regular users
+    const { supabase } = await import('./supabase');
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.access_token) {
+      console.log(`🔑 Using Supabase authentication for user: ${session.user.email} (${session.user.id})`);
+      return {
+        'Authorization': `Bearer ${session.access_token}`,
+        'X-User-ID': session.user.id,
+        'X-User-Role': session.user.user_metadata?.role || 'customer',
+      };
+    }
+
+    // SECONDARY: Try admin authentication (for admin routes only)
     const adminAuth = localStorage.getItem('adminAuth');
     const adminToken = localStorage.getItem('adminToken');
     
@@ -24,7 +37,7 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
         const token = adminData.token || adminToken;
         const userId = adminData.user?.id || adminData.admin?.id || adminData.id;
         
-        // Use only x-admin-token for admin authentication (avoid conflicts with Supabase JWTs)
+        console.log(`🔐 Using admin authentication for admin: ${userId}`);
         return {
           'x-admin-token': token,
           'x-user-id': userId,
@@ -37,30 +50,8 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
       }
     }
 
-    // Next try localStorage (for regular user login)
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      return {
-        'X-User-ID': user.id,
-        'X-User-Role': user.role || 'customer',
-      };
-    }
-
-    // Primary method: Supabase session for regular users (most important!)
-    const { supabase } = await import('./supabase');
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.access_token) {
-      console.log(`🔑 Using Supabase authentication for user: ${session.user.email} (${session.user.id})`);
-      return {
-        'Authorization': `Bearer ${session.access_token}`,
-        'X-User-ID': session.user.id,
-        'X-User-Role': session.user.user_metadata?.role || 'customer',
-      };
-    } else {
-      console.log('❌ No valid Supabase session found');
-    }
+    // FALLBACK: No valid authentication found
+    console.log('❌ No valid authentication session found');
   } catch (error) {
     console.warn('Failed to get authentication headers:', error);
   }
