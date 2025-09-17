@@ -32,6 +32,20 @@ export function DragDropUpload({
   const [uploadStartTime, setUploadStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [uploadProvider, setUploadProvider] = useState<string>('');
+
+  // 🎯 SECRET ICONS: Map providers to secret icons
+  const getProviderIcon = (provider: string | undefined): string => {
+    if (!provider) return '🔄';
+    if (provider === 'google_drive' || provider.includes('Google Drive')) return '🔵';
+    if (provider === 'cloudinary' || provider.includes('Cloudinary')) return '🔶';
+    return '🔄';
+  };
+
+  const getProviderName = (provider: string): string => {
+    if (provider === 'google_drive') return '🔵 مزود أول';
+    if (provider === 'cloudinary') return '🔶 مزود ثاني';
+    return '🔄 جاري التحديد...';
+  };
   
   // 🚀 CHUNKED UPLOAD: Enhanced progress tracking with recovery info
   const [chunkProgress, setChunkProgress] = useState<{
@@ -92,12 +106,12 @@ export function DragDropUpload({
     });
     
     let result;
-    setUploadProvider('🔄 جاري الرفع...'); // Initial state
+    setUploadProvider('🔄 جاري التحديد...'); // Initial state
     
     // 🚀 CHUNKED UPLOAD: Use chunked upload for large files (>10MB)
     if (file.size > 10 * 1024 * 1024) {
       console.log(`🚀 Using chunked upload for large file: ${file.name}`);
-      setUploadProvider('🚀 Google Drive - رفع متقدم');
+      setUploadProvider('🔵 رفع متقدم');
       
       result = await uploadFileWithChunks(
         file,
@@ -123,20 +137,20 @@ export function DragDropUpload({
       
       if (!result.success) {
         console.log('🔄 Chunked upload failed, trying standard Google Drive...');
-        setUploadProvider('🔄 Google Drive - رفع عادي');
+        setUploadProvider('🔵 رفع عادي');
         result = await uploadFileToGoogleDrive(file);
       }
     } else {
       // Standard upload for smaller files
       console.log(`📁 Using standard upload for file: ${file.name}`);
-      setUploadProvider('📁 Google Drive - رفع سريع');
+      setUploadProvider('🔵 رفع سريع');
       result = await uploadFileToGoogleDrive(file);
     }
     
     // Fallback to Cloudinary if Google Drive fails
     if (!result.success) {
       console.log('🔄 Cloud Storage failed, trying Cloudinary fallback...');
-      setUploadProvider('☁️ Cloudinary - النسخ الاحتياطي');
+      setUploadProvider('🔶 النسخ الاحتياطي');
       result = await uploadFile(file);
     }
     
@@ -155,7 +169,7 @@ export function DragDropUpload({
     }
     
     // ⏱️ TIMER: Set final provider used for this file
-    setUploadProvider(result.provider === 'google_drive' ? '✅ Google Drive' : '✅ Cloudinary');
+    setUploadProvider(result.provider === 'google_drive' ? '🔵 مكتمل' : '🔶 مكتمل');
     
     return {
       file,
@@ -228,11 +242,11 @@ export function DragDropUpload({
       
       let description = `تم رفع ${uploads.length} ملف بنجاح`;
       if (googleDriveCount > 0 && cloudinaryCount > 0) {
-        description += ` (${googleDriveCount} عبر التخزين السحابي، ${cloudinaryCount} عبر Cloudinary)`;
+        description += ` (${googleDriveCount} عبر 🔵، ${cloudinaryCount} عبر 🔶)`;
       } else if (googleDriveCount > 0) {
-        description += ` عبر التخزين السحابي`;
+        description += ` عبر 🔵`;
       } else {
-        description += ` عبر Cloudinary`;
+        description += ` عبر 🔶`;
       }
       
       toast({
@@ -338,7 +352,7 @@ export function DragDropUpload({
                     </span>
                   </div>
                   <div className="text-sm text-gray-600">
-                    {uploadProvider || '🔄 جاري تحديد المزود...'}
+                    {uploadProvider || '🔄 جاري التحديد...'}
                   </div>
                 </div>
               </div>
