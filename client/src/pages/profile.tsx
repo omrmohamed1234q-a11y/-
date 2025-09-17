@@ -6,10 +6,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { User, Settings, Phone, Mail, MapPin, Calendar, Star, Package, CreditCard, LogOut } from 'lucide-react';
+import { User, Settings, Phone, Mail, MapPin, Calendar, Star, Package, CreditCard, LogOut, Trash2 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 import { supabase } from '@/lib/supabase';
 
@@ -44,6 +56,13 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
+  
+  // Notification settings state
+  const [notificationSettings, setNotificationSettings] = useState({
+    emailNotifications: true,
+    pushNotifications: false,
+    orderUpdates: true
+  });
 
   // Fetch user profile data
   const { data: userProfile, isLoading } = useQuery<UserProfile>({
@@ -89,8 +108,69 @@ export default function Profile() {
     },
   });
 
+  // Update notification settings mutation
+  const updateNotificationsMutation = useMutation({
+    mutationFn: async (settings: typeof notificationSettings) => {
+      const response = await apiRequest('PUT', '/api/preferences/notifications', settings);
+      if (!response.ok) {
+        throw new Error('فشل في تحديث إعدادات الإشعارات');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم تحديث الإعدادات",
+        description: "تم حفظ إعدادات الإشعارات بنجاح",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "خطأ في التحديث",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete account mutation  
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('DELETE', '/api/account/delete');
+      if (!response.ok) {
+        throw new Error('فشل في حذف الحساب');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم حذف الحساب",
+        description: "تم حذف حسابك بنجاح",
+      });
+      // Sign out and redirect
+      supabase.auth.signOut();
+      navigate('/');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "خطأ في الحذف",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSave = () => {
     updateProfileMutation.mutate(formData);
+  };
+
+  const handleNotificationChange = (setting: keyof typeof notificationSettings, value: boolean) => {
+    const newSettings = { ...notificationSettings, [setting]: value };
+    setNotificationSettings(newSettings);
+    updateNotificationsMutation.mutate(newSettings);
+  };
+
+  const handleDeleteAccount = () => {
+    deleteAccountMutation.mutate();
   };
 
   const handleLogout = async () => {
@@ -384,9 +464,12 @@ export default function Profile() {
                       <h3 className="font-medium">إشعارات البريد الإلكتروني</h3>
                       <p className="text-sm text-gray-600">استقبال إشعارات حول الطلبات والعروض</p>
                     </div>
-                    <Button variant="outline" size="sm">
-                      تمكين
-                    </Button>
+                    <Switch
+                      checked={notificationSettings.emailNotifications}
+                      onCheckedChange={(checked) => handleNotificationChange('emailNotifications', checked)}
+                      disabled={updateNotificationsMutation.isPending}
+                      data-testid="switch-email-notifications"
+                    />
                   </div>
                   
                   <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -394,9 +477,12 @@ export default function Profile() {
                       <h3 className="font-medium">إشعارات push</h3>
                       <p className="text-sm text-gray-600">استقبال إشعارات فورية على الهاتف</p>
                     </div>
-                    <Button variant="outline" size="sm">
-                      تمكين
-                    </Button>
+                    <Switch
+                      checked={notificationSettings.pushNotifications}
+                      onCheckedChange={(checked) => handleNotificationChange('pushNotifications', checked)}
+                      disabled={updateNotificationsMutation.isPending}
+                      data-testid="switch-push-notifications"
+                    />
                   </div>
                   
                   <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -404,9 +490,12 @@ export default function Profile() {
                       <h3 className="font-medium">إشعارات تحديثات الطلبات</h3>
                       <p className="text-sm text-gray-600">تلقي تحديثات حالة الطلبات</p>
                     </div>
-                    <Button variant="outline" size="sm">
-                      تمكين
-                    </Button>
+                    <Switch
+                      checked={notificationSettings.orderUpdates}
+                      onCheckedChange={(checked) => handleNotificationChange('orderUpdates', checked)}
+                      disabled={updateNotificationsMutation.isPending}
+                      data-testid="switch-order-updates"
+                    />
                   </div>
                 </div>
 
@@ -444,20 +533,62 @@ export default function Profile() {
                 <Separator />
 
                 <div className="space-y-4">
-                  <h3 className="font-medium text-red-600">منطقة الخطر</h3>
+                  <h3 className="font-medium text-red-600 flex items-center gap-2">
+                    <Trash2 className="w-4 h-4" />
+                    منطقة الخطر
+                  </h3>
                   <div className="p-4 border border-red-200 rounded-lg bg-red-50">
                     <h4 className="font-medium text-red-800">حذف الحساب</h4>
                     <p className="text-sm text-red-600 mt-1">
-                      سيتم حذف جميع بياناتك نهائياً ولا يمكن استردادها
+                      سيتم حذف جميع بياناتك نهائياً ولا يمكن استردادها. هذا الإجراء لا يمكن التراجع عنه.
                     </p>
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      className="mt-3"
-                      data-testid="button-delete-account"
-                    >
-                      حذف الحساب
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          className="mt-3"
+                          data-testid="button-delete-account-trigger"
+                        >
+                          <Trash2 className="w-4 h-4 ml-2" />
+                          حذف الحساب
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="sm:max-w-md" dir="rtl">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+                            <Trash2 className="w-5 h-5" />
+                            تأكيد حذف الحساب
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="text-right">
+                            هل أنت متأكد من أنك تريد حذف حسابك نهائياً؟
+                            <br /><br />
+                            <strong className="text-red-600">تحذير:</strong> سيتم حذف:
+                            <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                              <li>جميع بياناتك الشخصية</li>
+                              <li>سجل طلباتك السابقة</li>
+                              <li>نقاط المكافآت والإنجازات</li>
+                              <li>المفضلة والإعدادات</li>
+                            </ul>
+                            <br />
+                            <strong>لا يمكن استرداد هذه البيانات نهائياً.</strong>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="flex-row-reverse gap-2">
+                          <AlertDialogCancel data-testid="button-cancel-delete">
+                            إلغاء
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={handleDeleteAccount}
+                            disabled={deleteAccountMutation.isPending}
+                            data-testid="button-confirm-delete"
+                          >
+                            {deleteAccountMutation.isPending ? 'جاري الحذف...' : 'نعم، احذف حسابي'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </CardContent>
