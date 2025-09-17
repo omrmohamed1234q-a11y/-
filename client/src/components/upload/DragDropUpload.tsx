@@ -33,6 +33,18 @@ export function DragDropUpload({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [uploadProvider, setUploadProvider] = useState<string>('');
 
+  // 📊 IDM STATS: Advanced upload statistics
+  const [sessionStats, setSessionStats] = useState({
+    filesTotal: 0,
+    filesCompleted: 0,
+    bytesTotal: 0,
+    bytesUploaded: 0,
+  });
+  const [currentSpeed, setCurrentSpeed] = useState(0); // bytes per second
+  const [speedSamples, setSpeedSamples] = useState<{ time: number; bytes: number }[]>([]);
+  const [eta, setEta] = useState(0); // seconds remaining
+  const [lastProgressUpdate, setLastProgressUpdate] = useState<{ time: number; bytes: number } | null>(null);
+
   // 🎯 SECRET ICONS: Map providers to secret icons
   const getProviderIcon = (provider: string | undefined): string => {
     if (!provider) return '🔄';
@@ -46,6 +58,56 @@ export function DragDropUpload({
     if (provider === 'cloudinary') return '🔶 مزود ثاني';
     return '🔄 جاري التحديد...';
   };
+
+  // 📊 IDM STATS: Helper functions for speed and ETA calculation
+  const updateSpeed = useCallback((bytesUploaded: number) => {
+    const now = Date.now();
+    const newSample = { time: now, bytes: bytesUploaded };
+    
+    setSpeedSamples(prevSamples => {
+      // Keep only last 10 samples (last 10 seconds for smooth calculation)
+      const filteredSamples = prevSamples.filter(sample => now - sample.time < 10000);
+      const updatedSamples = [...filteredSamples, newSample];
+      
+      // Calculate speed using EMA (Exponential Moving Average)
+      if (updatedSamples.length >= 2) {
+        const firstSample = updatedSamples[0];
+        const lastSample = updatedSamples[updatedSamples.length - 1];
+        const timeDiff = (lastSample.time - firstSample.time) / 1000; // seconds
+        const bytesDiff = lastSample.bytes - firstSample.bytes;
+        
+        if (timeDiff > 0) {
+          const instantSpeed = bytesDiff / timeDiff; // bytes per second
+          setCurrentSpeed(prevSpeed => {
+            // EMA with alpha = 0.2 for smooth speed calculation
+            return prevSpeed === 0 ? instantSpeed : prevSpeed * 0.8 + instantSpeed * 0.2;
+          });
+        }
+      }
+      
+      return updatedSamples;
+    });
+  }, []);
+
+  const calculateETA = useCallback((totalBytes: number, uploadedBytes: number, speed: number): number => {
+    if (speed <= 0 || uploadedBytes >= totalBytes) return 0;
+    const remainingBytes = totalBytes - uploadedBytes;
+    return Math.round(remainingBytes / speed); // seconds
+  }, []);
+
+  const formatSpeed = useCallback((bytesPerSecond: number): string => {
+    if (bytesPerSecond === 0) return '0 KB/s';
+    if (bytesPerSecond < 1024) return `${Math.round(bytesPerSecond)} B/s`;
+    if (bytesPerSecond < 1024 * 1024) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
+    return `${(bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`;
+  }, []);
+
+  const formatETA = useCallback((seconds: number): string => {
+    if (seconds <= 0) return '00:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }, []);
   
   // 🚀 CHUNKED UPLOAD: Enhanced progress tracking with recovery info
   const [chunkProgress, setChunkProgress] = useState<{
@@ -212,6 +274,19 @@ export function DragDropUpload({
     setUploading(true);
     setProgress(0);
     
+    // 📊 IDM STATS: Initialize session statistics
+    const totalBytes = acceptedFiles.reduce((sum, file) => sum + file.size, 0);
+    setSessionStats({
+      filesTotal: acceptedFiles.length,
+      filesCompleted: 0,
+      bytesTotal: totalBytes,
+      bytesUploaded: 0,
+    });
+    setCurrentSpeed(0);
+    setSpeedSamples([]);
+    setEta(0);
+    setLastProgressUpdate(null);
+    
     try {
       console.log('🚀 Starting smart upload system...');
       const uploads: { file: File; url: string; provider?: string }[] = [];
@@ -226,6 +301,23 @@ export function DragDropUpload({
         // Smart upload with fallback
         const uploadResult = await smartUpload(file, i, acceptedFiles.length);
         uploads.push(uploadResult);
+        
+        // 📊 IDM STATS: Update session statistics for completed file
+        setSessionStats(prev => {
+          const newBytesUploaded = prev.bytesUploaded + file.size;
+          const newFilesCompleted = prev.filesCompleted + 1;
+          
+          // Update speed and ETA based on total progress
+          updateSpeed(newBytesUploaded);
+          const newEta = calculateETA(prev.bytesTotal, newBytesUploaded, currentSpeed);
+          setEta(newEta);
+          
+          return {
+            ...prev,
+            filesCompleted: newFilesCompleted,
+            bytesUploaded: newBytesUploaded,
+          };
+        });
         
         console.log(`✅ File ${i + 1} uploaded via ${uploadResult.provider}`);
       }
@@ -272,6 +364,13 @@ export function DragDropUpload({
       setUploadStartTime(null);
       setElapsedTime(0);
       setUploadProvider('');
+      
+      // 📊 IDM STATS: Reset statistics
+      setSessionStats({ filesTotal: 0, filesCompleted: 0, bytesTotal: 0, bytesUploaded: 0 });
+      setCurrentSpeed(0);
+      setSpeedSamples([]);
+      setEta(0);
+      setLastProgressUpdate(null);
     }
   }, [onUpload, toast]);
 
@@ -342,18 +441,45 @@ export function DragDropUpload({
           
           {uploading && (
             <div className="mt-4 space-y-3">
-              {/* ⏱️ TIMER & Provider Display */}
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between">
+              {/* 📊 IDM STATS: Advanced upload statistics display */}
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
+                {/* Header Row: Time, Provider, Speed */}
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3 space-x-reverse">
-                    <Clock className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800" data-testid="text-elapsed-time">
                       {formatTime(elapsedTime)}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm font-medium text-purple-700" data-testid="text-provider-status">
                     {uploadProvider || '🔄 جاري التحديد...'}
                   </div>
+                  <div className="text-sm font-bold text-green-700" data-testid="text-speed-current">
+                    {formatSpeed(currentSpeed)}
+                  </div>
+                </div>
+
+                {/* Session Progress Row */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs text-blue-600" data-testid="text-session-files">
+                    📁 {sessionStats.filesCompleted}/{sessionStats.filesTotal} ملف
+                  </div>
+                  <div className="text-xs text-purple-600" data-testid="text-session-size">
+                    📦 {formatFileSize(sessionStats.bytesUploaded)} / {formatFileSize(sessionStats.bytesTotal)}
+                  </div>
+                  <div className="text-xs text-green-600" data-testid="text-eta">
+                    ⏱️ {formatETA(eta)}
+                  </div>
+                </div>
+
+                {/* Progress Percentage */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700" data-testid="text-overall-progress">
+                    التقدم الإجمالي
+                  </span>
+                  <span className="text-sm font-bold text-blue-700" data-testid="text-progress-percentage">
+                    {Math.round((sessionStats.bytesUploaded / sessionStats.bytesTotal) * 100 || 0)}%
+                  </span>
                 </div>
               </div>
               
