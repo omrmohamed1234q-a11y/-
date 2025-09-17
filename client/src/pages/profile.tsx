@@ -64,9 +64,12 @@ export default function Profile() {
     orderUpdates: true
   });
 
+  // Feature flag for v2 profile system
+  const useProfileV2 = import.meta.env.VITE_USE_PROFILE_V2 === 'true';
+
   // Fetch user profile data
   const { data: userProfile, isLoading } = useQuery<UserProfile>({
-    queryKey: ['/api/profile'],
+    queryKey: useProfileV2 ? ['/api/profile/v2'] : ['/api/profile'],
     retry: false,
   });
 
@@ -85,7 +88,8 @@ export default function Profile() {
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (updates: Partial<UserProfile>) => {
-      const response = await apiRequest('PUT', '/api/profile', updates);
+      const endpoint = useProfileV2 ? '/api/profile/v2' : '/api/profile';
+      const response = await apiRequest('PUT', endpoint, updates);
       if (!response.ok) {
         throw new Error('فشل في تحديث الملف الشخصي');
       }
@@ -97,7 +101,8 @@ export default function Profile() {
         description: "تم حفظ التغييرات بنجاح",
       });
       setIsEditing(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+      const profileKey = useProfileV2 ? ['/api/profile/v2'] : ['/api/profile'];
+      queryClient.invalidateQueries({ queryKey: profileKey });
     },
     onError: (error: Error) => {
       toast({
