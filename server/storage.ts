@@ -248,6 +248,7 @@ export interface IStorage {
   createUserNotification(notification: InsertUserNotification): Promise<UserNotification>;
   markAllNotificationsAsRead(userId: string): Promise<number>; // Returns count of updated notifications
   deleteUserNotification(notificationId: string): Promise<boolean>;
+  getUserUnreadNotificationsCount(userId: string): Promise<number>;
 
   // User Achievements operations
   getUserAchievements(userId: string): Promise<UserAchievement[]>;
@@ -570,6 +571,11 @@ export class MemoryStorage implements IStorage {
       isClicked: true,
       clickedAt: new Date()
     });
+  }
+
+  async getUserUnreadNotificationsCount(userId: string): Promise<number> {
+    const userNotifications = this.notifications.filter(n => n.userId === userId && !n.isRead);
+    return userNotifications.length;
   }
 
   async deleteNotification(id: string): Promise<boolean> {
