@@ -100,16 +100,47 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
   try {
     console.log('📁 Uploading to Cloud Storage (Primary)...');
     
-    // 🔧 TEMPORARY FIX: Convert file to base64 for JSON upload
+    // 🚀 MEMORY OPTIMIZATION: Safe file processing with timeout and size limits
+    const MAX_SAFE_SIZE = 8 * 1024 * 1024; // 8MB safe limit
+    
+    if (file.size > MAX_SAFE_SIZE) {
+      throw new Error(`الملف كبير جداً (${(file.size / 1024 / 1024).toFixed(1)}MB). الحد الأقصى: ${MAX_SAFE_SIZE / 1024 / 1024}MB`);
+    }
+    
     const fileBuffer = await new Promise<string>((resolve, reject) => {
+      // Add timeout to prevent hanging
+      const timeout = setTimeout(() => {
+        reject(new Error('انتهت مهلة معالجة الملف (10 ثوان)'));
+      }, 10000);
+      
       const reader = new FileReader();
+      
       reader.onload = () => {
-        const result = reader.result as string;
-        // Remove data URL prefix (data:type;base64,)
-        const base64 = result.split(',')[1];
-        resolve(base64);
+        clearTimeout(timeout);
+        try {
+          const result = reader.result as string;
+          const base64 = result.split(',')[1];
+          
+          // Memory check before proceeding
+          if (base64.length > MAX_SAFE_SIZE * 1.5) { // base64 is ~33% larger
+            reject(new Error('الملف كبير جداً للذاكرة المتاحة'));
+            return;
+          }
+          
+          console.log(`✅ File processed safely: ${file.name} (${(base64.length / 1024).toFixed(1)}KB base64)`);
+          resolve(base64);
+        } catch (error) {
+          reject(new Error('فشل في تحويل الملف'));
+        }
       };
-      reader.onerror = reject;
+      
+      reader.onerror = () => {
+        clearTimeout(timeout);
+        reject(new Error('فشل في قراءة الملف'));
+      };
+      
+      // Start reading
+      console.log(`🔄 Processing file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
       reader.readAsDataURL(file);
     });
 

@@ -272,41 +272,191 @@ export function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Get PDF file info with real page analysis
- */
-export async function getPDFInfo(file: File): Promise<{
+// 🔧 CACHE: Store PDF analysis results to avoid re-processing
+const pdfAnalysisCache = new Map<string, {
   pages: number;
   size: string;
   created: string;
+  timestamp: number;
+  fileSize: number;
+}>();
+
+// Cache TTL: 10 minutes for PDF analysis results
+const CACHE_TTL = 10 * 60 * 1000;
+
+// Maximum file size for client-side analysis (5MB)
+const MAX_CLIENT_ANALYSIS_SIZE = 5 * 1024 * 1024;
+
+/**
+ * Get PDF file info with optimized async analysis and caching
+ */
+export async function getPDFInfo(file: File, onProgress?: (progress: number) => void): Promise<{
+  pages: number;
+  size: string;
+  created: string;
+  fromCache?: boolean;
+  analysisTime?: number;
 }> {
-  try {
-    // Read the PDF file as array buffer
-    const arrayBuffer = await file.arrayBuffer();
-    
-    // Parse the PDF document with pdf-lib
-    const pdfDoc = await PDFDocument.load(arrayBuffer);
-    
-    // Get actual page count
-    const pages = pdfDoc.getPageCount();
-    
-    const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-    const created = new Date(file.lastModified).toLocaleDateString('ar-EG');
-    
-    console.log(`✅ PDF analyzed: ${file.name} has ${pages} pages`);
-    
-    return { pages, size, created };
-  } catch (error) {
-    console.error('❌ Error parsing PDF:', error);
-    // Fallback to 1 page if parsing fails
-    const pages = 1;
-    const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-    const created = new Date(file.lastModified).toLocaleDateString('ar-EG');
-    
-    console.log(`⚠️ PDF parsing failed, defaulting to 1 page for: ${file.name}`);
-    
-    return { pages, size, created };
+  const startTime = Date.now();
+  
+  // Generate cache key based on file name, size, and last modified
+  const cacheKey = `${file.name}_${file.size}_${file.lastModified}`;
+  
+  // Check cache first
+  const cached = pdfAnalysisCache.get(cacheKey);
+  if (cached && (startTime - cached.timestamp) < CACHE_TTL && cached.fileSize === file.size) {
+    pdfDebugLogger.info(`Cache hit for PDF analysis: ${file.name}`, { cacheKey });
+    if (onProgress) onProgress(100);
+    return {
+      pages: cached.pages,
+      size: cached.size,
+      created: cached.created,
+      fromCache: true,
+      analysisTime: Date.now() - startTime
+    };
   }
+  
+  const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+  const created = new Date(file.lastModified).toLocaleDateString('ar-EG');
+  
+  // For large files, skip client-side analysis and use fallback
+  if (file.size > MAX_CLIENT_ANALYSIS_SIZE) {
+    pdfDebugLogger.warn(`File too large for client analysis: ${file.name} (${size})`, { fileSize: file.size, maxSize: MAX_CLIENT_ANALYSIS_SIZE });
+    
+    const fallbackResult = {
+      pages: Math.max(1, Math.ceil(file.size / (100 * 1024))), // Estimate: ~100KB per page
+      size,
+      created,
+      analysisTime: Date.now() - startTime
+    };
+    
+    // Cache the fallback result
+    pdfAnalysisCache.set(cacheKey, {
+      ...fallbackResult,
+      timestamp: startTime,
+      fileSize: file.size
+    });
+    
+    if (onProgress) onProgress(100);
+    return fallbackResult;
+  }
+  
+  try {
+    pdfDebugLogger.info(`Starting client PDF analysis: ${file.name}`, { fileSize: file.size });
+    
+    if (onProgress) onProgress(10);
+    
+    // 🚀 TIMEOUT: Wrap PDF analysis with timeout to prevent hanging
+    const analysisPromise = analyzeWithTimeout(file, onProgress);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('PDF analysis timeout after 8 seconds')), 8000);
+    });
+    
+    const result = await Promise.race([analysisPromise, timeoutPromise]);
+    
+    if (onProgress) onProgress(100);
+    
+    // Cache successful result
+    pdfAnalysisCache.set(cacheKey, {
+      pages: result.pages,
+      size,
+      created,
+      timestamp: startTime,
+      fileSize: file.size
+    });
+    
+    pdfDebugLogger.info(`PDF analysis completed: ${file.name}`, { pages: result.pages, analysisTime: Date.now() - startTime });
+    
+    return {
+      pages: result.pages,
+      size,
+      created,
+      analysisTime: Date.now() - startTime
+    };
+    
+  } catch (error) {
+    pdfDebugLogger.error(`PDF analysis failed: ${file.name}`, { error: error instanceof Error ? error.message : error });
+    
+    // Smart fallback based on file size
+    const estimatedPages = Math.max(1, Math.ceil(file.size / (150 * 1024))); // Conservative estimate: ~150KB per page
+    
+    const fallbackResult = {
+      pages: estimatedPages,
+      size,
+      created,
+      analysisTime: Date.now() - startTime
+    };
+    
+    // Cache fallback result to avoid retrying failed files
+    pdfAnalysisCache.set(cacheKey, {
+      ...fallbackResult,
+      timestamp: startTime,
+      fileSize: file.size
+    });
+    
+    if (onProgress) onProgress(100);
+    
+    pdfDebugLogger.warn(`Using fallback page estimate for: ${file.name}`, { estimatedPages, originalError: error instanceof Error ? error.message : 'Unknown error' });
+    
+    return fallbackResult;
+  }
+}
+
+/**
+ * 🚀 ASYNC: Non-blocking PDF analysis with progress reporting
+ */
+async function analyzeWithTimeout(file: File, onProgress?: (progress: number) => void): Promise<{ pages: number }> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (onProgress) onProgress(25);
+      
+      // 🔧 CHUNKED READING: Read file in chunks to avoid blocking
+      const chunkSize = 1024 * 1024; // 1MB chunks
+      const chunks: ArrayBuffer[] = [];
+      let offset = 0;
+      
+      while (offset < file.size) {
+        const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+        const arrayBuffer = await chunk.arrayBuffer();
+        chunks.push(arrayBuffer);
+        offset += chunkSize;
+        
+        // Update progress
+        if (onProgress) {
+          const progress = 25 + ((offset / file.size) * 50); // 25-75%
+          onProgress(Math.min(progress, 75));
+        }
+        
+        // Yield control to prevent blocking
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+      
+      if (onProgress) onProgress(80);
+      
+      // Combine chunks
+      const totalLength = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+      const combined = new Uint8Array(totalLength);
+      let position = 0;
+      
+      for (const chunk of chunks) {
+        combined.set(new Uint8Array(chunk), position);
+        position += chunk.byteLength;
+      }
+      
+      if (onProgress) onProgress(85);
+      
+      // Parse PDF with pdf-lib
+      const pdfDoc = await PDFDocument.load(combined.buffer);
+      const pages = pdfDoc.getPageCount();
+      
+      if (onProgress) onProgress(95);
+      
+      resolve({ pages });
+      
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 /**
