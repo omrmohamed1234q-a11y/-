@@ -93,43 +93,55 @@ export async function uploadFile(file: File): Promise<UploadResult> {
   }
 }
 
-// 🚀 OPTIMIZED: Fast upload with FormData instead of base64
+// 🔧 FIXED: Convert to base64 for JSON upload (temporary fix)
 export async function uploadFileToGoogleDrive(file: File, printSettings?: any): Promise<UploadResult> {
   console.log(`🚀 Cloud Priority Upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
   
   try {
     console.log('📁 Uploading to Cloud Storage (Primary)...');
     
-    // 🚀 PERFORMANCE: Use FormData instead of base64 conversion
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('fileName', file.name);
-    formData.append('mimeType', file.type);
-    
-    if (printSettings) {
-      formData.append('printSettings', JSON.stringify(printSettings));
-    }
+    // 🔧 TEMPORARY FIX: Convert file to base64 for JSON upload
+    const fileBuffer = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix (data:type;base64,)
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
     // Try to get user info for better folder organization
+    let customerName = 'عميل غير محدد';
     try {
       const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
       if (userInfo.id) {
-        formData.append('customerName', userInfo.displayName || userInfo.fullName || userInfo.id);
+        customerName = userInfo.displayName || userInfo.fullName || userInfo.id;
       }
     } catch (error) {
       console.log('⚠️ Could not get user info for folder naming, using default');
     }
 
-    // 🚀 PERFORMANCE: FormData upload with authentication and error handling
-    // Note: apiRequest doesn't support FormData yet, using fetch with auth headers
+    // 🔧 FIX: JSON body with base64 encoded file
+    const requestBody = {
+      fileName: file.name,
+      fileBuffer: fileBuffer,
+      mimeType: file.type,
+      customerName,
+      printSettings
+    };
+
+    // 🚀 PERFORMANCE: JSON upload with authentication headers
     const authHeaders = await getAuthHeaders();
     const response = await fetch('/api/upload/google-drive-primary', {
       method: 'POST',
       headers: {
         ...authHeaders, // 🔒 SECURITY: Include authentication headers
-        // Don't set Content-Type - let browser set it with boundary for FormData
+        'Content-Type': 'application/json',
       },
-      body: formData,
+      body: JSON.stringify(requestBody),
       credentials: 'include',
     });
 

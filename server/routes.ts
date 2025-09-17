@@ -1587,17 +1587,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== GOOGLE DRIVE PRIORITY UPLOAD APIs ====================
   
-  // Google Drive Primary Upload for /print - with organized folder structure
-  app.post('/api/upload/google-drive-primary', async (req, res) => {
+  // Google Drive Primary Upload for /print - with organized folder structure  
+  app.post('/api/upload/google-drive-primary', requireAuth, async (req, res) => {
     try {
+      // 🔧 FIX: For now, only support JSON uploads until FormData is properly configured
       const { fileName, fileBuffer, mimeType, printSettings, customerName, uploadDate, shareWithEmail } = req.body;
       
       if (!fileName || !fileBuffer || !mimeType) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: fileName, fileBuffer, mimeType'
+          error: 'Missing required fields: fileName, fileBuffer, mimeType. Note: Currently only JSON uploads are supported.'
         });
       }
+      
+      // 🔒 SECURITY: Validate file size before processing base64
+      if (typeof fileBuffer !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid fileBuffer format. Expected base64 string.'
+        });
+      }
+      
+      // Calculate approximate file size (base64 is ~33% larger)
+      const base64Size = fileBuffer.length;
+      const approximateFileSize = Math.floor(base64Size * 0.75);
+      const maxFileSize = 15 * 1024 * 1024; // 15MB limit
+      
+      if (approximateFileSize > maxFileSize) {
+        return res.status(413).json({
+          success: false,
+          error: `File too large. Maximum size: ${Math.round(maxFileSize / 1024 / 1024)}MB, your file: ~${Math.round(approximateFileSize / 1024 / 1024)}MB`
+        });
+      }
+      
+      console.log('📄 JSON upload detected - converting base64 to buffer');
+      const buffer = Buffer.from(fileBuffer, 'base64');
 
       // Extract customer name from various sources
       const finalCustomerName = customerName || 
@@ -1628,9 +1652,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`   Share with: ${finalShareEmail}`);
       console.log(`   File: ${fullFileName}`);
 
-      // Convert base64 buffer to Buffer
-      const buffer = Buffer.from(fileBuffer, 'base64');
-      
       // Upload to Google Drive with temporary storage for /print page
       const driveResult = await hybridUploadService.uploadBuffer(
         buffer,

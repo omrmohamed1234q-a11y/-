@@ -1,9 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Upload, FileText, Image, X, Check } from 'lucide-react';
+import { Upload, FileText, Image, X, Check, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { uploadFileToGoogleDrive, uploadFile, uploadFileWithChunks, ChunkUploadProgress } from '@/lib/upload-service';
 
@@ -28,6 +28,11 @@ export function DragDropUpload({
   const [progress, setProgress] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<{ file: File; url: string; provider?: string }[]>([]);
   
+  // ⏱️ TIMER: Upload time tracking
+  const [uploadStartTime, setUploadStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [uploadProvider, setUploadProvider] = useState<string>('');
+  
   // 🚀 CHUNKED UPLOAD: Enhanced progress tracking with recovery info
   const [chunkProgress, setChunkProgress] = useState<{
     currentFile: string;
@@ -46,9 +51,37 @@ export function DragDropUpload({
   
   const { toast } = useToast();
 
+  // ⏱️ TIMER: Update elapsed time every second during upload
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (uploading && uploadStartTime) {
+      interval = setInterval(() => {
+        setElapsedTime(Math.floor((Date.now() - uploadStartTime) / 1000));
+      }, 1000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [uploading, uploadStartTime]);
+
+  // ⏱️ TIMER: Format elapsed time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
   // 🚀 ENHANCED: Smart upload with chunked support for large files
   const smartUpload = async (file: File, fileIndex: number, totalFiles: number): Promise<{ file: File; url: string; provider: string }> => {
     console.log(`📤 Smart upload ${fileIndex + 1}/${totalFiles}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+    
+    // ⏱️ TIMER: Start timer for first file
+    if (fileIndex === 0) {
+      setUploadStartTime(Date.now());
+      setElapsedTime(0);
+    }
     
     // Update progress state
     setChunkProgress({
@@ -59,10 +92,12 @@ export function DragDropUpload({
     });
     
     let result;
+    setUploadProvider('🔄 جاري الرفع...'); // Initial state
     
     // 🚀 CHUNKED UPLOAD: Use chunked upload for large files (>10MB)
     if (file.size > 10 * 1024 * 1024) {
       console.log(`🚀 Using chunked upload for large file: ${file.name}`);
+      setUploadProvider('🚀 Google Drive - رفع متقدم');
       
       result = await uploadFileWithChunks(
         file,
@@ -88,17 +123,20 @@ export function DragDropUpload({
       
       if (!result.success) {
         console.log('🔄 Chunked upload failed, trying standard Google Drive...');
+        setUploadProvider('🔄 Google Drive - رفع عادي');
         result = await uploadFileToGoogleDrive(file);
       }
     } else {
       // Standard upload for smaller files
       console.log(`📁 Using standard upload for file: ${file.name}`);
+      setUploadProvider('📁 Google Drive - رفع سريع');
       result = await uploadFileToGoogleDrive(file);
     }
     
     // Fallback to Cloudinary if Google Drive fails
     if (!result.success) {
       console.log('🔄 Cloud Storage failed, trying Cloudinary fallback...');
+      setUploadProvider('☁️ Cloudinary - النسخ الاحتياطي');
       result = await uploadFile(file);
     }
     
@@ -115,6 +153,9 @@ export function DragDropUpload({
         speed: result.averageSpeed || undefined
       } : null);
     }
+    
+    // ⏱️ TIMER: Set final provider used for this file
+    setUploadProvider(result.provider === 'google_drive' ? '✅ Google Drive' : '✅ Cloudinary');
     
     return {
       file,
@@ -212,6 +253,11 @@ export function DragDropUpload({
       setUploading(false);
       setProgress(0);
       setChunkProgress(null); // 🚀 CHUNKED UPLOAD: Reset chunk progress
+      
+      // ⏱️ TIMER: Reset timer state
+      setUploadStartTime(null);
+      setElapsedTime(0);
+      setUploadProvider('');
     }
   }, [onUpload, toast]);
 
@@ -282,6 +328,21 @@ export function DragDropUpload({
           
           {uploading && (
             <div className="mt-4 space-y-3">
+              {/* ⏱️ TIMER & Provider Display */}
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3 space-x-reverse">
+                    <Clock className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">
+                      {formatTime(elapsedTime)}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {uploadProvider || '🔄 جاري تحديد المزود...'}
+                  </div>
+                </div>
+              </div>
+              
               {/* Overall Progress */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">
