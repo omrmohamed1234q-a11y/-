@@ -2860,8 +2860,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let updatedUser = null;
       let updateMethod = 'unknown';
       
-      // Feature flag for DB persistence
-      const enableDbPersistence = process.env.FEATURE_PROFILE_PERSISTENCE !== 'false';
+      // Feature flag for DB persistence - FORCE ENABLE for testing
+      const enableDbPersistence = true; // process.env.FEATURE_PROFILE_PERSISTENCE !== 'false';
       
       if (enableDbPersistence) {
         try {

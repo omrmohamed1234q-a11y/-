@@ -64,8 +64,8 @@ export default function Profile() {
     orderUpdates: true
   });
 
-  // Feature flag for v2 profile system
-  const useProfileV2 = import.meta.env.VITE_USE_PROFILE_V2 === 'true';
+  // Feature flag for v2 profile system - FORCE ENABLE for testing
+  const useProfileV2 = true; // import.meta.env.VITE_USE_PROFILE_V2 === 'true';
 
   // Fetch user profile data
   const { data: userProfile, isLoading } = useQuery<UserProfile>({
