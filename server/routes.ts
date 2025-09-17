@@ -2631,8 +2631,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Step 1: PRIMARY - Get user from Supabase metadata (source of truth)
       try {
-        // Create Supabase admin client
-        const supabaseUrl = "https://gqjcgbogyhvivdlkkdhq.supabase.co";
+        // Create Supabase admin client using environment variables
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         
         if (supabaseUrl && supabaseServiceKey) {
