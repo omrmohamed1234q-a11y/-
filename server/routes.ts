@@ -2635,8 +2635,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Step 2: If not in DB, try Supabase Auth metadata as fallback
       if (!user) {
         try {
-          // Create Supabase admin client
-          const supabaseUrl = process.env.VITE_SUPABASE_URL;
+          // Create Supabase admin client - HARDCODE FOR TESTING
+          const supabaseUrl = "https://gqjcgbogyhvivdlkkdhq.supabase.co";
           const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
           
           if (supabaseUrl && supabaseServiceKey) {
