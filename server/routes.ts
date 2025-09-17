@@ -1450,8 +1450,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply security middleware
   app.use('/api/auth', authLimiter);
   app.use('/api/admin/security-access', authLimiter);
-  app.use('/api', generalLimiter);
-  app.use('/api', speedLimiter);
+  
+  // 🚀 PERFORMANCE FIX: Exclude performance-critical endpoints from rate limiters
+  const performanceCriticalPaths = ['/cart', '/pending-uploads', '/notifications'];
+  
+  app.use('/api', (req, res, next) => {
+    const isPerformanceCritical = performanceCriticalPaths.some(path => req.path.startsWith(path));
+    if (isPerformanceCritical) {
+      console.log(`⚡ Fast-track: ${req.method} ${req.originalUrl} (bypassing rate limiters)`);
+      return next(); // Skip ALL rate limiters for performance-critical operations
+    }
+    generalLimiter(req, res, next);
+  });
+  
+  app.use('/api', (req, res, next) => {
+    const isPerformanceCritical = performanceCriticalPaths.some(path => req.path.startsWith(path));
+    if (isPerformanceCritical) {
+      return next(); // Skip speed limiter for performance-critical operations
+    }
+    speedLimiter(req, res, next);
+  });
   
   // ==================== CUSTOM CLEANUP OPTIONS (before any auth) ====================
   
