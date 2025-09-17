@@ -1554,6 +1554,126 @@ export const updateCartItemSchema = z.object({
 });
 
 // ===========================================
+// PROFESSIONAL PROFILE SYSTEM TABLES
+// ===========================================
+
+// User preferences and settings
+export const userPreferences = pgTable("user_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  language: text("language").notNull().default("ar"), // "ar" | "en"
+  darkMode: boolean("dark_mode").default(false),
+  emailNotifications: boolean("email_notifications").default(true),
+  pushNotifications: boolean("push_notifications").default(true),
+  orderUpdates: boolean("order_updates").default(true),
+  marketingNotifications: boolean("marketing_notifications").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User delivery addresses
+export const userAddresses = pgTable("user_addresses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  label: text("label").notNull(), // "Home", "Work", "University", etc.
+  fullName: text("full_name").notNull(),
+  phone: text("phone").notNull(),
+  line1: text("line1").notNull(), // Main address line
+  line2: text("line2"), // Optional secondary address line
+  city: text("city").notNull(),
+  region: text("region").notNull(), // Governorate/State
+  postalCode: text("postal_code"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User notifications
+export const userNotifications = pgTable("user_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // "order" | "promo" | "system" | "achievement" | "points"
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  data: jsonb("data"), // Additional data (orderId, promoCode, etc.)
+  read: boolean("read").default(false),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User achievements and badges
+export const userAchievements = pgTable("user_achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  achievementCode: text("achievement_code").notNull(), // "first_print", "print_master", "big_spender", etc.
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  iconUrl: text("icon_url"), // Achievement icon/badge
+  pointsAwarded: integer("points_awarded").default(0),
+  earnedAt: timestamp("earned_at").defaultNow(),
+});
+
+// User activity log
+export const userActivity = pgTable("user_activity", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  action: text("action").notNull(), // "profile_updated", "order_placed", "reward_redeemed", "achievement_earned", etc.
+  description: text("description").notNull(), // Human readable description
+  metadata: jsonb("metadata"), // Additional context data
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Points transaction history
+export const rewardTransactions = pgTable("reward_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // "earned" | "spent"
+  amount: integer("amount").notNull(), // Positive for earned, negative for spent
+  reason: text("reason").notNull(), // "order_placed", "reward_redeemed", "achievement_earned", etc.
+  description: text("description").notNull(), // Human readable description
+  relatedId: varchar("related_id"), // orderId, rewardId, achievementId, etc.
+  balanceAfter: integer("balance_after").notNull(), // User's points balance after this transaction
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ===========================================
+// PROFILE SYSTEM INSERT SCHEMAS
+// ===========================================
+
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserAddressSchema = createInsertSchema(userAddresses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserNotificationSchema = createInsertSchema(userNotifications).omit({
+  id: true,
+  readAt: true,
+  createdAt: true,
+});
+
+export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({
+  id: true,
+  earnedAt: true,
+});
+
+export const insertUserActivitySchema = createInsertSchema(userActivity).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRewardTransactionSchema = createInsertSchema(rewardTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// ===========================================
 // TYPESCRIPT TYPES
 // ===========================================
 
@@ -1579,6 +1699,26 @@ export type AddPartnerProductToCartRequest = z.infer<typeof addPartnerProductToC
 export type AddPrintJobToCartRequest = z.infer<typeof addPrintJobToCartSchema>;
 export type AddToCartRequest = z.infer<typeof addToCartRequestSchema>;
 export type UpdateCartItemRequest = z.infer<typeof updateCartItemSchema>;
+
+// ===========================================
+// PROFESSIONAL PROFILE SYSTEM TYPES
+// ===========================================
+
+// Database table types (select)
+export type UserPreferences = typeof userPreferences.$inferSelect;
+export type UserAddress = typeof userAddresses.$inferSelect;
+export type UserNotification = typeof userNotifications.$inferSelect;
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type UserActivity = typeof userActivity.$inferSelect;
+export type RewardTransaction = typeof rewardTransactions.$inferSelect;
+
+// Insert types (for creating new records)
+export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type InsertUserAddress = z.infer<typeof insertUserAddressSchema>;
+export type InsertUserNotification = z.infer<typeof insertUserNotificationSchema>;
+export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
+export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
+export type InsertRewardTransaction = z.infer<typeof insertRewardTransactionSchema>;
 
 // ===========================================
 // UNIFIED CART TYPES (all item types)

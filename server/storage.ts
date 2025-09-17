@@ -1,4 +1,4 @@
-import { users, products, orders, printJobs, cartItems, cartOrders, drivers, announcements, partners, partnerProducts, secureAdmins, secureDrivers, securityLogs, pendingUploads, type User, type Product, type Order, type PrintJob, type CartItem, type CartOrder, type InsertCartItem, type InsertCartOrder, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct, type SecureAdmin, type InsertSecureAdmin, type SecureDriver, type InsertSecureDriver, type SecurityLog, type InsertSecurityLog, type PendingUpload, type InsertPendingUpload } from "@shared/schema";
+import { users, products, orders, printJobs, cartItems, cartOrders, drivers, announcements, partners, partnerProducts, secureAdmins, secureDrivers, securityLogs, pendingUploads, userPreferences, userAddresses, userNotifications, userAchievements, userActivity, rewardTransactions, type User, type Product, type Order, type PrintJob, type CartItem, type CartOrder, type InsertCartItem, type InsertCartOrder, type Announcement, type InsertAnnouncement, type Partner, type InsertPartner, type SelectPartnerProduct, type InsertPartnerProduct, type SecureAdmin, type InsertSecureAdmin, type SecureDriver, type InsertSecureDriver, type SecurityLog, type InsertSecurityLog, type PendingUpload, type InsertPendingUpload, type UserPreferences, type InsertUserPreferences, type UserAddress, type InsertUserAddress, type UserNotification, type InsertUserNotification, type UserAchievement, type InsertUserAchievement, type UserActivity, type InsertUserActivity, type RewardTransaction, type InsertRewardTransaction } from "@shared/schema";
 import { type SmartCampaign, type InsertSmartCampaign, type TargetingRule, type InsertTargetingRule, type SentMessage, type InsertSentMessage, type UserBehavior, type InsertUserBehavior, type MessageTemplate, type InsertMessageTemplate, type ScheduledJob, type InsertScheduledJob } from "@shared/smart-notifications-schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
@@ -88,10 +88,10 @@ export interface IStorage {
   getNotification(id: string): Promise<any | undefined>;
   createNotification(notification: any): Promise<any>;
   updateNotification(id: string, updates: any): Promise<any>;
-  markNotificationAsRead(id: string): Promise<any>;
+  markNotificationAsRead(id: string): Promise<UserNotification>;
   markNotificationAsClicked(id: string): Promise<any>;
   deleteNotification(id: string): Promise<boolean>;
-  getUserUnreadCount(userId: string): Promise<number>;
+  getUserUnreadNotificationsCount(userId: string): Promise<number>;
   
   // User notification preferences operations
   getUserNotificationPreferences(userId: string): Promise<any | undefined>;
@@ -224,6 +224,63 @@ export interface IStorage {
   getSentMessages(campaignId?: string): Promise<SentMessage[]>;
   createSentMessage(message: InsertSentMessage): Promise<SentMessage>;
   updateSentMessage(id: string, updates: Partial<InsertSentMessage>): Promise<SentMessage>;
+
+  // ===========================================
+  // PROFESSIONAL PROFILE SYSTEM OPERATIONS
+  // ===========================================
+
+  // User Preferences operations
+  getUserPreferences(userId: string): Promise<UserPreferences | undefined>;
+  createUserPreferences(preferences: InsertUserPreferences): Promise<UserPreferences>;
+  updateUserPreferences(userId: string, updates: Partial<InsertUserPreferences>): Promise<UserPreferences>;
+
+  // User Addresses operations
+  getUserAddresses(userId: string): Promise<UserAddress[]>;
+  getUserAddress(addressId: string): Promise<UserAddress | undefined>;
+  createUserAddress(address: InsertUserAddress): Promise<UserAddress>;
+  updateUserAddress(addressId: string, updates: Partial<InsertUserAddress>): Promise<UserAddress>;
+  deleteUserAddress(addressId: string): Promise<boolean>;
+  setDefaultAddress(userId: string, addressId: string): Promise<UserAddress>;
+
+  // Enhanced User Notifications operations (extending existing)
+  getUserNotifications(userId: string, limit?: number, offset?: number): Promise<UserNotification[]>;
+  getUserNotification(notificationId: string): Promise<UserNotification | undefined>;
+  createUserNotification(notification: InsertUserNotification): Promise<UserNotification>;
+  markAllNotificationsAsRead(userId: string): Promise<number>; // Returns count of updated notifications
+  deleteUserNotification(notificationId: string): Promise<boolean>;
+
+  // User Achievements operations
+  getUserAchievements(userId: string): Promise<UserAchievement[]>;
+  getUserAchievement(achievementId: string): Promise<UserAchievement | undefined>;
+  createUserAchievement(achievement: InsertUserAchievement): Promise<UserAchievement>;
+  deleteUserAchievement(achievementId: string): Promise<boolean>;
+  hasUserAchievement(userId: string, achievementCode: string): Promise<boolean>;
+
+  // User Activity operations
+  getUserActivity(userId: string, limit?: number, offset?: number): Promise<UserActivity[]>;
+  createUserActivity(activity: InsertUserActivity): Promise<UserActivity>;
+  deleteUserActivity(activityId: string): Promise<boolean>;
+  clearUserActivity(userId: string, olderThanDays?: number): Promise<number>; // Returns count of deleted activities
+
+  // Reward Transactions operations
+  getUserRewardTransactions(userId: string, limit?: number, offset?: number): Promise<RewardTransaction[]>;
+  getRewardTransaction(transactionId: string): Promise<RewardTransaction | undefined>;
+  createRewardTransaction(transaction: InsertRewardTransaction): Promise<RewardTransaction>;
+  getUserPointsBalance(userId: string): Promise<number>;
+  getUserPointsHistory(userId: string, days?: number): Promise<RewardTransaction[]>;
+
+  // Profile Summary and Analytics
+  getUserProfileSummary(userId: string): Promise<{
+    user: User;
+    preferences?: UserPreferences;
+    totalAddresses: number;
+    unreadNotifications: number;
+    totalAchievements: number;
+    recentActivity: UserActivity[];
+    currentPoints: number;
+    level: number;
+    levelProgress: number; // 0-100 percentage to next level
+  }>;
 }
 
 // Global storage to persist across application lifecycle
@@ -250,6 +307,14 @@ export class MemoryStorage implements IStorage {
   private notifications: any[] = [];
   private notificationPreferences: any[] = [];
   private pendingUploads: PendingUpload[] = [];
+  
+  // Professional Profile System Arrays
+  private userPreferencesData: UserPreferences[] = [];
+  private userAddressesData: UserAddress[] = [];
+  private userNotificationsData: UserNotification[] = [];
+  private userAchievementsData: UserAchievement[] = [];
+  private userActivityData: UserActivity[] = [];
+  private rewardTransactionsData: RewardTransaction[] = [];
   private privacyPolicies: any[] = [
     {
       id: 'privacy_policy_1',
@@ -5502,6 +5567,370 @@ class MemStorage implements IStorage {
     return this.cartOrders
       .filter(order => order.userId === userId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  // ===========================================
+  // PROFESSIONAL PROFILE SYSTEM IMPLEMENTATIONS
+  // ===========================================
+
+  // User Preferences operations
+  async getUserPreferences(userId: string): Promise<UserPreferences | undefined> {
+    return this.userPreferencesData.find(p => p.userId === userId);
+  }
+
+  async createUserPreferences(preferences: InsertUserPreferences): Promise<UserPreferences> {
+    const newPreferences: UserPreferences = {
+      id: `pref-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...preferences,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.userPreferencesData.push(newPreferences);
+    return newPreferences;
+  }
+
+  async updateUserPreferences(userId: string, updates: Partial<InsertUserPreferences>): Promise<UserPreferences> {
+    const index = this.userPreferencesData.findIndex(p => p.userId === userId);
+    if (index === -1) {
+      // Create default preferences if none exist
+      return await this.createUserPreferences({ userId, ...updates } as InsertUserPreferences);
+    }
+    
+    this.userPreferencesData[index] = {
+      ...this.userPreferencesData[index],
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    return this.userPreferencesData[index];
+  }
+
+  // User Addresses operations
+  async getUserAddresses(userId: string): Promise<UserAddress[]> {
+    return this.userAddressesData
+      .filter(addr => addr.userId === userId)
+      .sort((a, b) => {
+        if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }
+
+  async getUserAddress(addressId: string): Promise<UserAddress | undefined> {
+    return this.userAddressesData.find(addr => addr.id === addressId);
+  }
+
+  async createUserAddress(address: InsertUserAddress): Promise<UserAddress> {
+    const newAddress: UserAddress = {
+      id: `addr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...address,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    // If this is set as default, unset other defaults for this user
+    if (newAddress.isDefault) {
+      this.userAddressesData.forEach(addr => {
+        if (addr.userId === address.userId && addr.isDefault) {
+          addr.isDefault = false;
+        }
+      });
+    }
+    
+    this.userAddressesData.push(newAddress);
+    return newAddress;
+  }
+
+  async updateUserAddress(addressId: string, updates: Partial<InsertUserAddress>): Promise<UserAddress> {
+    const index = this.userAddressesData.findIndex(addr => addr.id === addressId);
+    if (index === -1) throw new Error('Address not found');
+    
+    const address = this.userAddressesData[index];
+    
+    // If setting as default, unset other defaults for this user
+    if (updates.isDefault) {
+      this.userAddressesData.forEach(addr => {
+        if (addr.userId === address.userId && addr.id !== addressId && addr.isDefault) {
+          addr.isDefault = false;
+        }
+      });
+    }
+    
+    this.userAddressesData[index] = {
+      ...address,
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    return this.userAddressesData[index];
+  }
+
+  async deleteUserAddress(addressId: string): Promise<boolean> {
+    const index = this.userAddressesData.findIndex(addr => addr.id === addressId);
+    if (index === -1) return false;
+    
+    this.userAddressesData.splice(index, 1);
+    return true;
+  }
+
+  async setDefaultAddress(userId: string, addressId: string): Promise<UserAddress> {
+    // Unset all defaults for this user
+    this.userAddressesData.forEach(addr => {
+      if (addr.userId === userId) {
+        addr.isDefault = false;
+      }
+    });
+    
+    // Set the specified address as default
+    const index = this.userAddressesData.findIndex(addr => addr.id === addressId && addr.userId === userId);
+    if (index === -1) throw new Error('Address not found');
+    
+    this.userAddressesData[index].isDefault = true;
+    this.userAddressesData[index].updatedAt = new Date();
+    
+    return this.userAddressesData[index];
+  }
+
+  // Enhanced User Notifications operations
+  async getUserNotifications(userId: string, limit = 50, offset = 0): Promise<UserNotification[]> {
+    return this.userNotificationsData
+      .filter(notif => notif.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(offset, offset + limit);
+  }
+
+  async getUserNotification(notificationId: string): Promise<UserNotification | undefined> {
+    return this.userNotificationsData.find(notif => notif.id === notificationId);
+  }
+
+  async createUserNotification(notification: InsertUserNotification): Promise<UserNotification> {
+    const newNotification: UserNotification = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...notification,
+      read: false,
+      readAt: null,
+      createdAt: new Date()
+    };
+    
+    this.userNotificationsData.push(newNotification);
+    return newNotification;
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<UserNotification> {
+    const index = this.userNotificationsData.findIndex(notif => notif.id === notificationId);
+    if (index === -1) throw new Error('Notification not found');
+    
+    this.userNotificationsData[index].read = true;
+    this.userNotificationsData[index].readAt = new Date();
+    
+    return this.userNotificationsData[index];
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<number> {
+    let count = 0;
+    this.userNotificationsData.forEach(notif => {
+      if (notif.userId === userId && !notif.read) {
+        notif.read = true;
+        notif.readAt = new Date();
+        count++;
+      }
+    });
+    return count;
+  }
+
+  async deleteUserNotification(notificationId: string): Promise<boolean> {
+    const index = this.userNotificationsData.findIndex(notif => notif.id === notificationId);
+    if (index === -1) return false;
+    
+    this.userNotificationsData.splice(index, 1);
+    return true;
+  }
+
+  async getUserUnreadNotificationsCount(userId: string): Promise<number> {
+    return this.userNotificationsData.filter(notif => notif.userId === userId && !notif.read).length;
+  }
+
+  // User Achievements operations
+  async getUserAchievements(userId: string): Promise<UserAchievement[]> {
+    return this.userAchievementsData
+      .filter(ach => ach.userId === userId)
+      .sort((a, b) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime());
+  }
+
+  async getUserAchievement(achievementId: string): Promise<UserAchievement | undefined> {
+    return this.userAchievementsData.find(ach => ach.id === achievementId);
+  }
+
+  async createUserAchievement(achievement: InsertUserAchievement): Promise<UserAchievement> {
+    const newAchievement: UserAchievement = {
+      id: `ach-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...achievement,
+      earnedAt: new Date()
+    };
+    
+    this.userAchievementsData.push(newAchievement);
+    
+    // Also create activity log
+    await this.createUserActivity({
+      userId: achievement.userId,
+      action: 'achievement_earned',
+      description: `حصل على إنجاز: ${achievement.title}`,
+      metadata: { achievementId: newAchievement.id, achievementCode: achievement.achievementCode }
+    });
+    
+    return newAchievement;
+  }
+
+  async deleteUserAchievement(achievementId: string): Promise<boolean> {
+    const index = this.userAchievementsData.findIndex(ach => ach.id === achievementId);
+    if (index === -1) return false;
+    
+    this.userAchievementsData.splice(index, 1);
+    return true;
+  }
+
+  async hasUserAchievement(userId: string, achievementCode: string): Promise<boolean> {
+    return this.userAchievementsData.some(ach => 
+      ach.userId === userId && ach.achievementCode === achievementCode
+    );
+  }
+
+  // User Activity operations
+  async getUserActivity(userId: string, limit = 50, offset = 0): Promise<UserActivity[]> {
+    return this.userActivityData
+      .filter(act => act.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(offset, offset + limit);
+  }
+
+  async createUserActivity(activity: InsertUserActivity): Promise<UserActivity> {
+    const newActivity: UserActivity = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...activity,
+      createdAt: new Date()
+    };
+    
+    this.userActivityData.push(newActivity);
+    return newActivity;
+  }
+
+  async deleteUserActivity(activityId: string): Promise<boolean> {
+    const index = this.userActivityData.findIndex(act => act.id === activityId);
+    if (index === -1) return false;
+    
+    this.userActivityData.splice(index, 1);
+    return true;
+  }
+
+  async clearUserActivity(userId: string, olderThanDays?: number): Promise<number> {
+    let count = 0;
+    const cutoffDate = olderThanDays ? new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000) : null;
+    
+    for (let i = this.userActivityData.length - 1; i >= 0; i--) {
+      const activity = this.userActivityData[i];
+      if (activity.userId === userId) {
+        if (!cutoffDate || new Date(activity.createdAt) < cutoffDate) {
+          this.userActivityData.splice(i, 1);
+          count++;
+        }
+      }
+    }
+    
+    return count;
+  }
+
+  // Reward Transactions operations
+  async getUserRewardTransactions(userId: string, limit = 50, offset = 0): Promise<RewardTransaction[]> {
+    return this.rewardTransactionsData
+      .filter(trans => trans.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(offset, offset + limit);
+  }
+
+  async getRewardTransaction(transactionId: string): Promise<RewardTransaction | undefined> {
+    return this.rewardTransactionsData.find(trans => trans.id === transactionId);
+  }
+
+  async createRewardTransaction(transaction: InsertRewardTransaction): Promise<RewardTransaction> {
+    const newTransaction: RewardTransaction = {
+      id: `trans-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...transaction,
+      createdAt: new Date()
+    };
+    
+    this.rewardTransactionsData.push(newTransaction);
+    
+    // Update user points
+    const user = await this.getUser(transaction.userId);
+    if (user) {
+      await this.updateUser(transaction.userId, { 
+        bountyPoints: transaction.balanceAfter 
+      });
+    }
+    
+    // Create activity log
+    await this.createUserActivity({
+      userId: transaction.userId,
+      action: transaction.type === 'earned' ? 'points_earned' : 'points_spent',
+      description: transaction.description,
+      metadata: { transactionId: newTransaction.id, amount: transaction.amount, reason: transaction.reason }
+    });
+    
+    return newTransaction;
+  }
+
+  async getUserPointsBalance(userId: string): Promise<number> {
+    const user = await this.getUser(userId);
+    return user?.bountyPoints || 0;
+  }
+
+  async getUserPointsHistory(userId: string, days = 30): Promise<RewardTransaction[]> {
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    return this.rewardTransactionsData
+      .filter(trans => 
+        trans.userId === userId && 
+        new Date(trans.createdAt) >= cutoffDate
+      )
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  // Profile Summary and Analytics
+  async getUserProfileSummary(userId: string): Promise<{
+    user: User;
+    preferences?: UserPreferences;
+    totalAddresses: number;
+    unreadNotifications: number;
+    totalAchievements: number;
+    recentActivity: UserActivity[];
+    currentPoints: number;
+    level: number;
+    levelProgress: number;
+  }> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error('User not found');
+    
+    const preferences = await this.getUserPreferences(userId);
+    const totalAddresses = this.userAddressesData.filter(addr => addr.userId === userId).length;
+    const unreadNotifications = await this.getUserUnreadNotificationsCount(userId);
+    const totalAchievements = this.userAchievementsData.filter(ach => ach.userId === userId).length;
+    const recentActivity = await this.getUserActivity(userId, 10, 0);
+    const currentPoints = user.bountyPoints || 0;
+    const level = user.level || 1;
+    
+    // Calculate level progress (assuming 1000 points per level)
+    const pointsInCurrentLevel = currentPoints % 1000;
+    const levelProgress = (pointsInCurrentLevel / 1000) * 100;
+    
+    return {
+      user,
+      preferences,
+      totalAddresses,
+      unreadNotifications,
+      totalAchievements,
+      recentActivity,
+      currentPoints,
+      level,
+      levelProgress
+    };
   }
 }
 
