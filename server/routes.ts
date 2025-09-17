@@ -2629,52 +2629,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = null;
       let dataSource = 'unknown';
       
-      // Step 1: Try to get user from database first
+      // Step 1: PRIMARY - Get user from Supabase metadata (source of truth)
       try {
-        user = await storage.getUser(userId);
-        if (user) {
-          dataSource = 'database';
-          console.log(`✅ [v2] Found user in database: ${user.email}`);
+        // Create Supabase admin client
+        const supabaseUrl = "https://gqjcgbogyhvivdlkkdhq.supabase.co";
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        
+        if (supabaseUrl && supabaseServiceKey) {
+          const supabase = createClient(supabaseUrl, supabaseServiceKey);
+          const { data: supabaseUser } = await supabase.auth.admin.getUserById(userId);
+          
+          if (supabaseUser?.user) {
+            const metadata = supabaseUser.user.user_metadata || {};
+            user = {
+              id: userId,
+              email: supabaseUser.user.email || `user-${userId.substring(0, 6)}@example.com`,
+              name: metadata.full_name || `مستخدم ${userId.substring(0, 8)}`,
+              phone: metadata.phone || '',
+              countryCode: metadata.country_code || '+20',
+              age: metadata.age || null,
+              gradeLevel: metadata.grade_level || '',
+              address: metadata.address || '',
+              profileImage: metadata.profile_image || '',
+              bountyPoints: 0,
+              level: 1,
+              totalOrders: 0,
+              totalSpent: '0.00',
+              memberSince: supabaseUser.user.created_at || new Date().toISOString()
+            };
+            dataSource = 'supabase_metadata';
+            console.log(`✅ [v2] Found user in Supabase metadata: ${user.email}, age: ${user.age}, grade: ${user.gradeLevel}`);
+          }
         }
-      } catch (dbError) {
-        console.log(`⚠️ [v2] Database error, trying Supabase fallback:`, dbError);
+      } catch (supabaseError) {
+        console.log(`⚠️ [v2] Supabase primary failed:`, supabaseError);
       }
       
-      // Step 2: If not in DB, try Supabase Auth metadata as fallback
+      // Step 2: FALLBACK - Try database if Supabase fails
       if (!user) {
         try {
-          // Create Supabase admin client - HARDCODE FOR TESTING
-          const supabaseUrl = "https://gqjcgbogyhvivdlkkdhq.supabase.co";
-          const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-          
-          if (supabaseUrl && supabaseServiceKey) {
-            const supabase = createClient(supabaseUrl, supabaseServiceKey);
-            const { data: supabaseUser } = await supabase.auth.admin.getUserById(userId);
-            
-            if (supabaseUser?.user) {
-              const metadata = supabaseUser.user.user_metadata || {};
-              user = {
-                id: userId,
-                email: supabaseUser.user.email || `user-${userId.substring(0, 6)}@example.com`,
-                name: metadata.full_name || `مستخدم ${userId.substring(0, 8)}`,
-                phone: metadata.phone || '',
-                countryCode: metadata.country_code || '+20',
-                age: metadata.age || null,
-                gradeLevel: metadata.grade_level || '',
-                address: metadata.address || '',
-                profileImage: metadata.profile_image || '',
-                bountyPoints: 0,
-                level: 1,
-                totalOrders: 0,
-                totalSpent: '0.00',
-                memberSince: supabaseUser.user.created_at || new Date().toISOString()
-              };
-              dataSource = 'supabase_metadata';
-              console.log(`✅ [v2] Found user in Supabase metadata: ${user.email}`);
-            }
+          user = await storage.getUser(userId);
+          if (user) {
+            dataSource = 'database';
+            console.log(`✅ [v2] Found user in database (fallback): ${user.email}`);
           }
-        } catch (supabaseError) {
-          console.log(`⚠️ [v2] Supabase fallback failed:`, supabaseError);
+        } catch (dbError) {
+          console.log(`⚠️ [v2] Database fallback error:`, dbError);
         }
       }
       
