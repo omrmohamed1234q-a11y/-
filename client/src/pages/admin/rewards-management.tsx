@@ -842,7 +842,7 @@ export default function RewardsManagement() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">النقاط المكتسبة</p>
-                      <p className="text-2xl font-bold">{stats.totalEarnedPages.toLocaleString()}</p>
+                      <p className="text-2xl font-bold">{stats.totalEarnedPoints?.toLocaleString() || '0'}</p>
                     </div>
                     <Award className="h-8 w-8 text-orange-500" />
                   </div>
@@ -918,7 +918,7 @@ export default function RewardsManagement() {
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                       <span className="text-sm font-medium">متوسط النقاط المكتسبة</span>
                       <span className="text-lg font-bold text-green-600">
-                        {stats.averageEarnedPerUser} ورقة/مستخدم
+                        {stats.averagePointsPerUser || 0} نقطة/مستخدم
                       </span>
                     </div>
                     
@@ -926,7 +926,7 @@ export default function RewardsManagement() {
                       <span className="text-sm font-medium">معدل الاستفادة</span>
                       <span className="text-lg font-bold text-orange-600">
                         {stats.averagePagesPerUser > 0 ? 
-                          Math.round((stats.averageEarnedPerUser / stats.averagePagesPerUser) * 100) : 0}%
+                          Math.round((stats.averagePointsPerUser / stats.averagePagesPerUser) * 100) : 0}%
                       </span>
                     </div>
                   </div>
