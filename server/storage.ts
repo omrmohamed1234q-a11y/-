@@ -567,6 +567,8 @@ export class MemoryStorage implements IStorage {
   }
 
   async createNotification(notificationData: any): Promise<any> {
+    console.log(`🚨 createNotification MAIN METHOD called with data:`, JSON.stringify(notificationData, null, 2));
+    
     // Convert old format to new format and delegate to createUserNotification
     const newFormatData = {
       userId: notificationData.userId,
@@ -585,7 +587,11 @@ export class MemoryStorage implements IStorage {
       }
     };
     
+    console.log(`🚨 About to call createUserNotification with:`, JSON.stringify(newFormatData, null, 2));
+    
     const newNotification = await this.createUserNotification(newFormatData);
+    
+    console.log(`🚨 createUserNotification returned:`, newNotification.id);
     
     // Return in old format for backwards compatibility
     return {
