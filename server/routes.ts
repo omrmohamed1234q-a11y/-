@@ -9575,6 +9575,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // إرسال إشعار للمستخدم بمنحه المكافأة
       try {
         console.log(`🔔 Creating notification for user ${userId} with ${points} points...`);
+        console.log(`🚨 DEBUG: About to call storage.createNotification`);
+        console.log(`🚨 DEBUG: Storage class name:`, storage.constructor.name);
         
         const notification = await storage.createNotification({
           userId: userId,
