@@ -9716,7 +9716,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // تحديث نقاط المستخدم في التخزين
       try {
-        const user = await storage.getUser(userId);
+        let user = await storage.getUser(userId);
+        
+        // إذا لم يوجد المستخدم في Memory Storage، تحقق من Supabase Auth
+        if (!user && supabase) {
+          try {
+            console.log(`🔍 User ${userId} not found in memory storage, checking Supabase Auth...`);
+            const { data: { user: authUser }, error } = await supabase.auth.admin.getUserById(userId);
+            
+            if (authUser && !error) {
+              console.log(`✅ Found user ${userId} in Supabase Auth: ${authUser.email}`);
+              
+              // إنشاء المستخدم في Memory Storage لأول مرة
+              user = await storage.createUser({
+                id: userId,
+                email: authUser.email,
+                displayName: authUser.user_metadata?.full_name || authUser.user_metadata?.firstName || authUser.email,
+                bountyPoints: 0,
+                totalPrints: 0,
+                referralCode: `REF_${userId.substring(0, 8)}`,
+                totalReferrals: 0
+              });
+              
+              console.log(`🆕 Created user profile in memory storage for: ${userId}`);
+            }
+          } catch (supabaseError) {
+            console.error('Error checking Supabase Auth:', supabaseError);
+          }
+        }
+        
         if (user) {
           const currentPoints = user.bountyPoints || 0;
           const newPoints = currentPoints + parseInt(points);
@@ -9727,7 +9755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`💰 Updated user ${userId} points: ${currentPoints} + ${points} = ${newPoints}`);
         } else {
-          console.warn(`⚠️ User ${userId} not found, cannot update points`);
+          console.warn(`⚠️ User ${userId} not found in both memory storage and Supabase Auth`);
           return res.status(404).json({ message: 'User not found' });
         }
       } catch (pointsError) {
