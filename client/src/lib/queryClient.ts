@@ -128,7 +128,30 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res, queryKey.join("/") as string);
-    return await res.json();
+    
+    try {
+      return await res.json();
+    } catch (jsonError) {
+      // Enhanced error logging for JSON parsing issues
+      console.error(`❌ JSON parsing failed for endpoint: ${queryKey.join("/")}`);
+      console.error(`Response status: ${res.status} ${res.statusText}`);
+      console.error(`Response headers:`, res.headers);
+      
+      // Try to get response text to see what was returned
+      try {
+        const responseText = await res.clone().text();
+        console.error(`Response body preview:`, responseText.substring(0, 500));
+        
+        // If response looks like HTML error page, throw a more descriptive error
+        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.includes('<html')) {
+          throw new Error(`Server returned HTML error page instead of JSON for ${queryKey.join("/")}`);
+        }
+      } catch (textError) {
+        console.error(`Could not read response text:`, textError);
+      }
+      
+      throw new Error(`Invalid JSON response from ${queryKey.join("/")}: ${jsonError.message}`);
+    }
   };
 
 export const queryClient = new QueryClient({
