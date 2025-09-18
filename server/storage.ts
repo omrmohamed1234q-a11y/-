@@ -528,14 +528,35 @@ export class MemoryStorage implements IStorage {
 
   // User notifications operations
   async getAllNotifications(userId?: string): Promise<any[]> {
+    // Delegate to the new system (getUserNotifications) and convert format
+    let notifications;
     if (userId) {
-      return this.notifications.filter(n => n.userId === userId).sort((a, b) => 
+      notifications = await this.getUserNotifications(userId, 1000, 0); // Large limit to get all
+    } else {
+      notifications = this.userNotificationsData.sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     }
-    return [...this.notifications].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    
+    // Convert to old format for backwards compatibility
+    return notifications.map(notif => ({
+      id: notif.id,
+      userId: notif.userId,
+      title: notif.title,
+      message: notif.message,
+      type: notif.type,
+      category: notif.metadata?.category,
+      iconType: notif.metadata?.iconType,
+      actionUrl: notif.metadata?.actionUrl,
+      sourceId: notif.metadata?.sourceId,
+      sourceType: notif.metadata?.sourceType,
+      priority: notif.metadata?.priority,
+      isPinned: notif.metadata?.isPinned,
+      isRead: notif.read,
+      actionData: notif.metadata?.actionData,
+      createdAt: notif.createdAt,
+      updatedAt: notif.createdAt
+    }));
   }
 
   async getNotification(id: string): Promise<any | undefined> {
@@ -543,14 +564,45 @@ export class MemoryStorage implements IStorage {
   }
 
   async createNotification(notificationData: any): Promise<any> {
-    const notification = {
-      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      ...notificationData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+    // Convert old format to new format and delegate to createUserNotification
+    const newFormatData = {
+      userId: notificationData.userId,
+      type: notificationData.type || 'system',
+      title: notificationData.title,
+      message: notificationData.message,
+      metadata: {
+        category: notificationData.category,
+        iconType: notificationData.iconType,
+        actionUrl: notificationData.actionUrl,
+        sourceId: notificationData.sourceId,
+        sourceType: notificationData.sourceType,
+        priority: notificationData.priority,
+        isPinned: notificationData.isPinned,
+        actionData: notificationData.actionData
+      }
     };
-    this.notifications.push(notification);
-    return notification;
+    
+    const newNotification = await this.createUserNotification(newFormatData);
+    
+    // Return in old format for backwards compatibility
+    return {
+      id: newNotification.id,
+      userId: newNotification.userId,
+      title: newNotification.title,
+      message: newNotification.message,
+      type: newNotification.type,
+      category: newNotification.metadata?.category,
+      iconType: newNotification.metadata?.iconType,
+      actionUrl: newNotification.metadata?.actionUrl,
+      sourceId: newNotification.metadata?.sourceId,
+      sourceType: newNotification.metadata?.sourceType,
+      priority: newNotification.metadata?.priority,
+      isPinned: newNotification.metadata?.isPinned,
+      isRead: newNotification.read,
+      actionData: newNotification.metadata?.actionData,
+      createdAt: newNotification.createdAt,
+      updatedAt: newNotification.createdAt
+    };
   }
 
   async updateNotification(id: string, updates: any): Promise<any> {
@@ -3488,11 +3540,12 @@ class MemStorage implements IStorage {
 
   // User notifications operations (MemStorage - pure memory implementation)
   async getAllNotifications(userId?: string): Promise<any[]> {
+    // Use the new system (userNotificationsData) for consistency
     if (userId) {
-      const userNotifications = this.notifications.filter(notif => notif.userId === userId);
+      const userNotifications = this.userNotificationsData.filter(notif => notif.userId === userId);
       return userNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
-    return [...this.notifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return [...this.userNotificationsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getNotification(id: string): Promise<any | undefined> {
@@ -3501,13 +3554,40 @@ class MemStorage implements IStorage {
 
   async createNotification(notificationData: any): Promise<any> {
     const notification = {
+      id: notificationData.id || `notif-${Date.now()}`,
       ...notificationData,
       createdAt: notificationData.createdAt || new Date(),
       updatedAt: new Date()
     };
     
+    // Write to both systems for compatibility
     this.notifications.push(notification);
-    console.log(`💾 Notification saved to memory storage: ${notification.id}`);
+    
+    // Also write to the new system (userNotificationsData)
+    const newSystemNotification = {
+      id: notification.id,
+      userId: notification.userId,
+      type: notification.type || 'system',
+      title: notification.title,
+      message: notification.message,
+      read: notification.isRead || false,
+      createdAt: notification.createdAt,
+      readAt: notification.readAt || null,
+      metadata: {
+        category: notification.category,
+        iconType: notification.iconType,
+        actionUrl: notification.actionUrl,
+        sourceId: notification.sourceId,
+        sourceType: notification.sourceType,
+        priority: notification.priority,
+        isPinned: notification.isPinned,
+        actionData: notification.actionData
+      }
+    };
+    
+    this.userNotificationsData.push(newSystemNotification);
+    
+    console.log(`💾 Notification saved to both storage systems: ${notification.id}`);
     return notification;
   }
 
@@ -3548,8 +3628,8 @@ class MemStorage implements IStorage {
   }
 
   async getUserUnreadCount(userId: string): Promise<number> {
-    return this.notifications.filter(notif => 
-      notif.userId === userId && notif.isRead === false
+    return this.userNotificationsData.filter(notif => 
+      notif.userId === userId && notif.read === false
     ).length;
   }
 
