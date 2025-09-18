@@ -270,6 +270,23 @@ export interface IStorage {
   getUserPointsBalance(userId: string): Promise<number>;
   getUserPointsHistory(userId: string, days?: number): Promise<RewardTransaction[]>;
 
+  // Rewards Statistics
+  getRewardsStatistics(): Promise<{
+    totalUsers: number;
+    totalFreePages: number;
+    totalEarnedPages: number;
+    totalPrintedPages: number;
+    totalReferrals: number;
+    rewardTypeStats: {
+      print_milestone: number;
+      referral: number;
+      first_login: number;
+      admin_bonus: number;
+    };
+    averagePagesPerUser: number;
+    averageEarnedPerUser: number;
+  }>;
+
   // Profile Summary and Analytics
   getUserProfileSummary(userId: string): Promise<{
     user: User;
