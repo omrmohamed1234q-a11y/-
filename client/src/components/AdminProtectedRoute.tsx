@@ -43,8 +43,33 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
         return;
       }
 
-      console.log('Admin authentication successful - using stored token');
-      setIsAuthenticated(true);
+      // Validate token with backend by making a test API call
+      console.log('Validating admin token with backend...');
+      try {
+        const response = await fetch('/api/admin/stats', {
+          method: 'GET',
+          headers: {
+            'x-admin-token': token,
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          console.log('✅ Admin token validated successfully with backend');
+          setIsAuthenticated(true);
+        } else {
+          console.log('❌ Admin token validation failed:', response.status, response.statusText);
+          // Clear invalid tokens
+          localStorage.removeItem('adminAuth');
+          localStorage.removeItem('adminToken');
+          redirectToLogin();
+        }
+      } catch (backendError) {
+        console.error('❌ Backend validation error:', backendError);
+        // Don't clear tokens on network errors, just retry
+        redirectToLogin();
+      }
       
     } catch (error) {
       console.error('Admin auth check failed:', error);
