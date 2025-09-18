@@ -27,7 +27,8 @@ import {
   Edit,
   Trash2,
   Eye,
-  Send
+  Send,
+  Gift
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -66,6 +67,10 @@ const AutomaticNotifications = () => {
     orderDelivered: { enabled: true, template: 'تم تسليم طلبك #{{orderNumber}} بنجاح' },
     orderCancelled: { enabled: true, template: 'تم إلغاء طلبك #{{orderNumber}}' },
     reviewReceived: { enabled: true, template: 'شكراً لتقييمك للطلب #{{orderNumber}}' },
+    rewardGranted: { enabled: true, template: '🎁 تم منحك {{points}} نقطة كمكافأة: {{reason}}' },
+    pointsEarned: { enabled: true, template: '⭐ حصلت على {{points}} نقطة من طلبك #{{orderNumber}}' },
+    levelUp: { enabled: true, template: '🏆 تهانينا! وصلت للمستوى {{level}} الجديد' },
+    rewardRedeemed: { enabled: true, template: '✨ تم استخدام المكافأة "{{rewardName}}" بنجاح' },
     systemAlert: { enabled: true, template: 'تنبيه النظام: {{message}}' }
   };
 
@@ -130,13 +135,29 @@ const AutomaticNotifications = () => {
   const getNotificationTypeIcon = (type: string) => {
     const icons: Record<string, any> = {
       'order_created': ShoppingCart,
+      'orderCreated': ShoppingCart,
       'payment_success': CreditCard,
+      'paymentSuccess': CreditCard,
       'payment_failed': XCircle,
+      'paymentFailed': XCircle,
       'order_processing': Clock,
+      'orderProcessing': Clock,
       'order_delivered': CheckCircle,
+      'orderDelivered': CheckCircle,
       'order_cancelled': XCircle,
+      'orderCancelled': XCircle,
       'review_received': Star,
+      'reviewReceived': Star,
+      'reward_granted': Gift,
+      'rewardGranted': Gift,
+      'points_earned': Star,
+      'pointsEarned': Star,
+      'level_up': Star,
+      'levelUp': Star,
+      'reward_redeemed': Gift,
+      'rewardRedeemed': Gift,
       'system_alert': AlertTriangle,
+      'systemAlert': AlertTriangle,
       'default': Bell
     };
     const IconComponent = icons[type] || icons.default;
@@ -274,10 +295,15 @@ const AutomaticNotifications = () => {
                           {key === 'orderDelivered' && 'تسليم الطلب'}
                           {key === 'orderCancelled' && 'إلغاء الطلب'}
                           {key === 'reviewReceived' && 'استلام التقييم'}
+                          {key === 'rewardGranted' && '🎁 منح مكافأة يدوية'}
+                          {key === 'pointsEarned' && '⭐ كسب نقاط من الطلبات'}
+                          {key === 'levelUp' && '🏆 الوصول لمستوى جديد'}
+                          {key === 'rewardRedeemed' && '✨ استخدام المكافأة'}
                           {key === 'systemAlert' && 'تنبيه النظام'}
                         </h4>
                         <p className="text-sm text-muted-foreground">
                           {key === 'systemAlert' ? 'للأدمن فقط' : 'للعملاء'}
+                          {(key === 'rewardGranted' || key === 'pointsEarned' || key === 'levelUp' || key === 'rewardRedeemed') && ' - نظام المكافآت'}
                         </p>
                       </div>
                     </div>
@@ -310,6 +336,9 @@ const AutomaticNotifications = () => {
                       />
                       <p className="text-xs text-muted-foreground">
                         يمكن استخدام متغيرات مثل: {`{{orderNumber}}, {{userName}}, {{message}}`}
+                        {(key === 'rewardGranted' || key === 'pointsEarned' || key === 'levelUp' || key === 'rewardRedeemed') && 
+                          `, {{points}}, {{reason}}, {{level}}, {{rewardName}}`
+                        }
                       </p>
                     </div>
                   )}
