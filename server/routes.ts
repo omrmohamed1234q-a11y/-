@@ -9791,8 +9791,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // إحصائيات المكافآت (Admin only)
   app.get('/api/admin/rewards/stats', isAdminAuthenticated, async (req, res) => {
     try {
-      // الحصول على الإحصائيات الحقيقية من الـ storage
-      const stats = await storage.getRewardsStatistics();
+      console.log('🔍 فحص storage methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(storage)));
+      
+      // حل مؤقت - حساب الإحصائيات مباشرة
+      const totalUsers = (await storage.getAllUsers()).length;
+      const allUsers = await storage.getAllUsers();
+      
+      const stats = {
+        totalUsers,
+        totalFreePages: allUsers.reduce((sum, user) => sum + (user.bountyPoints || 0), 0),
+        totalEarnedPages: allUsers.reduce((sum, user) => sum + (user.bountyPoints || 0), 0),
+        totalPrintedPages: allUsers.reduce((sum, user) => sum + (user.totalPrints || 0), 0),
+        totalReferrals: allUsers.reduce((sum, user) => sum + (user.totalReferrals || 0), 0),
+        rewardTypeStats: {
+          print_milestone: Math.floor(allUsers.reduce((sum, user) => sum + (user.totalPrints || 0), 0) / 10),
+          referral: allUsers.reduce((sum, user) => sum + (user.totalReferrals || 0), 0),
+          first_login: totalUsers,
+          admin_bonus: 0
+        },
+        averagePagesPerUser: totalUsers > 0 ? Math.round(allUsers.reduce((sum, user) => sum + (user.totalPrints || 0), 0) / totalUsers) : 0,
+        averageEarnedPerUser: totalUsers > 0 ? Math.round(allUsers.reduce((sum, user) => sum + (user.bountyPoints || 0), 0) / totalUsers) : 0
+      };
       
       console.log('📊 جلب إحصائيات المكافآت:', {
         totalUsers: stats.totalUsers,
