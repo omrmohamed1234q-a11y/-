@@ -4684,6 +4684,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order = await storage.createOrder(orderData);
       console.log('✅ Order created in checkout:', order.id, 'for user:', userId);
 
+      // 🚨 AUTOMATIC NOTIFICATION: Order Created
+      try {
+        console.log('📦 Triggering automatic order creation notification...');
+        await automaticNotifications.onOrderCreated(order);
+        console.log('✅ Automatic order creation notification sent successfully');
+      } catch (notificationError) {
+        console.error('❌ Error sending automatic order creation notification:', notificationError);
+        // Continue execution - don't fail the order if notification fails
+      }
+
       // Move files from temporary to permanent location if temp files exist
       let moveResult = null;
       if (tempFileInfo && tempFileInfo.tempFolderId && tempFileInfo.customerName) {
@@ -4713,8 +4723,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update order status to processing for demo
       setTimeout(async () => {
-        await storage.updateOrderStatus(order.id, 'processing');
-        console.log('🖨️ Order status changed to processing:', order.id);
+        try {
+          const previousStatus = 'pending';
+          await storage.updateOrderStatus(order.id, 'processing');
+          console.log('🖨️ Order status changed to processing:', order.id);
+          
+          // 🚨 AUTOMATIC NOTIFICATION: Order Status Updated
+          console.log('📋 Triggering automatic order status update notification...');
+          const updatedOrder = { ...order, status: 'processing' };
+          await automaticNotifications.onOrderStatusUpdated(updatedOrder, previousStatus);
+          console.log('✅ Automatic order status update notification sent successfully');
+        } catch (error) {
+          console.error('❌ Error in order status update process:', error);
+        }
       }, 2000);
       
       // Clear cart after successful order
@@ -5575,6 +5596,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.updateOrderRating(orderId, rating, review);
       
+      // 🚨 AUTOMATIC NOTIFICATION: Review Received
+      try {
+        console.log('⭐ Triggering automatic review notification...');
+        const order = await storage.getOrder(orderId);
+        if (order) {
+          const reviewData = {
+            id: `review-${orderId}-${Date.now()}`,
+            orderId: orderId,
+            userId: order.userId,
+            rating: rating,
+            review: review || '',
+            createdAt: new Date()
+          };
+          
+          await automaticNotifications.onReviewReceived(reviewData);
+          console.log('✅ Automatic review notification sent successfully');
+        }
+      } catch (notificationError) {
+        console.error('❌ Error sending automatic review notification:', notificationError);
+        // Continue execution - don't fail the rating if notification fails
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error('Error submitting rating:', error);
@@ -5658,7 +5701,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orderId = req.params.id;
       
+      // Get order before cancelling to send notification
+      const order = await storage.getOrder(orderId);
+      const previousStatus = order?.status || 'unknown';
+      
       await storage.cancelOrder(orderId);
+      
+      // 🚨 AUTOMATIC NOTIFICATION: Order Cancelled
+      if (order) {
+        try {
+          console.log('❌ Triggering automatic order cancellation notification...');
+          const cancelledOrder = { ...order, status: 'cancelled' };
+          await automaticNotifications.onOrderStatusUpdated(cancelledOrder, previousStatus);
+          console.log('✅ Automatic order cancellation notification sent successfully');
+        } catch (notificationError) {
+          console.error('❌ Error sending automatic order cancellation notification:', notificationError);
+          // Continue execution - don't fail the cancellation if notification fails
+        }
+      }
       
       res.json({ success: true });
     } catch (error) {
@@ -6311,6 +6371,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const order = await storage.createOrder(newOrder);
+      
+      // 🚨 AUTOMATIC NOTIFICATION: Order Created
+      try {
+        console.log('📦 Triggering automatic order creation notification for admin-created order...');
+        await automaticNotifications.onOrderCreated(order);
+        console.log('✅ Automatic order creation notification sent successfully for admin order');
+      } catch (notificationError) {
+        console.error('❌ Error sending automatic order creation notification for admin order:', notificationError);
+        // Continue execution - don't fail the order if notification fails
+      }
       
       res.json(order);
     } catch (error) {
@@ -9191,7 +9261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Paymob payment routes
   app.post('/api/payments/paymob/create', createPaymobPayment);
-  app.post('/api/payments/paymob/callback', handlePaymobCallback);
+  app.post('/api/payments/paymob/callback', (req, res) => handlePaymobCallback(req, res, storage, automaticNotifications));
   app.get('/api/payments/paymob/methods', getPaymobPaymentMethods);
   
   // Privacy Policy endpoints - this route was causing conflicts, removed to use the proper one later

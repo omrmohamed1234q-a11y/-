@@ -344,19 +344,21 @@ export async function createPaymobPayment(req: Request, res: Response) {
 }
 
 // Handle Paymob webhook/callback
-export async function handlePaymobCallback(req: Request, res: Response) {
+export async function handlePaymobCallback(req: Request, res: Response, storage?: any, automaticNotifications?: any) {
   try {
     const callbackData = req.body;
 
-    // Validate HMAC signature if available
+    // 🔒 SECURITY: Validate HMAC signature if available
     if (process.env.PAYMOB_HMAC) {
+      console.log('🔒 Validating HMAC signature for security...');
       const isValid = paymobService.validateCallback(callbackData);
       if (!isValid) {
-        console.warn('Invalid HMAC signature for Paymob callback');
-        return res.status(400).json({ success: false, error: 'Invalid signature' });
+        console.warn('🚫 SECURITY BLOCKED: Invalid HMAC signature for Paymob callback');
+        return res.status(401).json({ success: false, error: 'Unauthorized: Invalid signature' });
       }
+      console.log('✅ HMAC signature validated successfully');
     } else {
-      console.log('⚠️ PAYMOB_HMAC not configured, skipping signature validation');
+      console.log('⚠️ PAYMOB_HMAC not configured, skipping signature validation (INSECURE FOR PRODUCTION)');
     }
 
     const {
@@ -379,24 +381,113 @@ export async function handlePaymobCallback(req: Request, res: Response) {
       // Payment successful
       console.log(`✅ Payment successful for order ${merchant_order_id}`);
       
-      // TODO: Update order status in your database
-      // await storage.updateOrder(merchant_order_id, { 
-      //   paymentStatus: 'completed',
-      //   transactionId: transactionId,
-      //   paidAmount: amount_cents / 100,
-      //   completedAt: new Date()
-      // });
+      // Update order status in database
+      if (storage) {
+        try {
+          // Find order by merchant_order_id (try both orderId and orderNumber for compatibility)
+          const orders = await storage.getAllOrders();
+          let order = orders.find((o: any) => o.id === merchant_order_id);
+          if (!order) {
+            order = orders.find((o: any) => o.orderNumber === merchant_order_id);
+          }
+          
+          console.log(`🔍 Payment SUCCESS: Looking for order with merchant_order_id: ${merchant_order_id}`);
+          console.log(`🔍 Found order: ${order ? `${order.id} (${order.orderNumber})` : 'NOT FOUND'}`);
+          
+          if (order) {
+            const previousStatus = order.status;
+            
+            // Update payment and order status
+            await storage.updateOrder(order.id, { 
+              paymentStatus: 'completed',
+              transactionId: transactionId,
+              paidAmount: amount_cents / 100,
+              completedAt: new Date(),
+              status: 'paid'
+            });
+            
+            console.log(`💰 Order ${merchant_order_id} payment completed successfully`);
+            
+            // 🚨 AUTOMATIC NOTIFICATION: Payment Success
+            if (automaticNotifications) {
+              try {
+                console.log('💳 Triggering automatic payment success notification...');
+                const updatedOrder = { ...order, status: 'paid', paymentStatus: 'completed' };
+                await automaticNotifications.onOrderStatusUpdated(updatedOrder, previousStatus);
+                console.log('✅ Automatic payment success notification sent');
+              } catch (notificationError) {
+                console.error('❌ Error sending payment success notification:', notificationError);
+              }
+            }
+          }
+        } catch (updateError) {
+          console.error(`❌ Error updating order ${merchant_order_id}:`, updateError);
+        }
+      }
       
     } else if (success === false) {
       // Payment failed
       console.log(`❌ Payment failed for order ${merchant_order_id}`);
       
-      // TODO: Update order status in your database
-      // await storage.updateOrder(merchant_order_id, { 
-      //   paymentStatus: 'failed',
-      //   transactionId: transactionId,
-      //   failedAt: new Date()
-      // });
+      // Update order status in database
+      if (storage) {
+        try {
+          // Find order by merchant_order_id (try both orderId and orderNumber for compatibility)
+          const orders = await storage.getAllOrders();
+          let order = orders.find((o: any) => o.id === merchant_order_id);
+          if (!order) {
+            order = orders.find((o: any) => o.orderNumber === merchant_order_id);
+          }
+          
+          console.log(`🔍 Payment FAILURE: Looking for order with merchant_order_id: ${merchant_order_id}`);
+          console.log(`🔍 Found order: ${order ? `${order.id} (${order.orderNumber})` : 'NOT FOUND'}`);
+          
+          if (order) {
+            await storage.updateOrder(order.id, { 
+              paymentStatus: 'failed',
+              transactionId: transactionId,
+              failedAt: new Date(),
+              status: 'payment_failed'
+            });
+            
+            console.log(`💳 Order ${merchant_order_id} payment failed`);
+            
+            // 🚨 AUTOMATIC NOTIFICATION: Payment Failed
+            if (automaticNotifications) {
+              try {
+                console.log('💳 Triggering automatic payment failure notification...');
+                
+                const failureNotification = {
+                  userId: order.userId,
+                  title: 'فشل في عملية الدفع ❌',
+                  message: `فشل في دفع طلبك رقم ${order.orderNumber}. يرجى المحاولة مرة أخرى أو اختيار طريقة دفع أخرى`,
+                  type: 'payment',
+                  category: 'payment_failed',
+                  iconType: 'credit-card',
+                  actionUrl: `/orders/${order.id}`,
+                  sourceId: order.id,
+                  sourceType: 'order',
+                  priority: 'high',
+                  actionData: {
+                    orderId: order.id,
+                    orderNumber: order.orderNumber,
+                    transactionId: transactionId,
+                    failureReason: 'Payment processing failed'
+                  }
+                };
+                
+                await storage.createNotification(failureNotification);
+                await automaticNotifications.sendRealtimeNotification(order.userId, failureNotification);
+                console.log('✅ Automatic payment failure notification sent');
+              } catch (notificationError) {
+                console.error('❌ Error sending payment failure notification:', notificationError);
+              }
+            }
+          }
+        } catch (updateError) {
+          console.error(`❌ Error updating failed order ${merchant_order_id}:`, updateError);
+        }
+      }
     }
 
     res.json({ success: true });
