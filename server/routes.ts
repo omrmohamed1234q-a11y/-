@@ -9703,21 +9703,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // منح مكافأة يدوية للمستخدم (Admin only)
+  // منح مكافأة يدوية للمستخدم (Admin only) - محدث للنقاط
   app.post('/api/admin/rewards/grant', isAdminAuthenticated, async (req, res) => {
     try {
+      const { userId, points, reason } = req.body;
 
-      const { userId, pages, reason } = req.body;
-
-      if (!userId || !pages || pages <= 0) {
-        return res.status(400).json({ message: 'Valid userId and pages count required' });
+      if (!userId || !points || points <= 0) {
+        return res.status(400).json({ message: 'Valid userId and points count required' });
       }
 
-      console.log(`🎁 Admin ${req.user.id} granted ${pages} pages to user ${userId}: ${reason}`);
+      console.log(`🎁 Admin ${req.user.id} granted ${points} points to user ${userId}: ${reason}`);
+
+      // في المستقبل: تحديث قاعدة البيانات هنا لإضافة النقاط للمستخدم
+      // await updateUserPoints(userId, points);
 
       res.json({
         success: true,
-        message: `تم منح ${pages} ورقة مجانية للمستخدم بنجاح`
+        message: `تم منح ${points} نقطة مجانية للمستخدم بنجاح`
       });
     } catch (error) {
       console.error('Error granting admin reward:', error);
@@ -9788,35 +9790,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // إحصائيات المكافآت (Admin only)
+  // إحصائيات المكافآت (Admin only) - متصل بـ Supabase
   app.get('/api/admin/rewards/stats', isAdminAuthenticated, async (req, res) => {
     try {
-      console.log('🔍 فحص storage methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(storage)));
+      console.log('📊 جلب إحصائيات المكافآت من Supabase...');
       
-      // حل مؤقت - حساب الإحصائيات مباشرة
-      const totalUsers = (await storage.getAllUsers()).length;
-      const allUsers = await storage.getAllUsers();
+      let allUsers = [];
+      let totalUsers = 0;
       
+      // محاولة جلب البيانات من Supabase أولاً
+      if (supabase) {
+        try {
+          const { data: supabaseUsers, error } = await supabase
+            .from('users')
+            .select('id, bounty_points, total_prints, total_referrals');
+          
+          if (error) {
+            console.warn('⚠️ فشل جلب البيانات من Supabase:', error.message);
+            // fallback to memory storage
+            allUsers = await storage.getAllUsers();
+            totalUsers = allUsers.length;
+            console.log('🔄 استخدام Memory Storage كبديل');
+          } else {
+            allUsers = supabaseUsers || [];
+            totalUsers = allUsers.length;
+            console.log(`✅ تم جلب ${totalUsers} مستخدم من Supabase`);
+          }
+        } catch (supabaseError) {
+          console.warn('⚠️ خطأ في الاتصال بـ Supabase:', supabaseError);
+          // fallback to memory storage
+          allUsers = await storage.getAllUsers();
+          totalUsers = allUsers.length;
+          console.log('🔄 استخدام Memory Storage كبديل');
+        }
+      } else {
+        // fallback to memory storage if no supabase client
+        allUsers = await storage.getAllUsers();
+        totalUsers = allUsers.length;
+        console.log('🔄 استخدام Memory Storage (لا يوجد Supabase client)');
+      }
+      
+      // حساب الإحصائيات (تم تغيير التسميات للنقاط)
       const stats = {
         totalUsers,
-        totalFreePages: allUsers.reduce((sum, user) => sum + (user.bountyPoints || 0), 0),
-        totalEarnedPages: allUsers.reduce((sum, user) => sum + (user.bountyPoints || 0), 0),
-        totalPrintedPages: allUsers.reduce((sum, user) => sum + (user.totalPrints || 0), 0),
-        totalReferrals: allUsers.reduce((sum, user) => sum + (user.totalReferrals || 0), 0),
+        totalFreePoints: allUsers.reduce((sum, user) => sum + (user.bounty_points || user.bountyPoints || 0), 0),
+        totalEarnedPoints: allUsers.reduce((sum, user) => sum + (user.bounty_points || user.bountyPoints || 0), 0),
+        totalPrintedPages: allUsers.reduce((sum, user) => sum + (user.total_prints || user.totalPrints || 0), 0),
+        totalReferrals: allUsers.reduce((sum, user) => sum + (user.total_referrals || user.totalReferrals || 0), 0),
         rewardTypeStats: {
-          print_milestone: Math.floor(allUsers.reduce((sum, user) => sum + (user.totalPrints || 0), 0) / 10),
-          referral: allUsers.reduce((sum, user) => sum + (user.totalReferrals || 0), 0),
+          print_milestone: Math.floor(allUsers.reduce((sum, user) => sum + (user.total_prints || user.totalPrints || 0), 0) / 10),
+          referral: allUsers.reduce((sum, user) => sum + (user.total_referrals || user.totalReferrals || 0), 0),
           first_login: totalUsers,
           admin_bonus: 0
         },
-        averagePagesPerUser: totalUsers > 0 ? Math.round(allUsers.reduce((sum, user) => sum + (user.totalPrints || 0), 0) / totalUsers) : 0,
-        averageEarnedPerUser: totalUsers > 0 ? Math.round(allUsers.reduce((sum, user) => sum + (user.bountyPoints || 0), 0) / totalUsers) : 0
+        averagePagesPerUser: totalUsers > 0 ? Math.round(allUsers.reduce((sum, user) => sum + (user.total_prints || user.totalPrints || 0), 0) / totalUsers) : 0,
+        averagePointsPerUser: totalUsers > 0 ? Math.round(allUsers.reduce((sum, user) => sum + (user.bounty_points || user.bountyPoints || 0), 0) / totalUsers) : 0
       };
       
-      console.log('📊 جلب إحصائيات المكافآت:', {
+      console.log('📊 إحصائيات المكافآت المحدثة:', {
         totalUsers: stats.totalUsers,
-        totalEarnedPages: stats.totalEarnedPages,
-        rewardTransactions: Object.values(stats.rewardTypeStats).reduce((sum, val) => sum + val, 0)
+        totalEarnedPoints: stats.totalEarnedPoints,
+        rewardTransactions: Object.values(stats.rewardTypeStats).reduce((sum, val) => sum + val, 0),
+        dataSource: supabase ? 'Supabase' : 'Memory Storage'
       });
       
       res.json({

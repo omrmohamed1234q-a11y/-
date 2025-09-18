@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 
 interface RewardSettings {
-  pages_per_milestone: number;
+  points_per_milestone: number;
   milestone_reward: number;
   referral_reward: number;
   first_login_bonus: number;
@@ -40,13 +40,13 @@ interface RewardSettings {
 
 interface RewardStats {
   totalUsers: number;
-  totalFreePages: number;
-  totalEarnedPages: number;
+  totalFreePoints: number;
+  totalEarnedPoints: number;
   totalPrintedPages: number;
   totalReferrals: number;
   rewardTypeStats: Record<string, number>;
   averagePagesPerUser: number;
-  averageEarnedPerUser: number;
+  averagePointsPerUser: number;
 }
 
 interface Reward {
@@ -76,7 +76,7 @@ interface Challenge {
 export default function RewardsManagement() {
   const { toast } = useToast();
   const [settings, setSettings] = useState<RewardSettings>({
-    pages_per_milestone: 500,
+    points_per_milestone: 500,
     milestone_reward: 10,
     referral_reward: 10,
     first_login_bonus: 10,
@@ -99,7 +99,7 @@ export default function RewardsManagement() {
   const [manualRewardDialog, setManualRewardDialog] = useState(false);
   const [manualRewardForm, setManualRewardForm] = useState({
     userId: '',
-    pages: '',
+    points: '',
     reason: ''
   });
 
@@ -332,10 +332,10 @@ export default function RewardsManagement() {
   // منح مكافأة يدوية
   const grantManualReward = async () => {
     try {
-      if (!manualRewardForm.userId || !manualRewardForm.pages) {
+      if (!manualRewardForm.userId || !manualRewardForm.points) {
         toast({
           title: 'خطأ',
-          description: 'يرجى إدخال معرف المستخدم وعدد الأوراق',
+          description: 'يرجى إدخال معرف المستخدم وعدد النقاط',
           variant: 'destructive'
         });
         return;
@@ -344,7 +344,7 @@ export default function RewardsManagement() {
       setLoading(true);
       const response = await apiRequest('POST', '/api/admin/rewards/grant', {
         userId: manualRewardForm.userId,
-        pages: parseInt(manualRewardForm.pages),
+        points: parseInt(manualRewardForm.points),
         reason: manualRewardForm.reason || 'مكافأة إدارية'
       });
 
@@ -355,7 +355,7 @@ export default function RewardsManagement() {
           description: data.message
         });
         setManualRewardDialog(false);
-        setManualRewardForm({ userId: '', pages: '', reason: '' });
+        setManualRewardForm({ userId: '', points: '', reason: '' });
         loadStats(); // إعادة تحميل الإحصائيات
       } else {
         throw new Error(data.message);
@@ -387,10 +387,10 @@ export default function RewardsManagement() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Gift className="h-8 w-8 text-orange-500" />
-            إدارة نظام المكافآت والأوراق المجانية
+            إدارة نظام المكافآت والنقاط المجانية
           </h1>
           <p className="text-gray-600 mt-2">
-            تحكم في قوانين المكافآت وتتبع استخدام الأوراق المجانية
+            تحكم في قوانين المكافآت وتتبع استخدام النقاط المجانية
           </p>
         </div>
 
@@ -618,12 +618,12 @@ export default function RewardsManagement() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="pages_per_milestone">عدد الأوراق لكل معلم</Label>
+                    <Label htmlFor="points_per_milestone">عدد النقاط لكل معلم</Label>
                     <Input
-                      id="pages_per_milestone"
+                      id="points_per_milestone"
                       type="number"
-                      value={settings.pages_per_milestone}
-                      onChange={(e) => handleSettingChange('pages_per_milestone', e.target.value)}
+                      value={settings.points_per_milestone}
+                      onChange={(e) => handleSettingChange('points_per_milestone', e.target.value)}
                       min="1"
                       max="10000"
                     />
@@ -633,7 +633,7 @@ export default function RewardsManagement() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="milestone_reward">عدد الأوراق المجانية</Label>
+                    <Label htmlFor="milestone_reward">عدد النقاط المجانية</Label>
                     <Input
                       id="milestone_reward"
                       type="number"
@@ -643,7 +643,7 @@ export default function RewardsManagement() {
                       max="100"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      عدد الأوراق المجانية عند كل معلم
+                      عدد النقاط المجانية عند كل معلم
                     </p>
                   </div>
                 </div>
@@ -651,11 +651,11 @@ export default function RewardsManagement() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="font-medium text-blue-800 mb-2">المعاينة:</h4>
                   <p className="text-sm text-blue-700">
-                    كل <span className="font-bold">{settings.pages_per_milestone} ورقة</span> يطبعها المستخدم،
-                    سيحصل على <span className="font-bold">{settings.milestone_reward} أوراق مجانية</span>
+                    كل <span className="font-bold">{settings.points_per_milestone} نقطة</span> يحرزها المستخدم،
+                    سيحصل على <span className="font-bold">{settings.milestone_reward} نقاط مجانية</span>
                   </p>
                   <p className="text-xs text-blue-600 mt-1">
-                    مثال: عند طباعة 1500 ورقة = {Math.floor(1500 / settings.pages_per_milestone) * settings.milestone_reward} ورقة مجانية
+                    مثال: عند جمع 1500 نقطة = {Math.floor(1500 / settings.points_per_milestone) * settings.milestone_reward} نقطة مجانية
                   </p>
                 </div>
               </CardContent>
@@ -682,7 +682,7 @@ export default function RewardsManagement() {
                       max="100"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      أوراق مجانية لكل طرف عند الدعوة
+                      نقاط مجانية لكل طرف عند الدعوة
                     </p>
                   </div>
                   
@@ -705,7 +705,7 @@ export default function RewardsManagement() {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <h4 className="font-medium text-green-800 mb-2">المعاينة:</h4>
                   <p className="text-sm text-green-700">
-                    عند دعوة صديق، كلا الطرفين يحصل على <span className="font-bold">{settings.referral_reward} أوراق مجانية</span>
+                    عند دعوة صديق، كلا الطرفين يحصل على <span className="font-bold">{settings.referral_reward} نقاط مجانية</span>
                   </p>
                   <p className="text-xs text-green-600 mt-1">
                     الحد الأقصى: {Math.floor(settings.max_referral_rewards / settings.referral_reward)} دعوة مكافأة
@@ -724,7 +724,7 @@ export default function RewardsManagement() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="first_login_bonus">أوراق الترحيب المجانية</Label>
+                  <Label htmlFor="first_login_bonus">نقاط الترحيب المجانية</Label>
                   <Input
                     id="first_login_bonus"
                     type="number"
@@ -734,14 +734,14 @@ export default function RewardsManagement() {
                     max="50"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    أوراق مجانية عند أول تسجيل دخول
+                    نقاط مجانية عند أول تسجيل دخول
                   </p>
                 </div>
 
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <h4 className="font-medium text-yellow-800 mb-2">المعاينة:</h4>
                   <p className="text-sm text-yellow-700">
-                    كل مستخدم جديد سيحصل على <span className="font-bold">{settings.first_login_bonus} أوراق مجانية</span> عند أول تسجيل دخول
+                    كل مستخدم جديد سيحصل على <span className="font-bold">{settings.first_login_bonus} نقاط مجانية</span> عند أول تسجيل دخول
                   </p>
                 </div>
               </CardContent>
@@ -759,15 +759,15 @@ export default function RewardsManagement() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">مكافأة الترحيب:</span>
-                    <Badge variant="outline">{settings.first_login_bonus} أوراق</Badge>
+                    <Badge variant="outline">{settings.first_login_bonus} نقاط</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">مكافأة الدعوة:</span>
-                    <Badge variant="outline">{settings.referral_reward} أوراق لكل طرف</Badge>
+                    <Badge variant="outline">{settings.referral_reward} نقاط لكل طرف</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">مكافأة المعلم:</span>
-                    <Badge variant="outline">{settings.milestone_reward} أوراق / {settings.pages_per_milestone} ورقة</Badge>
+                    <Badge variant="outline">{settings.milestone_reward} نقاط / {settings.points_per_milestone} نقطة</Badge>
                   </div>
                 </div>
 
@@ -775,11 +775,11 @@ export default function RewardsManagement() {
 
                 <div className="text-xs text-gray-500">
                   <p><strong>مثال لمستخدم نشط:</strong></p>
-                  <p>• الترحيب: {settings.first_login_bonus} أوراق</p>
-                  <p>• دعوة 5 أصدقاء: {settings.referral_reward * 5} أوراق</p>
-                  <p>• طباعة 1000 ورقة: {Math.floor(1000 / settings.pages_per_milestone) * settings.milestone_reward} أوراق</p>
+                  <p>• الترحيب: {settings.first_login_bonus} نقاط</p>
+                  <p>• دعوة 5 أصدقاء: {settings.referral_reward * 5} نقاط</p>
+                  <p>• جمع 1000 نقطة: {Math.floor(1000 / settings.points_per_milestone) * settings.milestone_reward} نقاط</p>
                   <p className="font-medium mt-1 text-purple-600">
-                    المجموع: {settings.first_login_bonus + (settings.referral_reward * 5) + (Math.floor(1000 / settings.pages_per_milestone) * settings.milestone_reward)} ورقة مجانية
+                    المجموع: {settings.first_login_bonus + (settings.referral_reward * 5) + (Math.floor(1000 / settings.points_per_milestone) * settings.milestone_reward)} نقطة مجانية
                   </p>
                 </div>
               </CardContent>
@@ -841,7 +841,7 @@ export default function RewardsManagement() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">الأوراق المكتسبة</p>
+                      <p className="text-sm font-medium text-gray-600">النقاط المكتسبة</p>
                       <p className="text-2xl font-bold">{stats.totalEarnedPages.toLocaleString()}</p>
                     </div>
                     <Award className="h-8 w-8 text-orange-500" />
@@ -916,7 +916,7 @@ export default function RewardsManagement() {
                     </div>
                     
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-medium">متوسط الأوراق المكتسبة</span>
+                      <span className="text-sm font-medium">متوسط النقاط المكتسبة</span>
                       <span className="text-lg font-bold text-green-600">
                         {stats.averageEarnedPerUser} ورقة/مستخدم
                       </span>
@@ -947,7 +947,7 @@ export default function RewardsManagement() {
                 منح مكافآت يدوية
               </CardTitle>
               <p className="text-sm text-gray-600">
-                يمكنك منح أوراق مجانية إضافية لأي مستخدم لأسباب خاصة
+                يمكنك منح نقاط مجانية إضافية لأي مستخدم لأسباب خاصة
               </p>
             </CardHeader>
             <CardContent>
@@ -982,17 +982,17 @@ export default function RewardsManagement() {
                     </div>
                     
                     <div>
-                      <Label htmlFor="manual_pages">عدد الأوراق المجانية</Label>
+                      <Label htmlFor="manual_points">عدد النقاط المجانية</Label>
                       <Input
-                        id="manual_pages"
+                        id="manual_points"
                         type="number"
                         placeholder="10"
                         min="1"
                         max="500"
-                        value={manualRewardForm.pages}
+                        value={manualRewardForm.points}
                         onChange={(e) => setManualRewardForm(prev => ({
                           ...prev,
-                          pages: e.target.value
+                          points: e.target.value
                         }))}
                       />
                     </div>
