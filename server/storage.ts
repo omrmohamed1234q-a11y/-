@@ -1028,7 +1028,6 @@ export class MemoryStorage implements IStorage {
   async updateTeacher(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
   async deleteTeacher(id: string): Promise<void> { throw new Error('Not implemented'); }
   
-  createNotification(data: any): any { return { id: `notif-${Date.now()}`, ...data }; }
   getUserNotifications(userId: string): any[] { return []; }
   markNotificationAsRead(notificationId: string): void { }
   
@@ -3561,7 +3560,6 @@ class MemStorage implements IStorage {
   }
 
   async createNotification(notificationData: any): Promise<any> {
-    console.log(`🚨 MemoryStorage.createNotification CALLED with:`, JSON.stringify(notificationData, null, 2));
     const notification = {
       id: notificationData.id || `notif-${Date.now()}`,
       ...notificationData,
