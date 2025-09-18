@@ -2,6 +2,9 @@ import { users, products, orders, printJobs, cartItems, cartOrders, drivers, ann
 import { type SmartCampaign, type InsertSmartCampaign, type TargetingRule, type InsertTargetingRule, type SentMessage, type InsertSentMessage, type UserBehavior, type InsertUserBehavior, type MessageTemplate, type InsertMessageTemplate, type ScheduledJob, type InsertScheduledJob } from "@shared/smart-notifications-schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 export interface IStorage {
   // User operations
@@ -2932,7 +2935,14 @@ class MemStorage implements IStorage {
   private userAddressesData: any[] = [];
   private userAchievementsData: any[] = [];
 
+  // Notifications persistence
+  private readonly NOTIFICATIONS_FILE = path.join(process.cwd(), 'notifications-data.json');
+  private readonly NOTIFICATIONS_SECRET = process.env.NOTIFICATIONS_ENCRYPTION_SECRET || 'default-notifications-secret-2024';
+
   constructor() {
+    // Load notifications from persistent storage first
+    this.loadNotificationsFromFile();
+    
     // Initialize with test users for dropdown testing
     this.users.push(
       {
@@ -3565,6 +3575,10 @@ class MemStorage implements IStorage {
     console.log(`👤 Saved notification for userId: ${newSystemNotification.userId}`);
     console.log(`📊 Total notifications in storage after save: ${this.userNotificationsData.length}`);
     console.log(`🔍 Full notification object:`, JSON.stringify(newSystemNotification, null, 2));
+    
+    // Save to persistent file
+    this.saveNotificationsToFile();
+    
     return notification;
   }
 
@@ -3599,6 +3613,10 @@ class MemStorage implements IStorage {
     const index = this.notifications.findIndex(notif => notif.id === id);
     if (index !== -1) {
       this.notifications.splice(index, 1);
+      
+      // Save to persistent file
+      this.saveNotificationsToFile();
+      
       return true;
     }
     return false;
@@ -5889,6 +5907,9 @@ class MemStorage implements IStorage {
     this.userNotificationsData[index].read = true;
     this.userNotificationsData[index].readAt = new Date();
     
+    // Save to persistent file
+    this.saveNotificationsToFile();
+    
     return this.userNotificationsData[index];
   }
 
@@ -5901,6 +5922,12 @@ class MemStorage implements IStorage {
         count++;
       }
     });
+    
+    // Save to persistent file
+    if (count > 0) {
+      this.saveNotificationsToFile();
+    }
+    
     return count;
   }
 
@@ -5909,6 +5936,10 @@ class MemStorage implements IStorage {
     if (index === -1) return false;
     
     this.userNotificationsData.splice(index, 1);
+    
+    // Save to persistent file
+    this.saveNotificationsToFile();
+    
     return true;
   }
 
@@ -6157,6 +6188,142 @@ class MemStorage implements IStorage {
       level,
       levelProgress
     };
+  }
+
+  // Notifications persistence methods
+  private deriveKey(secret: string): Buffer {
+    return crypto.scryptSync(secret, 'notifications-salt-2024', 32);
+  }
+
+  private encryptData(data: string, secret: string): string {
+    try {
+      if (secret === 'default-notifications-secret-2024') {
+        console.error('🚨 SECURITY WARNING: Using default encryption secret! Set NOTIFICATIONS_ENCRYPTION_SECRET environment variable.');
+        throw new Error('Default encryption secret not allowed in production');
+      }
+
+      const key = this.deriveKey(secret);
+      const iv = crypto.randomBytes(12); // 12 bytes for GCM
+      const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+      
+      let encrypted = cipher.update(data, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      const authTag = cipher.getAuthTag();
+
+      const envelope = {
+        v: 1,
+        iv: iv.toString('base64'),
+        tag: authTag.toString('base64'),
+        ct: encrypted
+      };
+
+      return JSON.stringify(envelope);
+    } catch (error) {
+      console.error('🚨 Encryption failed - data will NOT be saved:', error);
+      throw error; // Do not fallback to plaintext
+    }
+  }
+
+  private decryptData(encryptedData: string, secret: string): string {
+    try {
+      // Try new format first
+      let envelope: any;
+      try {
+        envelope = JSON.parse(encryptedData);
+      } catch (parseError) {
+        // Legacy plaintext migration - one time only
+        console.log('📄 Migrating legacy plaintext notifications file');
+        return encryptedData;
+      }
+
+      if (!envelope.v || envelope.v !== 1) {
+        throw new Error('Invalid or unsupported encryption envelope version');
+      }
+
+      const key = this.deriveKey(secret);
+      const iv = Buffer.from(envelope.iv, 'base64');
+      const authTag = Buffer.from(envelope.tag, 'base64');
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+      
+      decipher.setAuthTag(authTag);
+      let decrypted = decipher.update(envelope.ct, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      return decrypted;
+    } catch (error) {
+      console.error('🚨 Decryption failed - notifications cannot be loaded:', error);
+      throw error; // Do not fallback to plaintext
+    }
+  }
+
+  private saveNotificationsToFile(): void {
+    try {
+      const data = {
+        notifications: this.userNotificationsData,
+        timestamp: new Date().toISOString(),
+        version: '1.0'
+      };
+
+      const jsonData = JSON.stringify(data, null, 2);
+      const encrypted = this.encryptData(jsonData, this.NOTIFICATIONS_SECRET);
+
+      // Write with secure permissions (0o600 = read/write for owner only)
+      fs.writeFileSync(this.NOTIFICATIONS_FILE, encrypted, { mode: 0o600 });
+      console.log(`💾 Notifications data saved securely (${this.userNotificationsData.length} notifications)`);
+    } catch (error) {
+      console.error('🚨 CRITICAL: Could not save notifications to file:', error);
+      // Do not continue if we can't persist data securely
+    }
+  }
+
+  private loadNotificationsFromFile(): void {
+    try {
+      if (!fs.existsSync(this.NOTIFICATIONS_FILE)) {
+        console.log('📂 No notifications file found - starting fresh');
+        return;
+      }
+
+      const encryptedData = fs.readFileSync(this.NOTIFICATIONS_FILE, 'utf8');
+      const decryptedData = this.decryptData(encryptedData, this.NOTIFICATIONS_SECRET);
+      
+      let parsedData: any;
+      try {
+        parsedData = JSON.parse(decryptedData);
+      } catch (parseError) {
+        console.error('🚨 Error parsing notifications file - data corrupted or invalid');
+        // Backup corrupted file for analysis
+        const backupPath = this.NOTIFICATIONS_FILE + '.corrupted.' + Date.now();
+        fs.copyFileSync(this.NOTIFICATIONS_FILE, backupPath);
+        console.log(`📋 Corrupted file backed up to: ${backupPath}`);
+        return;
+      }
+
+      // Schema validation
+      if (parsedData && 
+          typeof parsedData.version === 'string' &&
+          typeof parsedData.timestamp === 'string' &&
+          Array.isArray(parsedData.notifications)) {
+        
+        // Basic notification structure validation
+        const validNotifications = parsedData.notifications.filter((notif: any) => 
+          notif && 
+          typeof notif.id === 'string' &&
+          typeof notif.userId === 'string' &&
+          typeof notif.message === 'string'
+        );
+
+        this.userNotificationsData = validNotifications;
+        console.log(`📂 Loaded ${validNotifications.length} valid notifications from file (saved: ${parsedData.timestamp})`);
+        
+        if (validNotifications.length !== parsedData.notifications.length) {
+          console.log(`⚠️ Filtered out ${parsedData.notifications.length - validNotifications.length} invalid notifications`);
+        }
+      } else {
+        console.log('📂 Invalid notifications file schema - starting fresh');
+      }
+    } catch (error) {
+      console.error('🚨 Critical error loading notifications from file:', error);
+    }
   }
 }
 
