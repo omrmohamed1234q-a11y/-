@@ -9911,6 +9911,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
 
+      // البحث عن المكافأة في الـ store
+      const rewardIndex = rewardsStore.findIndex(reward => reward.id === id);
+      if (rewardIndex === -1) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'المكافأة غير موجودة' 
+        });
+      }
+
+      // حذف المكافأة من الـ store
+      rewardsStore.splice(rewardIndex, 1);
+
       console.log(`🗑️ Admin deleted reward: ${id}`);
 
       res.json({
@@ -10043,6 +10055,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/challenges/:id', isAdminAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
+
+      // البحث عن التحدي في الـ store
+      const challengeIndex = challengesStore.findIndex(challenge => challenge.id === id);
+      if (challengeIndex === -1) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'التحدي غير موجود' 
+        });
+      }
+
+      // حذف التحدي من الـ store
+      challengesStore.splice(challengeIndex, 1);
 
       console.log(`🗑️ Admin deleted challenge: ${id}`);
 

@@ -3505,17 +3505,8 @@ class MemStorage implements IStorage {
   // User notifications operations (MemStorage - pure memory implementation)
   async getAllNotifications(userId?: string): Promise<any[]> {
     // Use the new system (userNotificationsData) for consistency
-    console.log(`🔍 getAllNotifications called with userId: ${userId}`);
-    console.log(`📊 Total notifications in storage: ${this.userNotificationsData.length}`);
-    
     if (userId) {
       const userNotifications = this.userNotificationsData.filter(notif => notif.userId === userId);
-      console.log(`👤 Found ${userNotifications.length} notifications for user ${userId}`);
-      
-      if (this.userNotificationsData.length > 0) {
-        console.log(`🔍 Sample notification userIds in storage:`, this.userNotificationsData.slice(0, 3).map(n => n.userId));
-      }
-      
       return userNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
     return [...this.userNotificationsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -3561,8 +3552,6 @@ class MemStorage implements IStorage {
     this.userNotificationsData.push(newSystemNotification);
     
     console.log(`💾 Notification saved to both storage systems: ${notification.id}`);
-    console.log(`👤 Saved notification for userId: ${newSystemNotification.userId}`);
-    console.log(`📊 Total notifications in storage after save: ${this.userNotificationsData.length}`);
     return notification;
   }
 
