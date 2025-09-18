@@ -9939,45 +9939,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // الحصول على جميع التحديات (Admin)
   app.get('/api/admin/challenges/all', isAdminAuthenticated, async (req, res) => {
     try {
-      const mockChallenges = [
-        {
-          id: '1',
-          name: 'طباع النشيط',
-          description: 'اطبع 5 صفحات في يوم واحد',
-          type: 'daily',
-          target_value: 5,
-          points_reward: 50,
-          is_daily: true,
-          active: true,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '2',
-          name: 'ادع صديق',
-          description: 'شارك التطبيق مع صديق واحد',
-          type: 'referral',
-          target_value: 1,
-          points_reward: 100,
-          is_daily: false,
-          active: true,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '3',
-          name: 'أسبوع النشاط',
-          description: 'اطبع لمدة 7 أيام متتالية',
-          type: 'streak',
-          target_value: 7,
-          points_reward: 200,
-          is_daily: false,
-          active: true,
-          created_at: new Date().toISOString()
-        }
-      ];
-
       res.json({
         success: true,
-        data: mockChallenges
+        data: challengesStore
       });
     } catch (error) {
       console.error('Error fetching challenges:', error);
