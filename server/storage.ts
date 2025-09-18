@@ -5900,6 +5900,65 @@ class MemStorage implements IStorage {
   }
 
   // Profile Summary and Analytics
+  async getRewardsStatistics(): Promise<{
+    totalUsers: number;
+    totalFreePages: number;
+    totalEarnedPages: number;
+    totalPrintedPages: number;
+    totalReferrals: number;
+    rewardTypeStats: {
+      print_milestone: number;
+      referral: number;
+      first_login: number;
+      admin_bonus: number;
+    };
+    averagePagesPerUser: number;
+    averageEarnedPerUser: number;
+  }> {
+    // حساب الإحصائيات الحقيقية من البيانات المحفوظة
+    const totalUsers = this.users.length;
+    const totalPrintedPages = this.users.reduce((sum, user) => sum + (user.totalPrints || 0), 0);
+    const totalReferrals = this.users.reduce((sum, user) => sum + (user.totalReferrals || 0), 0);
+    const totalEarnedPages = this.users.reduce((sum, user) => sum + (user.bountyPoints || 0), 0);
+    
+    // حساب أنواع المكافآت من المعاملات
+    const rewardTypeStats = {
+      print_milestone: 0,
+      referral: 0,
+      first_login: 0,
+      admin_bonus: 0
+    };
+    
+    for (const transaction of this.rewardTransactionsData) {
+      if (transaction.type === 'earned') {
+        if (transaction.reason?.includes('print') || transaction.reason?.includes('طباعة')) {
+          rewardTypeStats.print_milestone++;
+        } else if (transaction.reason?.includes('referral') || transaction.reason?.includes('دعوة')) {
+          rewardTypeStats.referral++;
+        } else if (transaction.reason?.includes('login') || transaction.reason?.includes('تسجيل')) {
+          rewardTypeStats.first_login++;
+        } else if (transaction.reason?.includes('admin') || transaction.reason?.includes('إداري')) {
+          rewardTypeStats.admin_bonus++;
+        }
+      }
+    }
+    
+    const averagePagesPerUser = totalUsers > 0 ? Math.round(totalPrintedPages / totalUsers) : 0;
+    const averageEarnedPerUser = totalUsers > 0 ? Math.round(totalEarnedPages / totalUsers) : 0;
+    const totalFreePages = totalEarnedPages; // النقاط = الأوراق المجانية
+    
+    return {
+      totalUsers,
+      totalFreePages,
+      totalEarnedPages,
+      totalPrintedPages,
+      totalReferrals,
+      rewardTypeStats,
+      averagePagesPerUser,
+      averageEarnedPerUser
+    };
+  }
+
   async getUserProfileSummary(userId: string): Promise<{
     user: User;
     preferences?: UserPreferences;

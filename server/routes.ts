@@ -9725,15 +9725,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // إضافة بيانات تجريبية للاختبار (Admin only)
+  app.post('/api/admin/rewards/add-test-data', isAdminAuthenticated, async (req, res) => {
+    try {
+      console.log('🧪 إضافة بيانات تجريبية للمكافآت...');
+      
+      // إضافة مستخدمين تجريبيين
+      const testUsers = [
+        { username: 'احمد محمد', email: 'ahmed@test.com', bountyPoints: 150, totalPrints: 25, totalReferrals: 3 },
+        { username: 'فاطمة علي', email: 'fatma@test.com', bountyPoints: 75, totalPrints: 12, totalReferrals: 1 },
+        { username: 'محمد حسن', email: 'mohamed@test.com', bountyPoints: 220, totalPrints: 40, totalReferrals: 5 },
+        { username: 'مريم احمد', email: 'mariam@test.com', bountyPoints: 90, totalPrints: 18, totalReferrals: 2 }
+      ];
+      
+      for (const userData of testUsers) {
+        const user = await storage.createUser({
+          ...userData,
+          fullName: userData.username,
+          role: 'customer'
+        });
+        
+        // إضافة معاملات مكافآت للمستخدم
+        await storage.createRewardTransaction({
+          userId: user.id,
+          type: 'earned',
+          amount: 50,
+          balanceAfter: 50,
+          reason: 'مكافأة الترحيب',
+          description: 'تسجيل الدخول الأول'
+        });
+        
+        await storage.createRewardTransaction({
+          userId: user.id,
+          type: 'earned',
+          amount: userData.bountyPoints - 50,
+          balanceAfter: userData.bountyPoints,
+          reason: 'طباعة المستندات',
+          description: `مكافأة طباعة ${userData.totalPrints} ورقة`
+        });
+        
+        if (userData.totalReferrals > 0) {
+          await storage.createRewardTransaction({
+            userId: user.id,
+            type: 'earned',
+            amount: userData.totalReferrals * 10,
+            balanceAfter: userData.bountyPoints + (userData.totalReferrals * 10),
+            reason: 'دعوة الأصدقاء',
+            description: `دعوة ${userData.totalReferrals} أصدقاء`
+          });
+        }
+      }
+      
+      console.log('✅ تم إضافة البيانات التجريبية بنجاح');
+      res.json({
+        success: true,
+        message: 'تم إضافة البيانات التجريبية بنجاح',
+        usersAdded: testUsers.length
+      });
+    } catch (error) {
+      console.error('Error adding test data:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // إحصائيات المكافآت (Admin only)
   app.get('/api/admin/rewards/stats', isAdminAuthenticated, async (req, res) => {
     try {
-      // إرجاع null لإظهار empty state بدلاً من البيانات المزيفة
-      // سيتم ربط هذا بقاعدة البيانات لاحقاً لإرجاع إحصائيات حقيقية
+      // الحصول على الإحصائيات الحقيقية من الـ storage
+      const stats = await storage.getRewardsStatistics();
+      
+      console.log('📊 جلب إحصائيات المكافآت:', {
+        totalUsers: stats.totalUsers,
+        totalEarnedPages: stats.totalEarnedPages,
+        rewardTransactions: Object.values(stats.rewardTypeStats).reduce((sum, val) => sum + val, 0)
+      });
       
       res.json({
         success: true,
-        data: null  // إرجاع null لإظهار empty state
+        data: stats
       });
     } catch (error) {
       console.error('Error fetching reward stats:', error);
