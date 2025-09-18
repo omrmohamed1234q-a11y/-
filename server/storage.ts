@@ -655,9 +655,8 @@ export class MemoryStorage implements IStorage {
   }
 
   async getUserUnreadCount(userId: string): Promise<number> {
-    return this.notifications.filter(n => 
-      n.userId === userId && !n.isRead
-    ).length;
+    // Delegate to the new system method for consistency
+    return await this.getUserUnreadNotificationsCount(userId);
   }
 
   // User notification preferences operations
