@@ -6146,4 +6146,4 @@ class MemStorage implements IStorage {
 // Use MemStorage temporarily due to database connection issues
 // Will switch to DatabaseStorage when database is ready
 // تبديل إلى Memory Storage مؤقتاً
-export const storage = new MemoryStorage();
+export const storage = new MemStorage();
