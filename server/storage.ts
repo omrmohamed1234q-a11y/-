@@ -658,6 +658,28 @@ export class MemoryStorage implements IStorage {
     return preferences;
   }
 
+  // System notification configuration methods
+  async getNotificationConfig(): Promise<any> {
+    return this.systemNotificationConfig || {
+      orderCreated: { enabled: true, template: 'تم إنشاء طلبك بنجاح #{{orderNumber}}' },
+      paymentSuccess: { enabled: true, template: 'تم تأكيد الدفع للطلب #{{orderNumber}}' },
+      paymentFailed: { enabled: true, template: 'فشل في عملية الدفع للطلب #{{orderNumber}}' },
+      orderProcessing: { enabled: true, template: 'طلبك #{{orderNumber}} قيد المعالجة' },
+      orderDelivered: { enabled: true, template: 'تم تسليم طلبك #{{orderNumber}} بنجاح' },
+      orderCancelled: { enabled: true, template: 'تم إلغاء طلبك #{{orderNumber}}' },
+      reviewReceived: { enabled: true, template: 'شكراً لتقييمك للطلب #{{orderNumber}}' },
+      systemAlert: { enabled: true, template: 'تنبيه النظام: {{message}}' }
+    };
+  }
+
+  async updateNotificationConfig(config: any): Promise<any> {
+    this.systemNotificationConfig = {
+      ...config,
+      updatedAt: new Date()
+    };
+    return this.systemNotificationConfig;
+  }
+
   // Product operations
   async getAllProducts(): Promise<Product[]> {
     return [...this.products];

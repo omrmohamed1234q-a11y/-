@@ -11734,6 +11734,248 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =====================================
+  // 🔔 AUTOMATIC NOTIFICATIONS MANAGEMENT API
+  // =====================================
+
+  // Get notification configuration (Admin only)
+  app.get('/api/admin/notifications/config', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Check if user is authenticated and has admin role
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      // Get current configuration from storage
+      const config = await storage.getNotificationConfig();
+      
+      res.json({ success: true, config });
+    } catch (error) {
+      console.error('Error fetching notification config:', error);
+      res.status(500).json({ error: 'Failed to fetch notification configuration' });
+    }
+  });
+
+  // Update notification configuration (Admin only)
+  app.post('/api/admin/notifications/config', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Check if user is authenticated and has admin role
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      const { config } = req.body;
+      if (!config || typeof config !== 'object') {
+        return res.status(400).json({ error: 'Invalid configuration data' });
+      }
+
+      // Save configuration to storage
+      const updatedConfig = await storage.updateNotificationConfig(config);
+      
+      console.log('📝 Notification configuration updated:', updatedConfig);
+      
+      // Update the automatic notifications service configuration
+      if (automaticNotifications && typeof automaticNotifications.updateConfig === 'function') {
+        automaticNotifications.updateConfig(updatedConfig);
+      }
+
+      res.json({ success: true, message: 'Configuration updated successfully', config: updatedConfig });
+    } catch (error) {
+      console.error('Error updating notification config:', error);
+      res.status(500).json({ error: 'Failed to update notification configuration' });
+    }
+  });
+
+  // Get notification history with filtering (Admin only)  
+  app.get('/api/admin/notifications/history', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Check if user is authenticated and has admin role
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      const { type, status, limit = 100, offset = 0 } = req.query;
+
+      // Get all notifications from storage
+      const allNotifications = await storage.getAllNotifications() || [];
+      
+      // Apply filters
+      let filteredNotifications = allNotifications;
+      
+      if (type && type !== 'all') {
+        filteredNotifications = filteredNotifications.filter(n => n.type === type);
+      }
+      
+      if (status && status !== 'all') {
+        filteredNotifications = filteredNotifications.filter(n => n.status === status);
+      }
+
+      // Sort by creation date (newest first)
+      filteredNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      // Apply pagination
+      const startIndex = parseInt(offset as string);
+      const endIndex = startIndex + parseInt(limit as string);
+      const paginatedNotifications = filteredNotifications.slice(startIndex, endIndex);
+
+      res.json({
+        success: true,
+        notifications: paginatedNotifications,
+        total: filteredNotifications.length,
+        hasMore: endIndex < filteredNotifications.length
+      });
+    } catch (error) {
+      console.error('Error fetching notification history:', error);
+      res.status(500).json({ error: 'Failed to fetch notification history' });
+    }
+  });
+
+  // Fix existing route
+  // Get notification configuration (Admin only)
+  app.get('/api/admin/notifications/config', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Check if user is authenticated and has admin role
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      // Get current configuration from storage with fallback defaults
+      const config = {
+        orderCreated: { enabled: true, template: 'تم إنشاء طلبك بنجاح #{{orderNumber}}' },
+        paymentSuccess: { enabled: true, template: 'تم تأكيد الدفع للطلب #{{orderNumber}}' },
+        paymentFailed: { enabled: true, template: 'فشل في عملية الدفع للطلب #{{orderNumber}}' },
+        orderProcessing: { enabled: true, template: 'طلبك #{{orderNumber}} قيد المعالجة' },
+        orderDelivered: { enabled: true, template: 'تم تسليم طلبك #{{orderNumber}} بنجاح' },
+        orderCancelled: { enabled: true, template: 'تم إلغاء طلبك #{{orderNumber}}' },
+        reviewReceived: { enabled: true, template: 'شكراً لتقييمك للطلب #{{orderNumber}}' },
+        systemAlert: { enabled: true, template: 'تنبيه النظام: {{message}}' }
+      };
+
+      res.json({ success: true, config: defaultConfig });
+    } catch (error) {
+      console.error('Error fetching notification config:', error);
+      res.status(500).json({ error: 'Failed to fetch notification configuration' });
+    }
+  });
+
+  // Update notification configuration (Admin only)
+  app.post('/api/admin/notifications/config', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Check if user is authenticated and has admin role
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      const { config } = req.body;
+      if (!config || typeof config !== 'object') {
+        return res.status(400).json({ error: 'Invalid configuration data' });
+      }
+
+      // In production, save to database. For now, log the update
+      console.log('📝 Notification configuration updated:', config);
+      
+      // Update the automatic notifications service configuration
+      if (automaticNotifications && typeof automaticNotifications.updateConfig === 'function') {
+        automaticNotifications.updateConfig(config);
+      }
+
+      res.json({ success: true, message: 'Configuration updated successfully' });
+    } catch (error) {
+      console.error('Error updating notification config:', error);
+      res.status(500).json({ error: 'Failed to update notification configuration' });
+    }
+  });
+
+  // Send system alert (Admin only)
+  app.post('/api/admin/notifications/system-alert', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Check if user is authenticated and has admin role
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      const { title, message, urgent = false } = req.body;
+      if (!title || !message) {
+        return res.status(400).json({ error: 'Title and message are required' });
+      }
+
+      // Create system alert notification
+      const systemAlert = {
+        id: `alert-${Date.now()}`,
+        type: 'system_alert',
+        title,
+        message,
+        urgent,
+        createdAt: new Date(),
+        status: 'pending',
+        adminOnly: true
+      };
+
+      // Store the notification
+      await storage.createNotification(systemAlert);
+
+      // Send real-time notification to all admins
+      if (automaticNotifications && typeof automaticNotifications.sendRealtimeNotification === 'function') {
+        await automaticNotifications.sendRealtimeNotification(systemAlert);
+      }
+
+      console.log(`🚨 System alert sent: ${title} - ${urgent ? 'URGENT' : 'NORMAL'}`);
+
+      res.json({ 
+        success: true, 
+        message: 'System alert sent successfully',
+        alertId: systemAlert.id 
+      });
+    } catch (error) {
+      console.error('Error sending system alert:', error);
+      res.status(500).json({ error: 'Failed to send system alert' });
+    }
+  });
+
+  // Test notification system (Admin only)
+  app.post('/api/admin/notifications/test', isAdminAuthenticated, async (req, res) => {
+    try {
+      // Check if user is authenticated and has admin role
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      const { type = 'system_alert', userId = 'test-user' } = req.body;
+
+      const testNotification = {
+        id: `test-${Date.now()}`,
+        type,
+        title: 'إشعار تجريبي',
+        message: 'هذا إشعار تجريبي للتأكد من عمل النظام',
+        userId: type === 'system_alert' ? undefined : userId,
+        createdAt: new Date(),
+        status: 'sent',
+        isTest: true
+      };
+
+      // Store test notification
+      await storage.createNotification(testNotification);
+
+      // Send via automatic notification service
+      if (automaticNotifications) {
+        await automaticNotifications.sendRealtimeNotification(testNotification);
+      }
+
+      console.log(`🧪 Test notification sent: ${type}`);
+
+      res.json({ 
+        success: true, 
+        message: 'Test notification sent successfully',
+        notification: testNotification
+      });
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      res.status(500).json({ error: 'Failed to send test notification' });
+    }
+  });
+
+  console.log('🔔 Automatic notifications management APIs registered');
+
   return httpServer;
 }
 

@@ -23,7 +23,8 @@ import {
   HardDrive,
   FileText,
   ScrollText,
-  Lock
+  Lock,
+  Zap
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -41,6 +42,7 @@ const navigation = [
   { name: 'المكافآت', href: '/admin/rewards', icon: Gift },
   { name: 'المواد التعليمية', href: '/admin/teacher-materials', icon: GraduationCap },
   { name: 'المستخدمين', href: '/admin/users', icon: Users },
+  { name: 'الإشعارات التلقائية', href: '/admin/automatic-notifications', icon: Zap },
   { name: 'الشروط والأحكام', href: '/admin/terms-management', icon: FileText },
   { name: 'سياسة الخصوصية', href: '/admin/privacy-policy-management', icon: Lock },
   { name: 'التحليلات', href: '/admin/reports', icon: BarChart3 },

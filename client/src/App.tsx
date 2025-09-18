@@ -74,6 +74,7 @@ import DonationsPage from '@/pages/donations';
 import TermsAndConditions from '@/pages/terms-and-conditions';
 import PrivacyPolicy from '@/pages/privacy-policy';
 import SmartNotifications from '@/pages/admin/SmartNotifications';
+import AutomaticNotifications from '@/pages/admin/automatic-notifications';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 import CaptainSecureLogin from '@/pages/captain/secure-login';
 import CaptainDashboard from '@/pages/captain/dashboard';
@@ -136,6 +137,7 @@ function AppRouter() {
           <Route path="/admin/coupons" component={() => <AdminProtectedRoute><AdminCoupons /></AdminProtectedRoute>} />
           <Route path="/admin/inquiries" component={() => <AdminProtectedRoute><AdminInquiries /></AdminProtectedRoute>} />
           <Route path="/admin/announcements" component={() => <AdminProtectedRoute><AdminAnnouncements /></AdminProtectedRoute>} />
+          <Route path="/admin/automatic-notifications" component={() => <AdminProtectedRoute><AutomaticNotifications /></AdminProtectedRoute>} />
           <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
           <Route path="/admin/orders" component={() => <AdminProtectedRoute><AdminOrders /></AdminProtectedRoute>} />
           <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
@@ -210,6 +212,7 @@ function AppRouter() {
         <Route path="/admin/coupons" component={() => <AdminProtectedRoute><AdminCoupons /></AdminProtectedRoute>} />
         <Route path="/admin/inquiries" component={() => <AdminProtectedRoute><AdminInquiries /></AdminProtectedRoute>} />
         <Route path="/admin/announcements" component={() => <AdminProtectedRoute><AdminAnnouncements /></AdminProtectedRoute>} />
+        <Route path="/admin/automatic-notifications" component={() => <AdminProtectedRoute><AutomaticNotifications /></AdminProtectedRoute>} />
         <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
         <Route path="/admin/orders" component={() => <AdminProtectedRoute><AdminOrders /></AdminProtectedRoute>} />
         <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
