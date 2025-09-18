@@ -11,10 +11,59 @@ async function throwIfResNotOk(res: Response, url?: string) {
   }
 }
 
-// Helper to get authentication headers
-export async function getAuthHeaders(): Promise<Record<string, string>> {
+// Helper to get authentication headers with context-aware priority
+export async function getAuthHeaders(options: { url?: string; forceAdmin?: boolean } = {}): Promise<Record<string, string>> {
   try {
-    // PRIMARY: Always check Supabase session first for regular users
+    const isAdminRoute = options.forceAdmin || (options.url && options.url.includes('/api/admin/'));
+    
+    // For admin routes, prioritize admin authentication first
+    if (isAdminRoute) {
+      const adminAuth = localStorage.getItem('adminAuth');
+      const adminToken = localStorage.getItem('adminToken');
+      
+      if (adminAuth && adminToken) {
+        try {
+          const adminData = JSON.parse(adminAuth);
+          const token = adminData.token || adminToken;
+          const userId = adminData.user?.id || adminData.admin?.id || adminData.id;
+          
+          // Check if admin session is still valid (basic client-side validation)
+          if (adminData.loginTime) {
+            const loginTime = new Date(adminData.loginTime);
+            const now = new Date();
+            const hoursSinceLogin = (now.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
+            
+            // Client-side check: if more than 24 hours, clear and skip
+            if (hoursSinceLogin > 24) {
+              console.warn('🔐 Admin session expired (24h limit), clearing credentials');
+              localStorage.removeItem('adminAuth');
+              localStorage.removeItem('adminToken');
+              return {};
+            }
+          }
+          
+          console.log(`🔐 Using admin authentication for admin route: ${userId}`);
+          return {
+            'x-admin-token': token,
+            'X-User-ID': userId,
+            'X-User-Role': 'admin',
+          };
+        } catch (error) {
+          console.error('Error parsing admin auth:', error);
+          // Clear corrupted admin data
+          localStorage.removeItem('adminAuth');
+          localStorage.removeItem('adminToken');
+        }
+      }
+      
+      // If admin route but no valid admin token, don't fall back to Supabase
+      if (options.forceAdmin) {
+        console.log('❌ No valid admin authentication found for admin route');
+        return {};
+      }
+    }
+
+    // For non-admin routes or fallback, use Supabase session
     const { supabase } = await import('./supabase');
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -25,29 +74,6 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
         'X-User-ID': session.user.id,
         'X-User-Role': session.user.user_metadata?.role || 'customer',
       };
-    }
-
-    // SECONDARY: Try admin authentication (for admin routes only)
-    const adminAuth = localStorage.getItem('adminAuth');
-    const adminToken = localStorage.getItem('adminToken');
-    
-    if (adminAuth && adminToken) {
-      try {
-        const adminData = JSON.parse(adminAuth);
-        const token = adminData.token || adminToken;
-        const userId = adminData.user?.id || adminData.admin?.id || adminData.id;
-        
-        console.log(`🔐 Using admin authentication for admin: ${userId}`);
-        return {
-          'x-admin-token': token,
-          'x-user-id': userId,
-          'x-user-role': 'admin',
-          'X-User-ID': userId,
-          'X-User-Role': 'admin',
-        };
-      } catch (error) {
-        console.error('Error parsing admin auth:', error);
-      }
     }
 
     // FALLBACK: No valid authentication found
@@ -77,7 +103,7 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const authHeaders = await getAuthHeaders();
+  const authHeaders = await getAuthHeaders({ url });
   
   // Create timeout controller - longer for uploads (5 minutes)
   const controller = new AbortController();
@@ -112,9 +138,10 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const authHeaders = await getAuthHeaders();
+    const url = queryKey.join("/") as string;
+    const authHeaders = await getAuthHeaders({ url });
     
-    const res = await fetch(queryKey.join("/") as string, {
+    const res = await fetch(url, {
       method: "GET",
       headers: {
         ...authHeaders,
@@ -123,11 +150,11 @@ export const getQueryFn: <T>(options: {
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      handle401Error(queryKey.join("/") as string);
+      handle401Error(url);
       return null;
     }
 
-    await throwIfResNotOk(res, queryKey.join("/") as string);
+    await throwIfResNotOk(res, url);
     
     try {
       return await res.json();

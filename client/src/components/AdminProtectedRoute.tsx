@@ -43,13 +43,23 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
         return;
       }
 
-      // Validate token with backend by making a test API call
+      // Validate token with backend by making a test API call  
       console.log('Validating admin token with backend...');
       try {
+        // Use the centralized auth headers from queryClient with forceAdmin
+        const { getAuthHeaders } = await import('@/lib/queryClient');
+        const authHeaders = await getAuthHeaders({ forceAdmin: true });
+        
+        if (!authHeaders['x-admin-token']) {
+          console.log('❌ No admin token found in auth headers');
+          redirectToLogin();
+          return;
+        }
+
         const response = await fetch('/api/admin/stats', {
           method: 'GET',
           headers: {
-            'x-admin-token': token,
+            ...authHeaders,
             'Content-Type': 'application/json'
           },
           credentials: 'include'
@@ -67,7 +77,9 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
         }
       } catch (backendError) {
         console.error('❌ Backend validation error:', backendError);
-        // Don't clear tokens on network errors, just retry
+        // Clear tokens on any error to force fresh login
+        localStorage.removeItem('adminAuth');
+        localStorage.removeItem('adminToken');
         redirectToLogin();
       }
       
