@@ -531,7 +531,10 @@ export class MemoryStorage implements IStorage {
     // Delegate to the new system (getUserNotifications) and convert format
     let notifications;
     if (userId) {
+      console.log(`🔍 getAllNotifications: Looking for notifications for user ${userId}`);
+      console.log(`🔍 Total userNotificationsData count: ${this.userNotificationsData.length}`);
       notifications = await this.getUserNotifications(userId, 1000, 0); // Large limit to get all
+      console.log(`🔍 Found ${notifications.length} notifications for user ${userId}`);
     } else {
       notifications = this.userNotificationsData.sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
