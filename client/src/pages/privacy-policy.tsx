@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Shield, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Shield, Loader2, AlertTriangle } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 export default function PrivacyPolicy() {
   const [, navigate] = useLocation();
 
-  // استدعاء سياسة الخصوصية الحالية من نظام الإدارة
+  // جلب سياسة الخصوصية الحالية من نظام الإدارة
   const { data: response, isLoading, error } = useQuery({
     queryKey: ['/api/privacy-policy/current'],
     staleTime: 0,
@@ -16,7 +16,6 @@ export default function PrivacyPolicy() {
   });
 
   const policy = response?.data;
-  const isSuccess = response?.success && policy;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
@@ -27,13 +26,12 @@ export default function PrivacyPolicy() {
             variant="outline" 
             onClick={() => navigate('/profile')}
             className="flex items-center gap-2"
-            data-testid="button-back"
           >
             <ArrowLeft className="w-4 h-4" />
             العودة للبروفايل
           </Button>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Shield className="w-6 h-6 text-blue-600" />
+            <Shield className="w-6 h-6" />
             سياسة الخصوصية
           </h1>
         </div>
@@ -41,10 +39,10 @@ export default function PrivacyPolicy() {
         {/* حالة التحميل */}
         {isLoading && (
           <Card>
-            <CardContent className="flex items-center justify-center py-16">
+            <CardContent className="flex items-center justify-center py-12">
               <div className="text-center">
-                <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-blue-600" />
-                <p className="text-gray-600">جاري تحميل سياسة الخصوصية...</p>
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+                <p className="text-muted-foreground">جاري تحميل سياسة الخصوصية...</p>
               </div>
             </CardContent>
           </Card>
@@ -55,164 +53,117 @@ export default function PrivacyPolicy() {
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              حدث خطأ في تحميل سياسة الخصوصية. يرجى إعادة تحديث الصفحة.
+              فشل في تحميل سياسة الخصوصية. يرجى المحاولة مرة أخرى.
             </AlertDescription>
           </Alert>
         )}
 
-        {/* المحتوى الرئيسي - من نظام الإدارة */}
-        {isSuccess && !isLoading && (
-          <Card className="shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-              <div className="flex items-center gap-3 mb-2">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-                <span className="text-sm text-green-700 font-medium">محدث من نظام الإدارة</span>
-              </div>
-              <CardTitle className="text-2xl text-gray-900">
-                {policy.title || 'سياسة الخصوصية'}
-              </CardTitle>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p>الإصدار: {policy.version || '1.0'}</p>
-                <p>
-                  آخر تحديث: {policy.effectiveDate ? 
-                    new Date(policy.effectiveDate).toLocaleDateString('ar-EG', {
-                      year: 'numeric',
-                      month: 'long', 
-                      day: 'numeric'
-                    }) : 'غير محدد'
-                  }
-                </p>
-              </div>
+        {/* المحتوى من نظام الإدارة */}
+        {policy && !isLoading && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">{policy.title}</CardTitle>
+              <p className="text-sm text-gray-600">
+                الإصدار: {policy.version} • 
+                آخر تحديث: {new Date(policy.effectiveDate).toLocaleDateString('ar-EG', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </p>
             </CardHeader>
-
-            <CardContent className="p-8 space-y-8">
+            <CardContent className="space-y-8">
+              
               {/* جمع البيانات */}
-              {policy.dataCollection && (
-                <section className="space-y-4">
-                  <h2 className="text-xl font-bold text-gray-900 border-b-2 border-blue-200 pb-2">
-                    📊 جمع البيانات
-                  </h2>
-                  <div className="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-400">
-                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                      {policy.dataCollection}
-                    </p>
-                  </div>
-                </section>
-              )}
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  جمع البيانات
+                </h2>
+                <div className="text-gray-700 space-y-3 whitespace-pre-wrap">
+                  {policy.dataCollection}
+                </div>
+              </section>
 
               {/* استخدام البيانات */}
-              {policy.dataUsage && (
-                <section className="space-y-4">
-                  <h2 className="text-xl font-bold text-gray-900 border-b-2 border-green-200 pb-2">
-                    🎯 استخدام البيانات
-                  </h2>
-                  <div className="bg-green-50 p-6 rounded-lg border-l-4 border-green-400">
-                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                      {policy.dataUsage}
-                    </p>
-                  </div>
-                </section>
-              )}
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  استخدام البيانات
+                </h2>
+                <div className="text-gray-700 space-y-3 whitespace-pre-wrap">
+                  {policy.dataUsage}
+                </div>
+              </section>
 
               {/* مشاركة البيانات */}
-              {policy.dataSharing && (
-                <section className="space-y-4">
-                  <h2 className="text-xl font-bold text-gray-900 border-b-2 border-orange-200 pb-2">
-                    🤝 مشاركة البيانات
-                  </h2>
-                  <div className="bg-orange-50 p-6 rounded-lg border-l-4 border-orange-400">
-                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                      {policy.dataSharing}
-                    </p>
-                  </div>
-                </section>
-              )}
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  مشاركة البيانات
+                </h2>
+                <div className="text-gray-700 space-y-3 whitespace-pre-wrap">
+                  {policy.dataSharing}
+                </div>
+              </section>
 
               {/* حقوق المستخدم */}
-              {policy.userRights && (
-                <section className="space-y-4">
-                  <h2 className="text-xl font-bold text-gray-900 border-b-2 border-purple-200 pb-2">
-                    ⚖️ حقوق المستخدم
-                  </h2>
-                  <div className="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-400">
-                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                      {policy.userRights}
-                    </p>
-                  </div>
-                </section>
-              )}
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  حقوق المستخدم
+                </h2>
+                <div className="text-gray-700 space-y-3 whitespace-pre-wrap">
+                  {policy.userRights}
+                </div>
+              </section>
 
               {/* أمان البيانات */}
-              {policy.dataSecurity && (
-                <section className="space-y-4">
-                  <h2 className="text-xl font-bold text-gray-900 border-b-2 border-red-200 pb-2">
-                    🔒 أمان البيانات
-                  </h2>
-                  <div className="bg-red-50 p-6 rounded-lg border-l-4 border-red-400">
-                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                      {policy.dataSecurity}
-                    </p>
-                  </div>
-                </section>
-              )}
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  الأمان والحماية
+                </h2>
+                <div className="text-gray-700 space-y-3 whitespace-pre-wrap">
+                  {policy.dataSecurity}
+                </div>
+              </section>
 
               {/* معلومات التواصل */}
-              {policy.contactInfo && (
-                <section className="space-y-4">
-                  <h2 className="text-xl font-bold text-gray-900 border-b-2 border-gray-200 pb-2">
-                    📞 التواصل معنا
-                  </h2>
-                  <div className="bg-gray-50 p-6 rounded-lg border-l-4 border-gray-400">
-                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                      {policy.contactInfo}
-                    </p>
+              <section className="border-t pt-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  معلومات التواصل
+                </h2>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-gray-700 space-y-2 whitespace-pre-wrap">
+                    {policy.contactInfo}
                   </div>
-                </section>
-              )}
+                </div>
+              </section>
 
-              {/* محتوى عام (fallback) */}
-              {policy.content && !policy.dataCollection && (
-                <section className="space-y-4">
-                  <h2 className="text-xl font-bold text-gray-900 border-b-2 border-blue-200 pb-2">
-                    📄 محتوى السياسة
-                  </h2>
-                  <div className="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-400">
-                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                      {policy.content}
-                    </p>
-                  </div>
-                </section>
-              )}
-            </CardContent>
-
-            {/* الموافقة */}
-            <div className="border-t bg-gradient-to-r from-green-50 to-emerald-50 p-6">
-              <div className="text-center space-y-4">
-                <p className="text-gray-700 font-medium">
-                  باستخدامك لمنصة "اطبعلي"، فإنك توافق على سياسة الخصوصية المذكورة أعلاه
-                </p>
-                <Button 
-                  onClick={() => navigate('/profile')}
-                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-lg"
-                  data-testid="button-accept-privacy"
-                >
-                  ✅ فهمت وأوافق على سياسة الخصوصية
-                </Button>
+              {/* الموافقة */}
+              <div className="border-t pt-6">
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <p className="text-sm text-green-800 mb-4">
+                    باستخدامك لمنصة "اطبعلي"، فإنك تؤكد قراءتك وفهمك وموافقتك على سياسة الخصوصية هذه.
+                  </p>
+                  <Button 
+                    onClick={() => navigate('/profile')}
+                    className="w-full sm:w-auto"
+                  >
+                    فهمت وأوافق على سياسة الخصوصية
+                  </Button>
+                </div>
               </div>
-            </div>
+            </CardContent>
           </Card>
         )}
 
         {/* حالة عدم وجود بيانات */}
-        {!isSuccess && !isLoading && !error && (
+        {!policy && !isLoading && !error && (
           <Card>
-            <CardContent className="text-center py-16">
+            <CardContent className="text-center py-12">
               <Shield className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                لا توجد سياسة خصوصية متاحة
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                لا توجد سياسة خصوصية متاحة حالياً
               </h3>
-              <p className="text-gray-600 mb-6">
-                لم يتم نشر أي سياسة خصوصية من نظام الإدارة بعد
+              <p className="text-gray-600 mb-4">
+                لم يتم نشر أي إصدار من سياسة الخصوصية بعد.
               </p>
               <Button 
                 onClick={() => navigate('/profile')}
