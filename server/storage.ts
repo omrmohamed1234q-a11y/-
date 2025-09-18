@@ -6336,6 +6336,70 @@ class MemStorage implements IStorage {
       console.error('🚨 Critical error loading notifications from file:', error);
     }
   }
+
+  // ===============================
+  // NOTIFICATION METHODS (MemStorage Implementation)
+  // ===============================
+
+  async createNotification(notificationData: any): Promise<any> {
+    console.log('🚨 MemStorage.createNotification called with:', JSON.stringify(notificationData, null, 2));
+    
+    try {
+      const notification = {
+        id: notificationData.id || `notif-${Date.now()}`,
+        ...notificationData,
+        createdAt: notificationData.createdAt || new Date(),
+        updatedAt: new Date()
+      };
+      
+      console.log('📋 Created notification object:', JSON.stringify(notification, null, 2));
+      
+      // Add to legacy notifications array (for compatibility)
+      this.notifications.push(notification);
+      console.log('✅ Added to legacy notifications array');
+      
+      // Add to the main userNotificationsData system
+      const userNotification = {
+        id: notification.id,
+        userId: notification.userId,
+        type: notification.type || 'system',
+        title: notification.title,
+        message: notification.message,
+        read: notification.isRead || false,
+        createdAt: notification.createdAt,
+        readAt: notification.readAt || null,
+        metadata: {
+          category: notification.category,
+          iconType: notification.iconType,
+          actionUrl: notification.actionUrl,
+          sourceId: notification.sourceId,
+          sourceType: notification.sourceType,
+          priority: notification.priority,
+          isPinned: notification.isPinned,
+          actionData: notification.actionData
+        }
+      };
+      
+      this.userNotificationsData.push(userNotification);
+      console.log('✅ Added to userNotificationsData system');
+      
+      console.log(`💾 Notification saved to both storage systems: ${notification.id}`);
+      console.log(`👤 Saved notification for userId: ${userNotification.userId}`);
+      console.log(`📊 Total notifications in storage after save: ${this.userNotificationsData.length}`);
+      console.log(`🔍 Full notification object:`, JSON.stringify(userNotification, null, 2));
+      
+      // Save to persistent file
+      console.log('💾 CRITICAL: About to save notifications to file');
+      this.saveNotificationsToFile();
+      console.log('🚀 CRITICAL: Notification persistence completed successfully');
+      
+      return notification;
+    } catch (error) {
+      console.error('🚨 CRITICAL ERROR in MemStorage.createNotification:', error);
+      console.error('🚨 Error stack:', error.stack);
+      throw error;
+    }
+  }
 }
 
 // Use MemStorage temporarily due to database connection issues
