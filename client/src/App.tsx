@@ -74,6 +74,7 @@ import DonationsPage from '@/pages/donations';
 import TermsAndConditions from '@/pages/terms-and-conditions';
 import PrivacyPolicy from '@/pages/privacy-policy';
 import SmartNotifications from '@/pages/admin/SmartNotifications';
+import RewardsManagement from '@/pages/admin/rewards-management';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
 import CaptainSecureLogin from '@/pages/captain/secure-login';
 import CaptainDashboard from '@/pages/captain/dashboard';
