@@ -3561,6 +3561,7 @@ class MemStorage implements IStorage {
   }
 
   async createNotification(notificationData: any): Promise<any> {
+    console.log(`🚨 MemoryStorage.createNotification CALLED with:`, JSON.stringify(notificationData, null, 2));
     const notification = {
       id: notificationData.id || `notif-${Date.now()}`,
       ...notificationData,
