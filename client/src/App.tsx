@@ -126,7 +126,7 @@ function AppRouter() {
           <Route path="/secure-admin-login" component={SecureAdminLogin} />
           <Route path="/captain/secure-login" component={CaptainSecureLogin} />
           <Route path="/captain/dashboard" component={CaptainDashboard} />
-          <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+          <Route path="/admin" component={() => <AdminProtectedRoute><MainAdmin /></AdminProtectedRoute>} />
           <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
           <Route path="/admin/store" component={() => <AdminProtectedRoute><AdminStore /></AdminProtectedRoute>} />
           <Route path="/admin/products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
@@ -202,7 +202,7 @@ function AppRouter() {
         <Route path="/donations" component={DonationsPage} />
         
         {/* Admin routes - available for authenticated users too */}
-        <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+        <Route path="/admin" component={() => <AdminProtectedRoute><MainAdmin /></AdminProtectedRoute>} />
         <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
         <Route path="/admin/store" component={() => <AdminProtectedRoute><AdminStore /></AdminProtectedRoute>} />
         <Route path="/admin/products" component={() => <AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
