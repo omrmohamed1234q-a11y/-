@@ -9714,12 +9714,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🎁 Admin ${req.user.id} granted ${points} points to user ${userId}: ${reason}`);
 
-      // في المستقبل: تحديث قاعدة البيانات هنا لإضافة النقاط للمستخدم
-      // await updateUserPoints(userId, points);
+      // تحديث نقاط المستخدم في التخزين
+      try {
+        const user = await storage.getUser(userId);
+        if (user) {
+          const currentPoints = user.bountyPoints || 0;
+          const newPoints = currentPoints + parseInt(points);
+          
+          await storage.updateUser(userId, {
+            bountyPoints: newPoints
+          });
+          
+          console.log(`💰 Updated user ${userId} points: ${currentPoints} + ${points} = ${newPoints}`);
+        } else {
+          console.warn(`⚠️ User ${userId} not found, cannot update points`);
+          return res.status(404).json({ message: 'User not found' });
+        }
+      } catch (pointsError) {
+        console.error('Error updating user points:', pointsError);
+        return res.status(500).json({ message: 'Failed to update user points' });
+      }
+
+      // إرسال إشعار للمستخدم بمنحه المكافأة
+      try {
+        const notification = await storage.createNotification({
+          userId: userId,
+          title: `حصلت على ${points} نقطة مكافأة! 🎁`,
+          message: reason ? `${reason} - حصلت على ${points} نقطة يمكنك استخدامها في طلباتك القادمة` : `تم منحك ${points} نقطة مكافأة من الإدارة`,
+          type: 'system',
+          category: 'admin_bonus',
+          iconType: 'gift',
+          actionUrl: '/rewards',
+          sourceId: `admin_grant_${Date.now()}`,
+          sourceType: 'admin_action',
+          priority: 'normal',
+          isPinned: true,
+          actionData: {
+            pointsEarned: points,
+            grantedBy: req.user.id,
+            reason: reason || 'مكافأة إدارية',
+            grantDate: new Date().toISOString()
+          }
+        });
+
+        // إرسال إشعار فوري عبر WebSocket
+        if (automaticNotifications && typeof automaticNotifications.sendRealtimeNotification === 'function') {
+          await automaticNotifications.sendRealtimeNotification(userId, notification);
+          console.log(`📨 Real-time notification sent to user ${userId} for ${points} points reward`);
+        }
+      } catch (notificationError) {
+        console.error('Error sending reward notification:', notificationError);
+        // لا نعطل العملية إذا فشل الإشعار
+      }
 
       res.json({
         success: true,
-        message: `تم منح ${points} نقطة مجانية للمستخدم بنجاح`
+        message: `تم منح ${points} نقطة مجانية للمستخدم بنجاح وتم إرسال إشعار`
       });
     } catch (error) {
       console.error('Error granting admin reward:', error);

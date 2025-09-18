@@ -2916,6 +2916,105 @@ class MemStorage implements IStorage {
   private pendingUploads: PendingUpload[] = [];
 
   constructor() {
+    // Initialize with test users for dropdown testing
+    this.users.push(
+      {
+        id: 'user-1',
+        username: 'ahmed_student',
+        email: 'ahmed.student@atbaali.com',
+        fullName: 'أحمد محمد الطالب',
+        phone: '+201234567890',
+        countryCode: '+20',
+        age: 16,
+        gradeLevel: 'secondary_1',
+        role: 'customer',
+        bountyPoints: 150,
+        level: 3,
+        totalPrints: 45,
+        totalPurchases: 8,
+        totalReferrals: 2,
+        isTeacher: false,
+        teacherSubscription: false,
+        createdAt: new Date('2025-01-01')
+      },
+      {
+        id: 'user-2',
+        username: 'fatima_teacher',
+        email: 'fatima.teacher@atbaali.com',
+        fullName: 'فاطمة علي المعلمة',
+        phone: '+201987654321',
+        countryCode: '+20',
+        age: 32,
+        gradeLevel: 'teacher',
+        role: 'customer',
+        bountyPoints: 320,
+        level: 7,
+        totalPrints: 120,
+        totalPurchases: 25,
+        totalReferrals: 8,
+        isTeacher: true,
+        teacherSubscription: true,
+        createdAt: new Date('2024-11-15')
+      },
+      {
+        id: 'user-3',
+        username: 'omar_parent',
+        email: 'omar.parent@atbaali.com',
+        fullName: 'عمر حسن والد الطالب',
+        phone: '+201555444333',
+        countryCode: '+20',
+        age: 45,
+        gradeLevel: 'parent',
+        role: 'customer',
+        bountyPoints: 85,
+        level: 2,
+        totalPrints: 25,
+        totalPurchases: 12,
+        totalReferrals: 1,
+        isTeacher: false,
+        teacherSubscription: false,
+        createdAt: new Date('2025-02-10')
+      },
+      {
+        id: 'user-4',
+        username: 'sara_university',
+        email: 'sara.uni@atbaali.com',
+        fullName: 'سارة أحمد طالبة جامعية',
+        phone: '+201777888999',
+        countryCode: '+20',
+        age: 21,
+        gradeLevel: 'university',
+        role: 'customer',
+        bountyPoints: 275,
+        level: 5,
+        totalPrints: 95,
+        totalPurchases: 18,
+        totalReferrals: 5,
+        isTeacher: false,
+        teacherSubscription: false,
+        createdAt: new Date('2024-12-20')
+      },
+      {
+        id: 'user-5',
+        username: 'khaled_prep',
+        email: 'khaled.prep@atbaali.com',
+        fullName: 'خالد سمير طالب إعدادي',
+        phone: '+201666777888',
+        countryCode: '+20',
+        age: 14,
+        gradeLevel: 'preparatory_2',
+        role: 'customer',
+        bountyPoints: 125,
+        level: 3,
+        totalPrints: 38,
+        totalPurchases: 6,
+        totalReferrals: 3,
+        isTeacher: false,
+        teacherSubscription: false,
+        createdAt: new Date('2025-01-25')
+      }
+    );
+
     // Initialize with test admin account
     this.secureAdmins.push({
       id: 'admin-1',
@@ -2952,6 +3051,7 @@ class MemStorage implements IStorage {
       updatedAt: new Date()
     });
 
+    console.log('👥 Added 5 test users for dropdown testing');
     console.log('🔐 Test admin created: username=testadmin, email=admin@test.com, password=testpass123');
     console.log('🚚 Test driver created: username=testdriver, email=driver@test.com, password=driverpass123, code=DR001');
   }
