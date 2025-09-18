@@ -5886,6 +5886,8 @@ class MemStorage implements IStorage {
   }
 
   async createUserNotification(notification: InsertUserNotification): Promise<UserNotification> {
+    console.log(`📝 createUserNotification called with:`, JSON.stringify(notification, null, 2));
+    
     const newNotification: UserNotification = {
       id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       ...notification,
@@ -5894,7 +5896,14 @@ class MemStorage implements IStorage {
       createdAt: new Date()
     };
     
+    console.log(`📝 About to add notification to userNotificationsData:`, newNotification.id);
+    console.log(`📝 userNotificationsData size BEFORE: ${this.userNotificationsData.length}`);
+    
     this.userNotificationsData.push(newNotification);
+    
+    console.log(`📝 userNotificationsData size AFTER: ${this.userNotificationsData.length}`);
+    console.log(`📝 Last notification in array:`, this.userNotificationsData[this.userNotificationsData.length - 1]?.id);
+    
     return newNotification;
   }
 
