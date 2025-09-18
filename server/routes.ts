@@ -9385,38 +9385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/payments/paymob/callback', handlePaymobCallback);
   app.get('/api/payments/paymob/methods', getPaymobPaymentMethods);
   
-  // Privacy Policy endpoints
-  app.get('/api/privacy-policy/current', async (req, res) => {
-    try {
-      console.log('📄 Fetching current privacy policy...');
-      
-      // For now, return a default privacy policy until admin creates one
-      const defaultPolicy = {
-        id: 'default-policy-1',
-        version: '1.0',
-        title: 'سياسة الخصوصية - منصة اطبعلي',
-        effectiveDate: new Date().toISOString(),
-        isActive: true,
-        dataCollection: 'نحن في منصة اطبعلي نجمع بياناتك الشخصية لتقديم خدماتنا بأفضل صورة ممكنة. نجمع معلومات مثل اسمك وعنوان بريدك الإلكتروني ورقم هاتفك عند التسجيل أو الطلب.',
-        dataUsage: 'نستخدم بياناتك لمعالجة طلباتك وتحسين خدماتنا وإرسال إشعارات مهمة متعلقة بطلباتك. لا نستخدم بياناتك لأغراض تجارية غير مصرح بها.',
-        dataSharing: 'لا نشارك بياناتك الشخصية مع أطراف ثالثة إلا في الحالات الضرورية لتنفيذ خدماتنا أو عند وجود التزام قانوني بذلك.',
-        userRights: 'لديك الحق في الوصول إلى بياناتك وتعديلها أو حذفها. يمكنك طلب نسخة من بياناتك أو طلب حذف حسابك في أي وقت.',
-        dataSecurity: 'نحن ملتزمون بحماية بياناتك باستخدام تقنيات التشفير المتقدمة وإجراءات الأمان الصارمة لمنع الوصول غير المصرح به.',
-        contactInfo: 'للاستفسارات حول سياسة الخصوصية، يرجى التواصل معنا على: support@atbaali.com أو عبر رقم الهاتف: +201234567890'
-      };
-      
-      res.json({
-        success: true,
-        data: defaultPolicy
-      });
-    } catch (error: any) {
-      console.error('❌ Error fetching privacy policy:', error);
-      res.status(500).json({
-        success: false,
-        error: 'فشل في تحميل سياسة الخصوصية'
-      });
-    }
-  });
+  // Privacy Policy endpoints - this route was causing conflicts, removed to use the proper one later
 
   // Paymob diagnostic endpoint
   app.get('/api/payments/paymob/test', async (req, res) => {
