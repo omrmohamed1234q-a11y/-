@@ -243,6 +243,10 @@ function AppRouter() {
         <Route path="/sql-generator" component={SQLGenerator} />
         <Route path="/article/:id" component={ArticlePage} />
         
+        {/* Terms and Privacy Policy pages - available for authenticated users */}
+        <Route path="/terms-and-conditions" component={TermsAndConditions} />
+        <Route path="/terms" component={TermsAndConditions} />
+        <Route path="/privacy-policy" component={PrivacyPolicy} />
         
         <Route component={NotFound} />
       </Switch>
