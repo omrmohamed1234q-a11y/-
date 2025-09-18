@@ -2927,6 +2927,10 @@ class MemStorage implements IStorage {
   private securityLogs: any[] = [];
   private pendingUploads: PendingUpload[] = [];
   private notifications: any[] = [];
+  private userNotificationsData: any[] = [];
+  private userPreferencesData: any[] = [];
+  private userAddressesData: any[] = [];
+  private userAchievementsData: any[] = [];
 
   constructor() {
     // Initialize with test users for dropdown testing
