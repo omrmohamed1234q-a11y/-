@@ -3586,6 +3586,11 @@ class MemStorage implements IStorage {
     this.saveNotificationsToFile();
     
     return notification;
+    } catch (error) {
+      console.error('🚨 CRITICAL ERROR in createNotification:', error);
+      console.error('🚨 Error stack:', error.stack);
+      throw error;
+    }
   }
 
   async updateNotification(id: string, updates: any): Promise<any> {
