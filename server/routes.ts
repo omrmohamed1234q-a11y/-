@@ -11299,6 +11299,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update notification preferences (authenticated) - for profile page
+  app.put('/api/preferences/notifications', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const notificationSettings = req.body;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'User authentication required' });
+      }
+
+      // Get current preferences
+      let preferences = await storage.getUserPreferences(userId);
+      
+      if (!preferences) {
+        // Create default if none exist
+        preferences = await storage.createUserPreferences({
+          userId,
+          language: 'ar',
+          theme: 'light',
+          notifications: {
+            email: true,
+            push: false,
+            orderUpdates: true,
+            promotions: false
+          }
+        });
+      }
+
+      // Update notification settings from request body
+      const updatedNotifications = {
+        email: notificationSettings.emailNotifications || false,
+        push: notificationSettings.pushNotifications || false,
+        orderUpdates: notificationSettings.orderUpdates || false,
+        promotions: notificationSettings.promotions || false
+      };
+
+      const updated = await storage.updateUserPreferences(userId, {
+        notifications: updatedNotifications
+      });
+
+      res.json({ 
+        success: true, 
+        message: 'تم تحديث إعدادات الإشعارات بنجاح',
+        preferences: updated 
+      });
+    } catch (error) {
+      console.error('Error updating notification preferences:', error);
+      res.status(500).json({ error: 'Failed to update notification preferences' });
+    }
+  });
+
   // Toggle specific notification setting (authenticated)
   app.post('/api/preferences/notifications/:type', requireAuth, async (req: any, res) => {
     try {
