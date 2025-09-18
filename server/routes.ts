@@ -9728,27 +9728,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // إحصائيات المكافآت (Admin only)
   app.get('/api/admin/rewards/stats', isAdminAuthenticated, async (req, res) => {
     try {
-
-      // بيانات تجريبية للإحصائيات
-      const mockStats = {
-        totalUsers: 156,
-        totalFreePages: 2340,
-        totalEarnedPages: 4680,
-        totalPrintedPages: 15600,
-        totalReferrals: 89,
-        rewardTypeStats: {
-          print_milestone: 2340,
-          referral: 890,
-          first_login: 1560,
-          admin_bonus: 390
-        },
-        averagePagesPerUser: 100,
-        averageEarnedPerUser: 30
-      };
-
+      // إرجاع null لإظهار empty state بدلاً من البيانات المزيفة
+      // سيتم ربط هذا بقاعدة البيانات لاحقاً لإرجاع إحصائيات حقيقية
+      
       res.json({
         success: true,
-        data: mockStats
+        data: null  // إرجاع null لإظهار empty state
       });
     } catch (error) {
       console.error('Error fetching reward stats:', error);
