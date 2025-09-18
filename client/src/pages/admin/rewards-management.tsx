@@ -134,24 +134,18 @@ export default function RewardsManagement() {
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
+      } else {
+        // لا توجد بيانات متاحة
+        setStats(null);
       }
     } catch (error) {
       console.error('Error loading stats:', error);
-      // بيانات تجريبية للعرض
-      setStats({
-        totalUsers: 156,
-        totalFreePages: 2340,
-        totalEarnedPages: 4680,
-        totalPrintedPages: 15600,
-        totalReferrals: 89,
-        rewardTypeStats: {
-          print_milestone: 2340,
-          referral: 890,
-          first_login: 1560,
-          admin_bonus: 390
-        },
-        averagePagesPerUser: 100,
-        averageEarnedPerUser: 30
+      // فشل في تحميل الإحصائيات - عرض حالة خطأ
+      setStats(null);
+      toast({
+        title: 'تحذير',
+        description: 'فشل في تحميل إحصائيات المكافآت. تأكد من اتصالك بالإنترنت.',
+        variant: 'destructive'
       });
     }
   };
@@ -467,42 +461,66 @@ export default function RewardsManagement() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rewards.map((reward) => (
-              <Card key={reward.id} className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-semibold">{reward.name}</h3>
-                  <Badge variant={reward.available ? "default" : "secondary"}>
-                    {reward.available ? "متاح" : "غير متاح"}
-                  </Badge>
-                </div>
-                <p className="text-sm text-gray-600 mb-3">{reward.description}</p>
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-lg font-bold text-blue-600">{reward.points_cost} نقطة</span>
-                  <Badge variant="outline">{reward.reward_type}</Badge>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedReward(reward);
-                      setRewardDialog(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="destructive"
-                    onClick={() => deleteReward(reward.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+          {rewards.length === 0 ? (
+            <Card>
+              <CardContent className="py-16 text-center">
+                <Gift className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  لا توجد مكافآت متاحة
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  لم يتم إنشاء أي مكافآت بعد. ابدأ بإضافة أول مكافأة!
+                </p>
+                <Button 
+                  onClick={() => {
+                    setSelectedReward(null);
+                    setRewardDialog(true);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  إضافة أول مكافأة
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rewards.map((reward) => (
+                <Card key={reward.id} className="p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-semibold">{reward.name}</h3>
+                    <Badge variant={reward.available ? "default" : "secondary"}>
+                      {reward.available ? "متاح" : "غير متاح"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">{reward.description}</p>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-lg font-bold text-blue-600">{reward.points_cost} نقطة</span>
+                    <Badge variant="outline">{reward.reward_type}</Badge>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedReward(reward);
+                        setRewardDialog(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => deleteReward(reward.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* إدارة التحديات */}
@@ -521,45 +539,69 @@ export default function RewardsManagement() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {challenges.map((challenge) => (
-              <Card key={challenge.id} className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-semibold">{challenge.name}</h3>
-                  <Badge variant={challenge.active ? "default" : "secondary"}>
-                    {challenge.active ? "نشط" : "غير نشط"}
-                  </Badge>
-                </div>
-                <p className="text-sm text-gray-600 mb-3">{challenge.description}</p>
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-lg font-bold text-green-600">{challenge.points_reward} نقطة</span>
-                  <Badge variant="outline">{challenge.is_daily ? "يومي" : "عام"}</Badge>
-                </div>
-                <div className="text-sm text-gray-500 mb-3">
-                  الهدف: {challenge.target_value} {challenge.type}
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedChallenge(challenge);
-                      setChallengeDialog(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="destructive"
-                    onClick={() => deleteChallenge(challenge.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+          {challenges.length === 0 ? (
+            <Card>
+              <CardContent className="py-16 text-center">
+                <Target className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  لا توجد تحديات متاحة
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  لم يتم إنشاء أي تحديات بعد. ابدأ بإضافة أول تحدي!
+                </p>
+                <Button 
+                  onClick={() => {
+                    setSelectedChallenge(null);
+                    setChallengeDialog(true);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  إضافة أول تحدي
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {challenges.map((challenge) => (
+                <Card key={challenge.id} className="p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-semibold">{challenge.name}</h3>
+                    <Badge variant={challenge.active ? "default" : "secondary"}>
+                      {challenge.active ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">{challenge.description}</p>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-lg font-bold text-green-600">{challenge.points_reward} نقطة</span>
+                    <Badge variant="outline">{challenge.is_daily ? "يومي" : "عام"}</Badge>
+                  </div>
+                  <div className="text-sm text-gray-500 mb-3">
+                    الهدف: {challenge.target_value} {challenge.type}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedChallenge(challenge);
+                        setChallengeDialog(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => deleteChallenge(challenge.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* إعدادات المكافآت */}
@@ -747,19 +789,41 @@ export default function RewardsManagement() {
 
         {/* الإحصائيات */}
         <TabsContent value="stats" className="space-y-6">
-          {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">إجمالي المستخدمين</p>
-                      <p className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</p>
+          {!stats ? (
+            <Card>
+              <CardContent className="py-16 text-center">
+                <BarChart3 className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  لا توجد إحصائيات متاحة
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  سيتم عرض الإحصائيات عندما تبدأ في استخدام نظام المكافآت
+                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                  <h4 className="font-medium text-blue-800 mb-2">ماذا ستشمل الإحصائيات؟</h4>
+                  <ul className="text-sm text-blue-700 space-y-1 text-right">
+                    <li>• إجمالي المستخدمين والطلبات</li>
+                    <li>• إحصائيات الطباعة والمبيعات</li>
+                    <li>• تحليل أداء المكافآت</li>
+                    <li>• معدلات نمو النشاط</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">إجمالي المستخدمين</p>
+                        <p className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</p>
+                      </div>
+                      <Users className="h-8 w-8 text-blue-500" />
                     </div>
-                    <Users className="h-8 w-8 text-blue-500" />
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
               <Card>
                 <CardContent className="p-6">
@@ -797,7 +861,6 @@ export default function RewardsManagement() {
                 </CardContent>
               </Card>
             </div>
-          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* إحصائيات أنواع المكافآت */}
@@ -871,6 +934,8 @@ export default function RewardsManagement() {
               </CardContent>
             </Card>
           </div>
+            </>
+          )}
         </TabsContent>
 
         {/* المكافآت اليدوية */}
