@@ -1022,9 +1022,9 @@ export default function RewardsManagement() {
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="" disabled>
+                            <div className="p-2 text-center text-gray-500 text-sm">
                               لا توجد مستخدمين متاحين
-                            </SelectItem>
+                            </div>
                           )}
                         </SelectContent>
                       </Select>
