@@ -18,6 +18,15 @@ export default function PrivacyPolicy() {
 
   const currentPolicy = policyResponse?.data;
 
+  // Debug logging
+  console.log('Privacy Policy Debug:', {
+    policyResponse,
+    currentPolicy,
+    isLoading,
+    error,
+    hasData: !!currentPolicy
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-6">
