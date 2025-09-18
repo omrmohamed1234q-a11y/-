@@ -9642,44 +9642,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Failed to update user points' });
       }
 
-      // إرسال إشعار للمستخدم بمنحه المكافأة
+      // إرسال إشعار للمستخدم باستخدام نظام المكافآت الجديد
       try {
-        console.log(`🔔 Creating notification for user ${userId} with ${points} points...`);
-        console.log(`🚨 DEBUG: About to call storage.createNotification`);
-        console.log(`🚨 DEBUG: Storage class name:`, storage.constructor.name);
-        
-        const notification = await storage.createNotification({
+        await automaticNotifications.onRewardGranted({
           userId: userId,
-          title: `حصلت على ${points} نقطة مكافأة! 🎁`,
-          message: reason ? `${reason} - حصلت على ${points} نقطة يمكنك استخدامها في طلباتك القادمة` : `تم منحك ${points} نقطة مكافأة من الإدارة`,
-          type: 'system',
-          category: 'admin_bonus',
-          iconType: 'gift',
-          actionUrl: '/rewards',
-          sourceId: `admin_grant_${Date.now()}`,
-          sourceType: 'admin_action',
-          priority: 'normal',
-          isPinned: true,
-          isRead: false,
-          actionData: {
-            pointsEarned: points,
-            grantedBy: req.user.id,
-            reason: reason || 'مكافأة إدارية',
-            grantDate: new Date().toISOString()
-          }
+          points: points,
+          reason: reason || 'مكافأة إدارية',
+          adminId: req.user?.id
         });
-
-        console.log(`✅ Notification created with ID: ${notification?.id}`);
-        
-        // تحقق من الإشعارات المحفوظة
-        const userNotifications = await storage.getAllNotifications(userId);
-        console.log(`📋 User ${userId} now has ${userNotifications.length} total notifications`);
-
-        // إرسال إشعار فوري عبر WebSocket
-        if (automaticNotifications && typeof automaticNotifications.sendRealtimeNotification === 'function') {
-          await automaticNotifications.sendRealtimeNotification(userId, notification);
-          console.log(`📨 Real-time notification sent to user ${userId} for ${points} points reward`);
-        }
+        console.log(`🎁 Reward notification sent to user ${userId} for ${points} points`);
       } catch (notificationError) {
         console.error('❌ Error sending reward notification:', notificationError);
         // لا نعطل العملية إذا فشل الإشعار

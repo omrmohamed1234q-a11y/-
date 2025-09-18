@@ -469,4 +469,142 @@ export class AutomaticNotificationService {
       console.error('Error scheduling follow-up notifications:', error);
     }
   }
+
+  /**
+   * إرسال إشعار عند منح مكافأة يدوية
+   * Send notification when manual reward is granted
+   */
+  async onRewardGranted(data: { userId: string; points: number; reason: string; adminId?: string }): Promise<void> {
+    try {
+      console.log(`🎁 Sending reward granted notification: ${data.userId} (+${data.points} points)`);
+
+      const notification = await this.storage.createNotification({
+        userId: data.userId,
+        title: '🎁 تم منحك مكافأة جديدة!',
+        message: `تم منحك ${data.points} نقطة كمكافأة: ${data.reason}`,
+        type: 'reward',
+        category: 'reward_granted',
+        iconType: 'gift',
+        actionUrl: '/rewards',
+        sourceId: `reward_grant_${Date.now()}`,
+        sourceType: 'admin_reward',
+        priority: 'normal',
+        isPinned: true,
+        isRead: false,
+        actionData: {
+          points: data.points,
+          reason: data.reason,
+          adminId: data.adminId,
+          grantDate: new Date().toISOString()
+        }
+      });
+
+      await this.sendRealtimeNotification(data.userId, notification);
+
+      console.log(`✅ Reward granted notification sent: ${data.userId}`);
+    } catch (error) {
+      console.error('Error sending reward granted notification:', error);
+    }
+  }
+
+  /**
+   * إرسال إشعار عند كسب نقاط من الطلبات
+   * Send notification when points are earned from orders
+   */
+  async onPointsEarned(data: { userId: string; points: number; orderNumber: string; orderId: string }): Promise<void> {
+    try {
+      console.log(`⭐ Sending points earned notification: ${data.userId} (+${data.points} points from order ${data.orderNumber})`);
+
+      const notification = await this.storage.createNotification({
+        userId: data.userId,
+        title: '⭐ حصلت على نقاط جديدة!',
+        message: `حصلت على ${data.points} نقطة من طلبك #${data.orderNumber}`,
+        type: 'points',
+        category: 'points_earned',
+        iconType: 'star',
+        actionUrl: `/orders/${data.orderId}`,
+        sourceId: data.orderId,
+        sourceType: 'order_completion',
+        priority: 'normal',
+        actionData: {
+          points: data.points,
+          orderNumber: data.orderNumber,
+          orderId: data.orderId
+        }
+      });
+
+      await this.sendRealtimeNotification(data.userId, notification);
+
+      console.log(`✅ Points earned notification sent: ${data.userId}`);
+    } catch (error) {
+      console.error('Error sending points earned notification:', error);
+    }
+  }
+
+  /**
+   * إرسال إشعار عند الوصول لمستوى جديد
+   * Send notification when user reaches a new level
+   */
+  async onLevelUp(data: { userId: string; newLevel: number; previousLevel: number }): Promise<void> {
+    try {
+      console.log(`🏆 Sending level up notification: ${data.userId} (level ${data.previousLevel} → ${data.newLevel})`);
+
+      const notification = await this.storage.createNotification({
+        userId: data.userId,
+        title: '🏆 تهانينا! وصلت لمستوى جديد',
+        message: `تهانينا! وصلت للمستوى ${data.newLevel} الجديد`,
+        type: 'achievement',
+        category: 'level_up',
+        iconType: 'trophy',
+        actionUrl: '/rewards',
+        sourceId: `level_up_${data.userId}_${data.newLevel}`,
+        sourceType: 'level_achievement',
+        priority: 'high',
+        actionData: {
+          newLevel: data.newLevel,
+          previousLevel: data.previousLevel
+        }
+      });
+
+      await this.sendRealtimeNotification(data.userId, notification);
+
+      console.log(`✅ Level up notification sent: ${data.userId}`);
+    } catch (error) {
+      console.error('Error sending level up notification:', error);
+    }
+  }
+
+  /**
+   * إرسال إشعار عند استخدام مكافأة
+   * Send notification when reward is redeemed
+   */
+  async onRewardRedeemed(data: { userId: string; rewardName: string; rewardId: string; pointsCost: number }): Promise<void> {
+    try {
+      console.log(`✨ Sending reward redeemed notification: ${data.userId} redeemed ${data.rewardName}`);
+
+      const notification = await this.storage.createNotification({
+        userId: data.userId,
+        title: '✨ تم استخدام المكافأة بنجاح',
+        message: `تم استخدام المكافأة "${data.rewardName}" بنجاح`,
+        type: 'reward_usage',
+        category: 'reward_redeemed',
+        iconType: 'gift-check',
+        actionUrl: '/rewards',
+        sourceId: data.rewardId,
+        sourceType: 'reward_redemption',
+        priority: 'normal',
+        actionData: {
+          rewardName: data.rewardName,
+          rewardId: data.rewardId,
+          pointsCost: data.pointsCost
+        }
+      });
+
+      await this.sendRealtimeNotification(data.userId, notification);
+
+      console.log(`✅ Reward redeemed notification sent: ${data.userId}`);
+    } catch (error) {
+      console.error('Error sending reward redeemed notification:', error);
+    }
+  }
 }
