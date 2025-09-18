@@ -9,7 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiRequest } from '@/lib/queryClient';
+import { useQuery } from '@tanstack/react-query';
 import {
   Gift,
   Settings,
@@ -61,6 +63,13 @@ interface Reward {
   created_at: string;
 }
 
+interface UserOption {
+  value: string;
+  label: string;
+  displayName: string;
+  email: string;
+}
+
 interface Challenge {
   id: string;
   name: string;
@@ -102,6 +111,18 @@ export default function RewardsManagement() {
     points: '',
     reason: ''
   });
+
+  // جلب قائمة المستخدمين للقائمة المنسدلة
+  const { data: usersResponse, isLoading: usersLoading, error: usersError } = useQuery({
+    queryKey: ['/api/admin/users/list'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/admin/users/list');
+      return response;
+    },
+    enabled: manualRewardDialog, // جلب البيانات فقط عند فتح النافذة
+  });
+  
+  const usersList: UserOption[] = usersResponse?.data || [];
 
   // تحميل الإعدادات الحالية
   const loadSettings = async () => {
@@ -966,18 +987,49 @@ export default function RewardsManagement() {
                   
                   <div className="space-y-4 py-4">
                     <div>
-                      <Label htmlFor="manual_user_id">معرف المستخدم</Label>
-                      <Input
-                        id="manual_user_id"
-                        placeholder="user-12345 أو البريد الإلكتروني"
+                      <Label htmlFor="manual_user_id">اختر المستخدم</Label>
+                      <Select
                         value={manualRewardForm.userId}
-                        onChange={(e) => setManualRewardForm(prev => ({
+                        onValueChange={(value) => setManualRewardForm(prev => ({
                           ...prev,
-                          userId: e.target.value
+                          userId: value
                         }))}
-                      />
+                        disabled={usersLoading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue 
+                            placeholder={usersLoading ? "جاري تحميل المستخدمين..." : "اختر مستخدم من القائمة"} 
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[200px]">
+                          {usersLoading ? (
+                            <SelectItem value="" disabled>
+                              جاري تحميل المستخدمين...
+                            </SelectItem>
+                          ) : usersError ? (
+                            <SelectItem value="" disabled>
+                              خطأ في تحميل المستخدمين
+                            </SelectItem>
+                          ) : usersList?.length > 0 ? (
+                            usersList.map((user) => (
+                              <SelectItem key={user.value} value={user.value}>
+                                <div className="flex flex-col items-start">
+                                  <span className="font-medium">{user.email}</span>
+                                  {user.displayName && user.displayName !== user.email && (
+                                    <span className="text-sm text-gray-500">{user.displayName}</span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="" disabled>
+                              لا توجد مستخدمين متاحين
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                       <p className="text-xs text-gray-500 mt-1">
-                        يمكنك استخدام معرف المستخدم أو البريد الإلكتروني
+                        اختر المستخدم المراد منحه المكافأة من القائمة
                       </p>
                     </div>
                     

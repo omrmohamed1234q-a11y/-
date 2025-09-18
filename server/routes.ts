@@ -9864,6 +9864,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // الحصول على قائمة المستخدمين مع الإيميلات (Admin only)
+  app.get('/api/admin/users/list', isAdminAuthenticated, async (req, res) => {
+    try {
+      console.log('👥 جلب قائمة المستخدمين مع الإيميلات...');
+      
+      let allUsers = [];
+      if (supabase) {
+        try {
+          const { data: users, error } = await supabase
+            .from('users')
+            .select('id, email, display_name, full_name')
+            .order('email');
+            
+          if (error) {
+            console.error('Supabase error:', error);
+            // fallback to memory storage
+            allUsers = await storage.getAllUsers();
+          } else {
+            allUsers = users || [];
+            console.log(`✅ تم جلب ${allUsers.length} مستخدم من Supabase`);
+          }
+        } catch (supabaseError) {
+          console.error('Supabase connection error:', supabaseError);
+          // fallback to memory storage
+          allUsers = await storage.getAllUsers();
+        }
+      } else {
+        // fallback to memory storage if no supabase client
+        allUsers = await storage.getAllUsers();
+        console.log('🔄 استخدام Memory Storage (لا يوجد Supabase client)');
+      }
+      
+      // تنسيق البيانات للـ dropdown
+      const usersList = allUsers.map(user => ({
+        value: user.id || user.email, // استخدم ID أو الإيميل كـ value
+        label: user.email,
+        displayName: user.display_name || user.full_name || user.email,
+        email: user.email
+      }));
+      
+      console.log(`📝 تم تنسيق ${usersList.length} مستخدم للقائمة المنسدلة`);
+      
+      res.json({
+        success: true,
+        data: usersList
+      });
+    } catch (error) {
+      console.error('Error fetching users list:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // ==================== إدارة المكافآت والتحديات CRUD ====================
   
   // تم نقل المخازن العامة للأعلى قبل الـ endpoints
