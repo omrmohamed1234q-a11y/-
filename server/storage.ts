@@ -2914,6 +2914,7 @@ class MemStorage implements IStorage {
   private secureDrivers: any[] = [];
   private securityLogs: any[] = [];
   private pendingUploads: PendingUpload[] = [];
+  private notifications: any[] = [];
 
   constructor() {
     // Initialize with test users for dropdown testing
@@ -3485,55 +3486,42 @@ class MemStorage implements IStorage {
     }
   }
 
-  // User notifications operations (MemStorage - tries database first, fallback to memory)
+  // User notifications operations (MemStorage - pure memory implementation)
   async getAllNotifications(userId?: string): Promise<any[]> {
-    try {
-      const { notifications } = await import("../shared/schema");
-      if (userId) {
-        return await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
-      }
-      return await db.select().from(notifications).orderBy(desc(notifications.createdAt));
-    } catch (error) {
-      console.error('Database error in notifications, fallback to memory (empty):', error);
-      return [];
+    if (userId) {
+      const userNotifications = this.notifications.filter(notif => notif.userId === userId);
+      return userNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
+    return [...this.notifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getNotification(id: string): Promise<any | undefined> {
-    try {
-      const { notifications } = await import("../shared/schema");
-      const [notification] = await db.select().from(notifications).where(eq(notifications.id, id));
-      return notification;
-    } catch (error) {
-      console.error('Database error in getNotification, fallback to undefined:', error);
-      return undefined;
-    }
+    return this.notifications.find(notif => notif.id === id);
   }
 
   async createNotification(notificationData: any): Promise<any> {
-    try {
-      const { notifications } = await import("../shared/schema");
-      const [notification] = await db.insert(notifications).values(notificationData).returning();
-      return notification;
-    } catch (error) {
-      console.error('Database error in createNotification:', error);
-      throw error;
-    }
+    const notification = {
+      ...notificationData,
+      createdAt: notificationData.createdAt || new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.notifications.push(notification);
+    console.log(`💾 Notification saved to memory storage: ${notification.id}`);
+    return notification;
   }
 
   async updateNotification(id: string, updates: any): Promise<any> {
-    try {
-      const { notifications } = await import("../shared/schema");
-      const [notification] = await db
-        .update(notifications)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(notifications.id, id))
-        .returning();
-      return notification;
-    } catch (error) {
-      console.error('Database error in updateNotification:', error);
-      throw error;
+    const index = this.notifications.findIndex(notif => notif.id === id);
+    if (index !== -1) {
+      this.notifications[index] = {
+        ...this.notifications[index],
+        ...updates,
+        updatedAt: new Date()
+      };
+      return this.notifications[index];
     }
+    throw new Error('Notification not found');
   }
 
   async markNotificationAsRead(id: string): Promise<any> {
@@ -3551,28 +3539,18 @@ class MemStorage implements IStorage {
   }
 
   async deleteNotification(id: string): Promise<boolean> {
-    try {
-      const { notifications } = await import("../shared/schema");
-      const result = await db.delete(notifications).where(eq(notifications.id, id));
-      return (result as any).rowCount > 0;
-    } catch (error) {
-      console.error('Database error in deleteNotification:', error);
-      return false;
+    const index = this.notifications.findIndex(notif => notif.id === id);
+    if (index !== -1) {
+      this.notifications.splice(index, 1);
+      return true;
     }
+    return false;
   }
 
   async getUserUnreadCount(userId: string): Promise<number> {
-    try {
-      const { notifications } = await import("../shared/schema");
-      const result = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(notifications)
-        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
-      return result[0]?.count || 0;
-    } catch (error) {
-      console.error('Database error in getUserUnreadCount:', error);
-      return 0;
-    }
+    return this.notifications.filter(notif => 
+      notif.userId === userId && notif.isRead === false
+    ).length;
   }
 
   // User notification preferences operations (MemStorage)
