@@ -3537,18 +3537,24 @@ class MemStorage implements IStorage {
   }
 
   async createNotification(notificationData: any): Promise<any> {
-    const notification = {
-      id: notificationData.id || `notif-${Date.now()}`,
-      ...notificationData,
-      createdAt: notificationData.createdAt || new Date(),
-      updatedAt: new Date()
-    };
+    console.log('🔧 createNotification called with data:', JSON.stringify(notificationData, null, 2));
     
-    // Write to both systems for compatibility
-    this.notifications.push(notification);
-    
-    // Also write to the new system (userNotificationsData)
-    const newSystemNotification = {
+    try {
+      const notification = {
+        id: notificationData.id || `notif-${Date.now()}`,
+        ...notificationData,
+        createdAt: notificationData.createdAt || new Date(),
+        updatedAt: new Date()
+      };
+      
+      console.log('📋 Created notification object:', JSON.stringify(notification, null, 2));
+      
+      // Write to both systems for compatibility
+      this.notifications.push(notification);
+      console.log('✅ Added to legacy notifications array');
+      
+      // Also write to the new system (userNotificationsData)
+      const newSystemNotification = {
       id: notification.id,
       userId: notification.userId,
       type: notification.type || 'system',
