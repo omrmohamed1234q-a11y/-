@@ -9865,7 +9865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // الحصول على قائمة المستخدمين مع الإيميلات (Admin only)
-  app.get('/api/admin/users/list', isAdminAuthenticated, async (req, res) => {
+  app.get('/api/admin/users-dropdown', isAdminAuthenticated, async (req, res) => {
     try {
       console.log('👥 جلب قائمة المستخدمين مع الإيميلات...');
       

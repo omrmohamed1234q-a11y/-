@@ -114,10 +114,11 @@ export default function RewardsManagement() {
 
   // جلب قائمة المستخدمين للقائمة المنسدلة
   const { data: usersResponse, isLoading: usersLoading, error: usersError } = useQuery({
-    queryKey: ['/api/admin/users/list'],
+    queryKey: ['/api/admin/users-dropdown'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/admin/users/list');
-      return response;
+      const response = await apiRequest('GET', '/api/admin/users-dropdown');
+      const data = await response.json();
+      return data;
     },
     enabled: manualRewardDialog, // جلب البيانات فقط عند فتح النافذة
   });
@@ -1003,13 +1004,13 @@ export default function RewardsManagement() {
                         </SelectTrigger>
                         <SelectContent className="max-h-[200px]">
                           {usersLoading ? (
-                            <SelectItem value="" disabled>
+                            <div className="p-2 text-center text-gray-500 text-sm">
                               جاري تحميل المستخدمين...
-                            </SelectItem>
+                            </div>
                           ) : usersError ? (
-                            <SelectItem value="" disabled>
+                            <div className="p-2 text-center text-red-500 text-sm">
                               خطأ في تحميل المستخدمين
-                            </SelectItem>
+                            </div>
                           ) : usersList?.length > 0 ? (
                             usersList.map((user) => (
                               <SelectItem key={user.value} value={user.value}>
