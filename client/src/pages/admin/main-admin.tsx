@@ -97,6 +97,14 @@ export default function MainAdmin() {
       link: '/admin/announcements',
       color: 'bg-pink-600 hover:bg-pink-700',
       textColor: 'text-pink-100'
+    },
+    {
+      title: '📢 نظام الإشعارات الشامل',
+      description: 'إدارة الإشعارات التلقائية واليدوية وتنبيهات النظام',
+      icon: Bell,
+      link: '/admin/automatic-notifications',
+      color: 'bg-cyan-600 hover:bg-cyan-700',
+      textColor: 'text-cyan-100'
     }
   ];
 

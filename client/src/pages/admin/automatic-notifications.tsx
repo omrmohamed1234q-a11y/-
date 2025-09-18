@@ -32,6 +32,8 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const AutomaticNotifications = () => {
+  // إضافة عنوان واضح للصفحة
+  document.title = "نظام الإشعارات الشامل - إدارة اطبعلي";
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [configTab, setConfigTab] = useState('triggers');
