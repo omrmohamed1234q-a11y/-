@@ -9737,6 +9737,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // إرسال إشعار للمستخدم بمنحه المكافأة
       try {
+        console.log(`🔔 Creating notification for user ${userId} with ${points} points...`);
+        
         const notification = await storage.createNotification({
           userId: userId,
           title: `حصلت على ${points} نقطة مكافأة! 🎁`,
@@ -9749,6 +9751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sourceType: 'admin_action',
           priority: 'normal',
           isPinned: true,
+          isRead: false,
           actionData: {
             pointsEarned: points,
             grantedBy: req.user.id,
@@ -9757,13 +9760,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
 
+        console.log(`✅ Notification created with ID: ${notification?.id}`);
+        
+        // تحقق من الإشعارات المحفوظة
+        const userNotifications = await storage.getAllNotifications(userId);
+        console.log(`📋 User ${userId} now has ${userNotifications.length} total notifications`);
+
         // إرسال إشعار فوري عبر WebSocket
         if (automaticNotifications && typeof automaticNotifications.sendRealtimeNotification === 'function') {
           await automaticNotifications.sendRealtimeNotification(userId, notification);
           console.log(`📨 Real-time notification sent to user ${userId} for ${points} points reward`);
         }
       } catch (notificationError) {
-        console.error('Error sending reward notification:', notificationError);
+        console.error('❌ Error sending reward notification:', notificationError);
         // لا نعطل العملية إذا فشل الإشعار
       }
 
