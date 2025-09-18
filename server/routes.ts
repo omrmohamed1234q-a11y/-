@@ -9931,21 +9931,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let allUsers = [];
       if (supabase) {
         try {
-          const { data: users, error } = await supabase
-            .from('users')
-            .select('id, email, display_name, full_name')
-            .order('email');
-            
+          // جلب جميع المستخدمين من Supabase Auth
+          const { data: { users }, error } = await supabase.auth.admin.listUsers();
+          
           if (error) {
-            console.error('Supabase error:', error);
+            console.error('Supabase Auth error:', error);
             // fallback to memory storage
             allUsers = await storage.getAllUsers();
           } else {
-            allUsers = users || [];
-            console.log(`✅ تم جلب ${allUsers.length} مستخدم من Supabase`);
+            // تحويل بيانات المستخدمين من Supabase Auth
+            allUsers = users.map((user: any) => ({
+              id: user.id,
+              email: user.email,
+              display_name: user.user_metadata?.full_name || user.user_metadata?.firstName || '',
+              full_name: user.user_metadata?.full_name || 
+                        `${user.user_metadata?.firstName || ''} ${user.user_metadata?.lastName || ''}`.trim(),
+              created_at: user.created_at,
+              confirmed_at: user.confirmed_at
+            }));
+            console.log(`✅ تم جلب ${allUsers.length} مستخدم من Supabase Auth`);
           }
         } catch (supabaseError) {
-          console.error('Supabase connection error:', supabaseError);
+          console.error('Supabase Auth connection error:', supabaseError);
           // fallback to memory storage
           allUsers = await storage.getAllUsers();
         }
