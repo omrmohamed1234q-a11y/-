@@ -6487,7 +6487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
   
   // Calculate route using Google Directions API
-  app.post('/api/orders/calculate-route', requireDriverAuth, async (req, res) => {
+  app.post('/api/orders/calculate-route', async (req, res) => {
     try {
       // Validate request with Zod
       const validationResult = calculateRouteSchema.safeParse(req.body);
