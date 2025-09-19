@@ -8,6 +8,10 @@ import { apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { useWebSocket, useWebSocketEvent } from '@/hooks/use-websocket';
 import { useGPS } from '@/hooks/use-gps';
+import GoogleMap from '@/components/GoogleMap';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import {
   Truck,
   MapPin,
@@ -31,7 +35,17 @@ import {
   Receipt,
   Map,
   Zap,
-  Activity
+  Activity,
+  TrendingUp,
+  BarChart3,
+  Target,
+  Clock8,
+  Coins,
+  Navigation2,
+  Gauge,
+  Trophy,
+  MapPin2,
+  Route2
 } from 'lucide-react';
 
 interface CaptainOrder {
@@ -95,11 +109,48 @@ interface CaptainProfile {
   totalDeliveries: number;
 }
 
+interface CaptainStats {
+  dailyEarnings: number;
+  weeklyEarnings: number;
+  monthlyEarnings: number;
+  ordersToday: number;
+  ordersWeek: number;
+  ordersMonth: number;
+  averageRating: number;
+  totalDistance: number;
+  onlineTime: number;
+  completionRate: number;
+}
+
+interface RouteInfo {
+  orderId: string;
+  routeData: any;
+  encodedPolyline: string;
+  estimatedDistance: number;
+  estimatedDuration: number;
+  routeSteps: any[];
+}
+
 export default function CaptainDashboard() {
   const [captainData, setCaptainData] = useState<CaptainProfile | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<CaptainOrder | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [activeOrders, setActiveOrders] = useState<CaptainOrder[]>([]);
+  const [stats, setStats] = useState<CaptainStats>({
+    dailyEarnings: 0,
+    weeklyEarnings: 0,
+    monthlyEarnings: 0,
+    ordersToday: 0,
+    ordersWeek: 0,
+    ordersMonth: 0,
+    averageRating: 4.8,
+    totalDistance: 0,
+    onlineTime: 0,
+    completionRate: 95
+  });
+  const [currentRoute, setCurrentRoute] = useState<RouteInfo | null>(null);
+  const [showMap, setShowMap] = useState(false);
+  const [selectedTab, setSelectedTab] = useState('dashboard');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -137,7 +188,7 @@ export default function CaptainDashboard() {
     
     try {
       const parsed = JSON.parse(authData);
-      setCaptainData({
+      const captain = {
         id: parsed.user.id,
         name: parsed.user.fullName,
         phone: parsed.user.phone,
@@ -146,7 +197,11 @@ export default function CaptainDashboard() {
         vehicleNumber: parsed.user.driverCode,
         rating: 4.8,
         totalDeliveries: 156
-      });
+      };
+      setCaptainData(captain);
+      
+      // Load initial stats
+      loadCaptainStats(captain.id);
     } catch (error) {
       console.error('خطأ في قراءة بيانات الكبتن:', error);
       setLocation('/captain/secure-login');
@@ -279,6 +334,87 @@ export default function CaptainDashboard() {
     }
   });
 
+  // تحميل إحصائيات الكابتن المتقدمة
+  const loadCaptainStats = async (captainId: string) => {
+    try {
+      const response = await fetch(`/api/captain/${captainId}/stats`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStats(prev => ({
+            ...prev,
+            ...data.stats
+          }));
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ فشل في تحميل الإحصائيات:', error);
+      // استخدام القيم الافتراضية
+    }
+  };
+
+  // حساب مسار باستخدام Google Directions API
+  const calculateRoute = async (orderId: string, destinationLat: number, destinationLng: number) => {
+    if (!currentLocation || !captainData?.id) {
+      toast({
+        title: '❌ خطأ',
+        description: 'الموقع الحالي غير متاح',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const response = await apiRequest('POST', '/api/orders/calculate-route', {
+        origin: {
+          lat: currentLocation.lat,
+          lng: currentLocation.lng
+        },
+        destination: {
+          lat: destinationLat,
+          lng: destinationLng
+        }
+      });
+
+      if (response.success && response.route) {
+        const routeInfo: RouteInfo = {
+          orderId,
+          routeData: response.route.routeData,
+          encodedPolyline: response.route.encodedPolyline,
+          estimatedDistance: response.route.estimatedDistance,
+          estimatedDuration: response.route.estimatedDuration,
+          routeSteps: response.route.routeSteps
+        };
+        
+        setCurrentRoute(routeInfo);
+        setShowMap(true);
+        setSelectedTab('map');
+        
+        toast({
+          title: '✅ تم حساب المسار',
+          description: `المسافة: ${Math.round(routeInfo.estimatedDistance/1000)}كم، الزمن: ${Math.round(routeInfo.estimatedDuration/60)}دقيقة`
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: '❌ خطأ في حساب المسار',
+        description: error.message || 'فشل في حساب المسار',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // فتح خرائط Google للملاحة
+  const openGoogleNavigation = (lat: number, lng: number) => {
+    if (currentLocation) {
+      const url = `https://www.google.com/maps/dir/${currentLocation.lat},${currentLocation.lng}/${lat},${lng}`;
+      window.open(url, '_blank');
+    }
+  };
+
   // تسجيل الخروج
   const handleLogout = () => {
     localStorage.removeItem('captainAuth');
@@ -311,49 +447,93 @@ export default function CaptainDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* شريط علوي */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* شريط علوي متطور */}
+      <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <Truck className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  isOnline ? 'bg-gradient-to-r from-green-500 to-green-600 shadow-lg shadow-green-500/30' : 
+                           'bg-gradient-to-r from-gray-400 to-gray-500'
+                }`}>
+                  <Truck className="w-7 h-7 text-white" />
+                </div>
+                {isOnline && (
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 border-2 border-white rounded-full animate-pulse" />
+                )}
               </div>
               <div>
-                <h1 className="font-bold text-lg text-gray-900">مرحباً {captainData.name}</h1>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Badge variant={isOnline ? "default" : "secondary"} className="text-xs">
-                    {isOnline ? '🟢 متصل' : '🔴 غير متصل'}
+                <h1 className="font-bold text-xl text-gray-900 mb-1">مرحباً {captainData.name}</h1>
+                <div className="flex items-center gap-3 text-sm">
+                  <Badge 
+                    variant={isOnline ? "default" : "secondary"} 
+                    className={`text-xs font-medium px-3 py-1 ${
+                      isOnline ? 'bg-green-100 text-green-800 border-green-200' : 
+                               'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {isOnline ? '🟢 متصل ونشط' : '🔴 غير متصل'}
                   </Badge>
-                  <span>• {captainData.vehicleType === 'motorcycle' ? '🏍️ دراجة نارية' : '🚗 سيارة'}</span>
+                  <div className="flex items-center gap-1 text-gray-600">
+                    {captainData.vehicleType === 'motorcycle' ? <span>🏍️</span> : <span>🚗</span>}
+                    <span className="font-medium">{captainData.vehicleNumber}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <Star className="w-4 h-4 text-yellow-500" />
+                    <span className="font-medium">{captainData.rating}</span>
+                  </div>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              {/* حالة WebSocket */}
-              <Badge 
-                variant={wsState.isConnected ? "default" : "destructive"}
-                className="text-xs"
-              >
-                {wsState.isConnected ? '🔗 متصل' : '❌ منقطع'}
-              </Badge>
+            <div className="flex items-center gap-3">
+              {/* مؤشرات الحالة */}
+              <div className="hidden md:flex items-center gap-3">
+                <Badge 
+                  variant={wsState.isConnected ? "default" : "destructive"}
+                  className="text-xs px-2 py-1"
+                >
+                  {wsState.isConnected ? '🔗 متصل' : '❌ منقطع'}
+                </Badge>
+                
+                <Badge 
+                  variant={isTracking ? "default" : "secondary"}
+                  className="text-xs px-2 py-1"
+                >
+                  {isTracking ? '📍 GPS نشط' : '📍 GPS معطل'}
+                </Badge>
+              </div>
               
               <Button
-                variant={isOnline ? "destructive" : "default"}
+                variant={isOnline ? "outline" : "default"}
                 size="sm"
                 onClick={toggleOnlineStatus}
-                className="text-xs"
+                className={`px-4 py-2 font-medium transition-all duration-300 ${
+                  isOnline ? 'hover:bg-red-50 hover:border-red-200 hover:text-red-600' : 
+                           'bg-green-600 hover:bg-green-700 text-white'
+                }`}
                 data-testid="button-toggle-status"
               >
-                {isOnline ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                {isOnline ? 'إيقاف' : 'تشغيل'}
+                {isOnline ? (
+                  <>
+                    <Pause className="w-4 h-4 mr-2" />
+                    إيقاف العمل
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    بدء العمل
+                  </>
+                )}
               </Button>
+              
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
+                className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 data-testid="button-logout"
               >
                 <LogOut className="w-4 h-4" />
@@ -363,59 +543,85 @@ export default function CaptainDashboard() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* إحصائيات سريعة */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-full mx-auto mb-2">
-                <Star className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900">{captainData.rating}</div>
-              <div className="text-xs text-gray-600">التقييم</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-full mx-auto mb-2">
-                <Package className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900">{captainData.totalDeliveries}</div>
-              <div className="text-xs text-gray-600">توصيلة</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center w-10 h-10 bg-orange-100 rounded-full mx-auto mb-2">
-                <Activity className="w-5 h-5 text-orange-600" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900">{availableOrders.length}</div>
-              <div className="text-xs text-gray-600">طلبات متاحة</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full mx-auto mb-2">
-                <Navigation className="w-5 h-5 text-purple-600" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900">
-                {currentLocation ? '✓' : '✗'}
-              </div>
-              <div className="text-xs text-gray-600">
-                GPS {accuracy && `(${Math.round(accuracy)}م)`}
-              </div>
-              {isTracking && (
-                <div className="text-xs text-green-600 mt-1">🟢 نشط</div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      <div className="max-w-7xl mx-auto p-6">
+        {/* لوحة التحكم بالتابز */}
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[400px] mb-8 bg-white/70 backdrop-blur-sm">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2 data-[state=active]:bg-white">
+              <BarChart3 className="w-4 h-4" />
+              لوحة التحكم
+            </TabsTrigger>
+            <TabsTrigger value="map" className="flex items-center gap-2 data-[state=active]:bg-white">
+              <Map className="w-4 h-4" />
+              الخريطة
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="flex items-center gap-2 data-[state=active]:bg-white">
+              <TrendingUp className="w-4 h-4" />
+              الإحصائيات
+            </TabsTrigger>
+          </TabsList>
 
-        {/* الطلبات المتاحة */}
-        <Card>
+          {/* لوحة التحكم الرئيسية */}
+          <TabsContent value="dashboard" className="space-y-6">
+            {/* إحصائيات سريعة محسنة */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
+                <CardContent className="p-6 text-center">
+                  <div className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <Star className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">{stats.averageRating}</div>
+                  <div className="text-sm text-gray-600 font-medium">متوسط التقييم</div>
+                  <div className="text-xs text-yellow-600 mt-2">⭐ ممتاز</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+                <CardContent className="p-6 text-center">
+                  <div className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <Package className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">{stats.ordersToday}</div>
+                  <div className="text-sm text-gray-600 font-medium">طلبات اليوم</div>
+                  <div className="text-xs text-blue-600 mt-2">📦 من أصل {stats.ordersWeek} هذا الأسبوع</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+                <CardContent className="p-6 text-center">
+                  <div className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <Coins className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">{stats.dailyEarnings}</div>
+                  <div className="text-sm text-gray-600 font-medium">أرباح اليوم (جنيه)</div>
+                  <div className="text-xs text-green-600 mt-2">💰 +{Math.round((stats.dailyEarnings / stats.weeklyEarnings) * 100) || 0}% من الأسبوع</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
+                <CardContent className="p-6 text-center">
+                  <div className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <Navigation2 className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {availableOrders.length}
+                  </div>
+                  <div className="text-sm text-gray-600 font-medium">طلبات متاحة</div>
+                  <div className={`text-xs mt-2 ${
+                    currentLocation ? 'text-green-600' : 'text-red-500'
+                  }`}>
+                    {currentLocation ? (
+                      <>📍 GPS متصل ({Math.round(accuracy || 0)}م)</>
+                    ) : (
+                      <>❌ GPS غير متصل</>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* الطلبات المتاحة محسنة */}
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
@@ -514,21 +720,36 @@ export default function CaptainDashboard() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setSelectedOrder(order)}
+                          className="border-blue-200 text-blue-700 hover:bg-blue-50"
                           data-testid={`button-view-details-${order.id}`}
                         >
                           <FileText className="w-4 h-4 mr-1" />
                           التفاصيل
                         </Button>
+                        
+                        {order.deliveryCoordinates && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => calculateRoute(order.id, order.deliveryCoordinates!.lat, order.deliveryCoordinates!.lng)}
+                            className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                            data-testid={`button-route-${order.id}`}
+                          >
+                            <Route2 className="w-4 h-4 mr-1" />
+                            المسار
+                          </Button>
+                        )}
+                        
                         <Button
                           size="sm"
                           onClick={() => acceptOrderMutation.mutate(order.id)}
                           disabled={acceptOrderMutation.isPending}
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-300"
                           data-testid={`button-accept-order-${order.id}`}
                         >
                           {acceptOrderMutation.isPending ? (
@@ -544,11 +765,229 @@ export default function CaptainDashboard() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* تاب الخريطة */}
+          <TabsContent value="map" className="space-y-6">
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin2 className="w-5 h-5 text-blue-600" />
+                  خريطة التوصيل التفاعلية
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {currentLocation ? (
+                  <div className="space-y-4">
+                    <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden">
+                      {/* مكان مكون Google Maps */}
+                      <div className="text-center">
+                        <Map className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600 font-medium">خريطة Google Maps</p>
+                        <p className="text-sm text-gray-500 mt-2">سيتم تحميلها قريباً...</p>
+                        
+                        {/* معلومات الموقع */}
+                        <div className="mt-6 p-4 bg-blue-50 rounded-lg text-left">
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-gray-600">العرض:</span>
+                              <p className="text-blue-700 font-mono">{currentLocation.lat.toFixed(6)}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-600">الطول:</span>
+                              <p className="text-blue-700 font-mono">{currentLocation.lng.toFixed(6)}</p>
+                            </div>
+                          </div>
+                          
+                          {accuracy && (
+                            <div className="mt-3 pt-3 border-t border-blue-200">
+                              <span className="font-medium text-gray-600">دقة GPS:</span>
+                              <p className="text-green-700">{Math.round(accuracy)} متر</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* معلومات المسار */}
+                      {currentRoute && (
+                        <div className="absolute top-4 right-4 bg-white rounded-lg p-4 shadow-lg max-w-xs">
+                          <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                            <Route className="w-4 h-4" />
+                            معلومات المسار
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Navigation className="w-4 h-4 text-blue-500" />
+                              <span>{Math.round(currentRoute.estimatedDistance/1000)} كم</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Timer className="w-4 h-4 text-green-500" />
+                              <span>{Math.round(currentRoute.estimatedDuration/60)} دقيقة</span>
+                            </div>
+                          </div>
+                          
+                          <Button 
+                            size="sm" 
+                            className="w-full mt-3 bg-blue-600 hover:bg-blue-700"
+                            onClick={() => {
+                              const order = availableOrders.find(o => o.id === currentRoute.orderId);
+                              if (order?.deliveryCoordinates) {
+                                openGoogleNavigation(order.deliveryCoordinates.lat, order.deliveryCoordinates.lng);
+                              }
+                            }}
+                          >
+                            <Navigation className="w-4 h-4 mr-1" />
+                            فتح في Google Maps
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {!isTracking && (
+                      <div className="text-center py-4">
+                        <Button
+                          onClick={startTracking}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Navigation className="w-4 h-4 mr-2" />
+                          بدء تتبع الموقع
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600 font-medium">غير متصل بالموقع</p>
+                    <p className="text-sm text-gray-500 mt-2">تحتاج إلى تفعيل GPS لعرض الخريطة</p>
+                    <Button
+                      onClick={startTracking}
+                      className="mt-4 bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Navigation className="w-4 h-4 mr-2" />
+                      تفعيل GPS
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* تاب الإحصائيات */}
+          <TabsContent value="stats" className="space-y-6">
+            {/* إحصائيات الأرباح */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-green-100/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Coins className="w-5 h-5 text-green-600" />
+                    الأرباح
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">اليوم</span>
+                      <span className="font-bold text-lg text-green-700">{stats.dailyEarnings} جنيه</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">هآا الأسبوع</span>
+                      <span className="font-bold text-green-700">{stats.weeklyEarnings} جنيه</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">هذا الشهر</span>
+                      <span className="font-bold text-green-700">{stats.monthlyEarnings} جنيه</span>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-2">متوسط الربح للطلب</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {stats.ordersToday > 0 ? Math.round(stats.dailyEarnings / stats.ordersToday) : 0} جنيه
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-blue-100/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Package className="w-5 h-5 text-blue-600" />
+                    الطلبات
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">اليوم</span>
+                      <span className="font-bold text-lg text-blue-700">{stats.ordersToday}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">هذا الأسبوع</span>
+                      <span className="font-bold text-blue-700">{stats.ordersWeek}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">هذا الشهر</span>
+                      <span className="font-bold text-blue-700">{stats.ordersMonth}</span>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-2">معدل الإنجاز</p>
+                    <div className="flex items-center gap-2">
+                      <Progress value={stats.completionRate} className="flex-1" />
+                      <span className="text-sm font-medium">{stats.completionRate}%</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-purple-100/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Gauge className="w-5 h-5 text-purple-600" />
+                    الأداء
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">التقييم</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                        <span className="font-bold text-purple-700">{stats.averageRating}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">المسافة اليوم</span>
+                      <span className="font-bold text-purple-700">{Math.round(stats.totalDistance)} كم</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">زمن العمل</span>
+                      <span className="font-bold text-purple-700">{Math.round(stats.onlineTime/60)} ساعة</span>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="text-center">
+                    <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-purple-700">كابتن متميز!</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* تفاصيل الطلب (مودال) */}
+      {/* تفاصيل الطلب (مودال محسن) */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
