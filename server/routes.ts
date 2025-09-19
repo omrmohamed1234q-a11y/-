@@ -330,6 +330,12 @@ const isAdminAuthenticated = async (req: any, res: any, next: any) => {
 
 // Driver authentication middleware - Real implementation with captain support
 const requireDriverAuth = async (req: any, res: any, next: any) => {
+  console.log(`🔐 Driver auth middleware called for ${req.method} ${req.path}`);
+  console.log('   Headers:', {
+    authorization: req.headers.authorization ? `${req.headers.authorization.substring(0, 20)}...` : 'none',
+    'x-captain-session': req.headers['x-captain-session'] ? `${req.headers['x-captain-session'].substring(0, 15)}...` : 'none'
+  });
+  
   const authHeader = req.headers.authorization;
   const captainSession = req.headers['x-captain-session'];
   
@@ -340,11 +346,14 @@ const requireDriverAuth = async (req: any, res: any, next: any) => {
   if (captainSession) {
     token = captainSession;
     isCaptain = true;
+    console.log(`🧑‍✈️ Captain session detected: ${token.substring(0, 10)}...`);
   } else if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
+    console.log(`👤 Regular driver token detected: ${token.substring(0, 10)}...`);
   }
   
   if (!token) {
+    console.log('❌ No authentication token found');
     return res.status(401).json({ 
       success: false, 
       error: 'Driver authentication required' 

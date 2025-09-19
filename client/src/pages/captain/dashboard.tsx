@@ -357,13 +357,29 @@ export default function CaptainDashboard() {
 
   // حساب مسار باستخدام Google Directions API
   const calculateRoute = async (orderId: string, destinationLat: number, destinationLng: number) => {
-    if (!currentLocation || !captainData?.id) {
+    if (!captainData?.id) {
       toast({
         title: '❌ خطأ',
-        description: 'الموقع الحالي غير متاح',
+        description: 'معرف الكابتن غير متاح',
         variant: 'destructive'
       });
       return;
+    }
+    
+    // استخدام موقع افتراضي إذا لم يكن GPS متاح
+    const fallbackLocation = {
+      lat: 30.0444196, // القاهرة - موقع افتراضي
+      lng: 31.2357116
+    };
+    
+    const originLocation = currentLocation || fallbackLocation;
+    
+    if (!currentLocation) {
+      toast({
+        title: '⚠️ تنبيه',
+        description: 'يتم استخدام موقع افتراضي - تأكد من تفعيل GPS للحصول على مسار دقيق',
+        variant: 'default'
+      });
     }
 
     try {
@@ -383,9 +399,10 @@ export default function CaptainDashboard() {
         headers,
         credentials: 'include',
         body: JSON.stringify({
+          orderId: orderId,
           origin: {
-            lat: currentLocation.lat,
-            lng: currentLocation.lng
+            lat: originLocation.lat,
+            lng: originLocation.lng
           },
           destination: {
             lat: destinationLat,
