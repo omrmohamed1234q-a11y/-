@@ -218,20 +218,117 @@ class NotificationService {
   }
 
   /**
-   * الحصول على الإشعارات المحفوظة
+   * الحصول على الإشعارات المحفوظة - محدث ليتكامل مع backend API
    */
   async getStoredNotifications() {
     if (!this.isInitialized) {
       await this.loadStoredNotifications();
     }
     
+    // جرب جلب الإشعارات من backend API أولاً
+    try {
+      const backendNotifications = await this.fetchNotificationsFromAPI();
+      if (backendNotifications && backendNotifications.length > 0) {
+        // دمج الإشعارات من backend مع المحلية
+        this.mergeNotifications(backendNotifications);
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to fetch notifications from backend, using local cache:', error.message);
+    }
+    
     return this.notifications;
   }
 
   /**
-   * إضافة إشعار جديد مع فحص الإعدادات
+   * جلب الإشعارات من backend API - مثل NotificationCenter
    */
-  addNotification(notification) {
+  async fetchNotificationsFromAPI() {
+    try {
+      // استخدام نفس authentication method مثل NotificationCenter
+      const response = await fetch('/api/notifications?limit=10', {
+        method: 'GET',
+        headers: {
+          'X-Admin-Token': 'dev-test-token', 
+          'X-User-ID': await this.getUserId(), // سنضيف هذه الطريقة
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Fetched notifications from backend API:', data.notifications?.length || 0);
+      return data.notifications || [];
+      
+    } catch (error) {
+      console.error('❌ Failed to fetch notifications from API:', error);
+      return [];
+    }
+  }
+
+  /**
+   * الحصول على user ID للاستخدام مع API
+   */
+  async getUserId() {
+    try {
+      // محاولة الحصول على user ID من captain service
+      const captainService = require('./captainService.js').default || require('./captainService.js');
+      const captain = captainService.captain;
+      
+      if (captain && captain.id) {
+        return captain.id;
+      }
+      
+      // fallback لـ test user
+      return '3e3882cc-81fa-48c9-bc69-c290128f4ff2';
+    } catch (error) {
+      console.warn('⚠️ Could not get user ID, using test user:', error.message);
+      return '3e3882cc-81fa-48c9-bc69-c290128f4ff2';
+    }
+  }
+
+  /**
+   * دمج الإشعارات من backend مع المحلية
+   */
+  mergeNotifications(backendNotifications) {
+    try {
+      // تحويل إشعارات backend للصيغة المحلية
+      const convertedNotifications = backendNotifications.map(notification => ({
+        id: notification.id,
+        type: notification.type || 'general',
+        title: notification.title,
+        message: notification.body || notification.message,
+        timestamp: new Date(notification.createdAt),
+        data: notification.metadata || {},
+        isRead: notification.read || false,
+        priority: notification.priority || 'medium'
+      }));
+      
+      // دمج مع الإشعارات المحلية (تجنب المضاعفة)
+      const existingIds = new Set(this.notifications.map(n => n.id));
+      const newNotifications = convertedNotifications.filter(n => !existingIds.has(n.id));
+      
+      if (newNotifications.length > 0) {
+        this.notifications = [...newNotifications, ...this.notifications]
+          .slice(0, this.maxStoredNotifications);
+        
+        console.log(`✅ Merged ${newNotifications.length} new notifications from backend`);
+        
+        // حفظ الإشعارات المدمجة
+        this.saveNotifications();
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to merge notifications:', error);
+    }
+  }
+
+  /**
+   * إضافة إشعار جديد مع فحص الإعدادات وإرسال للbackend
+   */
+  async addNotification(notification) {
     // فحص إعدادات الإشعارات قبل الإضافة
     if (!this.shouldShowNotification(notification.type)) {
       console.log('🔕 Notification blocked by settings:', notification.type);
@@ -248,7 +345,7 @@ class NotificationService {
       notification.timestamp = new Date();
     }
     
-    // إضافة للقائمة (الأحدث أولاً)
+    // إضافة للقائمة المحلية (الأحدث أولاً)
     this.notifications.unshift(notification);
     
     // الاحتفاظ بعدد محدود من الإشعارات
@@ -256,8 +353,15 @@ class NotificationService {
       this.notifications = this.notifications.slice(0, this.maxStoredNotifications);
     }
     
-    // حفظ في التخزين
+    // حفظ في التخزين المحلي
     this.saveNotifications();
+    
+    // إرسال للbackend API أيضاً (لا تحجب إذا فشل)
+    try {
+      await this.sendNotificationToAPI(notification);
+    } catch (error) {
+      console.warn('⚠️ Failed to send notification to backend:', error.message);
+    }
     
     // إشعار المستمعين
     this.notifyHandlers('onNewNotification', notification);
@@ -265,6 +369,42 @@ class NotificationService {
     console.log('✅ تم إضافة إشعار جديد:', notification.title);
     
     return notification.id;
+  }
+
+  /**
+   * إرسال إشعار جديد للbackend API
+   */
+  async sendNotificationToAPI(notification) {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Token': 'dev-test-token',
+          'X-User-ID': await this.getUserId(),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          type: notification.type,
+          title: notification.title,
+          body: notification.message,
+          metadata: notification.data,
+          priority: notification.priority
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Notification sent to backend API successfully');
+      return result;
+
+    } catch (error) {
+      console.error('❌ Failed to send notification to backend API:', error);
+      throw error;
+    }
   }
 
   /**
