@@ -84,6 +84,8 @@ export default function NotificationCenter() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   
+  console.log('🔍 NotificationCenter rendered! User:', user?.id, 'User status:', !!user);
+  
   // Initialize WebSocket for real-time notifications
   const { state: wsState } = useWebSocket();
 
@@ -91,10 +93,12 @@ export default function NotificationCenter() {
   const { data: notificationsData, isLoading } = useQuery({
     queryKey: ['/api/notifications', filter],
     queryFn: async () => {
+      console.log('🔍 Fetching notifications - User status:', !!user, user?.id);
       const response = await apiRequest('GET', `/api/notifications?limit=50&offset=0`);
+      console.log('📋 Notifications response:', response);
       return response;
     },
-    enabled: !!user, // Only fetch if user is authenticated
+    enabled: true, // TEMPORARILY enabled for debugging
     refetchInterval: isOpen ? 10000 : 30000, // Faster refresh when popover is open
   });
 
@@ -102,10 +106,12 @@ export default function NotificationCenter() {
   const { data: unreadData } = useQuery({
     queryKey: ['/api/notifications/unread-count'],
     queryFn: async () => {
+      console.log('🔢 Fetching unread count - User status:', !!user, user?.id);
       const response = await apiRequest('GET', '/api/notifications/unread-count');
+      console.log('📊 Unread count response:', response);
       return response;
     },
-    enabled: !!user, // Only fetch if user is authenticated
+    enabled: true, // TEMPORARILY enabled for debugging
     refetchInterval: 30000, // Refresh every 30 seconds (optimized from 5s)
   });
 
