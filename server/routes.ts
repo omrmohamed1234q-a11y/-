@@ -364,6 +364,8 @@ const requireDriverAuth = async (req: any, res: any, next: any) => {
     if (isCaptain) {
       // For captain authentication, check if captain exists in driver storage
       const drivers = await storage.getAllDrivers();
+      console.log(`🔍 Debug: Found ${drivers.length} drivers in storage:`, drivers.map(d => `${d.name}(${d.id}/${d.username})`));
+      console.log(`🔍 Debug: Looking for captain with token: ${token}`);
       const captain = drivers.find((d: any) => d.id === token || d.username === token);
       
       if (!captain) {
