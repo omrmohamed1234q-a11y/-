@@ -367,25 +367,47 @@ export default function CaptainDashboard() {
     }
 
     try {
-      const response = await apiRequest('POST', '/api/orders/calculate-route', {
-        origin: {
-          lat: currentLocation.lat,
-          lng: currentLocation.lng
-        },
-        destination: {
-          lat: destinationLat,
-          lng: destinationLng
-        }
+      // استخدام captain authentication headers
+      const captainSession = localStorage.getItem('captain_session') || captainData?.id;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (captainSession) {
+        headers['x-captain-session'] = captainSession;
+        headers['Authorization'] = `Bearer ${captainSession}`;
+      }
+
+      const response = await fetch('/api/orders/calculate-route', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          origin: {
+            lat: currentLocation.lat,
+            lng: currentLocation.lng
+          },
+          destination: {
+            lat: destinationLat,
+            lng: destinationLng
+          }
+        })
       });
 
-      if (response.success && response.route) {
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'فشل في حساب المسار');
+      }
+
+      if (data.success && data.route) {
         const routeInfo: RouteInfo = {
           orderId,
-          routeData: response.route.routeData,
-          encodedPolyline: response.route.encodedPolyline,
-          estimatedDistance: response.route.estimatedDistance,
-          estimatedDuration: response.route.estimatedDuration,
-          routeSteps: response.route.routeSteps
+          routeData: data.route.routeData,
+          encodedPolyline: data.route.encodedPolyline,
+          estimatedDistance: data.route.estimatedDistance,
+          estimatedDuration: data.route.estimatedDuration,
+          routeSteps: data.route.routeSteps
         };
         
         setCurrentRoute(routeInfo);
@@ -398,6 +420,7 @@ export default function CaptainDashboard() {
         });
       }
     } catch (error: any) {
+      console.error('خطأ في حساب المسار:', error);
       toast({
         title: '❌ خطأ في حساب المسار',
         description: error.message || 'فشل في حساب المسار',
