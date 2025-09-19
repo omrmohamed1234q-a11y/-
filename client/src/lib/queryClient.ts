@@ -69,11 +69,20 @@ export async function getAuthHeaders(options: { url?: string; forceAdmin?: boole
     
     if (session?.access_token) {
       console.log(`🔑 Using Supabase authentication for user: ${session.user.email} (${session.user.id})`);
-      return {
+      
+      const headers: Record<string, string> = {
         'Authorization': `Bearer ${session.access_token}`,
         'X-User-ID': session.user.id,
         'X-User-Role': session.user.user_metadata?.role || 'customer',
       };
+      
+      // DEVELOPMENT MODE: Add dev-test-token for notification APIs  
+      if (options.url && (options.url.includes('/api/notifications') || options.url.includes('/api/notification'))) {
+        headers['X-Admin-Token'] = 'dev-test-token';
+        console.log('🧪 DEV MODE: Added dev-test-token for notification API');
+      }
+      
+      return headers;
     }
 
     // FALLBACK: No valid authentication found
