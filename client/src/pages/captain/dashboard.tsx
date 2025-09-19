@@ -252,11 +252,12 @@ export default function CaptainDashboard() {
   const { data: availableOrders = [], isLoading: ordersLoading } = useQuery<CaptainOrder[]>({
     queryKey: ['/api/captain/available-orders', captainData?.id],
     queryFn: async () => {
-      const captainSession = localStorage.getItem('captain_session');
+      const captainSession = localStorage.getItem('captain_session') || captainData?.id;
       const headers: Record<string, string> = {};
       
       if (captainSession) {
         headers['x-captain-session'] = captainSession;
+        headers['Authorization'] = `Bearer ${captainSession}`;
       }
       
       const response = await fetch(`/api/captain/${captainData?.id}/available-orders`, {
