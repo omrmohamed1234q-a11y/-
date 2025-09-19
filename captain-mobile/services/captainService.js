@@ -475,13 +475,40 @@ class CaptainService {
   }
 
   /**
-   * معالج الطلب الجديد
+   * معالج الطلب الجديد - محدث ليتكامل مع notification backend
    */
-  handleNewOrder(orderData) {
+  async handleNewOrder(orderData) {
     console.log('🚚 New order available:', orderData);
     
     // إضافة الطلب للقائمة
     this.orders.push(orderData);
+    
+    // إرسال إشعار للbackend API عن الطلب الجديد
+    try {
+      await this.sendNotificationToBackend({
+        type: 'new_order',
+        title: '🚚 طلب جديد متاح',
+        message: `طلب رقم ${orderData.orderNumber || orderData.id} متاح للتوصيل`,
+        data: orderData,
+        priority: 'high'
+      });
+    } catch (error) {
+      console.warn('⚠️ Failed to send new order notification to backend:', error.message);
+    }
+    
+    // إخطار notification service المحلي أيضاً
+    try {
+      const notificationService = require('./notificationService.js').default || require('./notificationService.js');
+      await notificationService.addNotification({
+        type: 'new_order',
+        title: '🚚 طلب جديد متاح',
+        message: `طلب رقم ${orderData.orderNumber || orderData.id} متاح للتوصيل`,
+        data: orderData,
+        priority: 'high'
+      });
+    } catch (error) {
+      console.warn('⚠️ Failed to add notification locally:', error.message);
+    }
     
     // إخطار المستمعين
     this.notifyHandlers('onNewOrder', orderData);
@@ -508,6 +535,48 @@ class CaptainService {
     
     // إخطار المستمعين
     this.notifyHandlers('onOrdersUpdate', this.orders);
+  }
+
+  /**
+   * إرسال إشعار للbackend API - مثل notification service
+   */
+  async sendNotificationToBackend(notification) {
+    try {
+      // الحصول على user ID من الكابتن الحالي أو fallback
+      let userId = this.captain?.id;
+      if (!userId) {
+        userId = '3e3882cc-81fa-48c9-bc69-c290128f4ff2'; // fallback test user
+      }
+
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Token': 'dev-test-token',
+          'X-User-ID': userId,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          type: notification.type,
+          title: notification.title,
+          body: notification.message,
+          metadata: notification.data,
+          priority: notification.priority
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Captain notification sent to backend API successfully');
+      return result;
+
+    } catch (error) {
+      console.error('❌ Captain failed to send notification to backend API:', error);
+      throw error;
+    }
   }
 
   /**
