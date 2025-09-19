@@ -256,8 +256,8 @@ export default function CheckoutPage() {
       deliveryAddress: fullAddress,
       phoneVerified: isPhoneVerified,
       deliveryCoordinates: selectedLocation ? {
-        lat: selectedLocation.lat,
-        lng: selectedLocation.lng
+        lat: selectedLocation.latitude,
+        lng: selectedLocation.longitude
       } : null,
       appliedCoupon: appliedCoupon ? {
         code: appliedCoupon.code,
