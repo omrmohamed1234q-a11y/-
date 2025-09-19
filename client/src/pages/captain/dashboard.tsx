@@ -256,7 +256,7 @@ export default function CaptainDashboard() {
       const headers: Record<string, string> = {};
       
       if (captainSession) {
-        headers['X-Captain-Session'] = captainSession;
+        headers['x-captain-session'] = captainSession;
       }
       
       const response = await fetch(`/api/captain/${captainData?.id}/available-orders`, {

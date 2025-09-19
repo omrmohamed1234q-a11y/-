@@ -255,6 +255,10 @@ export default function CheckoutPage() {
       customerPhone: verifiedPhoneNumber || formData.customerPhone,
       deliveryAddress: fullAddress,
       phoneVerified: isPhoneVerified,
+      deliveryCoordinates: selectedLocation ? {
+        lat: selectedLocation.lat,
+        lng: selectedLocation.lng
+      } : null,
       appliedCoupon: appliedCoupon ? {
         code: appliedCoupon.code,
         discountAmount: appliedCoupon.discountAmount,

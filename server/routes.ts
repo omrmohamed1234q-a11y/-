@@ -4510,7 +4510,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user?.id;
       const { 
+        customerName,
+        customerPhone,
+        customerEmail,
         deliveryAddress,
+        deliveryCoordinates,
         deliveryMethod = 'delivery',
         paymentMethod = 'cash',
         notes,
@@ -4622,10 +4626,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }),
+        customerName,
+        customerPhone,
+        customerEmail,
         subtotal: cart.subtotal.toString(),
         totalAmount: cart.subtotal.toString(),
-        status: 'pending',
+        status: 'ready',
         deliveryAddress,
+        deliveryCoordinates: deliveryCoordinates || null,
         deliveryMethod,
         paymentMethod,
         deliveryNotes: notes,
