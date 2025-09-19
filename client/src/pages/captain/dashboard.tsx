@@ -820,34 +820,66 @@ export default function CaptainDashboard() {
               <CardContent>
                 {currentLocation ? (
                   <div className="space-y-4">
-                    <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden">
-                      {/* مكان مكون Google Maps */}
-                      <div className="text-center">
-                        <Map className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 font-medium">خريطة Google Maps</p>
-                        <p className="text-sm text-gray-500 mt-2">سيتم تحميلها قريباً...</p>
-                        
-                        {/* معلومات الموقع */}
-                        <div className="mt-6 p-4 bg-blue-50 rounded-lg text-left">
-                          <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="h-96 bg-gray-100 rounded-lg relative overflow-hidden">
+                      {currentLocation ? (
+                        <GoogleMap
+                          customerLocation={currentLocation}
+                          driverLocation={{
+                            lat: currentLocation.lat,
+                            lng: currentLocation.lng,
+                            timestamp: Date.now(),
+                            driverId: captainData?.id || 'captain-001',
+                            driverName: captainData?.name || 'الكابتن',
+                            speed: 0,
+                            heading: 0
+                          }}
+                          orderDestination={currentRoute ? {
+                            lat: availableOrders.find(o => o.id === currentRoute.orderId)?.deliveryCoordinates?.lat || 0,
+                            lng: availableOrders.find(o => o.id === currentRoute.orderId)?.deliveryCoordinates?.lng || 0
+                          } : undefined}
+                          routeData={{
+                            routes: currentRoute?.routeData ? [currentRoute.routeData] : [],
+                            encodedPolyline: currentRoute?.encodedPolyline,
+                            estimatedDistance: currentRoute?.estimatedDistance,
+                            estimatedDuration: currentRoute?.estimatedDuration
+                          }}
+                          showRoute={!!currentRoute}
+                          isDriverMode={true}
+                          height="384px"
+                          zoom={13}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <Map className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-600 font-medium">خريطة Google Maps</p>
+                            <p className="text-sm text-gray-500 mt-2">يتم تحديد الموقع...</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* معلومات الموقع الحالي */}
+                      {currentLocation && (
+                        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-md text-left min-w-[200px]">
+                          <div className="grid grid-cols-2 gap-3 text-sm">
                             <div>
                               <span className="font-medium text-gray-600">العرض:</span>
-                              <p className="text-blue-700 font-mono">{currentLocation.lat.toFixed(6)}</p>
+                              <p className="text-blue-700 font-mono text-xs">{currentLocation.lat.toFixed(6)}</p>
                             </div>
                             <div>
                               <span className="font-medium text-gray-600">الطول:</span>
-                              <p className="text-blue-700 font-mono">{currentLocation.lng.toFixed(6)}</p>
+                              <p className="text-blue-700 font-mono text-xs">{currentLocation.lng.toFixed(6)}</p>
                             </div>
                           </div>
                           
                           {accuracy && (
-                            <div className="mt-3 pt-3 border-t border-blue-200">
-                              <span className="font-medium text-gray-600">دقة GPS:</span>
-                              <p className="text-green-700">{Math.round(accuracy)} متر</p>
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <span className="font-medium text-gray-600 text-xs">دقة GPS:</span>
+                              <p className="text-green-700 text-xs">{Math.round(accuracy)} متر</p>
                             </div>
                           )}
                         </div>
-                      </div>
+                      )}
                       
                       {/* معلومات المسار */}
                       {currentRoute && (

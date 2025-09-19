@@ -24,6 +24,14 @@ interface DriverLocation extends Location {
   heading?: number;
 }
 
+interface RouteData {
+  routes: any[];
+  encodedPolyline?: string;
+  estimatedDistance?: number;
+  estimatedDuration?: number;
+  steps?: any[];
+}
+
 interface GoogleMapProps {
   customerLocation?: Location;
   driverLocation?: DriverLocation;
@@ -32,6 +40,8 @@ interface GoogleMapProps {
   isDriverMode?: boolean;
   zoom?: number;
   height?: string;
+  routeData?: RouteData;
+  showRoute?: boolean;
 }
 
 export default function GoogleMap({
@@ -41,7 +51,9 @@ export default function GoogleMap({
   onDriverLocationUpdate,
   isDriverMode = false,
   zoom = 13,
-  height = '400px'
+  height = '400px',
+  routeData,
+  showRoute = false
 }: GoogleMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -49,6 +61,7 @@ export default function GoogleMap({
   const customerMarkerRef = useRef<any>(null);
   const destinationMarkerRef = useRef<any>(null);
   const routeRef = useRef<any>(null);
+  const polylineRef = useRef<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trackingActive, setTrackingActive] = useState(false);
@@ -120,6 +133,68 @@ export default function GoogleMap({
       setError('خطأ في إنشاء الخريطة');
     }
   }, [isLoaded, zoom, customerLocation, driverLocation]);
+
+  // دالة لرسم المسار على الخريطة
+  const drawRoute = (routeData: RouteData) => {
+    if (!mapInstanceRef.current || !window.google) return;
+
+    // مسح المسار السابق
+    if (polylineRef.current) {
+      polylineRef.current.setMap(null);
+      polylineRef.current = null;
+    }
+
+    try {
+      let pathCoordinates: any[] = [];
+
+      // استخدام encoded polyline إذا كان متاح
+      if (routeData.encodedPolyline) {
+        pathCoordinates = window.google.maps.geometry.encoding.decodePath(routeData.encodedPolyline);
+      }
+      // أو استخدام البيانات المباشرة من Google Directions API
+      else if (routeData.routes && routeData.routes.length > 0) {
+        const route = routeData.routes[0];
+        if (route.overview_polyline && route.overview_polyline.points) {
+          pathCoordinates = window.google.maps.geometry.encoding.decodePath(route.overview_polyline.points);
+        }
+      }
+
+      if (pathCoordinates.length > 0) {
+        // إنشاء polyline للمسار
+        const routePolyline = new window.google.maps.Polyline({
+          path: pathCoordinates,
+          geodesic: true,
+          strokeColor: '#4F46E5', // لون أزرق
+          strokeOpacity: 1.0,
+          strokeWeight: 4,
+          clickable: false
+        });
+
+        routePolyline.setMap(mapInstanceRef.current);
+        polylineRef.current = routePolyline;
+
+        // تعديل حدود الخريطة لتشمل كامل المسار
+        const bounds = new window.google.maps.LatLngBounds();
+        pathCoordinates.forEach(coord => bounds.extend(coord));
+        mapInstanceRef.current.fitBounds(bounds, 50); // 50px padding
+
+        console.log('✅ تم رسم المسار على الخريطة');
+      }
+    } catch (error) {
+      console.error('❌ خطأ في رسم المسار:', error);
+    }
+  };
+
+  // رسم المسار عند توفر بيانات المسار
+  useEffect(() => {
+    if (showRoute && routeData && isLoaded) {
+      drawRoute(routeData);
+    } else if (!showRoute && polylineRef.current) {
+      // مسح المسار إذا تم إلغاء العرض
+      polylineRef.current.setMap(null);
+      polylineRef.current = null;
+    }
+  }, [showRoute, routeData, isLoaded]);
 
   // إضافة العلامات
   useEffect(() => {
@@ -194,11 +269,38 @@ export default function GoogleMap({
       animation: window.google.maps.Animation.DROP
     });
 
-    // رسم المسار إذا كانت الوجهة متاحة
+    // رسم المسار باستخدام Google Directions API إذا كانت الوجهة متاحة
     if (orderDestination) {
-      drawRoute(
-        { lat: driverLocation.lat, lng: driverLocation.lng },
-        orderDestination
+      const directionsService = new window.google.maps.DirectionsService();
+      const directionsRenderer = new window.google.maps.DirectionsRenderer({
+        suppressMarkers: true,
+        strokeColor: '#3B82F6',
+        strokeWeight: 4,
+        strokeOpacity: 0.8
+      });
+
+      // إزالة المسار القديم
+      if (routeRef.current) {
+        routeRef.current.setMap(null);
+      }
+
+      directionsService.route(
+        {
+          origin: { lat: driverLocation.lat, lng: driverLocation.lng },
+          destination: orderDestination,
+          travelMode: window.google.maps.TravelMode.DRIVING,
+          avoidHighways: false,
+          avoidTolls: false
+        },
+        (result: any, status: any) => {
+          if (status === 'OK') {
+            directionsRenderer.setDirections(result);
+            directionsRenderer.setMap(mapInstanceRef.current);
+            routeRef.current = directionsRenderer;
+          } else {
+            console.warn('فشل في رسم المسار:', status);
+          }
+        }
       );
     }
 
@@ -206,43 +308,6 @@ export default function GoogleMap({
     mapInstanceRef.current.setCenter({ lat: driverLocation.lat, lng: driverLocation.lng });
     
   }, [driverLocation, orderDestination]);
-
-  // رسم المسار
-  const drawRoute = (start: Location, end: Location) => {
-    if (!mapInstanceRef.current || !window.google) return;
-
-    const directionsService = new window.google.maps.DirectionsService();
-    const directionsRenderer = new window.google.maps.DirectionsRenderer({
-      suppressMarkers: true,
-      strokeColor: '#3B82F6',
-      strokeWeight: 4,
-      strokeOpacity: 0.8
-    });
-
-    // إزالة المسار القديم
-    if (routeRef.current) {
-      routeRef.current.setMap(null);
-    }
-
-    directionsService.route(
-      {
-        origin: start,
-        destination: end,
-        travelMode: window.google.maps.TravelMode.DRIVING,
-        avoidHighways: false,
-        avoidTolls: false
-      },
-      (result: any, status: any) => {
-        if (status === 'OK') {
-          directionsRenderer.setDirections(result);
-          directionsRenderer.setMap(mapInstanceRef.current);
-          routeRef.current = directionsRenderer;
-        } else {
-          console.warn('فشل في رسم المسار:', status);
-        }
-      }
-    );
-  };
 
   // بدء تتبع موقع الكابتن (للكباتن فقط)
   const startLocationTracking = () => {
