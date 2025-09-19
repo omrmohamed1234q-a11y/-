@@ -3448,6 +3448,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add test order for captain (temporary endpoint for testing - NO AUTH)
+  app.post('/api/orders/add-test-captain-order', async (req, res) => {
+    try {
+      const testOrder = {
+        id: `test-captain-order-${Date.now()}`,
+        orderNumber: `TEST-${Date.now()}`,
+        userId: 'test-user-001',
+        items: [
+          {
+            productId: 'test-product',
+            quantity: 10,
+            price: 15,
+            name: 'طباعة مستندات A4',
+            notes: 'جودة عالية'
+          }
+        ],
+        totalAmount: 150,
+        status: 'ready', // جاهز للتوصيل
+        customerName: 'أحمد محمود التجريبي',
+        customerPhone: '+201234567890',
+        deliveryAddress: 'شارع التحرير، وسط البلد، القاهرة',
+        deliveryCoordinates: {
+          lat: 30.0444196,
+          lng: 31.2357116
+        },
+        paymentMethod: 'cash',
+        specialInstructions: 'اتصل عند الوصول - طلب تجريبي',
+        priority: 'normal',
+        estimatedDelivery: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        timeline: [
+          {
+            timestamp: new Date().toISOString(),
+            status: 'created',
+            description: 'تم إنشاء الطلب التجريبي',
+            location: 'النظام'
+          },
+          {
+            timestamp: new Date().toISOString(),
+            status: 'ready',
+            description: 'جاهز للتوصيل بواسطة الكابتن',
+            location: 'مستودع الطباعة'
+          }
+        ]
+      };
+
+      const createdOrder = await storage.createOrder(testOrder);
+      console.log('🧪 تم إضافة طلب تجريبي للكابتن:', createdOrder.id);
+
+      res.json({
+        success: true,
+        message: 'تم إضافة طلب تجريبي للكابتن',
+        order: createdOrder
+      });
+    } catch (error) {
+      console.error('❌ خطأ في إضافة طلب تجريبي:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في إضافة طلب تجريبي'
+      });
+    }
+  });
+
   // Get all orders for current user
   app.get('/api/orders/user', requireAuth, async (req: any, res) => {
     try {
