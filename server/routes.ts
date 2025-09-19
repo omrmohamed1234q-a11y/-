@@ -2530,6 +2530,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== LEGACY ADMIN ORDERS ROUTES (للنظام الأصلي) ====================
+  
+  // PUT: Update order - For legacy orders-management page
+  app.put("/api/admin/orders/:id", isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      console.log(`🔄 Legacy: Updating order ${id} with updates:`, updates);
+      
+      // Update in storage with all provided fields
+      const updatedOrder = await storage.updateOrder(id, {
+        ...updates,
+        updatedAt: new Date().toISOString()
+      });
+      
+      if (!updatedOrder) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'Order not found' 
+        });
+      }
+      
+      res.json({
+        success: true,
+        order: updatedOrder
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Error updating order:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to update order' 
+      });
+    }
+  });
+
+  // DELETE: Delete order - For legacy orders-management page
+  app.delete("/api/admin/orders/:id", isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      console.log(`🗑️ Legacy: Deleting order ${id}`);
+      
+      // Delete from storage
+      const success = await storage.deleteOrder(id);
+      
+      if (!success) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'Order not found' 
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Order deleted successfully'
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Error deleting order:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to delete order' 
+      });
+    }
+  });
+
+  // GET: All drivers - For legacy orders-management page
+  app.get("/api/admin/drivers", isAdminAuthenticated, async (req, res) => {
+    try {
+      console.log('🚚 Legacy: Getting all drivers for orders-management page');
+      
+      // Get all drivers from storage
+      const drivers = await storage.getAllDrivers();
+      
+      // Transform to format expected by legacy page
+      const transformedDrivers = drivers.map(driver => ({
+        id: driver.id,
+        name: driver.name,
+        username: driver.username || driver.name,
+        driverCode: driver.driverCode,
+        phone: driver.phone,
+        email: driver.email,
+        vehicleType: driver.vehicleType || 'motorcycle',
+        vehiclePlate: driver.vehiclePlate || 'غير محدد',
+        status: driver.status || 'offline',
+        isAvailable: driver.isAvailable || false,
+        currentOrders: driver.currentOrders || 0,
+        rating: driver.rating || 4.5,
+        deliveryCount: driver.deliveryCount || 0
+      }));
+      
+      console.log(`🚚 Returning ${transformedDrivers.length} drivers`);
+      res.json(transformedDrivers);
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching drivers:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch drivers' 
+      });
+    }
+  });
+
   // Helper function for status text
   function getOrderStatusText(status: string): string {
     const statusMap: Record<string, string> = {
