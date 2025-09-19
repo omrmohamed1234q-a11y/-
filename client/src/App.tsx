@@ -140,6 +140,8 @@ function AppRouter() {
           <Route path="/admin/automatic-notifications" component={() => <AdminProtectedRoute><AutomaticNotifications /></AdminProtectedRoute>} />
           <Route path="/admin/reports" component={() => <AdminProtectedRoute><SimpleAnalytics /></AdminProtectedRoute>} />
           <Route path="/admin/orders" component={() => <AdminProtectedRoute><AdminOrders /></AdminProtectedRoute>} />
+          <Route path="/admin/orders-management" component={() => <AdminProtectedRoute><OrdersManagement /></AdminProtectedRoute>} />
+          <Route path="/admin/orders-management-enhanced" component={() => <AdminProtectedRoute><OrdersManagementEnhanced /></AdminProtectedRoute>} />
           <Route path="/admin/partners" component={() => <AdminProtectedRoute><AdminPartners /></AdminProtectedRoute>} />
           <Route path="/admin/security" component={() => <AdminProtectedRoute><SecurityManagement /></AdminProtectedRoute>} />
           <Route path="/admin/security-access" component={() => <AdminProtectedRoute><SecurityAccess /></AdminProtectedRoute>} />
