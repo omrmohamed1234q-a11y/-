@@ -151,8 +151,8 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
         });
       }
 
-      // البحث عن الكبتن في النظام الآمن - استخدام getUserByUsernameOrEmail للبحث بالاسم فقط
-      const captain = await memorySecurityStorage.getUserByUsernameOrEmail(username, username);
+      // البحث عن الكبتن في النظام الآمن - استخدام function مخصص للكباتن
+      const captain = await memorySecurityStorage.getSecureCaptainByCredentials(username, username);
       
       if (!captain) {
         // تسجيل محاولة دخول فاشلة

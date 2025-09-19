@@ -1284,10 +1284,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // General API rate limiting
+  // General API rate limiting - Increased for development
   const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Limit each IP to 1000 requests per windowMs
+    max: 10000, // Limit each IP to 10000 requests per windowMs (increased for development)
     message: {
       success: false,
       message: 'تم تجاوز عدد الطلبات المسموحة. حاول مرة أخرى لاحقاً',
@@ -12035,6 +12035,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting account:', error);
       res.status(500).json({ error: 'Failed to delete account' });
+    }
+  });
+
+  // ==================== CAPTAIN LOGIN ENDPOINT (SECURE) ====================
+  
+  // Captain login rate limiting - strict protection against brute force
+  const captainLoginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Only 5 login attempts per IP per 15 minutes
+    message: {
+      success: false,
+      error: 'تم تجاوز عدد محاولات تسجيل الدخول. حاول مرة أخرى بعد 15 دقيقة'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  
+  // Secure captain login endpoint
+  app.post('/api/captain/secure-login', captainLoginLimiter, async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المستخدم وكلمة المرور مطلوبان'
+        });
+      }
+
+      // Validate JWT_SECRET exists (security requirement)
+      const secretKey = process.env.JWT_SECRET;
+      if (!secretKey) {
+        console.error('❌ CRITICAL: JWT_SECRET not configured');
+        return res.status(500).json({
+          success: false,
+          error: 'نظام المصادقة غير مكون بشكل صحيح'
+        });
+      }
+
+      // Find captain in driver storage
+      const drivers = await storage.getAllDrivers();
+      const captain = drivers.find((d: any) => 
+        d.username === username || d.email === username
+      );
+      
+      if (!captain) {
+        console.log(`❌ Captain login failed - user not found: ${username}`);
+        return res.status(401).json({
+          success: false,
+          error: 'بيانات تسجيل الدخول غير صحيحة'
+        });
+      }
+
+      // Secure password verification with bcrypt if hashed, fallback to plaintext temporarily
+      let isPasswordValid = false;
+      if (captain.password && captain.password.startsWith('$2b$')) {
+        // Password is bcrypt hashed
+        isPasswordValid = await bcrypt.compare(password, captain.password);
+      } else {
+        // Temporary plaintext comparison - will be upgraded to bcrypt
+        isPasswordValid = captain.password === password;
+        console.warn(`⚠️ Using plaintext password for captain: ${captain.username}`);
+      }
+
+      if (!isPasswordValid) {
+        console.log(`❌ Captain login failed - invalid password: ${captain.username}`);
+        return res.status(401).json({
+          success: false,
+          error: 'بيانات تسجيل الدخول غير صحيحة'
+        });
+      }
+
+      // Generate secure JWT token
+      const payload = {
+        captainId: captain.id,
+        username: captain.username,
+        email: captain.email,
+        role: 'captain',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+      };
+
+      const token = jwt.sign(payload, secretKey);
+
+      res.json({
+        success: true,
+        message: 'تم تسجيل الدخول بنجاح',
+        data: {
+          token,
+          captain: {
+            id: captain.id,
+            name: captain.name,
+            username: captain.username,
+            email: captain.email,
+            vehicleType: captain.vehicleType,
+            rating: captain.rating,
+            status: captain.status
+          }
+        }
+      });
+
+      // Secure logging without sensitive data
+      console.log(`✅ Captain login successful: ${captain.username} (ID: ${captain.id})`);
+      
+    } catch (error: any) {
+      console.error('❌ Captain login system error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'خطأ في النظام. حاول مرة أخرى'
+      });
     }
   });
 
