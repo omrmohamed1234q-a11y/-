@@ -12084,6 +12084,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Secure captain login endpoint
   app.post('/api/captain/secure-login', captainLoginLimiter, async (req, res) => {
+    console.log('🚨 CAPTAIN LOGIN ENDPOINT CALLED!');
+    console.log('📋 Request method:', req.method);
+    console.log('📋 Request URL:', req.url);
+    console.log('📋 Request headers:', JSON.stringify(req.headers));
+    
     try {
       const { username, password } = req.body;
       
