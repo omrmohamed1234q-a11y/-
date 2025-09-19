@@ -338,6 +338,11 @@ export class MemorySecurityStorage {
     );
   }
 
+  async getUserByUsernameOrEmail(username: string, email: string): Promise<SecurityUser | undefined> {
+    return this.users.find(user => 
+      user.username === username || user.email === email
+    );
+  }
 
   async getSecurityUserByToken(token: string): Promise<SecurityUser | undefined> {
     return this.users.find(user => user.currentToken === token);

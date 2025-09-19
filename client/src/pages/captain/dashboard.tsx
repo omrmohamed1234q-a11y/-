@@ -43,7 +43,9 @@ import {
   Coins,
   Navigation2,
   Gauge,
-  Trophy
+  Trophy,
+  MapPin,
+  Route2
 } from 'lucide-react';
 
 interface CaptainOrder {
@@ -738,7 +740,7 @@ export default function CaptainDashboard() {
                             className="border-purple-200 text-purple-700 hover:bg-purple-50"
                             data-testid={`button-route-${order.id}`}
                           >
-                            <Route className="w-4 h-4 mr-1" />
+                            <Route2 className="w-4 h-4 mr-1" />
                             المسار
                           </Button>
                         )}

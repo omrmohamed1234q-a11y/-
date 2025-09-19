@@ -97,11 +97,10 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       const testDriverExists = existingDrivers.find((d: any) => d.username === 'testdriver');
       
       if (!testDriverExists) {
-        // إنشاء الكابتن في النظام العادي أولاً
         await storage.createDriver({
           name: 'كبتن تجريبي',
           username: 'testdriver',
-          password: 'driverpass123',
+          password: 'Driver123!',
           email: 'testdriver@atbaali.com',
           phone: '01001234567',
           vehicleType: 'motorcycle',
@@ -111,23 +110,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
           status: 'online',
           isAvailable: true
         });
-
-        // إنشاء الكابتن في نظام الأمان أيضاً
-        const hashedPassword = await bcrypt.hash('driverpass123', 12);
-        await memorySecurityStorage.createSecurityUser({
-          username: 'testdriver',
-          email: 'testdriver@atbaali.com',
-          password_hash: hashedPassword,
-          full_name: 'كبتن تجريبي',
-          role: 'driver',
-          phone: '01001234567',
-          driver_code: 'DR001',
-          is_active: true,
-          failed_attempts: 0
-        });
-
-        console.log('✅ تم إنشاء كبتن تجريبي في النظامين العادي والآمن');
-        console.log('🔑 بيانات الدخول: testdriver / driverpass123');
+        console.log('✅ تم إنشاء كبتن تجريبي في النظام العادي');
       }
     } catch (error) {
       console.error('❌ خطأ في إنشاء الكبتن التجريبي:', error);
@@ -151,8 +134,8 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
         });
       }
 
-      // البحث عن الكبتن في النظام الآمن - استخدام function مخصص للكباتن
-      const captain = await memorySecurityStorage.getSecureCaptainByCredentials(username, username);
+      // البحث عن الكبتن في النظام الآمن - استخدام getUserByUsernameOrEmail للبحث بالاسم فقط
+      const captain = await memorySecurityStorage.getUserByUsernameOrEmail(username, username);
       
       if (!captain) {
         // تسجيل محاولة دخول فاشلة
