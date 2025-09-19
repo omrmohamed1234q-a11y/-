@@ -9374,7 +9374,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Method 1: Captain JWT token validation
       if (userType === 'captain') {
         try {
-          const secretKey = process.env.JWT_SECRET || 'atbaali-captain-secret-key-2025';
+          const secretKey = process.env.JWT_SECRET;
+          
+          if (!secretKey) {
+            console.error('❌ SECURITY ERROR: JWT_SECRET environment variable is required');
+            return res.status(500).json({
+              success: false,
+              error: 'JWT_SECRET environment variable must be set for security'
+            });
+          }
           const decoded = jwt.verify(token, secretKey) as any;
           
           if (decoded.captainId === userId && decoded.role === 'captain') {

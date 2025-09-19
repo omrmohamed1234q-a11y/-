@@ -88,23 +88,56 @@ export function useWebSocket(): WebSocketHook {
     isConnecting: false
   });
 
-  // Get authentication token for WebSocket connection
-  const getAuthToken = useCallback(async () => {
-    // Check localStorage first (for admin users)
+  // Get authentication details for WebSocket connection
+  const getAuthDetails = useCallback(async () => {
+    // Check for captain authentication first
+    const captainSession = localStorage.getItem('captain_session');
+    if (captainSession) {
+      try {
+        const captainData = JSON.parse(captainSession);
+        if (captainData.token) {
+          console.log('🔑 Using Captain authentication for user:', captainData.username || captainData.captainId);
+          return {
+            token: captainData.token,
+            userType: 'captain',
+            userId: captainData.captainId,
+            userData: captainData
+          };
+        }
+      } catch (error) {
+        console.warn('⚠️ Invalid captain session data:', error);
+      }
+    }
+    
+    // Check localStorage for admin token
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
-      return storedToken;
+      return {
+        token: storedToken,
+        userType: 'admin',
+        userId: user?.id,
+        userData: user
+      };
     }
     
     // Fall back to Supabase session for regular users
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      return session?.access_token || null;
+      if (session?.access_token && user) {
+        console.log('🔑 Using Supabase authentication for user:', user.email, `(${user.id})`);
+        return {
+          token: session.access_token,
+          userType: 'customer',
+          userId: user.id,
+          userData: user
+        };
+      }
     } catch (error) {
-      console.warn('⚠️ Failed to get auth token:', error);
-      return null;
+      console.warn('⚠️ Failed to get Supabase session:', error);
     }
-  }, []);
+    
+    return null;
+  }, [user]);
 
   // إنشاء اتصال WebSocket - RE-ENABLED after fixing auth issues
   const connect = useCallback(() => {
@@ -136,30 +169,28 @@ export function useWebSocket(): WebSocketHook {
         // Request notification permission
         requestNotificationPermission();
 
-        // مصادقة المستخدم إذا كان متاحاً مع JWT token
-        if (user) {
-          const token = await getAuthToken();
-          
-          // Only authenticate if we have a valid JWT token
-          if (token && token !== 'temp-token') {
-            const authMessage: WebSocketMessage = {
-              type: 'authenticate',
-              data: {
-                userId: user.id,
-                userType: 'customer',
-                token: token
-              }
-            };
-            ws.send(JSON.stringify(authMessage));
-          } else {
-            console.log('⚠️ No valid JWT token available for WebSocket authentication');
-            // Close connection if no valid token
-            setState(prev => ({
-              ...prev,
-              error: 'مطلوب تسجيل دخول صالح للاتصال'
-            }));
-            ws.close(4001, 'Authentication required');
-          }
+        // مصادقة المستخدم مع دعم Captain و Supabase authentication
+        const authDetails = await getAuthDetails();
+        
+        if (authDetails && authDetails.token !== 'temp-token') {
+          const authMessage: WebSocketMessage = {
+            type: 'authenticate',
+            data: {
+              userId: authDetails.userId,
+              userType: authDetails.userType,
+              token: authDetails.token
+            }
+          };
+          ws.send(JSON.stringify(authMessage));
+          console.log(`🔐 WebSocket authentication sent for ${authDetails.userType}: ${authDetails.userId}`);
+        } else {
+          console.log('⚠️ No valid authentication available for WebSocket connection');
+          // Close connection if no valid token
+          setState(prev => ({
+            ...prev,
+            error: 'مطلوب تسجيل دخول صالح للاتصال'
+          }));
+          ws.close(4001, 'Authentication required');
         }
 
         // بدء ping للحفاظ على الاتصال

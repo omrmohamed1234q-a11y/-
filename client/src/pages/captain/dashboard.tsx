@@ -44,7 +44,7 @@ import {
   Navigation2,
   Gauge,
   Trophy,
-  MapPin2,
+  MapPin,
   Route2
 } from 'lucide-react';
 
@@ -774,7 +774,7 @@ export default function CaptainDashboard() {
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <MapPin2 className="w-5 h-5 text-blue-600" />
+                  <MapPin className="w-5 h-5 text-blue-600" />
                   خريطة التوصيل التفاعلية
                 </CardTitle>
               </CardHeader>

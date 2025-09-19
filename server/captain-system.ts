@@ -204,7 +204,12 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
         exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
       };
 
-      const secretKey = process.env.JWT_SECRET || 'atbaali-captain-secret-key-2025';
+      const secretKey = process.env.JWT_SECRET;
+      
+      if (!secretKey) {
+        console.error('❌ SECURITY ERROR: JWT_SECRET environment variable is required');
+        throw new Error('JWT_SECRET environment variable must be set for security');
+      }
       const captainToken = jwt.sign(payload, secretKey);
 
       // تحديث آخر دخول
@@ -299,7 +304,12 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
             exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60)
           };
 
-          const secretKey = process.env.JWT_SECRET || 'atbaali-captain-secret-key-2025';
+          const secretKey = process.env.JWT_SECRET;
+      
+      if (!secretKey) {
+        console.error('❌ SECURITY ERROR: JWT_SECRET environment variable is required');
+        throw new Error('JWT_SECRET environment variable must be set for security');
+      }
           const captainToken = jwt.sign(payload, secretKey);
 
           await memorySecurityStorage.createSecurityLog({
