@@ -12087,7 +12087,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = req.body;
       
+      console.log(`🔍 Captain login debug - Username: '${username}', Password length: ${password?.length || 'undefined'}`);
+      console.log('📥 Full request body:', JSON.stringify(req.body));
+      
       if (!username || !password) {
+        console.log('❌ Missing credentials in request');
         return res.status(400).json({
           success: false,
           error: 'اسم المستخدم وكلمة المرور مطلوبان'
