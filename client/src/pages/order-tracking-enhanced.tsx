@@ -33,15 +33,49 @@ export default function OrderTrackingEnhanced() {
   const [searchOrderNumber, setSearchOrderNumber] = useState('');
   const [orderToTrack, setOrderToTrack] = useState(params?.orderNumber || '');
   const [driverLocation, setDriverLocation] = useState<any>(null);
+  const [routeData, setRouteData] = useState<any>(null);
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const { toast } = useToast();
 
-  // Track order query
+  // Track order query  
   const { data: orderData, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/orders/track', orderToTrack],
     queryFn: async () => {
       if (!orderToTrack) return null;
       
-      // Simulated order tracking data - replace with real API call
+      // محاولة جلب الطلب الحقيقي أولاً
+      try {
+        const response = await apiRequest('GET', `/api/orders/user`);
+        const orders = await response.json();
+        const foundOrder = orders.find((order: any) => 
+          order.orderNumber === orderToTrack || order.id === orderToTrack
+        );
+        
+        if (foundOrder) {
+          return {
+            orderNumber: foundOrder.orderNumber,
+            orderId: foundOrder.id,
+            status: foundOrder.status,
+            statusText: foundOrder.statusText,
+            customerName: foundOrder.customerName || 'العميل',
+            customerPhone: foundOrder.customerPhone || '',
+            deliveryAddress: foundOrder.deliveryAddress,
+            deliveryMethod: foundOrder.deliveryMethod,
+            totalAmount: foundOrder.totalAmount,
+            paymentMethod: foundOrder.paymentMethod,
+            estimatedDelivery: foundOrder.estimatedDelivery,
+            driverName: foundOrder.driverName,
+            driverPhone: foundOrder.driverPhone,
+            createdAt: foundOrder.createdAt,
+            deliveryCoordinates: foundOrder.deliveryCoordinates,
+            timeline: foundOrder.timeline || []
+          };
+        }
+      } catch (err) {
+        console.error('Error fetching real order:', err);
+      }
+      
+      // Simulated order tracking data - fallback for demo
       if (orderToTrack === 'ORD-2024-001') {
         return {
           orderNumber: 'ORD-2024-001',
@@ -216,6 +250,65 @@ export default function OrderTrackingEnhanced() {
     if (orderData?.deliveryAddress) {
       const encodedAddress = encodeURIComponent(orderData.deliveryAddress);
       window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+    }
+  };
+
+  // حساب المسار
+  const calculateRoute = async () => {
+    if (!orderData?.orderId) {
+      toast({
+        title: "خطأ",
+        description: "لا يمكن حساب المسار - الطلب غير صحيح",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCalculatingRoute(true);
+    
+    try {
+      const response = await fetch('/api/orders/calculate-route', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          orderId: orderData.orderId,
+          origin: {
+            lat: 30.001703, // Default driver location - يمكن تحديثه بالموقع الحقيقي
+            lng: 32.500275
+          },
+          destination: orderData.deliveryCoordinates || {
+            lat: 29.964875, // Default coordinates for Suez
+            lng: 32.559544
+          },
+          waypoints: []
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'فشل في حساب المسار');
+      }
+
+      if (data.success && data.route) {
+        setRouteData(data.route);
+        toast({
+          title: '✅ تم حساب المسار',
+          description: `المسافة: ${Math.round(data.route.estimatedDistance/1000)}كم، الزمن: ${Math.round(data.route.estimatedDuration/60)}دقيقة`
+        });
+      }
+    } catch (error: any) {
+      console.error('خطأ في حساب المسار:', error);
+      toast({
+        title: '❌ خطأ في حساب المسار',
+        description: error.message || 'فشل في حساب المسار',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCalculatingRoute(false);
     }
   };
 
@@ -400,6 +493,20 @@ export default function OrderTrackingEnhanced() {
                             موقع السائق
                           </Button>
                         )}
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={calculateRoute}
+                          disabled={isCalculatingRoute}
+                          data-testid="calculate-route-button"
+                        >
+                          {isCalculatingRoute ? (
+                            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                          ) : (
+                            <Navigation className="w-3 h-3 mr-1" />
+                          )}
+                          {isCalculatingRoute ? 'حساب...' : 'المسار'}
+                        </Button>
                         <Button size="sm" onClick={callDriver}>
                           <Phone className="w-3 h-3 mr-1" />
                           اتصال
@@ -418,6 +525,54 @@ export default function OrderTrackingEnhanced() {
                         </div>
                         <div className="text-xs text-green-600 mt-1">
                           آخر تحديث: {new Date(liveDriverLocation.lastUpdate).toLocaleTimeString('ar-EG')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Route Information */}
+                {routeData && (
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Navigation className="h-5 w-5 text-green-600" />
+                      <h3 className="text-lg font-medium text-green-900">معلومات المسار</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="bg-white p-3 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {Math.round(routeData.estimatedDistance / 1000)}
+                        </div>
+                        <div className="text-sm text-gray-600">كيلومتر</div>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {Math.round(routeData.estimatedDuration / 60)}
+                        </div>
+                        <div className="text-sm text-gray-600">دقيقة</div>
+                      </div>
+                    </div>
+
+                    {routeData.routeSteps && routeData.routeSteps.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">خطوات المسار:</h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {routeData.routeSteps.slice(0, 5).map((step: any, index: number) => (
+                            <div key={index} className="bg-white p-2 rounded text-sm">
+                              <div className="flex items-start gap-2">
+                                <span className="bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                                  {index + 1}
+                                </span>
+                                <span className="text-gray-700">{step.instruction}</span>
+                              </div>
+                            </div>
+                          ))}
+                          {routeData.routeSteps.length > 5 && (
+                            <div className="text-xs text-gray-500 text-center">
+                              ...و {routeData.routeSteps.length - 5} خطوة أخرى
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
