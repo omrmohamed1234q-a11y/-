@@ -29,6 +29,7 @@ export interface IStorage {
   updateOrderRating(id: string, rating: number, review?: string): Promise<Order>;
   cancelOrder(id: string): Promise<Order>;
   addDriverNote(id: string, note: string): Promise<Order>;
+  addOrderTimelineEvent(orderId: string, event: any): Promise<void>;
   getActiveOrders(): Promise<Order[]>;
   getOrdersByStatus(status: string): Promise<Order[]>;
   deleteOrder(id: string): Promise<boolean>;
@@ -891,6 +892,21 @@ export class MemoryStorage implements IStorage {
     
     console.log('📋 Added driver note to order:', id);
     return this.orders[orderIndex];
+  }
+
+  async addOrderTimelineEvent(orderId: string, event: any): Promise<void> {
+    const orderIndex = this.orders.findIndex(order => order.id === orderId);
+    if (orderIndex === -1) {
+      console.log(`⚠️ Order not found for timeline event: ${orderId}`);
+      return;
+    }
+
+    // Add timeline event to order (for now, just log it - can be extended later)
+    console.log(`📅 Timeline event for order ${orderId}:`, event);
+    
+    // Could store timeline in order object if schema supports it
+    // this.orders[orderIndex].timeline = this.orders[orderIndex].timeline || [];
+    // this.orders[orderIndex].timeline.push(event);
   }
   
   async getActiveOrders(): Promise<Order[]> { 
