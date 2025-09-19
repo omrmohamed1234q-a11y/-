@@ -501,6 +501,35 @@ export class AutomaticNotificationService {
 
       await this.sendRealtimeNotification(data.userId, notification);
 
+      // 📧 Send reward email notification
+      const user = await this.storage.getUser(data.userId);
+      if (user && user.email) {
+        console.log(`📧 Sending reward email to: ${user.email}`);
+        
+        // Get admin name if available
+        let adminName = null;
+        if (data.adminId) {
+          try {
+            const adminUser = await this.storage.getUser(data.adminId);
+            adminName = adminUser?.fullName || adminUser?.username || 'الإدارة';
+          } catch (error) {
+            console.log('⚠️ Could not fetch admin name:', error);
+            adminName = 'الإدارة';
+          }
+        }
+
+        await this.smartDelivery.sendSmartReward(user.email, {
+          points: data.points,
+          reason: data.reason,
+          adminName: adminName,
+          userName: user.fullName || user.username || 'عميلنا العزيز'
+        });
+        
+        console.log(`✅ Reward email sent to: ${user.email}`);
+      } else {
+        console.log(`⚠️ No email found for user: ${data.userId}`);
+      }
+
       console.log(`✅ Reward granted notification sent: ${data.userId}`);
     } catch (error) {
       console.error('Error sending reward granted notification:', error);

@@ -472,6 +472,68 @@ class SmartDeliveryService {
       html: personalizedHtml,
     });
   }
+
+  /**
+   * إرسال إشعار المكافآت والنقاط
+   * Send reward and points notification email
+   */
+  async sendSmartReward(userEmail: string, rewardData: any): Promise<boolean> {
+    const rewardTemplate = {
+      subject: '🎁 تهانينا! حصلت على مكافأة جديدة - {{points}} نقطة!',
+      html: `
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px; overflow: hidden;">
+          <div style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.1);">
+            <h1 style="color: #FFD700; font-size: 2.5em; margin: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">🎉 تهانينا! 🎉</h1>
+            <p style="font-size: 1.3em; margin: 10px 0 0 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">حصلت على مكافأة جديدة!</p>
+          </div>
+          
+          <div style="background: white; color: #333; padding: 30px; margin: 0;">
+            <div style="text-align: center; margin-bottom: 25px;">
+              <div style="background: linear-gradient(45deg, #ff6b6b, #ffa726); border-radius: 50%; width: 100px; height: 100px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 3em;">🎁</div>
+              <h2 style="color: #2c3e50; margin: 0;">مكافأة خاصة لك!</h2>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; text-align: center; margin: 20px 0;">
+              <h3 style="color: #007bff; font-size: 2em; margin: 0 0 10px 0;">{{points}} نقطة 💎</h3>
+              <p style="color: #666; font-size: 1.1em; margin: 0;">{{reason}}</p>
+              {{#adminName}}<p style="color: #28a745; margin: 10px 0 0 0; font-weight: bold;">منحت بواسطة: {{adminName}}</p>{{/adminName}}
+            </div>
+            
+            <div style="background: #e8f5e8; padding: 20px; border-radius: 10px; border-right: 4px solid #28a745; margin: 20px 0;">
+              <h4 style="color: #155724; margin: 0 0 10px 0;">💡 كيف تستفيد من نقاطك:</h4>
+              <ul style="color: #155724; margin: 0; padding-right: 20px;">
+                <li>🎁 استبدال النقاط بخصومات حصرية</li>
+                <li>📚 الحصول على مواد تعليمية مجانية</li>
+                <li>🏆 الوصول للمستويات المتقدمة</li>
+                <li>🎉 مكافآت خاصة للأعضاء المميزين</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://atbaali.com/rewards" style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; padding: 15px 35px; text-decoration: none; border-radius: 30px; font-size: 1.1em; display: inline-block; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                🎁 استخدم نقاطك الآن
+              </a>
+            </div>
+            
+            <div style="text-align: center; color: #666; font-size: 0.9em; margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee;">
+              <p>شكراً لك على ثقتك في منصة اطبعلي! 💙</p>
+              <p>فريق اطبعلي</p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+
+    const personalizedSubject = this.targetingEngine.personalizeContent(rewardTemplate.subject, rewardData);
+    const personalizedHtml = this.targetingEngine.personalizeContent(rewardTemplate.html, rewardData);
+
+    return await this.sendSmartEmail({
+      to: userEmail,
+      from: 'rewards@atbaali.com',
+      subject: personalizedSubject,
+      html: personalizedHtml,
+    });
+  }
 }
 
 // ============================================================================
