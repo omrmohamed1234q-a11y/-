@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import { Truck, User, Lock, LogIn, Navigation } from 'lucide-react';
+import { Truck, LogIn } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 export default function CaptainLogin() {
@@ -18,9 +16,11 @@ export default function CaptainLogin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('🔐 Captain login attempt:', username);
+    
     if (!username || !password) {
       toast({
-        title: '❌ خطأ في البيانات',
+        title: '❌ خطأ',
         description: 'يرجى إدخال اسم المستخدم وكلمة المرور',
         variant: 'destructive'
       });
@@ -30,31 +30,48 @@ export default function CaptainLogin() {
     setIsLoading(true);
     
     try {
-      const response = await apiRequest('POST', '/api/captain/secure-login', {
-        username,
-        password
+      const response = await fetch('/api/captain/secure-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password
+        })
       });
 
       const data = await response.json();
+      console.log('📊 Login response:', data);
 
-      if (data.success) {
+      if (data.success && data.data) {
         // حفظ بيانات الكبتن
-        localStorage.setItem('captain_session', data.sessionToken);
-        localStorage.setItem('captain_data', JSON.stringify(data.captain));
+        localStorage.setItem('captain_token', data.data.token);
+        localStorage.setItem('captain_data', JSON.stringify(data.data.captain));
         
         toast({
           title: '✅ تم تسجيل الدخول بنجاح',
-          description: `مرحباً ${data.captain.name}`,
+          description: `مرحباً ${data.data.captain.name}`,
           duration: 3000
         });
 
+        console.log('✅ Captain login successful, redirecting...');
+        
         // الانتقال لصفحة الكبتن
         setLocation('/captain/dashboard');
+      } else {
+        console.error('❌ Captain login failed:', data.error || 'Unknown error');
+        toast({
+          title: '❌ فشل تسجيل الدخول',
+          description: data.error || 'بيانات تسجيل الدخول غير صحيحة',
+          variant: 'destructive'
+        });
       }
     } catch (error: any) {
+      console.error('❌ Captain login error:', error);
       toast({
-        title: '❌ خطأ في تسجيل الدخول',
-        description: error.error || 'فشل في تسجيل الدخول',
+        title: '❌ خطأ في الاتصال',
+        description: 'تعذر الاتصال بالخادم',
         variant: 'destructive'
       });
     } finally {
@@ -76,8 +93,9 @@ export default function CaptainLogin() {
 
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-xl font-semibold text-gray-800">
-              تسجيل دخول الكبتن
+            <CardTitle className="text-xl font-semibold text-gray-800 flex items-center justify-center gap-2">
+              <LogIn className="w-5 h-5" />
+              دخول آمن للكباتن
             </CardTitle>
           </CardHeader>
           
@@ -85,42 +103,36 @@ export default function CaptainLogin() {
             <form onSubmit={handleLogin} className="space-y-6">
               {/* اسم المستخدم */}
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium text-gray-700">
-                  اسم المستخدم أو البريد الإلكتروني
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10 h-12 text-lg"
-                    placeholder="أدخل اسم المستخدم"
-                    disabled={isLoading}
-                    data-testid="input-username"
-                  />
-                </div>
+                <label htmlFor="username" className="text-sm font-medium text-gray-700">
+                  اسم المستخدم أو رقم الكبتن
+                </label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-12 text-lg"
+                  placeholder="captain001"
+                  disabled={isLoading}
+                  data-testid="input-username"
+                />
               </div>
 
               {/* كلمة المرور */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="text-sm font-medium text-gray-700">
                   كلمة المرور
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 h-12 text-lg"
-                    placeholder="أدخل كلمة المرور"
-                    disabled={isLoading}
-                    data-testid="input-password"
-                  />
-                </div>
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 text-lg"
+                  placeholder="captain123"
+                  disabled={isLoading}
+                  data-testid="input-password"
+                />
               </div>
 
               {/* زر تسجيل الدخول */}
@@ -133,36 +145,33 @@ export default function CaptainLogin() {
                 {isLoading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    جاري تسجيل الدخول...
+                    جاري الدخول...
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <LogIn className="w-5 h-5" />
-                    تسجيل الدخول
+                    دخول آمن
                   </div>
                 )}
               </Button>
             </form>
 
-            {/* بيانات تجريبية */}
-            <div className="mt-6 p-4 bg-green-50 rounded-lg">
-              <h3 className="text-sm font-semibold text-green-800 mb-2">🔑 بيانات التجربة:</h3>
-              <div className="text-xs text-green-700 space-y-1">
-                <p><strong>المستخدم:</strong> captain001</p>
+            {/* بيانات التجربة */}
+            <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+              <h3 className="text-sm font-semibold text-green-800 mb-2 text-center">
+                🔑 بيانات التجربة
+              </h3>
+              <div className="text-xs text-green-700 space-y-1 text-center">
+                <p><strong>اسم المستخدم:</strong> captain001</p>
                 <p><strong>كلمة المرور:</strong> captain123</p>
               </div>
             </div>
 
             {/* معلومات إضافية */}
-            <div className="mt-6 flex items-center justify-center gap-4 text-xs text-gray-500">
-              <div className="flex items-center gap-1">
-                <Navigation className="w-3 h-3" />
-                تتبع GPS
-              </div>
-              <div className="flex items-center gap-1">
-                <Truck className="w-3 h-3" />
-                توصيل سريع
-              </div>
+            <div className="mt-4 text-center">
+              <p className="text-xs text-gray-500">
+                نظام آمن مع تشفير متقدم 🔒
+              </p>
             </div>
           </CardContent>
         </Card>
