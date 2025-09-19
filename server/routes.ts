@@ -353,16 +353,19 @@ const requireDriverAuth = async (req: any, res: any, next: any) => {
 
   try {
     if (isCaptain) {
-      // For captain authentication, check if captain exists in captain system
-      const captains = await captainSystem.getAllCaptains();
-      const captain = captains.find(c => c.id === token || c.username === token);
+      // For captain authentication, check if captain exists in driver storage
+      const drivers = await storage.getAllDrivers();
+      const captain = drivers.find((d: any) => d.id === token || d.username === token);
       
       if (!captain) {
+        console.log(`❌ Captain authentication failed for token: ${token}`);
         return res.status(401).json({ 
           success: false, 
           error: 'Invalid captain session' 
         });
       }
+      
+      console.log(`✅ Captain authenticated: ${captain.username || captain.name} (${captain.id})`);
       
       // Set both driver and captain for compatibility
       req.driver = {
