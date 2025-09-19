@@ -1455,10 +1455,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/admin/security-access', authLimiter);
   
   // 🚀 PERFORMANCE FIX: Exclude performance-critical endpoints from rate limiters
-  const performanceCriticalPaths = ['/cart', '/pending-uploads', '/notifications'];
+  const performanceCriticalPaths = ['/cart', '/pending-uploads', '/notifications', '/captain'];
   
   app.use('/api', (req, res, next) => {
     const isPerformanceCritical = performanceCriticalPaths.some(path => req.path.startsWith(path));
+    console.log(`🔍 Checking path: ${req.path}, Performance critical: ${isPerformanceCritical}`);
     if (isPerformanceCritical) {
       console.log(`⚡ Fast-track: ${req.method} ${req.originalUrl} (bypassing rate limiters)`);
       return next(); // Skip ALL rate limiters for performance-critical operations
@@ -1468,7 +1469,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.use('/api', (req, res, next) => {
     const isPerformanceCritical = performanceCriticalPaths.some(path => req.path.startsWith(path));
+    console.log(`🔍 Speed check path: ${req.path}, Performance critical: ${isPerformanceCritical}`);
     if (isPerformanceCritical) {
+      console.log(`⚡ Fast-track speed: ${req.method} ${req.originalUrl} (bypassing speed limiters)`);
       return next(); // Skip speed limiter for performance-critical operations
     }
     speedLimiter(req, res, next);
