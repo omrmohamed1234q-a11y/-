@@ -2610,7 +2610,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       '/api/drive/storage-info',
       '/api/drive/reinitialize',  // Public access to reinitialize Google Drive
       '/api/terms/current',  // Public access to current terms and conditions
-      '/api/privacy-policy/current'  // Public access to current privacy policy
+      '/api/privacy-policy/current',  // Public access to current privacy policy
+      '/api/orders/calculate-route'  // Public access for route calculation
     ];
     
     // Check if current path is a public endpoint
