@@ -75,7 +75,7 @@ import TermsAndConditions from '@/pages/terms-and-conditions';
 import PrivacyPolicy from '@/pages/privacy-policy';
 import SmartNotifications from '@/pages/admin/SmartNotifications';
 import { AdminProtectedRoute } from '@/components/AdminProtectedRoute';
-import CaptainSecureLogin from '@/pages/captain/secure-login';
+import CaptainSimpleLogin from '@/pages/captain/simple-login';
 import CaptainDashboard from '@/pages/captain/dashboard';
 import StorageDashboard from '@/pages/storage-dashboard';
 
@@ -123,7 +123,8 @@ function AppRouter() {
           {/* Hidden secure routes - direct access only */}
           <Route path="/admin/secure-login" component={SecureAdminLogin} />
           <Route path="/secure-admin-login" component={SecureAdminLogin} />
-          <Route path="/captain/secure-login" component={CaptainSecureLogin} />
+          <Route path="/captain/secure-login" component={CaptainSimpleLogin} />
+          <Route path="/captain/login" component={CaptainSimpleLogin} />
           <Route path="/captain/dashboard" component={CaptainDashboard} />
           <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
           <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
