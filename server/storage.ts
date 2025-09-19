@@ -68,6 +68,9 @@ export interface IStorage {
   // Admin statistics
   getAdminStats(): Promise<any>;
   
+  // Admin account operations
+  getAdminAccounts(): Promise<any[]>;
+  
   // Teacher plan operations  
   getAllTeacherPlans(): Promise<any[]>;
   getAllTeacherSubscriptions(): Promise<any[]>;
@@ -998,6 +1001,11 @@ export class MemoryStorage implements IStorage {
     };
   }
   
+  // Admin account operations
+  async getAdminAccounts(): Promise<any[]> {
+    return []; // MemoryStorage doesn't have admin accounts by default
+  }
+  
   // Stubs for all other methods - to be implemented as needed
   async getAllTeacherPlans(): Promise<any[]> { return []; }
   async getAllTeacherSubscriptions(): Promise<any[]> { return []; }
@@ -1923,6 +1931,11 @@ export class DatabaseStorage implements IStorage {
       revenue: 15000, // This would be calculated from actual orders
       monthlyGrowth: 25
     };
+  }
+  
+  // Admin account operations
+  async getAdminAccounts(): Promise<any[]> {
+    return []; // DatabaseStorage doesn't have admin accounts management yet
   }
 
   // Teacher plan operations  
@@ -3803,6 +3816,11 @@ class MemStorage implements IStorage {
       revenue: 15000,
       monthlyGrowth: 25
     };
+  }
+  
+  // Admin account operations
+  async getAdminAccounts(): Promise<any[]> {
+    return this.secureAdmins || [];
   }
 
   async getAllTeacherPlans(): Promise<any[]> {
