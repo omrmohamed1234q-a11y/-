@@ -6320,6 +6320,255 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===============================================
+  // GOOGLE DIRECTIONS API ROUTES FOR ROUTE CALCULATION
+  // ===============================================
+  
+  // Calculate route using Google Directions API
+  app.post('/api/orders/calculate-route', requireDriverAuth, async (req, res) => {
+    try {
+      const { orderId, origin, destination, waypoints = [] } = req.body;
+      
+      if (!orderId || !origin || !destination) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: orderId, origin, destination'
+        });
+      }
+
+      const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!googleApiKey) {
+        return res.status(500).json({
+          success: false,
+          message: 'Google Maps API key not configured'
+        });
+      }
+
+      // Build Google Directions API request
+      const originStr = `${origin.lat},${origin.lng}`;
+      const destinationStr = `${destination.lat},${destination.lng}`;
+      const waypointsStr = waypoints.length > 0 
+        ? `&waypoints=optimize:true|${waypoints.map((wp: any) => `${wp.lat},${wp.lng}`).join('|')}` 
+        : '';
+      
+      const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?` +
+        `origin=${originStr}&destination=${destinationStr}${waypointsStr}` +
+        `&mode=driving&language=ar&region=EG&key=${googleApiKey}`;
+
+      console.log(`🗺️  Calculating route for order ${orderId}: ${originStr} → ${destinationStr}`);
+
+      const response = await fetch(directionsUrl);
+      const directionsData = await response.json();
+
+      if (directionsData.status !== 'OK') {
+        return res.status(400).json({
+          success: false,
+          message: `Google Directions API error: ${directionsData.status}`,
+          error: directionsData.error_message
+        });
+      }
+
+      // Extract route information - aggregate all legs for multi-waypoint routes
+      const route = directionsData.routes[0];
+      
+      // Calculate total distance and duration across all legs
+      const totalDistance = route.legs.reduce((sum: number, leg: any) => sum + leg.distance.value, 0);
+      const totalDuration = route.legs.reduce((sum: number, leg: any) => sum + leg.duration.value, 0);
+      
+      const routeInfo = {
+        routeData: {
+          status: directionsData.status,
+          summary: route.summary,
+          legs_count: route.legs.length
+        }, // Lightweight version
+        routeSteps: route.legs.flatMap((leg: any) => leg.steps), // All steps from all legs
+        encodedPolyline: route.overview_polyline.points,
+        estimatedDistance: totalDistance, // meters - sum of all legs
+        estimatedDuration: totalDuration, // seconds - sum of all legs
+        routeLastUpdated: new Date(),
+        alternativeRoutes: directionsData.routes.slice(1) // Other route options
+      };
+
+      console.log(`✅ Route calculated: ${leg.distance.text} / ${leg.duration.text}`);
+
+      res.json({
+        success: true,
+        route: routeInfo,
+        message: `تم حساب المسار بنجاح: ${leg.distance.text} في ${leg.duration.text}`
+      });
+
+    } catch (error) {
+      console.error('❌ Error calculating route:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to calculate route',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Update order with calculated route data
+  app.put('/api/orders/:id/update-route', isAdminAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const routeUpdate = req.body;
+
+      // Validate route update data using our schema
+      const validRouteFields = [
+        'deliveryCoordinates', 'routeData', 'routeSteps', 'encodedPolyline',
+        'estimatedDistance', 'estimatedDuration', 'routeLastUpdated', 
+        'driverCurrentLocation', 'customerTrackingEnabled', 'routeOptimized',
+        'alternativeRoutes'
+      ];
+
+      const filteredUpdate: any = {};
+      Object.keys(routeUpdate).forEach(key => {
+        if (validRouteFields.includes(key)) {
+          filteredUpdate[key] = routeUpdate[key];
+        }
+      });
+
+      if (Object.keys(filteredUpdate).length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid route fields provided'
+        });
+      }
+
+      console.log(`🔄 Updating order ${id} with route data:`, Object.keys(filteredUpdate));
+
+      // Ensure routeLastUpdated is a proper Date object
+      if (filteredUpdate.routeLastUpdated && !(filteredUpdate.routeLastUpdated instanceof Date)) {
+        filteredUpdate.routeLastUpdated = new Date(filteredUpdate.routeLastUpdated);
+      }
+
+      // Update order in storage with route data
+      const updatedOrder = await storage.updateOrder(id, {
+        ...filteredUpdate,
+        updatedAt: new Date()
+      });
+      
+      if (!updatedOrder) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found'
+        });
+      }
+
+      console.log(`✅ Order ${id} updated with route information`);
+
+      res.json({
+        success: true,
+        order: updatedOrder,
+        message: 'تم تحديث بيانات المسار بنجاح'
+      });
+
+    } catch (error) {
+      console.error('❌ Error updating order route:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update order route',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get optimized route for multiple orders (for drivers with multiple deliveries)
+  app.post('/api/orders/optimize-route', requireDriverAuth, async (req, res) => {
+    try {
+      const { driverLocation, orderIds } = req.body;
+
+      if (!driverLocation || !orderIds || !Array.isArray(orderIds)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: driverLocation, orderIds (array)'
+        });
+      }
+
+      const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!googleApiKey) {
+        return res.status(500).json({
+          success: false,
+          message: 'Google Maps API key not configured'
+        });
+      }
+
+      // Get orders from storage
+      const orders = await Promise.all(
+        orderIds.map(id => storage.getOrder(id))
+      );
+
+      const validOrders = orders.filter(order => 
+        order && order.deliveryCoordinates
+      );
+
+      if (validOrders.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid orders with delivery coordinates found'
+        });
+      }
+
+      // Build waypoints from order delivery addresses
+      const waypoints = validOrders.map(order => 
+        `${order.deliveryCoordinates!.lat},${order.deliveryCoordinates!.lng}`
+      );
+
+      const origin = `${driverLocation.lat},${driverLocation.lng}`;
+      const destination = waypoints[waypoints.length - 1]; // Last delivery as destination
+      const waypointsStr = waypoints.length > 1 
+        ? `&waypoints=optimize:true|${waypoints.slice(0, -1).join('|')}` 
+        : '';
+
+      const optimizeUrl = `https://maps.googleapis.com/maps/api/directions/json?` +
+        `origin=${origin}&destination=${destination}${waypointsStr}` +
+        `&mode=driving&language=ar&region=EG&key=${googleApiKey}`;
+
+      console.log(`🚛 Optimizing route for ${validOrders.length} orders`);
+
+      const response = await fetch(optimizeUrl);
+      const directionsData = await response.json();
+
+      if (directionsData.status !== 'OK') {
+        return res.status(400).json({
+          success: false,
+          message: `Google Directions API error: ${directionsData.status}`,
+          error: directionsData.error_message
+        });
+      }
+
+      const route = directionsData.routes[0];
+      const totalDistance = route.legs.reduce((sum: number, leg: any) => sum + leg.distance.value, 0);
+      const totalDuration = route.legs.reduce((sum: number, leg: any) => sum + leg.duration.value, 0);
+
+      console.log(`✅ Optimized route: ${Math.round(totalDistance/1000)}km in ${Math.round(totalDuration/60)}min`);
+
+      res.json({
+        success: true,
+        optimizedRoute: {
+          routeData: directionsData,
+          waypoints: route.waypoint_order || [],
+          encodedPolyline: route.overview_polyline.points,
+          totalDistance: totalDistance, // meters
+          totalDuration: totalDuration, // seconds
+          legs: route.legs
+        },
+        orderSequence: route.waypoint_order ? 
+          route.waypoint_order.map((index: number) => validOrders[index]) : 
+          validOrders,
+        message: `تم تحسين المسار لـ ${validOrders.length} طلبات`
+      });
+
+    } catch (error) {
+      console.error('❌ Error optimizing route:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to optimize route',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Notifications endpoints with caching
   app.get('/api/notifications', async (req: any, res) => {
     try {
