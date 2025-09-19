@@ -24,12 +24,15 @@ import {
   insertUserTermsAcceptanceSchema,
   insertCartItemSchema,
   addToCartRequestSchema,
+  insertOrderSchema,
   type InsertTermsAndConditions,
   type InsertUserTermsAcceptance,
   type InsertCartItem,
-  type AddToCartRequest 
+  type AddToCartRequest,
+  type InsertOrder
 } from '../shared/schema';
 import { calculateSharedPrice, type SharedPricingOptions } from '../shared/pricing';
+import { z } from 'zod';
 import {
   insertSmartCampaignSchema,
   insertMessageTemplateSchema,
@@ -6324,17 +6327,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GOOGLE DIRECTIONS API ROUTES FOR ROUTE CALCULATION
   // ===============================================
   
+  // Zod validation schemas for route endpoints
+  const calculateRouteSchema = z.object({
+    orderId: z.string().min(1, 'Order ID is required'),
+    origin: z.object({
+      lat: z.number().min(-90).max(90, 'Invalid latitude'),
+      lng: z.number().min(-180).max(180, 'Invalid longitude')
+    }),
+    destination: z.object({
+      lat: z.number().min(-90).max(90, 'Invalid latitude'),
+      lng: z.number().min(-180).max(180, 'Invalid longitude')
+    }),
+    waypoints: z.array(z.object({
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180)
+    })).optional().default([])
+  });
+
+  const optimizeRouteSchema = z.object({
+    driverLocation: z.object({
+      lat: z.number().min(-90).max(90, 'Invalid driver latitude'),
+      lng: z.number().min(-180).max(180, 'Invalid driver longitude')
+    }),
+    orderIds: z.array(z.string().min(1)).min(1, 'At least one order ID required')
+  });
+
+  // Enhanced error handling for Google Directions API
+  const getGoogleApiErrorMessage = (status: string, error_message?: string): string => {
+    const errorMessages: { [key: string]: string } = {
+      'ZERO_RESULTS': 'لا يمكن العثور على مسار بين الموقعين المحددين',
+      'OVER_QUERY_LIMIT': 'تم تجاوز الحد المسموح من طلبات الخرائط',
+      'REQUEST_DENIED': 'تم رفض طلب الخرائط - تحقق من مفتاح API',
+      'INVALID_REQUEST': 'طلب غير صالح - تحقق من البيانات المرسلة',
+      'NOT_FOUND': 'لم يتم العثور على أحد المواقع المحددة',
+      'UNKNOWN_ERROR': 'خطأ مؤقت - حاول مرة أخرى'
+    };
+    return errorMessages[status] || `خطأ في Google Maps: ${error_message || status}`;
+  };
+  
   // Calculate route using Google Directions API
   app.post('/api/orders/calculate-route', requireDriverAuth, async (req, res) => {
     try {
-      const { orderId, origin, destination, waypoints = [] } = req.body;
-      
-      if (!orderId || !origin || !destination) {
+      // Validate request with Zod
+      const validationResult = calculateRouteSchema.safeParse(req.body);
+      if (!validationResult.success) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: orderId, origin, destination'
+          message: 'بيانات غير صحيحة',
+          errors: validationResult.error.errors.map(e => e.message)
         });
       }
+
+      const { orderId, origin, destination, waypoints } = validationResult.data;
 
       const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
       if (!googleApiKey) {
@@ -6363,8 +6407,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (directionsData.status !== 'OK') {
         return res.status(400).json({
           success: false,
-          message: `Google Directions API error: ${directionsData.status}`,
-          error: directionsData.error_message
+          message: getGoogleApiErrorMessage(directionsData.status, directionsData.error_message),
+          googleStatus: directionsData.status
         });
       }
 
@@ -6389,12 +6433,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         alternativeRoutes: directionsData.routes.slice(1) // Other route options
       };
 
-      console.log(`✅ Route calculated: ${leg.distance.text} / ${leg.duration.text}`);
+      console.log(`✅ Route calculated: ${Math.round(totalDistance/1000)}km in ${Math.round(totalDuration/60)}min`);
 
       res.json({
         success: true,
         route: routeInfo,
-        message: `تم حساب المسار بنجاح: ${leg.distance.text} في ${leg.duration.text}`
+        message: `تم حساب المسار بنجاح: ${Math.round(totalDistance/1000)}كم في ${Math.round(totalDuration/60)}دقيقة`
       });
 
     } catch (error) {
@@ -6407,44 +6451,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Zod schema for route update validation  
+  const routeUpdateSchema = z.object({
+    deliveryCoordinates: z.object({
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180),
+      address: z.string().optional()
+    }).optional(),
+    routeData: z.any().optional(),
+    routeSteps: z.array(z.any()).optional(),
+    encodedPolyline: z.string().optional(),
+    estimatedDistance: z.number().positive().optional(),
+    estimatedDuration: z.number().positive().optional(),
+    routeLastUpdated: z.date().or(z.string().transform(str => new Date(str))).optional(),
+    driverCurrentLocation: z.object({
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180),
+      timestamp: z.string(),
+      accuracy: z.number().optional()
+    }).optional(),
+    customerTrackingEnabled: z.boolean().optional(),
+    routeOptimized: z.boolean().optional(),
+    alternativeRoutes: z.array(z.any()).optional()
+  });
+
   // Update order with calculated route data
   app.put('/api/orders/:id/update-route', isAdminAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const routeUpdate = req.body;
-
-      // Validate route update data using our schema
-      const validRouteFields = [
-        'deliveryCoordinates', 'routeData', 'routeSteps', 'encodedPolyline',
-        'estimatedDistance', 'estimatedDuration', 'routeLastUpdated', 
-        'driverCurrentLocation', 'customerTrackingEnabled', 'routeOptimized',
-        'alternativeRoutes'
-      ];
-
-      const filteredUpdate: any = {};
-      Object.keys(routeUpdate).forEach(key => {
-        if (validRouteFields.includes(key)) {
-          filteredUpdate[key] = routeUpdate[key];
-        }
-      });
-
-      if (Object.keys(filteredUpdate).length === 0) {
+      
+      // Validate request with Zod
+      const validationResult = routeUpdateSchema.safeParse(req.body);
+      if (!validationResult.success) {
         return res.status(400).json({
           success: false,
-          message: 'No valid route fields provided'
+          message: 'بيانات المسار غير صحيحة',
+          errors: validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
         });
       }
 
-      console.log(`🔄 Updating order ${id} with route data:`, Object.keys(filteredUpdate));
+      const routeUpdate = validationResult.data;
 
-      // Ensure routeLastUpdated is a proper Date object
-      if (filteredUpdate.routeLastUpdated && !(filteredUpdate.routeLastUpdated instanceof Date)) {
-        filteredUpdate.routeLastUpdated = new Date(filteredUpdate.routeLastUpdated);
+      if (Object.keys(routeUpdate).length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'لا توجد بيانات مسار لتحديثها'
+        });
       }
+
+      console.log(`🔄 Updating order ${id} with route data:`, Object.keys(routeUpdate));
 
       // Update order in storage with route data
       const updatedOrder = await storage.updateOrder(id, {
-        ...filteredUpdate,
+        ...routeUpdate,
         updatedAt: new Date()
       });
       
@@ -6476,14 +6535,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get optimized route for multiple orders (for drivers with multiple deliveries)
   app.post('/api/orders/optimize-route', requireDriverAuth, async (req, res) => {
     try {
-      const { driverLocation, orderIds } = req.body;
-
-      if (!driverLocation || !orderIds || !Array.isArray(orderIds)) {
+      // Validate request with Zod
+      const validationResult = optimizeRouteSchema.safeParse(req.body);
+      if (!validationResult.success) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: driverLocation, orderIds (array)'
+          message: 'بيانات غير صحيحة',
+          errors: validationResult.error.errors.map(e => e.message)
         });
       }
+
+      const { driverLocation, orderIds } = validationResult.data;
 
       const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
       if (!googleApiKey) {
@@ -6532,8 +6594,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (directionsData.status !== 'OK') {
         return res.status(400).json({
           success: false,
-          message: `Google Directions API error: ${directionsData.status}`,
-          error: directionsData.error_message
+          message: getGoogleApiErrorMessage(directionsData.status, directionsData.error_message),
+          googleStatus: directionsData.status
         });
       }
 
