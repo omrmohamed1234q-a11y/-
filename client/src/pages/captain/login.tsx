@@ -30,7 +30,7 @@ export default function CaptainLogin() {
     setIsLoading(true);
     
     try {
-      const response = await apiRequest('POST', '/api/captain/login', {
+      const response = await apiRequest('POST', '/api/captain/secure-login', {
         username,
         password
       });
@@ -145,11 +145,11 @@ export default function CaptainLogin() {
             </form>
 
             {/* بيانات تجريبية */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h3 className="text-sm font-semibold text-blue-800 mb-2">للتجربة:</h3>
-              <div className="text-xs text-blue-700 space-y-1">
-                <p><strong>المستخدم:</strong> testdriver</p>
-                <p><strong>كلمة المرور:</strong> Driver123!</p>
+            <div className="mt-6 p-4 bg-green-50 rounded-lg">
+              <h3 className="text-sm font-semibold text-green-800 mb-2">🔑 بيانات التجربة:</h3>
+              <div className="text-xs text-green-700 space-y-1">
+                <p><strong>المستخدم:</strong> captain001</p>
+                <p><strong>كلمة المرور:</strong> captain123</p>
               </div>
             </div>
 
