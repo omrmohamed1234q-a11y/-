@@ -328,32 +328,66 @@ const isAdminAuthenticated = async (req: any, res: any, next: any) => {
   next();
 };
 
-// Driver authentication middleware - Real implementation
+// Driver authentication middleware - Real implementation with captain support
 const requireDriverAuth = async (req: any, res: any, next: any) => {
   const authHeader = req.headers.authorization;
+  const captainSession = req.headers['x-captain-session'];
   
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  let token = null;
+  let isCaptain = false;
+  
+  // Check for captain session first (priority for captain dashboard)
+  if (captainSession) {
+    token = captainSession;
+    isCaptain = true;
+  } else if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  }
+  
+  if (!token) {
     return res.status(401).json({ 
       success: false, 
       error: 'Driver authentication required' 
     });
   }
 
-  const token = authHeader.split(' ')[1];
-  
   try {
-    // Get driver by ID (in production, verify JWT token)
-    const driverId = token;
-    const driver = await storage.getDriver(driverId);
-    
-    if (!driver) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid driver token' 
-      });
-    }
+    if (isCaptain) {
+      // For captain authentication, check if captain exists in captain system
+      const captains = await captainSystem.getAllCaptains();
+      const captain = captains.find(c => c.id === token || c.username === token);
+      
+      if (!captain) {
+        return res.status(401).json({ 
+          success: false, 
+          error: 'Invalid captain session' 
+        });
+      }
+      
+      // Set both driver and captain for compatibility
+      req.driver = {
+        id: captain.id,
+        username: captain.username,
+        name: captain.name,
+        phone: captain.phone,
+        status: captain.status
+      };
+      req.captain = captain;
+    } else {
+      // Regular driver authentication
+      const driverId = token;
+      const driver = await storage.getDriver(driverId);
+      
+      if (!driver) {
+        return res.status(401).json({ 
+          success: false, 
+          error: 'Invalid driver token' 
+        });
+      }
 
-    req.driver = driver;
+      req.driver = driver;
+    }
+    
     next();
   } catch (error) {
     return res.status(401).json({ 
