@@ -99,12 +99,13 @@ export default function MainAdmin() {
       textColor: 'text-pink-100'
     },
     {
-      title: '🔔📢 نظام الإشعارات الشامل',
-      description: 'إدارة الإشعارات التلقائية واليدوية وتنبيهات النظام - شامل كل أنواع الإشعارات',
+      title: 'نظام الإشعارات الشامل',
+      description: 'إدارة الإشعارات التلقائية والبريدية وتنبيهات النظام - شامل كل أنواع الإشعارات',
       icon: Bell,
       link: '/admin/automatic-notifications',
       color: 'bg-red-500 hover:bg-red-600',
-      textColor: 'text-red-100'
+      textColor: 'text-red-100',
+      isSpecial: true
     }
   ];
 
@@ -210,24 +211,58 @@ export default function MainAdmin() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {adminSections.map((section, index) => (
             <Link key={index} href={section.link}>
-              <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-all duration-200 cursor-pointer transform hover:scale-105">
-                <CardHeader className="pb-3">
-                  <div className={`w-12 h-12 rounded-lg ${section.color} flex items-center justify-center mb-4`}>
-                    <section.icon className="w-6 h-6 text-white" />
+              {section.isSpecial ? (
+                /* Special Notifications Card - مطابق للصورة */
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl p-6 border border-slate-600 shadow-2xl cursor-pointer transform hover:scale-105 transition-all duration-200">
+                  {/* Notification Icon */}
+                  <div className="absolute top-4 left-4">
+                    <div className="bg-red-500 p-3 rounded-xl shadow-lg">
+                      <Bell className="w-6 h-6 text-white" />
+                    </div>
                   </div>
-                  <CardTitle className="text-white text-lg">{section.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-400 text-sm leading-relaxed">
-                    {section.description}
-                  </p>
-                  
-                  <div className="mt-4 flex items-center text-slate-300">
-                    <Eye className="w-4 h-4 mr-2" />
-                    <span className="text-sm">عرض التفاصيل</span>
+
+                  {/* Main Content */}
+                  <div className="text-center space-y-4 pt-2">
+                    <div className="flex items-center justify-center gap-3">
+                      <h3 className="text-xl font-bold text-white">نظام الإشعارات الشامل</h3>
+                      <div className="flex gap-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                      </div>
+                    </div>
+
+                    <p className="text-slate-300 text-sm leading-relaxed">
+                      إدارة الإشعارات التلقائية والبريدية وتنبيهات النظام - شامل كل أنواع الإشعارات
+                    </p>
+
+                    {/* Action Button */}
+                    <div className="flex items-center justify-center text-slate-300 mt-4">
+                      <Eye className="w-4 h-4 ml-2" />
+                      <span className="text-sm">عرض التفاصيل</span>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              ) : (
+                /* Regular Cards */
+                <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-all duration-200 cursor-pointer transform hover:scale-105">
+                  <CardHeader className="pb-3">
+                    <div className={`w-12 h-12 rounded-lg ${section.color} flex items-center justify-center mb-4`}>
+                      <section.icon className="w-6 h-6 text-white" />
+                    </div>
+                    <CardTitle className="text-white text-lg">{section.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                      {section.description}
+                    </p>
+                    
+                    <div className="mt-4 flex items-center text-slate-300">
+                      <Eye className="w-4 h-4 mr-2" />
+                      <span className="text-sm">عرض التفاصيل</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </Link>
           ))}
         </div>
