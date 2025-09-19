@@ -11,10 +11,12 @@ import {
   Settings, 
   FileText, 
   Bell, 
-  Eye,
   LogOut,
   Activity,
-  Database
+  Database,
+  ShoppingCart,
+  Gift,
+  Box
 } from 'lucide-react';
 import { Link } from 'wouter';
 
@@ -51,95 +53,137 @@ export default function MainAdmin() {
 
   const adminSections = [
     {
-      title: 'إدارة الأمان',
-      description: 'إدارة المسؤولين والسائقين وسجلات الأمان',
-      icon: Shield,
-      link: '/admin/security-dashboard',
-      color: 'bg-red-600 hover:bg-red-700',
-      textColor: 'text-red-100'
+      title: 'الاستفسارات',
+      description: 'الرد على استفسارات العملاء',
+      icon: 'headset',
+      link: '/admin/inquiries',
+      iconColor: 'bg-orange-100 text-orange-600'
     },
     {
-      title: 'إدارة المستخدمين',
-      description: 'عرض وإدارة جميع المستخدمين',
-      icon: Users,
-      link: '/admin/users',
-      color: 'bg-blue-600 hover:bg-blue-700',
-      textColor: 'text-blue-100'
-    },
-    {
-      title: 'إدارة السائقين',
-      description: 'متابعة حالة السائقين والتوصيلات',
-      icon: Truck,
-      link: '/admin/drivers',
-      color: 'bg-green-600 hover:bg-green-700',
-      textColor: 'text-green-100'
-    },
-    {
-      title: 'إدارة الطلبات',
-      description: 'متابعة جميع الطلبات والمبيعات',
-      icon: FileText,
-      link: '/admin/orders-management',
-      color: 'bg-purple-600 hover:bg-purple-700',
-      textColor: 'text-purple-100'
-    },
-    {
-      title: 'التحليلات',
-      description: 'إحصائيات شاملة للمنصة',
-      icon: BarChart3,
-      link: '/admin/simple-analytics',
-      color: 'bg-orange-600 hover:bg-orange-700',
-      textColor: 'text-orange-100'
-    },
-    {
-      title: 'الإعلانات',
-      description: 'إدارة الإعلانات والمقالات',
-      icon: Bell,
+      title: 'إدارة الإعلانات',
+      description: 'إنشاء وتحرير إعلانات الصفحة الرئيسية',
+      icon: 'monitor',
       link: '/admin/announcements',
-      color: 'bg-pink-600 hover:bg-pink-700',
-      textColor: 'text-pink-100'
+      iconColor: 'bg-blue-100 text-blue-600'
+    },
+    {
+      title: 'إدارة الشركاء',
+      description: 'إدارة المطابع والمكتبات الشريكة',
+      icon: 'building',
+      link: '/admin/partners',
+      iconColor: 'bg-purple-100 text-purple-600'
+    },
+    {
+      title: 'نظام المكافآت والأوراق المجانية',
+      description: 'إدارة قوانين المكافآت ومتابعة الاستخدام',
+      icon: 'gift',
+      link: '/admin/rewards-management',
+      iconColor: 'bg-purple-100 text-purple-600'
+    },
+    {
+      title: 'إدارة السائقين والمديرين',
+      description: 'لوحة الأمان المتقدمة - نظام آمن لإدارة الحسابات',
+      icon: 'truck',
+      link: '/admin/security-dashboard',
+      iconColor: 'bg-blue-100 text-blue-600'
+    },
+    {
+      title: 'التقارير والإحصائيات',
+      description: 'مراجعة الأداء والتقارير',
+      icon: 'bar-chart',
+      link: '/admin/simple-analytics',
+      iconColor: 'bg-blue-100 text-blue-600'
     },
     {
       title: 'نظام الإشعارات الشامل',
       description: 'إدارة الإشعارات التلقائية والبريدية وتنبيهات النظام - شامل كل أنواع الإشعارات',
-      icon: Bell,
+      icon: 'notification',
       link: '/admin/automatic-notifications',
-      color: 'bg-red-500 hover:bg-red-600',
-      textColor: 'text-red-100',
+      iconColor: 'bg-red-100 text-red-600',
       isSpecial: true
     }
   ];
 
+  const quickActions = [
+    {
+      title: 'الطلبات الجديدة',
+      description: 'عرض ومعالجة الطلبات الواردة',
+      icon: 'shopping-cart',
+      link: '/admin/orders-management',
+      iconColor: 'bg-red-100 text-red-600'
+    },
+    {
+      title: 'إدارة العملاء',
+      description: 'عرض وإدارة حسابات العملاء',
+      icon: 'users',
+      link: '/admin/users',
+      iconColor: 'bg-green-100 text-green-600'
+    },
+    {
+      title: 'إدارة المنتجات',
+      description: 'إضافة وتحرير المنتجات',
+      icon: 'box',
+      link: '/admin/products',
+      iconColor: 'bg-blue-100 text-blue-600'
+    },
+    {
+      title: 'الكوبونات والعروض',
+      description: 'إنشاء وإدارة العروض',
+      icon: 'gift',
+      link: '/admin/coupons',
+      iconColor: 'bg-purple-100 text-purple-600'
+    }
+  ];
+
+  const getIconComponent = (iconType: string) => {
+    const iconMap: Record<string, any> = {
+      'headset': Activity,
+      'monitor': FileText,
+      'building': Database,
+      'gift': Gift,
+      'truck': Truck,
+      'bar-chart': BarChart3,
+      'notification': Bell,
+      'shopping-cart': ShoppingCart,
+      'users': Users,
+      'box': Box
+    };
+    
+    return iconMap[iconType] || Bell;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-slate-800 shadow-xl border-b border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4 rtl:space-x-reverse">
-              <div className="bg-red-600 p-3 rounded-lg">
-                <Shield className="w-8 h-8 text-white" />
+              <div className="bg-red-600 p-2 rounded-lg">
+                <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">لوحة التحكم الإدارية</h1>
-                <p className="text-slate-300">منصة اطبعلي - النظام الإداري</p>
+                <h1 className="text-xl font-bold text-gray-900">لوحة التحكم الإدارية</h1>
+                <p className="text-gray-600 text-sm">منصة اطبعلي</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {adminData && (
                 <div className="text-right">
-                  <p className="text-white font-medium">{adminData.admin?.fullName || adminData.admin?.username}</p>
-                  <p className="text-slate-300 text-sm">{adminData.admin?.email}</p>
+                  <p className="text-gray-900 font-medium text-sm">{adminData.admin?.fullName || adminData.admin?.username}</p>
+                  <p className="text-gray-500 text-xs">{adminData.admin?.email}</p>
                 </div>
               )}
               
               <Button
                 onClick={handleLogout}
                 variant="outline"
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                size="sm"
+                className="border-gray-300"
                 data-testid="button-admin-logout"
               >
-                <LogOut className="w-4 h-4 mr-2" />
+                <LogOut className="w-4 h-4 mr-1" />
                 خروج
               </Button>
             </div>
@@ -147,168 +191,133 @@ export default function MainAdmin() {
         </div>
       </div>
 
-      {/* System Status Alert */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <Alert className="mb-6 bg-green-900 border-green-700">
-          <Activity className="h-4 w-4 text-green-400" />
-          <AlertDescription className="text-green-100">
+        {/* System Status Alert */}
+        <Alert className="mb-6 bg-green-50 border-green-200">
+          <Activity className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
             <strong>حالة النظام:</strong> جميع الأنظمة تعمل بشكل طبيعي | آخر تحديث: {new Date().toLocaleString('ar-EG')}
           </AlertDescription>
         </Alert>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-slate-800 border-slate-700">
-            <CardContent className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-slate-400 text-sm">المستخدمين</p>
-                  <p className="text-2xl font-bold text-white">{stats.totalUsers}</p>
+                  <p className="text-gray-600 text-sm">المستخدمين</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
                 </div>
-                <Users className="w-8 h-8 text-blue-400" />
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <Users className="w-6 h-6 text-blue-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800 border-slate-700">
-            <CardContent className="p-6">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-slate-400 text-sm">السائقين النشطين</p>
-                  <p className="text-2xl font-bold text-white">{stats.activeDrivers}</p>
+                  <p className="text-gray-600 text-sm">السائقين النشطين</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.activeDrivers}</p>
                 </div>
-                <Truck className="w-8 h-8 text-green-400" />
+                <div className="bg-green-100 p-2 rounded-lg">
+                  <Truck className="w-6 h-6 text-green-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800 border-slate-700">
-            <CardContent className="p-6">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-slate-400 text-sm">إجمالي الطلبات</p>
-                  <p className="text-2xl font-bold text-white">{stats.totalOrders}</p>
+                  <p className="text-gray-600 text-sm">إجمالي الطلبات</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalOrders}</p>
                 </div>
-                <FileText className="w-8 h-8 text-purple-400" />
+                <div className="bg-purple-100 p-2 rounded-lg">
+                  <FileText className="w-6 h-6 text-purple-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800 border-slate-700">
-            <CardContent className="p-6">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-slate-400 text-sm">حالة النظام</p>
-                  <p className="text-2xl font-bold text-green-400">{stats.systemStatus}</p>
+                  <p className="text-gray-600 text-sm">حالة النظام</p>
+                  <p className="text-xl font-bold text-green-600">{stats.systemStatus}</p>
                 </div>
-                <Database className="w-8 h-8 text-orange-400" />
+                <div className="bg-orange-100 p-2 rounded-lg">
+                  <Database className="w-6 h-6 text-orange-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Admin Sections Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {adminSections.map((section, index) => (
-            <Link key={index} href={section.link}>
-              {section.isSpecial ? (
-                /* Special Notifications Card - مطابق للصورة */
-                <div className="relative bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl p-6 border border-slate-600 shadow-2xl cursor-pointer transform hover:scale-105 transition-all duration-200">
-                  {/* Notification Icon */}
-                  <div className="absolute top-4 left-4">
-                    <div className="bg-red-500 p-3 rounded-xl shadow-lg">
-                      <Bell className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-
-                  {/* Main Content */}
-                  <div className="text-center space-y-4 pt-2">
-                    <div className="flex items-center justify-center gap-3">
-                      <h3 className="text-xl font-bold text-white">نظام الإشعارات الشامل</h3>
-                      <div className="flex gap-2">
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      </div>
-                    </div>
-
-                    <p className="text-slate-300 text-sm leading-relaxed">
-                      إدارة الإشعارات التلقائية والبريدية وتنبيهات النظام - شامل كل أنواع الإشعارات
-                    </p>
-
-                    {/* Action Button */}
-                    <div className="flex items-center justify-center text-slate-300 mt-4">
-                      <Eye className="w-4 h-4 ml-2" />
-                      <span className="text-sm">عرض التفاصيل</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Regular Cards */
-                <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-all duration-200 cursor-pointer transform hover:scale-105">
-                  <CardHeader className="pb-3">
-                    <div className={`w-12 h-12 rounded-lg ${section.color} flex items-center justify-center mb-4`}>
-                      <section.icon className="w-6 h-6 text-white" />
-                    </div>
-                    <CardTitle className="text-white text-lg">{section.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-slate-400 text-sm leading-relaxed">
+            <Card key={index} className="bg-white shadow-sm border hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{section.title}</h3>
+                    <p className="text-gray-600 text-sm mb-4 leading-relaxed">
                       {section.description}
                     </p>
-                    
-                    <div className="mt-4 flex items-center text-slate-300">
-                      <Eye className="w-4 h-4 mr-2" />
-                      <span className="text-sm">عرض التفاصيل</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </Link>
+                    <Link href={section.link}>
+                      <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm">
+                        افتح الآن ←
+                      </Button>
+                    </Link>
+                  </div>
+                  <div className={`p-3 rounded-xl ${section.iconColor} ml-4`}>
+                    {(() => {
+                      const IconComponent = getIconComponent(section.icon);
+                      return <IconComponent className="w-6 h-6" />;
+                    })()}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 bg-slate-800 rounded-lg border border-slate-700 p-6">
-          <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-            <Settings className="w-5 h-5 mr-2" />
-            إجراءات سريعة
-          </h3>
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">الإجراءات السريعة</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button
-              asChild
-              className="bg-red-600 hover:bg-red-700 text-white h-12"
-              data-testid="button-security-access"
-            >
-              <Link href="/admin/security-dashboard">
-                <Shield className="w-4 h-4 mr-2" />
-                الوصول الأمني
-              </Link>
-            </Button>
-            
-            <Button
-              asChild
-              variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-700 h-12"
-              data-testid="button-system-monitoring"
-            >
-              <Link href="/admin/simple-analytics">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                مراقبة النظام
-              </Link>
-            </Button>
-            
-            <Button
-              asChild
-              variant="outline" 
-              className="border-slate-600 text-slate-300 hover:bg-slate-700 h-12"
-              data-testid="button-user-management"
-            >
-              <Link href="/admin/users">
-                <Users className="w-4 h-4 mr-2" />
-                إدارة المستخدمين
-              </Link>
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {quickActions.map((action, index) => (
+              <Card key={index} className="bg-gray-50 border-0 shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900 mb-1">{action.title}</h4>
+                      <p className="text-gray-600 text-sm mb-3">
+                        {action.description}
+                      </p>
+                      <Link href={action.link}>
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-sm">
+                          افتح الآن ←
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className={`p-2 rounded-lg ${action.iconColor} ml-3`}>
+                      {(() => {
+                        const IconComponent = getIconComponent(action.icon);
+                        return <IconComponent className="w-5 h-5" />;
+                      })()}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </div>
