@@ -669,17 +669,17 @@ export class MemorySecurityStorage {
 
     const testDriver = {
       id: uuidv4(),
-      username: 'testdriver',
-      email: 'testdriver@atbaali.com',
-      password_hash: await bcrypt.hash('Driver123!', 10),
-      full_name: 'محمد أحمد السائق التجريبي',
+      username: 'captain',
+      email: 'captain@atbaali.com',
+      password_hash: await bcrypt.hash('123456', 10),
+      full_name: 'كابتن التوصيل الرئيسي',
       role: 'driver' as const,
       is_active: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      driver_code: 'DR001',
+      driver_code: 'CAP001',
       vehicle_type: 'دراجة نارية',
-      working_area: 'القاهرة الجديدة',
+      working_area: 'جميع المناطق',
       last_login: null
     };
 

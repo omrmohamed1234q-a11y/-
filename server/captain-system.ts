@@ -94,18 +94,18 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
   const initTestCaptain = async () => {
     try {
       const existingDrivers = await storage.getAllDrivers();
-      const testDriverExists = existingDrivers.find((d: any) => d.username === 'testdriver');
+      const testDriverExists = existingDrivers.find((d: any) => d.username === 'captain');
       
       if (!testDriverExists) {
         await storage.createDriver({
-          name: 'كبتن تجريبي',
-          username: 'testdriver',
-          password: 'Driver123!',
-          email: 'testdriver@atbaali.com',
+          name: 'كابتن التوصيل الرئيسي',
+          username: 'captain',
+          password: '123456',
+          email: 'captain@atbaali.com',
           phone: '01001234567',
           vehicleType: 'motorcycle',
-          vehicleNumber: '123456',
-          rating: 4.8,
+          vehicleNumber: 'CAP001',
+          rating: 5.0,
           totalDeliveries: 0,
           status: 'online',
           isAvailable: true
