@@ -5032,26 +5032,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enrich with additional data
       const enrichedUser = {
         ...user,
-        totalOrders: Math.floor(Math.random() * 20),
-        totalSpent: Math.floor(Math.random() * 5000),
-        bountyPoints: Math.floor(Math.random() * 1000),
-        accountLevel: Math.floor(Math.random() * 5) + 1,
         status: (user as any).status || 'active',
         lastLoginAt: new Date().toISOString(),
-        orders: [
-          {
-            id: 'ORD-001',
-            total: 150.50,
-            status: 'delivered',
-            createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-          },
-          {
-            id: 'ORD-002',
-            total: 75.25,
-            status: 'processing',
-            createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-          }
-        ]
+        orders: []
       };
       
       res.json(enrichedUser);
@@ -9227,66 +9210,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // إرسال إشعارات تجريبية للكابتن بعد المصادقة
   function sendTestNotificationsToCaptain(captainId: string, ws: WebSocket) {
-    console.log(`🧪 Sending test notifications to captain: ${captainId}`);
-    
-    const testNotifications = [
-      {
-        type: 'new_order_available',
-        data: {
-          id: `order_${Date.now()}`,
-          orderNumber: `ORD-${Math.floor(Math.random() * 10000)}`,
-          customerName: 'أحمد محمد',
-          customerPhone: '01001234567',
-          totalAmount: 150.5,
-          priority: 'normal',
-          deliveryAddress: 'شارع التحرير، القاهرة',
-          estimatedDelivery: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-          items: [
-            { name: 'طباعة مستندات', quantity: 10, price: 15.05 }
-          ]
-        },
-        timestamp: Date.now()
-      },
-      {
-        type: 'order_status_update',
-        data: {
-          id: `order_${Date.now() - 1000}`,
-          orderNumber: 'ORD-8765',
-          status: 'printing',
-          statusText: 'جاري الطباعة',
-          message: 'تم بدء طباعة طلبك بنجاح',
-          timestamp: Date.now()
-        }
-      },
-      {
-        type: 'system_message',
-        data: {
-          id: `sys_${Date.now()}`,
-          type: 'announcement',
-          title: 'إعلان مهم',
-          message: 'سيتم تحديث النظام الليلة من 2:00 ص إلى 4:00 ص',
-          priority: 'medium',
-          timestamp: Date.now()
-        }
-      },
-      {
-        type: 'location_update_request',
-        data: {
-          message: 'يرجى تحديث موقعك للحصول على طلبات أفضل',
-          timestamp: Date.now(),
-          requestId: `loc_${Date.now()}`
-        }
-      }
-    ];
-
-    testNotifications.forEach((notification, index) => {
-      setTimeout(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify(notification));
-          console.log(`📤 Test notification sent: ${notification.type}`);
-        }
-      }, (index + 1) * 3000); // Send every 3 seconds
-    });
+    console.log(`✅ Captain ${captainId} connected - ready to receive real orders`);
+    // No test notifications - captain will receive real orders only
   }
 
   // دالة إرسال إشعار جديد لجميع الكباتن
