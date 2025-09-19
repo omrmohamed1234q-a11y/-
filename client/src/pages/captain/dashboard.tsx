@@ -407,7 +407,8 @@ export default function CaptainDashboard() {
           destination: {
             lat: destinationLat,
             lng: destinationLng
-          }
+          },
+          waypoints: [] // إضافة waypoints field فاضي
         })
       });
 
