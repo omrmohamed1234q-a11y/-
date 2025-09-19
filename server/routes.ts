@@ -11946,6 +11946,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log('🔔 Automatic notifications management APIs registered');
 
+  // ADD TEST NOTIFICATIONS FOR USER محمد (one-time setup)
+  setTimeout(async () => {
+    try {
+      const testUserId = '3e3882cc-81fa-48c9-bc69-c290128f4ff2'; // محمد's user ID
+      const testNotifications = [
+        {
+          id: `test-notif-${Date.now()}-1`,
+          userId: testUserId,
+          title: '🎁 مرحباً بك في نظام الإشعارات!',
+          message: 'نحن سعداء لوجودك معنا. اكتشف المزيد من الميزات الرائعة!',
+          type: 'welcome',
+          category: 'system',
+          iconType: 'bell',
+          actionUrl: '/rewards',
+          sourceId: 'test_welcome',
+          sourceType: 'system',
+          priority: 'normal',
+          isPinned: true,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: `test-notif-${Date.now()}-2`,
+          userId: testUserId,
+          title: '🚀 إشعار اختبار 2',
+          message: 'هذا إشعار تجريبي للتأكد من أن النظام يعمل بشكل صحيح',
+          type: 'info',
+          category: 'system',
+          iconType: 'check-circle',
+          actionUrl: '/profile',
+          sourceId: 'test_system',
+          sourceType: 'test',
+          priority: 'normal',
+          isPinned: false,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: `test-notif-${Date.now()}-3`,
+          userId: testUserId,
+          title: '⭐ إشعار مهم!',
+          message: 'تم إعداد نظام الإشعارات بنجاح، ستصلك الآن جميع التحديثات المهمة',
+          type: 'achievement',
+          category: 'system',
+          iconType: 'star',
+          actionUrl: '/rewards',
+          sourceId: 'test_achievement',
+          sourceType: 'system',
+          priority: 'high',
+          isPinned: true,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+
+      console.log('🔔 Creating test notifications for user محمد...');
+      for (const notification of testNotifications) {
+        await storage.createNotification(notification);
+        console.log(`✅ Created test notification: ${notification.title}`);
+      }
+      console.log('🎉 Test notifications setup complete!');
+    } catch (error) {
+      console.error('❌ Error creating test notifications:', error);
+    }
+  }, 3000); // Wait 3 seconds for server to initialize
+
   return httpServer;
 }
 
