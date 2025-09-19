@@ -2,9 +2,6 @@ import { users, products, orders, printJobs, cartItems, cartOrders, drivers, ann
 import { type SmartCampaign, type InsertSmartCampaign, type TargetingRule, type InsertTargetingRule, type SentMessage, type InsertSentMessage, type UserBehavior, type InsertUserBehavior, type MessageTemplate, type InsertMessageTemplate, type ScheduledJob, type InsertScheduledJob } from "@shared/smart-notifications-schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
 
 export interface IStorage {
   // User operations
@@ -67,9 +64,6 @@ export interface IStorage {
   
   // Admin statistics
   getAdminStats(): Promise<any>;
-  
-  // Admin account operations
-  getAdminAccounts(): Promise<any[]>;
   
   // Teacher plan operations  
   getAllTeacherPlans(): Promise<any[]>;
@@ -534,44 +528,30 @@ export class MemoryStorage implements IStorage {
 
   // User notifications operations
   async getAllNotifications(userId?: string): Promise<any[]> {
-    // Delegate to the new system (getUserNotifications) and convert format
-    let notifications;
     if (userId) {
-      console.log(`🔍 getAllNotifications: Looking for notifications for user ${userId}`);
-      console.log(`🔍 Total userNotificationsData count: ${this.userNotificationsData.length}`);
-      notifications = await this.getUserNotifications(userId, 1000, 0); // Large limit to get all
-      console.log(`🔍 Found ${notifications.length} notifications for user ${userId}`);
-    } else {
-      notifications = this.userNotificationsData.sort((a, b) => 
+      return this.notifications.filter(n => n.userId === userId).sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     }
-    
-    // Convert to old format for backwards compatibility
-    return notifications.map(notif => ({
-      id: notif.id,
-      userId: notif.userId,
-      title: notif.title,
-      message: notif.message,
-      type: notif.type,
-      category: notif.metadata?.category,
-      iconType: notif.metadata?.iconType,
-      actionUrl: notif.metadata?.actionUrl,
-      sourceId: notif.metadata?.sourceId,
-      sourceType: notif.metadata?.sourceType,
-      priority: notif.metadata?.priority,
-      isPinned: notif.metadata?.isPinned,
-      isRead: notif.read,
-      actionData: notif.metadata?.actionData,
-      createdAt: notif.createdAt,
-      updatedAt: notif.createdAt
-    }));
+    return [...this.notifications].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 
   async getNotification(id: string): Promise<any | undefined> {
     return this.notifications.find(n => n.id === id);
   }
 
+  async createNotification(notificationData: any): Promise<any> {
+    const notification = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...notificationData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.notifications.push(notification);
+    return notification;
+  }
 
   async updateNotification(id: string, updates: any): Promise<any> {
     const index = this.notifications.findIndex(n => n.id === id);
@@ -623,8 +603,9 @@ export class MemoryStorage implements IStorage {
   }
 
   async getUserUnreadCount(userId: string): Promise<number> {
-    // Delegate to the new system method for consistency
-    return await this.getUserUnreadNotificationsCount(userId);
+    return this.notifications.filter(n => 
+      n.userId === userId && !n.isRead
+    ).length;
   }
 
   // User notification preferences operations
@@ -659,28 +640,6 @@ export class MemoryStorage implements IStorage {
     };
     this.notificationPreferences.push(preferences);
     return preferences;
-  }
-
-  // System notification configuration methods
-  async getNotificationConfig(): Promise<any> {
-    return this.systemNotificationConfig || {
-      orderCreated: { enabled: true, template: 'تم إنشاء طلبك بنجاح #{{orderNumber}}' },
-      paymentSuccess: { enabled: true, template: 'تم تأكيد الدفع للطلب #{{orderNumber}}' },
-      paymentFailed: { enabled: true, template: 'فشل في عملية الدفع للطلب #{{orderNumber}}' },
-      orderProcessing: { enabled: true, template: 'طلبك #{{orderNumber}} قيد المعالجة' },
-      orderDelivered: { enabled: true, template: 'تم تسليم طلبك #{{orderNumber}} بنجاح' },
-      orderCancelled: { enabled: true, template: 'تم إلغاء طلبك #{{orderNumber}}' },
-      reviewReceived: { enabled: true, template: 'شكراً لتقييمك للطلب #{{orderNumber}}' },
-      systemAlert: { enabled: true, template: 'تنبيه النظام: {{message}}' }
-    };
-  }
-
-  async updateNotificationConfig(config: any): Promise<any> {
-    this.systemNotificationConfig = {
-      ...config,
-      updatedAt: new Date()
-    };
-    return this.systemNotificationConfig;
   }
 
   // Product operations
@@ -1001,11 +960,6 @@ export class MemoryStorage implements IStorage {
     };
   }
   
-  // Admin account operations
-  async getAdminAccounts(): Promise<any[]> {
-    return []; // MemoryStorage doesn't have admin accounts by default
-  }
-  
   // Stubs for all other methods - to be implemented as needed
   async getAllTeacherPlans(): Promise<any[]> { return []; }
   async getAllTeacherSubscriptions(): Promise<any[]> { return []; }
@@ -1014,6 +968,7 @@ export class MemoryStorage implements IStorage {
   async updateTeacher(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
   async deleteTeacher(id: string): Promise<void> { throw new Error('Not implemented'); }
   
+  createNotification(data: any): any { return { id: `notif-${Date.now()}`, ...data }; }
   getUserNotifications(userId: string): any[] { return []; }
   markNotificationAsRead(notificationId: string): void { }
   
@@ -1931,11 +1886,6 @@ export class DatabaseStorage implements IStorage {
       revenue: 15000, // This would be calculated from actual orders
       monthlyGrowth: 25
     };
-  }
-  
-  // Admin account operations
-  async getAdminAccounts(): Promise<any[]> {
-    return []; // DatabaseStorage doesn't have admin accounts management yet
   }
 
   // Teacher plan operations  
@@ -2964,21 +2914,46 @@ class MemStorage implements IStorage {
   private secureDrivers: any[] = [];
   private securityLogs: any[] = [];
   private pendingUploads: PendingUpload[] = [];
-  private notifications: any[] = [];
-  private userNotificationsData: any[] = [];
-  private userPreferencesData: any[] = [];
-  private userAddressesData: any[] = [];
-  private userAchievementsData: any[] = [];
-
-  // Notifications persistence
-  private readonly NOTIFICATIONS_FILE = path.join(process.cwd(), 'notifications-data.json');
-  private readonly NOTIFICATIONS_SECRET = process.env.NOTIFICATIONS_ENCRYPTION_SECRET || 'default-notifications-secret-2024';
 
   constructor() {
-    // Load notifications from persistent storage first
-    this.loadNotificationsFromFile();
-    
-    // Clean initialization - no test data
+    // Initialize with test admin account
+    this.secureAdmins.push({
+      id: 'admin-1',
+      username: 'testadmin',
+      email: 'admin@test.com',
+      password: 'hashed_testpass123',
+      fullName: 'مدير تجريبي',
+      role: 'admin',
+      permissions: ['read', 'write', 'admin'],
+      isActive: true,
+      lastLogin: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    // Initialize with test driver account
+    this.secureDrivers.push({
+      id: 'driver-1',
+      username: 'testdriver',
+      email: 'driver@test.com',
+      password: 'hashed_driverpass123',
+      driverCode: 'DR001',
+      fullName: 'سائق تجريبي',
+      phone: '1234567890',
+      licenseNumber: 'LIC123',
+      vehicleType: 'motorcycle',
+      vehiclePlate: 'ABC123',
+      isActive: true,
+      status: 'offline',
+      rating: 5.0,
+      totalDeliveries: 0,
+      lastLogin: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    console.log('🔐 Test admin created: username=testadmin, email=admin@test.com, password=testpass123');
+    console.log('🚚 Test driver created: username=testdriver, email=driver@test.com, password=driverpass123, code=DR001');
   }
 
   // Method to clean up duplicate priorities in existing data
@@ -3052,10 +3027,181 @@ class MemStorage implements IStorage {
       createdAt: new Date()
     }
   ];
-  private orders: Order[] = [];
+  private orders: Order[] = [
+    {
+      id: 'ORD-001',
+      userId: '48c03e72-d53b-4a3f-a729-c38276268315',
+      customerName: 'أحمد محمد علي',
+      customerPhone: '01012345678',
+      customerEmail: 'ahmed@email.com',
+      deliveryAddress: 'شارع المنصورة، حي المعادي، القاهرة',
+      notes: 'يرجى التأكد من جودة الطباعة والألوان',
+      adminNotes: '',
+      items: [
+        {
+          id: 'item-1',
+          type: 'document',
+          name: 'ملزمة الرياضيات للثانوية العامة',
+          description: 'ملزمة شاملة للمراجعة النهائية',
+          quantity: 3,
+          pages: 150,
+          color: true,
+          paperSize: 'A4',
+          binding: 'spiral',
+          estimatedPrice: 75,
+          finalPrice: 75,
+          fileUrl: 'https://example.com/math-booklet.pdf'
+        },
+        {
+          id: 'item-2', 
+          type: 'book',
+          name: 'كتاب الفيزياء للصف الثاني الثانوي',
+          description: 'كتاب وزارة التربية والتعليم',
+          quantity: 2,
+          pages: 200,
+          color: false,
+          paperSize: 'A4',
+          binding: 'hardcover',
+          estimatedPrice: 40,
+          finalPrice: 40
+        }
+      ],
+      totalAmount: 115,
+      estimatedCost: 110,
+      finalPrice: 115,
+      status: 'pending',
+      paymentMethod: 'نقدي عند الاستلام',
+      priority: 'high',
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
+    },
+    {
+      id: 'ORD-002',
+      userId: 'user-2',
+      customerName: 'فاطمة حسن إبراهيم',
+      customerPhone: '01098765432',
+      customerEmail: 'fatma@email.com',
+      deliveryAddress: 'شارع البترول، مدينة نصر، القاهرة',
+      notes: 'طلب عاجل - امتحان غداً',
+      adminNotes: 'تم التسعير والموافقة',
+      items: [
+        {
+          id: 'item-3',
+          type: 'document',
+          name: 'أسئلة مراجعة اللغة الإنجليزية',
+          description: 'مجموعة أسئلة للمراجعة النهائية',
+          quantity: 1,
+          pages: 25,
+          color: false,
+          paperSize: 'A4',
+          binding: 'none',
+          estimatedPrice: 15,
+          finalPrice: 15
+        }
+      ],
+      totalAmount: 15,
+      estimatedCost: 12,
+      finalPrice: 15,
+      status: 'confirmed',
+      paymentMethod: 'نقدي عند الاستلام',
+      priority: 'urgent',
+      createdAt: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago
+    },
+    {
+      id: 'ORD-003',
+      userId: 'user-3',
+      customerName: 'محمد سعد أحمد',
+      customerPhone: '01154321098',
+      customerEmail: 'mohamed@email.com',
+      deliveryAddress: 'شارع فيصل، الجيزة',
+      notes: 'يفضل التسليم بعد الساعة 4 عصراً',
+      adminNotes: 'جاري الطباعة',
+      items: [
+        {
+          id: 'item-4',
+          type: 'custom',
+          name: 'بروشور إعلاني',
+          description: 'تصميم بروشور ملون للشركة',
+          quantity: 100,
+          pages: 2,
+          color: true,
+          paperSize: 'A5',
+          binding: 'none',
+          estimatedPrice: 200,
+          finalPrice: 180
+        }
+      ],
+      totalAmount: 180,
+      estimatedCost: 200,
+      finalPrice: 180,
+      status: 'printing',
+      paymentMethod: 'تحويل بنكي',
+      priority: 'medium',
+      createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000) // 4 hours ago
+    },
+    {
+      id: 'ORD-004',
+      userId: 'user-4',
+      customerName: 'نورا عبد الرحمن',
+      customerPhone: '01276543210',
+      customerEmail: 'nora@email.com',
+      deliveryAddress: 'شارع الهرم، الجيزة',
+      notes: '',
+      adminNotes: 'تم التسليم بنجاح',
+      items: [
+        {
+          id: 'item-5',
+          type: 'document',
+          name: 'مذكرة التاريخ',
+          description: 'مذكرة شاملة لمنهج التاريخ',
+          quantity: 1,
+          pages: 80,
+          color: false,
+          paperSize: 'A4',
+          binding: 'spiral',
+          estimatedPrice: 35,
+          finalPrice: 35
+        }
+      ],
+      totalAmount: 35,
+      estimatedCost: 35,
+      finalPrice: 35,
+      status: 'delivered',
+      paymentMethod: 'نقدي عند الاستلام',
+      priority: 'low',
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day ago
+    }
+  ];
   private printJobs: PrintJob[] = [];
   private cartItems: CartItem[] = [];
-  private notifications: any[] = [];
+  private notifications: any[] = [
+    {
+      id: 'notif-1',
+      userId: '48c03e72-d53b-4a3f-a729-c38276268315',
+      type: 'order',
+      message: 'تم قبول طلبك رقم #ORD-001 وجاري التحضير الآن',
+      read: false,
+      createdAt: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
+      metadata: { orderId: 'ORD-001' }
+    },
+    {
+      id: 'notif-2',
+      userId: '48c03e72-d53b-4a3f-a729-c38276268315',
+      type: 'delivery',
+      message: 'السائق في الطريق إليك! متوقع الوصول خلال 15 دقيقة',
+      read: false,
+      createdAt: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+      metadata: { orderId: 'ORD-001', driverId: 'driver-123' }
+    },
+    {
+      id: 'notif-3',
+      userId: '48c03e72-d53b-4a3f-a729-c38276268315',
+      type: 'print',
+      message: 'تم الانتهاء من طباعة ملفك "كتاب الرياضيات" بجودة عالية',
+      read: true,
+      createdAt: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
+      metadata: { fileId: 'file-456' }
+    }
+  ];
 
   async getUser(id: string): Promise<User | undefined> {
     return this.users.find(u => u.id === id);
@@ -3239,98 +3385,55 @@ class MemStorage implements IStorage {
     }
   }
 
-  // User notifications operations (MemStorage - pure memory implementation)
+  // User notifications operations (MemStorage - tries database first, fallback to memory)
   async getAllNotifications(userId?: string): Promise<any[]> {
-    // Use the new system (userNotificationsData) for consistency
-    console.log(`🔍 getAllNotifications called with userId: ${userId}`);
-    console.log(`📊 Total notifications in storage: ${this.userNotificationsData.length}`);
-    
-    if (userId) {
-      const userNotifications = this.userNotificationsData.filter(notif => notif.userId === userId);
-      console.log(`👤 Found ${userNotifications.length} notifications for user ${userId}`);
-      
-      if (this.userNotificationsData.length > 0 && userNotifications.length === 0) {
-        console.log(`🔍 Sample notification userIds in storage:`, this.userNotificationsData.slice(0, 3).map(n => n.userId));
-        console.log(`🔍 Looking for userId: ${userId}`);
+    try {
+      const { notifications } = await import("../shared/schema");
+      if (userId) {
+        return await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
       }
-      
-      return userNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return await db.select().from(notifications).orderBy(desc(notifications.createdAt));
+    } catch (error) {
+      console.error('Database error in notifications, fallback to memory (empty):', error);
+      return [];
     }
-    return [...this.userNotificationsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getNotification(id: string): Promise<any | undefined> {
-    return this.notifications.find(notif => notif.id === id);
+    try {
+      const { notifications } = await import("../shared/schema");
+      const [notification] = await db.select().from(notifications).where(eq(notifications.id, id));
+      return notification;
+    } catch (error) {
+      console.error('Database error in getNotification, fallback to undefined:', error);
+      return undefined;
+    }
   }
 
   async createNotification(notificationData: any): Promise<any> {
-    console.log('🔧 createNotification called with data:', JSON.stringify(notificationData, null, 2));
-    
     try {
-      const notification = {
-        id: notificationData.id || `notif-${Date.now()}`,
-        ...notificationData,
-        createdAt: notificationData.createdAt || new Date(),
-        updatedAt: new Date()
-      };
-      
-      console.log('📋 Created notification object:', JSON.stringify(notification, null, 2));
-      
-      // Write to both systems for compatibility
-      this.notifications.push(notification);
-      console.log('✅ Added to legacy notifications array');
-      
-      // Also write to the new system (userNotificationsData)
-      const newSystemNotification = {
-      id: notification.id,
-      userId: notification.userId,
-      type: notification.type || 'system',
-      title: notification.title,
-      message: notification.message,
-      read: notification.isRead || false,
-      createdAt: notification.createdAt,
-      readAt: notification.readAt || null,
-      metadata: {
-        category: notification.category,
-        iconType: notification.iconType,
-        actionUrl: notification.actionUrl,
-        sourceId: notification.sourceId,
-        sourceType: notification.sourceType,
-        priority: notification.priority,
-        isPinned: notification.isPinned,
-        actionData: notification.actionData
-      }
-    };
-    
-    this.userNotificationsData.push(newSystemNotification);
-    
-    console.log(`💾 Notification saved to both storage systems: ${notification.id}`);
-    console.log(`👤 Saved notification for userId: ${newSystemNotification.userId}`);
-    console.log(`📊 Total notifications in storage after save: ${this.userNotificationsData.length}`);
-    console.log(`🔍 Full notification object:`, JSON.stringify(newSystemNotification, null, 2));
-    
-    // Save to persistent file
-    this.saveNotificationsToFile();
-    
-    return notification;
+      const { notifications } = await import("../shared/schema");
+      const [notification] = await db.insert(notifications).values(notificationData).returning();
+      return notification;
     } catch (error) {
-      console.error('🚨 CRITICAL ERROR in createNotification:', error);
-      console.error('🚨 Error stack:', error.stack);
+      console.error('Database error in createNotification:', error);
       throw error;
     }
   }
 
   async updateNotification(id: string, updates: any): Promise<any> {
-    const index = this.notifications.findIndex(notif => notif.id === id);
-    if (index !== -1) {
-      this.notifications[index] = {
-        ...this.notifications[index],
-        ...updates,
-        updatedAt: new Date()
-      };
-      return this.notifications[index];
+    try {
+      const { notifications } = await import("../shared/schema");
+      const [notification] = await db
+        .update(notifications)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(notifications.id, id))
+        .returning();
+      return notification;
+    } catch (error) {
+      console.error('Database error in updateNotification:', error);
+      throw error;
     }
-    throw new Error('Notification not found');
   }
 
   async markNotificationAsRead(id: string): Promise<any> {
@@ -3348,22 +3451,28 @@ class MemStorage implements IStorage {
   }
 
   async deleteNotification(id: string): Promise<boolean> {
-    const index = this.notifications.findIndex(notif => notif.id === id);
-    if (index !== -1) {
-      this.notifications.splice(index, 1);
-      
-      // Save to persistent file
-      this.saveNotificationsToFile();
-      
-      return true;
+    try {
+      const { notifications } = await import("../shared/schema");
+      const result = await db.delete(notifications).where(eq(notifications.id, id));
+      return (result as any).rowCount > 0;
+    } catch (error) {
+      console.error('Database error in deleteNotification:', error);
+      return false;
     }
-    return false;
   }
 
   async getUserUnreadCount(userId: string): Promise<number> {
-    return this.userNotificationsData.filter(notif => 
-      notif.userId === userId && notif.read === false
-    ).length;
+    try {
+      const { notifications } = await import("../shared/schema");
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('Database error in getUserUnreadCount:', error);
+      return 0;
+    }
   }
 
   // User notification preferences operations (MemStorage)
@@ -3816,11 +3925,6 @@ class MemStorage implements IStorage {
       revenue: 15000,
       monthlyGrowth: 25
     };
-  }
-  
-  // Admin account operations
-  async getAdminAccounts(): Promise<any[]> {
-    return this.secureAdmins || [];
   }
 
   async getAllTeacherPlans(): Promise<any[]> {
@@ -5622,8 +5726,6 @@ class MemStorage implements IStorage {
   }
 
   async createUserNotification(notification: InsertUserNotification): Promise<UserNotification> {
-    console.log(`📝 createUserNotification called with:`, JSON.stringify(notification, null, 2));
-    
     const newNotification: UserNotification = {
       id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       ...notification,
@@ -5632,14 +5734,7 @@ class MemStorage implements IStorage {
       createdAt: new Date()
     };
     
-    console.log(`📝 About to add notification to userNotificationsData:`, newNotification.id);
-    console.log(`📝 userNotificationsData size BEFORE: ${this.userNotificationsData.length}`);
-    
     this.userNotificationsData.push(newNotification);
-    
-    console.log(`📝 userNotificationsData size AFTER: ${this.userNotificationsData.length}`);
-    console.log(`📝 Last notification in array:`, this.userNotificationsData[this.userNotificationsData.length - 1]?.id);
-    
     return newNotification;
   }
 
@@ -5649,9 +5744,6 @@ class MemStorage implements IStorage {
     
     this.userNotificationsData[index].read = true;
     this.userNotificationsData[index].readAt = new Date();
-    
-    // Save to persistent file
-    this.saveNotificationsToFile();
     
     return this.userNotificationsData[index];
   }
@@ -5665,12 +5757,6 @@ class MemStorage implements IStorage {
         count++;
       }
     });
-    
-    // Save to persistent file
-    if (count > 0) {
-      this.saveNotificationsToFile();
-    }
-    
     return count;
   }
 
@@ -5679,10 +5765,6 @@ class MemStorage implements IStorage {
     if (index === -1) return false;
     
     this.userNotificationsData.splice(index, 1);
-    
-    // Save to persistent file
-    this.saveNotificationsToFile();
-    
     return true;
   }
 
@@ -5932,209 +6014,9 @@ class MemStorage implements IStorage {
       levelProgress
     };
   }
-
-  // Notifications persistence methods
-  private deriveKey(secret: string): Buffer {
-    return crypto.scryptSync(secret, 'notifications-salt-2024', 32);
-  }
-
-  private encryptData(data: string, secret: string): string {
-    try {
-      if (secret === 'default-notifications-secret-2024') {
-        console.error('🚨 SECURITY WARNING: Using default encryption secret! Set NOTIFICATIONS_ENCRYPTION_SECRET environment variable.');
-        throw new Error('Default encryption secret not allowed in production');
-      }
-
-      const key = this.deriveKey(secret);
-      const iv = crypto.randomBytes(12); // 12 bytes for GCM
-      const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-      
-      let encrypted = cipher.update(data, 'utf8', 'hex');
-      encrypted += cipher.final('hex');
-      const authTag = cipher.getAuthTag();
-
-      const envelope = {
-        v: 1,
-        iv: iv.toString('base64'),
-        tag: authTag.toString('base64'),
-        ct: encrypted
-      };
-
-      return JSON.stringify(envelope);
-    } catch (error) {
-      console.error('🚨 Encryption failed - data will NOT be saved:', error);
-      throw error; // Do not fallback to plaintext
-    }
-  }
-
-  private decryptData(encryptedData: string, secret: string): string {
-    try {
-      // Try new format first
-      let envelope: any;
-      try {
-        envelope = JSON.parse(encryptedData);
-      } catch (parseError) {
-        // Legacy plaintext migration - one time only
-        console.log('📄 Migrating legacy plaintext notifications file');
-        return encryptedData;
-      }
-
-      if (!envelope.v || envelope.v !== 1) {
-        throw new Error('Invalid or unsupported encryption envelope version');
-      }
-
-      const key = this.deriveKey(secret);
-      const iv = Buffer.from(envelope.iv, 'base64');
-      const authTag = Buffer.from(envelope.tag, 'base64');
-      const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-      
-      decipher.setAuthTag(authTag);
-      let decrypted = decipher.update(envelope.ct, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      
-      return decrypted;
-    } catch (error) {
-      console.error('🚨 Decryption failed - notifications cannot be loaded:', error);
-      throw error; // Do not fallback to plaintext
-    }
-  }
-
-  private saveNotificationsToFile(): void {
-    try {
-      const data = {
-        notifications: this.userNotificationsData,
-        timestamp: new Date().toISOString(),
-        version: '1.0'
-      };
-
-      const jsonData = JSON.stringify(data, null, 2);
-      const encrypted = this.encryptData(jsonData, this.NOTIFICATIONS_SECRET);
-
-      // Write with secure permissions (0o600 = read/write for owner only)
-      fs.writeFileSync(this.NOTIFICATIONS_FILE, encrypted, { mode: 0o600 });
-      console.log(`💾 Notifications data saved securely (${this.userNotificationsData.length} notifications)`);
-    } catch (error) {
-      console.error('🚨 CRITICAL: Could not save notifications to file:', error);
-      // Do not continue if we can't persist data securely
-    }
-  }
-
-  private loadNotificationsFromFile(): void {
-    try {
-      if (!fs.existsSync(this.NOTIFICATIONS_FILE)) {
-        console.log('📂 No notifications file found - starting fresh');
-        return;
-      }
-
-      const encryptedData = fs.readFileSync(this.NOTIFICATIONS_FILE, 'utf8');
-      const decryptedData = this.decryptData(encryptedData, this.NOTIFICATIONS_SECRET);
-      
-      let parsedData: any;
-      try {
-        parsedData = JSON.parse(decryptedData);
-      } catch (parseError) {
-        console.error('🚨 Error parsing notifications file - data corrupted or invalid');
-        // Backup corrupted file for analysis
-        const backupPath = this.NOTIFICATIONS_FILE + '.corrupted.' + Date.now();
-        fs.copyFileSync(this.NOTIFICATIONS_FILE, backupPath);
-        console.log(`📋 Corrupted file backed up to: ${backupPath}`);
-        return;
-      }
-
-      // Schema validation
-      if (parsedData && 
-          typeof parsedData.version === 'string' &&
-          typeof parsedData.timestamp === 'string' &&
-          Array.isArray(parsedData.notifications)) {
-        
-        // Basic notification structure validation
-        const validNotifications = parsedData.notifications.filter((notif: any) => 
-          notif && 
-          typeof notif.id === 'string' &&
-          typeof notif.userId === 'string' &&
-          typeof notif.message === 'string'
-        );
-
-        this.userNotificationsData = validNotifications;
-        console.log(`📂 Loaded ${validNotifications.length} valid notifications from file (saved: ${parsedData.timestamp})`);
-        
-        if (validNotifications.length !== parsedData.notifications.length) {
-          console.log(`⚠️ Filtered out ${parsedData.notifications.length - validNotifications.length} invalid notifications`);
-        }
-      } else {
-        console.log('📂 Invalid notifications file schema - starting fresh');
-      }
-    } catch (error) {
-      console.error('🚨 Critical error loading notifications from file:', error);
-    }
-  }
-
-  // ===============================
-  // NOTIFICATION METHODS (MemStorage Implementation)
-  // ===============================
-
-  async createNotification(notificationData: any): Promise<any> {
-    console.log('🚨 MemStorage.createNotification called with:', JSON.stringify(notificationData, null, 2));
-    
-    try {
-      const notification = {
-        id: notificationData.id || `notif-${Date.now()}`,
-        ...notificationData,
-        createdAt: notificationData.createdAt || new Date(),
-        updatedAt: new Date()
-      };
-      
-      console.log('📋 Created notification object:', JSON.stringify(notification, null, 2));
-      
-      // Add to legacy notifications array (for compatibility)
-      this.notifications.push(notification);
-      console.log('✅ Added to legacy notifications array');
-      
-      // Add to the main userNotificationsData system
-      const userNotification = {
-        id: notification.id,
-        userId: notification.userId,
-        type: notification.type || 'system',
-        title: notification.title,
-        message: notification.message,
-        read: notification.isRead || false,
-        createdAt: notification.createdAt,
-        readAt: notification.readAt || null,
-        metadata: {
-          category: notification.category,
-          iconType: notification.iconType,
-          actionUrl: notification.actionUrl,
-          sourceId: notification.sourceId,
-          sourceType: notification.sourceType,
-          priority: notification.priority,
-          isPinned: notification.isPinned,
-          actionData: notification.actionData
-        }
-      };
-      
-      this.userNotificationsData.push(userNotification);
-      console.log('✅ Added to userNotificationsData system');
-      
-      console.log(`💾 Notification saved to both storage systems: ${notification.id}`);
-      console.log(`👤 Saved notification for userId: ${userNotification.userId}`);
-      console.log(`📊 Total notifications in storage after save: ${this.userNotificationsData.length}`);
-      console.log(`🔍 Full notification object:`, JSON.stringify(userNotification, null, 2));
-      
-      // Save to persistent file
-      console.log('💾 CRITICAL: About to save notifications to file');
-      this.saveNotificationsToFile();
-      console.log('🚀 CRITICAL: Notification persistence completed successfully');
-      
-      return notification;
-    } catch (error) {
-      console.error('🚨 CRITICAL ERROR in MemStorage.createNotification:', error);
-      console.error('🚨 Error stack:', error.stack);
-      throw error;
-    }
-  }
 }
 
 // Use MemStorage temporarily due to database connection issues
 // Will switch to DatabaseStorage when database is ready
 // تبديل إلى Memory Storage مؤقتاً
-export const storage = new MemStorage();
+export const storage = new MemoryStorage();

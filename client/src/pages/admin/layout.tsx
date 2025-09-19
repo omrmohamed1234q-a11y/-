@@ -23,8 +23,7 @@ import {
   HardDrive,
   FileText,
   ScrollText,
-  Lock,
-  Zap
+  Lock
 } from 'lucide-react';
 
 interface AdminLayoutProps {

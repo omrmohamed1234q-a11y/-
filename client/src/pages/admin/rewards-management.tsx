@@ -9,9 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiRequest } from '@/lib/queryClient';
-import { useQuery } from '@tanstack/react-query';
 import {
   Gift,
   Settings,
@@ -63,13 +61,6 @@ interface Reward {
   created_at: string;
 }
 
-interface UserOption {
-  value: string;
-  label: string;
-  displayName: string;
-  email: string;
-}
-
 interface Challenge {
   id: string;
   name: string;
@@ -111,19 +102,6 @@ export default function RewardsManagement() {
     points: '',
     reason: ''
   });
-
-  // جلب قائمة المستخدمين للقائمة المنسدلة
-  const { data: usersResponse, isLoading: usersLoading, error: usersError } = useQuery({
-    queryKey: ['/api/admin/users-dropdown'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/admin/users-dropdown');
-      const data = await response.json();
-      return data;
-    },
-    enabled: manualRewardDialog, // جلب البيانات فقط عند فتح النافذة
-  });
-  
-  const usersList: UserOption[] = usersResponse?.data || [];
 
   // تحميل الإعدادات الحالية
   const loadSettings = async () => {
@@ -864,7 +842,7 @@ export default function RewardsManagement() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">النقاط المكتسبة</p>
-                      <p className="text-2xl font-bold">{stats.totalEarnedPoints?.toLocaleString() || '0'}</p>
+                      <p className="text-2xl font-bold">{stats.totalEarnedPages.toLocaleString()}</p>
                     </div>
                     <Award className="h-8 w-8 text-orange-500" />
                   </div>
@@ -940,7 +918,7 @@ export default function RewardsManagement() {
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                       <span className="text-sm font-medium">متوسط النقاط المكتسبة</span>
                       <span className="text-lg font-bold text-green-600">
-                        {stats.averagePointsPerUser || 0} نقطة/مستخدم
+                        {stats.averageEarnedPerUser} ورقة/مستخدم
                       </span>
                     </div>
                     
@@ -948,7 +926,7 @@ export default function RewardsManagement() {
                       <span className="text-sm font-medium">معدل الاستفادة</span>
                       <span className="text-lg font-bold text-orange-600">
                         {stats.averagePagesPerUser > 0 ? 
-                          Math.round((stats.averagePointsPerUser / stats.averagePagesPerUser) * 100) : 0}%
+                          Math.round((stats.averageEarnedPerUser / stats.averagePagesPerUser) * 100) : 0}%
                       </span>
                     </div>
                   </div>
@@ -988,49 +966,18 @@ export default function RewardsManagement() {
                   
                   <div className="space-y-4 py-4">
                     <div>
-                      <Label htmlFor="manual_user_id">اختر المستخدم</Label>
-                      <Select
+                      <Label htmlFor="manual_user_id">معرف المستخدم</Label>
+                      <Input
+                        id="manual_user_id"
+                        placeholder="user-12345 أو البريد الإلكتروني"
                         value={manualRewardForm.userId}
-                        onValueChange={(value) => setManualRewardForm(prev => ({
+                        onChange={(e) => setManualRewardForm(prev => ({
                           ...prev,
-                          userId: value
+                          userId: e.target.value
                         }))}
-                        disabled={usersLoading}
-                      >
-                        <SelectTrigger>
-                          <SelectValue 
-                            placeholder={usersLoading ? "جاري تحميل المستخدمين..." : "اختر مستخدم من القائمة"} 
-                          />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[200px]">
-                          {usersLoading ? (
-                            <div className="p-2 text-center text-gray-500 text-sm">
-                              جاري تحميل المستخدمين...
-                            </div>
-                          ) : usersError ? (
-                            <div className="p-2 text-center text-red-500 text-sm">
-                              خطأ في تحميل المستخدمين
-                            </div>
-                          ) : usersList?.length > 0 ? (
-                            usersList.map((user) => (
-                              <SelectItem key={user.value} value={user.value}>
-                                <div className="flex flex-col items-start">
-                                  <span className="font-medium">{user.email}</span>
-                                  {user.displayName && user.displayName !== user.email && (
-                                    <span className="text-sm text-gray-500">{user.displayName}</span>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <div className="p-2 text-center text-gray-500 text-sm">
-                              لا توجد مستخدمين متاحين
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      />
                       <p className="text-xs text-gray-500 mt-1">
-                        اختر المستخدم المراد منحه المكافأة من القائمة
+                        يمكنك استخدام معرف المستخدم أو البريد الإلكتروني
                       </p>
                     </div>
                     

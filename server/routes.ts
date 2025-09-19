@@ -144,29 +144,8 @@ const requireAuth = async (req: any, res: any, next: any) => {
   // Try multiple authentication methods
   let authenticatedUserId = null;
   
-  // Method 1: Admin token authentication (for admin users accessing any routes)
-  if (userId && adminToken) {
-    try {
-      // Check if admin token is valid against admin accounts in storage
-      const adminAccounts = await storage.getAdminAccounts();
-      const validAdminAccount = adminAccounts.find(admin => 
-        admin.token === adminToken && admin.user?.id === userId
-      );
-      
-      if (validAdminAccount) {
-        authenticatedUserId = userId;
-        console.log(`👨‍💼 ADMIN AUTH: Using admin user ID ${userId} with valid admin token`);
-      } else {
-        console.log(`❌ ADMIN AUTH: Invalid admin token or user ID combination`);
-      }
-    } catch (error) {
-      console.error('Error validating admin token:', error);
-      // Continue to other auth methods
-    }
-  }
-  
-  // Method 2: Direct user ID header (ONLY for development/testing with admin token)
-  if (!authenticatedUserId && userId && adminToken && process.env.NODE_ENV !== 'production') {
+  // Method 1: Direct user ID header (ONLY for development/testing with admin token)
+  if (userId && adminToken && process.env.NODE_ENV !== 'production') {
     // Verify admin token for test access
     if (adminToken === process.env.ADMIN_MASTER_TOKEN || adminToken === 'dev-test-token') {
       authenticatedUserId = userId;
@@ -174,7 +153,7 @@ const requireAuth = async (req: any, res: any, next: any) => {
     }
   }
   
-  // Method 3: Supabase JWT token (primary production method)
+  // Method 2: Supabase JWT token (primary production method)
   if (!authenticatedUserId && authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
     try {
@@ -1302,10 +1281,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // General API rate limiting - More permissive to handle health checks
+  // General API rate limiting
   const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5000, // Increased limit to handle high traffic
+    max: 1000, // Limit each IP to 1000 requests per windowMs
     message: {
       success: false,
       message: 'تم تجاوز عدد الطلبات المسموحة. حاول مرة أخرى لاحقاً',
@@ -1313,17 +1292,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => {
-      // Skip rate limiting for HEAD requests (health checks) and admin routes
-      const isHead = req.method === 'HEAD';
-      const isAdmin = req.path.includes('/admin') || req.originalUrl.includes('/admin');
-      
-      if (isHead || isAdmin) {
-        console.log(`⚡ Skipping rate limit for: ${req.method} ${req.originalUrl}`);
-        return true;
-      }
-      return false;
-    }
   });
 
   // Speed limiting for suspicious behavior
@@ -1479,17 +1447,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🚨 URGENT NOTIFICATION FIX: Completely disable rate limiting for debugging
-  console.log('🔥 NOTIFICATION DEBUG: All rate limiting disabled temporarily');
+  // Apply security middleware
+  app.use('/api/auth', authLimiter);
+  app.use('/api/admin/security-access', authLimiter);
   
-  // Skip ALL rate limiting - will be re-enabled after debugging
+  // 🚀 PERFORMANCE FIX: Exclude performance-critical endpoints from rate limiters
+  const performanceCriticalPaths = ['/cart', '/pending-uploads', '/notifications'];
+  
   app.use('/api', (req, res, next) => {
-    console.log(`🚀 No rate limiting: ${req.method} ${req.originalUrl}`);
-    next();
+    const isPerformanceCritical = performanceCriticalPaths.some(path => req.path.startsWith(path));
+    if (isPerformanceCritical) {
+      console.log(`⚡ Fast-track: ${req.method} ${req.originalUrl} (bypassing rate limiters)`);
+      return next(); // Skip ALL rate limiters for performance-critical operations
+    }
+    generalLimiter(req, res, next);
   });
   
-  // 🚨 URGENT FIX: speedLimiter disabled for notification debugging
-  // app.use('/api', speedLimiter); // DISABLED
+  app.use('/api', (req, res, next) => {
+    const isPerformanceCritical = performanceCriticalPaths.some(path => req.path.startsWith(path));
+    if (isPerformanceCritical) {
+      return next(); // Skip speed limiter for performance-critical operations
+    }
+    speedLimiter(req, res, next);
+  });
   
   // ==================== CUSTOM CLEANUP OPTIONS (before any auth) ====================
   
@@ -2547,111 +2527,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         error: 'Failed to update order status' 
-      });
-    }
-  });
-
-  // ==================== LEGACY ADMIN ORDERS ROUTES (للنظام الأصلي) ====================
-  
-  // PUT: Update order - For legacy orders-management page
-  app.put("/api/admin/orders/:id", isAdminAuthenticated, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updates = req.body;
-      
-      console.log(`🔄 Legacy: Updating order ${id} with updates:`, updates);
-      
-      // Update in storage with all provided fields
-      const updatedOrder = await storage.updateOrder(id, {
-        ...updates,
-        updatedAt: new Date().toISOString()
-      });
-      
-      if (!updatedOrder) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'Order not found' 
-        });
-      }
-      
-      res.json({
-        success: true,
-        order: updatedOrder
-      });
-      
-    } catch (error: any) {
-      console.error('❌ Error updating order:', error);
-      res.status(500).json({ 
-        success: false,
-        error: 'Failed to update order' 
-      });
-    }
-  });
-
-  // DELETE: Delete order - For legacy orders-management page
-  app.delete("/api/admin/orders/:id", isAdminAuthenticated, async (req, res) => {
-    try {
-      const { id } = req.params;
-      
-      console.log(`🗑️ Legacy: Deleting order ${id}`);
-      
-      // Delete from storage
-      const success = await storage.deleteOrder(id);
-      
-      if (!success) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'Order not found' 
-        });
-      }
-      
-      res.json({
-        success: true,
-        message: 'Order deleted successfully'
-      });
-      
-    } catch (error: any) {
-      console.error('❌ Error deleting order:', error);
-      res.status(500).json({ 
-        success: false,
-        error: 'Failed to delete order' 
-      });
-    }
-  });
-
-  // GET: All drivers - For legacy orders-management page
-  app.get("/api/admin/drivers", isAdminAuthenticated, async (req, res) => {
-    try {
-      console.log('🚚 Legacy: Getting all drivers for orders-management page');
-      
-      // Get all drivers from storage
-      const drivers = await storage.getAllDrivers();
-      
-      // Transform to format expected by legacy page
-      const transformedDrivers = drivers.map(driver => ({
-        id: driver.id,
-        name: driver.name,
-        username: driver.username || driver.name,
-        driverCode: driver.driverCode,
-        phone: driver.phone,
-        email: driver.email,
-        vehicleType: driver.vehicleType || 'motorcycle',
-        vehiclePlate: driver.vehiclePlate || 'غير محدد',
-        status: driver.status || 'offline',
-        isAvailable: driver.isAvailable || false,
-        currentOrders: driver.currentOrders || 0,
-        rating: driver.rating || 4.5,
-        deliveryCount: driver.deliveryCount || 0
-      }));
-      
-      console.log(`🚚 Returning ${transformedDrivers.length} drivers`);
-      res.json(transformedDrivers);
-      
-    } catch (error: any) {
-      console.error('❌ Error fetching drivers:', error);
-      res.status(500).json({ 
-        success: false,
-        error: 'Failed to fetch drivers' 
       });
     }
   });
@@ -4809,16 +4684,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order = await storage.createOrder(orderData);
       console.log('✅ Order created in checkout:', order.id, 'for user:', userId);
 
-      // 🚨 AUTOMATIC NOTIFICATION: Order Created
-      try {
-        console.log('📦 Triggering automatic order creation notification...');
-        await automaticNotifications.onOrderCreated(order);
-        console.log('✅ Automatic order creation notification sent successfully');
-      } catch (notificationError) {
-        console.error('❌ Error sending automatic order creation notification:', notificationError);
-        // Continue execution - don't fail the order if notification fails
-      }
-
       // Move files from temporary to permanent location if temp files exist
       let moveResult = null;
       if (tempFileInfo && tempFileInfo.tempFolderId && tempFileInfo.customerName) {
@@ -4848,19 +4713,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update order status to processing for demo
       setTimeout(async () => {
-        try {
-          const previousStatus = 'pending';
-          await storage.updateOrderStatus(order.id, 'processing');
-          console.log('🖨️ Order status changed to processing:', order.id);
-          
-          // 🚨 AUTOMATIC NOTIFICATION: Order Status Updated
-          console.log('📋 Triggering automatic order status update notification...');
-          const updatedOrder = { ...order, status: 'processing' };
-          await automaticNotifications.onOrderStatusUpdated(updatedOrder, previousStatus);
-          console.log('✅ Automatic order status update notification sent successfully');
-        } catch (error) {
-          console.error('❌ Error in order status update process:', error);
-        }
+        await storage.updateOrderStatus(order.id, 'processing');
+        console.log('🖨️ Order status changed to processing:', order.id);
       }, 2000);
       
       // Clear cart after successful order
@@ -5053,9 +4907,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enrich with additional data
       const enrichedUser = {
         ...user,
+        totalOrders: Math.floor(Math.random() * 20),
+        totalSpent: Math.floor(Math.random() * 5000),
+        bountyPoints: Math.floor(Math.random() * 1000),
+        accountLevel: Math.floor(Math.random() * 5) + 1,
         status: (user as any).status || 'active',
         lastLoginAt: new Date().toISOString(),
-        orders: []
+        orders: [
+          {
+            id: 'ORD-001',
+            total: 150.50,
+            status: 'delivered',
+            createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+          },
+          {
+            id: 'ORD-002',
+            total: 75.25,
+            status: 'processing',
+            createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+          }
+        ]
       };
       
       res.json(enrichedUser);
@@ -5704,28 +5575,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.updateOrderRating(orderId, rating, review);
       
-      // 🚨 AUTOMATIC NOTIFICATION: Review Received
-      try {
-        console.log('⭐ Triggering automatic review notification...');
-        const order = await storage.getOrder(orderId);
-        if (order) {
-          const reviewData = {
-            id: `review-${orderId}-${Date.now()}`,
-            orderId: orderId,
-            userId: order.userId,
-            rating: rating,
-            review: review || '',
-            createdAt: new Date()
-          };
-          
-          await automaticNotifications.onReviewReceived(reviewData);
-          console.log('✅ Automatic review notification sent successfully');
-        }
-      } catch (notificationError) {
-        console.error('❌ Error sending automatic review notification:', notificationError);
-        // Continue execution - don't fail the rating if notification fails
-      }
-      
       res.json({ success: true });
     } catch (error) {
       console.error('Error submitting rating:', error);
@@ -5809,24 +5658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orderId = req.params.id;
       
-      // Get order before cancelling to send notification
-      const order = await storage.getOrder(orderId);
-      const previousStatus = order?.status || 'unknown';
-      
       await storage.cancelOrder(orderId);
-      
-      // 🚨 AUTOMATIC NOTIFICATION: Order Cancelled
-      if (order) {
-        try {
-          console.log('❌ Triggering automatic order cancellation notification...');
-          const cancelledOrder = { ...order, status: 'cancelled' };
-          await automaticNotifications.onOrderStatusUpdated(cancelledOrder, previousStatus);
-          console.log('✅ Automatic order cancellation notification sent successfully');
-        } catch (notificationError) {
-          console.error('❌ Error sending automatic order cancellation notification:', notificationError);
-          // Continue execution - don't fail the cancellation if notification fails
-        }
-      }
       
       res.json({ success: true });
     } catch (error) {
@@ -6480,16 +6312,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const order = await storage.createOrder(newOrder);
       
-      // 🚨 AUTOMATIC NOTIFICATION: Order Created
-      try {
-        console.log('📦 Triggering automatic order creation notification for admin-created order...');
-        await automaticNotifications.onOrderCreated(order);
-        console.log('✅ Automatic order creation notification sent successfully for admin order');
-      } catch (notificationError) {
-        console.error('❌ Error sending automatic order creation notification for admin order:', notificationError);
-        // Continue execution - don't fail the order if notification fails
-      }
-      
       res.json(order);
     } catch (error) {
       console.error('Error creating order:', error);
@@ -6498,6 +6320,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notifications endpoints with caching
+  app.get('/api/notifications', async (req: any, res) => {
+    try {
+      // Get the authenticated user ID from session or fallback
+      const authenticatedUserId = req.user?.id || '3e3882cc-81fa-48c9-bc69-c290128f4ff2';
+      const userId = req.headers['x-user-id'] || authenticatedUserId;
+      const cacheKey = `notifications_${userId}`;
+      
+      // Check cache first (10 seconds TTL for notifications)
+      const cachedNotifications = cacheGet(cacheKey);
+      if (cachedNotifications) {
+        console.log(`📦 Cache hit for notifications: ${userId}`);
+        return res.json(cachedNotifications);
+      }
+      
+      // Get regular notifications from storage
+      let notifications = storage.getUserNotifications(userId);
+      
+      // Show only notifications specifically for this user
+      const userSpecificNotifications = globalNotificationStorage.filter(n => n.userId === userId);
+      
+      let finalInquiryNotifications = userSpecificNotifications;
+      
+      if (userSpecificNotifications.length > 0) {
+        finalInquiryNotifications = userSpecificNotifications
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        console.log(`📧 User ${userId} has ${finalInquiryNotifications.length} specific inquiry notifications`);
+      } else {
+        console.log(`📭 No specific notifications found for user ${userId}`);
+      }
+      
+      // Transform inquiry notifications to standard format
+      const transformedInquiryNotifications = finalInquiryNotifications.map(n => ({
+        id: n.id,
+        title: n.title || 'إشعار جديد',
+        message: n.message || '',
+        type: n.type || 'inquiry',
+        read: n.isRead || false,
+        isRead: n.isRead || false,
+        createdAt: n.createdAt,
+        inquiryId: n.inquiryId
+      }));
+      
+      // Combine and sort all notifications by creation date
+      const allNotifications = [
+        ...notifications,
+        ...transformedInquiryNotifications
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      // Cache notifications for 10 seconds
+      cacheSet(cacheKey, allNotifications, 10);
+      
+      console.log(`📱 User ${userId} has ${allNotifications.length} notifications (${transformedInquiryNotifications.length} inquiry notifications)`);
+      console.log(`🔍 Global storage has ${globalNotificationStorage.length} total notifications`);
+      res.json(allNotifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.json([]);
+    }
+  });
+
+  app.put('/api/notifications/:id/read', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.markNotificationAsRead(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ error: 'Failed to mark notification as read' });
+    }
+  });
+
+  app.post('/api/notifications', async (req: any, res) => {
+    try {
+      const notification = await storage.createNotification(req.body);
+      res.json(notification);
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      res.status(500).json({ error: 'Failed to create notification' });
+    }
+  });
+
+  // Get unread notifications count
+  app.get('/api/notifications/count', async (req: any, res) => {
+    try {
+      const authenticatedUserId = req.user?.id || '3e3882cc-81fa-48c9-bc69-c290128f4ff2';
+      const userId = req.headers['x-user-id'] || authenticatedUserId;
+      
+      // Get notifications and count unread ones
+      const notifications = storage.getUserNotifications(userId);
+      const userSpecificNotifications = globalNotificationStorage.filter(n => n.userId === userId && !n.isRead);
+      
+      const unreadFromStorage = notifications.filter((n: any) => !n.isRead).length;
+      const unreadFromGlobal = userSpecificNotifications.length;
+      const totalUnread = unreadFromStorage + unreadFromGlobal;
+      
+      res.json({ count: totalUnread });
+    } catch (error) {
+      console.error('Error getting notification count:', error);
+      res.json({ count: 0 });
+    }
+  });
+
+  // Create sample notifications for testing (development only)
+  app.post('/api/notifications/create-samples', async (req: any, res) => {
+    try {
+      const authenticatedUserId = req.user?.id || '3e3882cc-81fa-48c9-bc69-c290128f4ff2';
+      const userId = req.headers['x-user-id'] || authenticatedUserId;
+      
+      const sampleNotifications = [
+        {
+          userId,
+          title: '📦 طلب جديد مُستلم',
+          message: 'تم استلام طلبك رقم #12345 وسيتم معالجته خلال 24 ساعة',
+          type: 'order',
+          iconType: 'success',
+          priority: 'normal',
+          isRead: false,
+          isClicked: false,
+          isPinned: false
+        },
+        {
+          userId,
+          title: '🎉 مكافأة جديدة!',
+          message: 'تهانينا! حصلت على 50 نقطة مكافآت لإكمال طلبك الخامس',
+          type: 'reward',
+          iconType: 'success',
+          priority: 'high',
+          isRead: false,
+          isClicked: false,
+          isPinned: true
+        },
+        {
+          userId,
+          title: '🚚 طلبك في الطريق',
+          message: 'الكابتن أحمد في طريقه إليك. الوصول المتوقع خلال 15 دقيقة',
+          type: 'delivery',
+          iconType: 'info',
+          priority: 'high',
+          isRead: false,
+          isClicked: false,
+          isPinned: false,
+          actionUrl: '/orders/track'
+        },
+        {
+          userId,
+          title: '🔔 إعلان مهم',
+          message: 'خصم 20% على جميع خدمات الطباعة لفترة محدودة!',
+          type: 'announcement',
+          iconType: 'warning',
+          priority: 'urgent',
+          isRead: true,
+          isClicked: false,
+          isPinned: false,
+          actionUrl: '/store'
+        },
+        {
+          userId,
+          title: '⚙️ تحديث النظام',
+          message: 'تم تحديث النظام لتحسين الأداء وإضافة ميزات جديدة',
+          type: 'system',
+          iconType: 'info',
+          priority: 'low',
+          isRead: false,
+          isClicked: false,
+          isPinned: false
+        }
+      ];
+
+      // Add notifications to global storage
+      sampleNotifications.forEach(notification => {
+        const notificationWithId = {
+          ...notification,
+          id: `sample-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          createdAt: new Date().toISOString(),
+          sentAt: new Date().toISOString()
+        };
+        globalNotificationStorage.push(notificationWithId);
+      });
+
+      console.log(`📧 Created ${sampleNotifications.length} sample notifications for user ${userId}`);
+      res.json({ 
+        success: true, 
+        message: `Created ${sampleNotifications.length} sample notifications`,
+        notifications: sampleNotifications.length
+      });
+    } catch (error) {
+      console.error('Error creating sample notifications:', error);
+      res.status(500).json({ error: 'Failed to create sample notifications' });
+    }
+  });
 
   // ============================================================================
   // Smart Notifications API - نظام التنبيهات الذكي
@@ -9231,8 +9244,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // إرسال إشعارات تجريبية للكابتن بعد المصادقة
   function sendTestNotificationsToCaptain(captainId: string, ws: WebSocket) {
-    console.log(`✅ Captain ${captainId} connected - ready to receive real orders`);
-    // No test notifications - captain will receive real orders only
+    console.log(`🧪 Sending test notifications to captain: ${captainId}`);
+    
+    const testNotifications = [
+      {
+        type: 'new_order_available',
+        data: {
+          id: `order_${Date.now()}`,
+          orderNumber: `ORD-${Math.floor(Math.random() * 10000)}`,
+          customerName: 'أحمد محمد',
+          customerPhone: '01001234567',
+          totalAmount: 150.5,
+          priority: 'normal',
+          deliveryAddress: 'شارع التحرير، القاهرة',
+          estimatedDelivery: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          items: [
+            { name: 'طباعة مستندات', quantity: 10, price: 15.05 }
+          ]
+        },
+        timestamp: Date.now()
+      },
+      {
+        type: 'order_status_update',
+        data: {
+          id: `order_${Date.now() - 1000}`,
+          orderNumber: 'ORD-8765',
+          status: 'printing',
+          statusText: 'جاري الطباعة',
+          message: 'تم بدء طباعة طلبك بنجاح',
+          timestamp: Date.now()
+        }
+      },
+      {
+        type: 'system_message',
+        data: {
+          id: `sys_${Date.now()}`,
+          type: 'announcement',
+          title: 'إعلان مهم',
+          message: 'سيتم تحديث النظام الليلة من 2:00 ص إلى 4:00 ص',
+          priority: 'medium',
+          timestamp: Date.now()
+        }
+      },
+      {
+        type: 'location_update_request',
+        data: {
+          message: 'يرجى تحديث موقعك للحصول على طلبات أفضل',
+          timestamp: Date.now(),
+          requestId: `loc_${Date.now()}`
+        }
+      }
+    ];
+
+    testNotifications.forEach((notification, index) => {
+      setTimeout(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(notification));
+          console.log(`📤 Test notification sent: ${notification.type}`);
+        }
+      }, (index + 1) * 3000); // Send every 3 seconds
+    });
   }
 
   // دالة إرسال إشعار جديد لجميع الكباتن
@@ -9311,7 +9382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Paymob payment routes
   app.post('/api/payments/paymob/create', createPaymobPayment);
-  app.post('/api/payments/paymob/callback', (req, res) => handlePaymobCallback(req, res, storage, automaticNotifications));
+  app.post('/api/payments/paymob/callback', handlePaymobCallback);
   app.get('/api/payments/paymob/methods', getPaymobPaymentMethods);
   
   // Privacy Policy endpoints - this route was causing conflicts, removed to use the proper one later
@@ -9643,72 +9714,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🎁 Admin ${req.user.id} granted ${points} points to user ${userId}: ${reason}`);
 
-      // تحديث نقاط المستخدم في التخزين
-      try {
-        let user = await storage.getUser(userId);
-        
-        // إذا لم يوجد المستخدم في Memory Storage، تحقق من Supabase Auth
-        if (!user && supabase) {
-          try {
-            console.log(`🔍 User ${userId} not found in memory storage, checking Supabase Auth...`);
-            const { data: { user: authUser }, error } = await supabase.auth.admin.getUserById(userId);
-            
-            if (authUser && !error) {
-              console.log(`✅ Found user ${userId} in Supabase Auth: ${authUser.email}`);
-              
-              // إنشاء المستخدم في Memory Storage لأول مرة
-              user = await storage.createUser({
-                id: userId,
-                email: authUser.email,
-                displayName: authUser.user_metadata?.full_name || authUser.user_metadata?.firstName || authUser.email,
-                bountyPoints: 0,
-                totalPrints: 0,
-                referralCode: `REF_${userId.substring(0, 8)}`,
-                totalReferrals: 0
-              });
-              
-              console.log(`🆕 Created user profile in memory storage for: ${userId}`);
-            }
-          } catch (supabaseError) {
-            console.error('Error checking Supabase Auth:', supabaseError);
-          }
-        }
-        
-        if (user) {
-          const currentPoints = user.bountyPoints || 0;
-          const newPoints = currentPoints + parseInt(points);
-          
-          await storage.updateUser(userId, {
-            bountyPoints: newPoints
-          });
-          
-          console.log(`💰 Updated user ${userId} points: ${currentPoints} + ${points} = ${newPoints}`);
-        } else {
-          console.warn(`⚠️ User ${userId} not found in both memory storage and Supabase Auth`);
-          return res.status(404).json({ message: 'User not found' });
-        }
-      } catch (pointsError) {
-        console.error('Error updating user points:', pointsError);
-        return res.status(500).json({ message: 'Failed to update user points' });
-      }
-
-      // إرسال إشعار للمستخدم باستخدام نظام المكافآت الجديد
-      try {
-        await automaticNotifications.onRewardGranted({
-          userId: userId,
-          points: points,
-          reason: reason || 'مكافأة إدارية',
-          adminId: req.user?.id
-        });
-        console.log(`🎁 Reward notification sent to user ${userId} for ${points} points`);
-      } catch (notificationError) {
-        console.error('❌ Error sending reward notification:', notificationError);
-        // لا نعطل العملية إذا فشل الإشعار
-      }
+      // في المستقبل: تحديث قاعدة البيانات هنا لإضافة النقاط للمستخدم
+      // await updateUserPoints(userId, points);
 
       res.json({
         success: true,
-        message: `تم منح ${points} نقطة مجانية للمستخدم بنجاح وتم إرسال إشعار`
+        message: `تم منح ${points} نقطة مجانية للمستخدم بنجاح`
       });
     } catch (error) {
       console.error('Error granting admin reward:', error);
@@ -9853,65 +9864,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // الحصول على قائمة المستخدمين مع الإيميلات (Admin only)
-  app.get('/api/admin/users-dropdown', isAdminAuthenticated, async (req, res) => {
-    try {
-      console.log('👥 جلب قائمة المستخدمين مع الإيميلات...');
-      
-      let allUsers = [];
-      if (supabase) {
-        try {
-          // جلب جميع المستخدمين من Supabase Auth
-          const { data: { users }, error } = await supabase.auth.admin.listUsers();
-          
-          if (error) {
-            console.error('Supabase Auth error:', error);
-            // fallback to memory storage
-            allUsers = await storage.getAllUsers();
-          } else {
-            // تحويل بيانات المستخدمين من Supabase Auth
-            allUsers = users.map((user: any) => ({
-              id: user.id,
-              email: user.email,
-              display_name: user.user_metadata?.full_name || user.user_metadata?.firstName || '',
-              full_name: user.user_metadata?.full_name || 
-                        `${user.user_metadata?.firstName || ''} ${user.user_metadata?.lastName || ''}`.trim(),
-              created_at: user.created_at,
-              confirmed_at: user.confirmed_at
-            }));
-            console.log(`✅ تم جلب ${allUsers.length} مستخدم من Supabase Auth`);
-          }
-        } catch (supabaseError) {
-          console.error('Supabase Auth connection error:', supabaseError);
-          // fallback to memory storage
-          allUsers = await storage.getAllUsers();
-        }
-      } else {
-        // fallback to memory storage if no supabase client
-        allUsers = await storage.getAllUsers();
-        console.log('🔄 استخدام Memory Storage (لا يوجد Supabase client)');
-      }
-      
-      // تنسيق البيانات للـ dropdown
-      const usersList = allUsers.map(user => ({
-        value: user.id || user.email, // استخدم ID أو الإيميل كـ value
-        label: user.email,
-        displayName: user.display_name || user.full_name || user.email,
-        email: user.email
-      }));
-      
-      console.log(`📝 تم تنسيق ${usersList.length} مستخدم للقائمة المنسدلة`);
-      
-      res.json({
-        success: true,
-        data: usersList
-      });
-    } catch (error) {
-      console.error('Error fetching users list:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  });
-
   // ==================== إدارة المكافآت والتحديات CRUD ====================
   
   // تم نقل المخازن العامة للأعلى قبل الـ endpoints
@@ -10004,18 +9956,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
 
-      // البحث عن المكافأة في الـ store
-      const rewardIndex = rewardsStore.findIndex(reward => reward.id === id);
-      if (rewardIndex === -1) {
-        return res.status(404).json({ 
-          success: false, 
-          message: 'المكافأة غير موجودة' 
-        });
-      }
-
-      // حذف المكافأة من الـ store
-      rewardsStore.splice(rewardIndex, 1);
-
       console.log(`🗑️ Admin deleted reward: ${id}`);
 
       res.json({
@@ -10032,9 +9972,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // الحصول على جميع التحديات (Admin)
   app.get('/api/admin/challenges/all', isAdminAuthenticated, async (req, res) => {
     try {
+      const mockChallenges = [
+        {
+          id: '1',
+          name: 'طباع النشيط',
+          description: 'اطبع 5 صفحات في يوم واحد',
+          type: 'daily',
+          target_value: 5,
+          points_reward: 50,
+          is_daily: true,
+          active: true,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '2',
+          name: 'ادع صديق',
+          description: 'شارك التطبيق مع صديق واحد',
+          type: 'referral',
+          target_value: 1,
+          points_reward: 100,
+          is_daily: false,
+          active: true,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '3',
+          name: 'أسبوع النشاط',
+          description: 'اطبع لمدة 7 أيام متتالية',
+          type: 'streak',
+          target_value: 7,
+          points_reward: 200,
+          is_daily: false,
+          active: true,
+          created_at: new Date().toISOString()
+        }
+      ];
+
       res.json({
         success: true,
-        data: challengesStore
+        data: mockChallenges
       });
     } catch (error) {
       console.error('Error fetching challenges:', error);
@@ -10112,18 +10088,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/challenges/:id', isAdminAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-
-      // البحث عن التحدي في الـ store
-      const challengeIndex = challengesStore.findIndex(challenge => challenge.id === id);
-      if (challengeIndex === -1) {
-        return res.status(404).json({ 
-          success: false, 
-          message: 'التحدي غير موجود' 
-        });
-      }
-
-      // حذف التحدي من الـ store
-      challengesStore.splice(challengeIndex, 1);
 
       console.log(`🗑️ Admin deleted challenge: ${id}`);
 
@@ -11754,317 +11718,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to delete account' });
     }
   });
-
-  // =====================================
-  // 🔔 AUTOMATIC NOTIFICATIONS MANAGEMENT API
-  // =====================================
-
-  // Get notification configuration (Admin only)
-  app.get('/api/admin/notifications/config', isAdminAuthenticated, async (req, res) => {
-    try {
-      // Check if user is authenticated and has admin role
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-      }
-
-      // Get current configuration from storage
-      const config = await storage.getNotificationConfig();
-      
-      res.json({ success: true, config });
-    } catch (error) {
-      console.error('Error fetching notification config:', error);
-      res.status(500).json({ error: 'Failed to fetch notification configuration' });
-    }
-  });
-
-  // Update notification configuration (Admin only)
-  app.post('/api/admin/notifications/config', isAdminAuthenticated, async (req, res) => {
-    try {
-      // Check if user is authenticated and has admin role
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-      }
-
-      const { config } = req.body;
-      if (!config || typeof config !== 'object') {
-        return res.status(400).json({ error: 'Invalid configuration data' });
-      }
-
-      // Save configuration to storage
-      const updatedConfig = await storage.updateNotificationConfig(config);
-      
-      console.log('📝 Notification configuration updated:', updatedConfig);
-      
-      // Update the automatic notifications service configuration
-      if (automaticNotifications && typeof automaticNotifications.updateConfig === 'function') {
-        automaticNotifications.updateConfig(updatedConfig);
-      }
-
-      res.json({ success: true, message: 'Configuration updated successfully', config: updatedConfig });
-    } catch (error) {
-      console.error('Error updating notification config:', error);
-      res.status(500).json({ error: 'Failed to update notification configuration' });
-    }
-  });
-
-  // Get notification history with filtering (Admin only)  
-  app.get('/api/admin/notifications/history', isAdminAuthenticated, async (req, res) => {
-    try {
-      // Check if user is authenticated and has admin role
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-      }
-
-      const { type, status, limit = 100, offset = 0 } = req.query;
-
-      // Get all notifications from storage
-      const allNotifications = await storage.getAllNotifications() || [];
-      
-      // Apply filters
-      let filteredNotifications = allNotifications;
-      
-      if (type && type !== 'all') {
-        filteredNotifications = filteredNotifications.filter(n => n.type === type);
-      }
-      
-      if (status && status !== 'all') {
-        filteredNotifications = filteredNotifications.filter(n => n.status === status);
-      }
-
-      // Sort by creation date (newest first)
-      filteredNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-      // Apply pagination
-      const startIndex = parseInt(offset as string);
-      const endIndex = startIndex + parseInt(limit as string);
-      const paginatedNotifications = filteredNotifications.slice(startIndex, endIndex);
-
-      res.json({
-        success: true,
-        notifications: paginatedNotifications,
-        total: filteredNotifications.length,
-        hasMore: endIndex < filteredNotifications.length
-      });
-    } catch (error) {
-      console.error('Error fetching notification history:', error);
-      res.status(500).json({ error: 'Failed to fetch notification history' });
-    }
-  });
-
-  // Fix existing route
-  // Get notification configuration (Admin only)
-  app.get('/api/admin/notifications/config', isAdminAuthenticated, async (req, res) => {
-    try {
-      // Check if user is authenticated and has admin role
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-      }
-
-      // Get current configuration from storage with fallback defaults
-      const config = {
-        orderCreated: { enabled: true, template: 'تم إنشاء طلبك بنجاح #{{orderNumber}}' },
-        paymentSuccess: { enabled: true, template: 'تم تأكيد الدفع للطلب #{{orderNumber}}' },
-        paymentFailed: { enabled: true, template: 'فشل في عملية الدفع للطلب #{{orderNumber}}' },
-        orderProcessing: { enabled: true, template: 'طلبك #{{orderNumber}} قيد المعالجة' },
-        orderDelivered: { enabled: true, template: 'تم تسليم طلبك #{{orderNumber}} بنجاح' },
-        orderCancelled: { enabled: true, template: 'تم إلغاء طلبك #{{orderNumber}}' },
-        reviewReceived: { enabled: true, template: 'شكراً لتقييمك للطلب #{{orderNumber}}' },
-        systemAlert: { enabled: true, template: 'تنبيه النظام: {{message}}' }
-      };
-
-      res.json({ success: true, config: defaultConfig });
-    } catch (error) {
-      console.error('Error fetching notification config:', error);
-      res.status(500).json({ error: 'Failed to fetch notification configuration' });
-    }
-  });
-
-  // Update notification configuration (Admin only)
-  app.post('/api/admin/notifications/config', isAdminAuthenticated, async (req, res) => {
-    try {
-      // Check if user is authenticated and has admin role
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-      }
-
-      const { config } = req.body;
-      if (!config || typeof config !== 'object') {
-        return res.status(400).json({ error: 'Invalid configuration data' });
-      }
-
-      // In production, save to database. For now, log the update
-      console.log('📝 Notification configuration updated:', config);
-      
-      // Update the automatic notifications service configuration
-      if (automaticNotifications && typeof automaticNotifications.updateConfig === 'function') {
-        automaticNotifications.updateConfig(config);
-      }
-
-      res.json({ success: true, message: 'Configuration updated successfully' });
-    } catch (error) {
-      console.error('Error updating notification config:', error);
-      res.status(500).json({ error: 'Failed to update notification configuration' });
-    }
-  });
-
-  // Send system alert (Admin only)
-  app.post('/api/admin/notifications/system-alert', isAdminAuthenticated, async (req, res) => {
-    try {
-      // Check if user is authenticated and has admin role
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-      }
-
-      const { title, message, urgent = false } = req.body;
-      if (!title || !message) {
-        return res.status(400).json({ error: 'Title and message are required' });
-      }
-
-      // Create system alert notification
-      const systemAlert = {
-        id: `alert-${Date.now()}`,
-        type: 'system_alert',
-        title,
-        message,
-        urgent,
-        createdAt: new Date(),
-        status: 'pending',
-        adminOnly: true
-      };
-
-      // Store the notification
-      await storage.createNotification(systemAlert);
-
-      // Send real-time notification to all admins
-      if (automaticNotifications && typeof automaticNotifications.sendRealtimeNotification === 'function') {
-        await automaticNotifications.sendRealtimeNotification(systemAlert);
-      }
-
-      console.log(`🚨 System alert sent: ${title} - ${urgent ? 'URGENT' : 'NORMAL'}`);
-
-      res.json({ 
-        success: true, 
-        message: 'System alert sent successfully',
-        alertId: systemAlert.id 
-      });
-    } catch (error) {
-      console.error('Error sending system alert:', error);
-      res.status(500).json({ error: 'Failed to send system alert' });
-    }
-  });
-
-  // Test notification system (Admin only)
-  app.post('/api/admin/notifications/test', isAdminAuthenticated, async (req, res) => {
-    try {
-      // Check if user is authenticated and has admin role
-      if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-      }
-
-      const { type = 'system_alert', userId = 'test-user' } = req.body;
-
-      const testNotification = {
-        id: `test-${Date.now()}`,
-        type,
-        title: 'إشعار تجريبي',
-        message: 'هذا إشعار تجريبي للتأكد من عمل النظام',
-        userId: type === 'system_alert' ? undefined : userId,
-        createdAt: new Date(),
-        status: 'sent',
-        isTest: true
-      };
-
-      // Store test notification
-      await storage.createNotification(testNotification);
-
-      // Send via automatic notification service
-      if (automaticNotifications) {
-        await automaticNotifications.sendRealtimeNotification(testNotification);
-      }
-
-      console.log(`🧪 Test notification sent: ${type}`);
-
-      res.json({ 
-        success: true, 
-        message: 'Test notification sent successfully',
-        notification: testNotification
-      });
-    } catch (error) {
-      console.error('Error sending test notification:', error);
-      res.status(500).json({ error: 'Failed to send test notification' });
-    }
-  });
-
-  console.log('🔔 Automatic notifications management APIs registered');
-
-  // ADD TEST NOTIFICATIONS FOR USER محمد (one-time setup)
-  setTimeout(async () => {
-    try {
-      const testUserId = '3e3882cc-81fa-48c9-bc69-c290128f4ff2'; // محمد's user ID
-      const testNotifications = [
-        {
-          id: `test-notif-${Date.now()}-1`,
-          userId: testUserId,
-          title: '🎁 مرحباً بك في نظام الإشعارات!',
-          message: 'نحن سعداء لوجودك معنا. اكتشف المزيد من الميزات الرائعة!',
-          type: 'welcome',
-          category: 'system',
-          iconType: 'bell',
-          actionUrl: '/rewards',
-          sourceId: 'test_welcome',
-          sourceType: 'system',
-          priority: 'normal',
-          isPinned: true,
-          isRead: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: `test-notif-${Date.now()}-2`,
-          userId: testUserId,
-          title: '🚀 إشعار اختبار 2',
-          message: 'هذا إشعار تجريبي للتأكد من أن النظام يعمل بشكل صحيح',
-          type: 'info',
-          category: 'system',
-          iconType: 'check-circle',
-          actionUrl: '/profile',
-          sourceId: 'test_system',
-          sourceType: 'test',
-          priority: 'normal',
-          isPinned: false,
-          isRead: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: `test-notif-${Date.now()}-3`,
-          userId: testUserId,
-          title: '⭐ إشعار مهم!',
-          message: 'تم إعداد نظام الإشعارات بنجاح، ستصلك الآن جميع التحديثات المهمة',
-          type: 'achievement',
-          category: 'system',
-          iconType: 'star',
-          actionUrl: '/rewards',
-          sourceId: 'test_achievement',
-          sourceType: 'system',
-          priority: 'high',
-          isPinned: true,
-          isRead: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ];
-
-      console.log('🔔 Creating test notifications for user محمد...');
-      for (const notification of testNotifications) {
-        await storage.createNotification(notification);
-        console.log(`✅ Created test notification: ${notification.title}`);
-      }
-      console.log('🎉 Test notifications setup complete!');
-    } catch (error) {
-      console.error('❌ Error creating test notifications:', error);
-    }
-  }, 3000); // Wait 3 seconds for server to initialize
 
   return httpServer;
 }

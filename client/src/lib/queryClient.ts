@@ -63,74 +63,23 @@ export async function getAuthHeaders(options: { url?: string; forceAdmin?: boole
       }
     }
 
-    // Check if user has admin credentials (even for non-admin routes)
-    const adminAuth = localStorage.getItem('adminAuth');
-    const adminToken = localStorage.getItem('adminToken');
-    
-    if (adminAuth && adminToken) {
-      try {
-        const adminData = JSON.parse(adminAuth);
-        const token = adminData.token || adminToken;
-        const userId = adminData.user?.id || adminData.admin?.id || adminData.id;
-        
-        console.log(`🔐 Using admin authentication for any route: ${userId}`);
-        return {
-          'x-admin-token': token,
-          'X-User-ID': userId,
-          'X-User-Role': 'admin',
-        };
-      } catch (error) {
-        console.error('Error parsing admin auth:', error);
-        localStorage.removeItem('adminAuth');
-        localStorage.removeItem('adminToken');
-      }
-    }
-
     // For non-admin routes or fallback, use Supabase session
     const { supabase } = await import('./supabase');
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session?.access_token) {
       console.log(`🔑 Using Supabase authentication for user: ${session.user.email} (${session.user.id})`);
-      
-      const headers: Record<string, string> = {
+      return {
         'Authorization': `Bearer ${session.access_token}`,
         'X-User-ID': session.user.id,
         'X-User-Role': session.user.user_metadata?.role || 'customer',
       };
-      
-      // DEVELOPMENT MODE: Add dev-test-token for notification APIs  
-      if (options.url && (options.url.includes('/api/notifications') || options.url.includes('/api/notification'))) {
-        headers['X-Admin-Token'] = 'dev-test-token';
-        console.log('🧪 DEV MODE: Added dev-test-token for notification API');
-      }
-      
-      return headers;
     }
 
     // FALLBACK: No valid authentication found
     console.log('❌ No valid authentication session found');
-    
-    // DEVELOPMENT MODE: Even without authentication, allow notification API access  
-    if (options.url && (options.url.includes('/api/notifications') || options.url.includes('/api/notification'))) {
-      console.log('🧪 DEV MODE: Adding dev-test-token and user ID for notification API fallback');
-      return {
-        'X-Admin-Token': 'dev-test-token',
-        'X-User-ID': '3e3882cc-81fa-48c9-bc69-c290128f4ff2', // محمد's user ID
-      };
-    }
-    
   } catch (error) {
     console.warn('Failed to get authentication headers:', error);
-    
-    // DEVELOPMENT MODE: Even on error, allow notification API access  
-    if (options.url && (options.url.includes('/api/notifications') || options.url.includes('/api/notification'))) {
-      console.log('🧪 DEV MODE: Adding dev-test-token and user ID for notification API after auth error');
-      return {
-        'X-Admin-Token': 'dev-test-token',
-        'X-User-ID': '3e3882cc-81fa-48c9-bc69-c290128f4ff2', // محمد's user ID
-      };
-    }
   }
   
   return {};
