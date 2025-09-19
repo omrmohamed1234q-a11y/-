@@ -203,6 +203,13 @@ class SmartDeliveryService {
    * Send smart email with personalization
    */
   async sendSmartEmail(params: EmailParams): Promise<boolean> {
+    console.log('🔍 DEBUG sendSmartEmail called with:', { 
+      to: params.to, 
+      subject: params.subject,
+      sendgridKeyExists: !!process.env.SENDGRID_API_KEY,
+      sendgridKeyPrefix: process.env.SENDGRID_API_KEY ? process.env.SENDGRID_API_KEY.substring(0, 10) + '...' : 'undefined'
+    });
+    
     if (!process.env.SENDGRID_API_KEY) {
       console.log('📧 Email would be sent (SendGrid API key not configured):', params.subject);
       return true; // Return true for testing when API key not available
@@ -478,6 +485,12 @@ class SmartDeliveryService {
    * Send reward and points notification email
    */
   async sendSmartReward(userEmail: string, rewardData: any): Promise<boolean> {
+    console.log('🎁 DEBUG sendSmartReward called with:', { 
+      userEmail, 
+      rewardData,
+      timestamp: new Date().toISOString()
+    });
+    
     const rewardTemplate = {
       subject: '🎁 تهانينا! حصلت على مكافأة جديدة - {{points}} نقطة!',
       html: `
