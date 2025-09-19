@@ -230,7 +230,7 @@ function AppRouter() {
         {/* Secure login routes - available always */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
         <Route path="/secure-admin-login" component={SecureAdminLogin} />
-        <Route path="/captain/secure-login" component={CaptainSecureLogin} />
+        <Route path="/captain/secure-login" component={CaptainSimpleLogin} />
         <Route path="/captain/dashboard" component={CaptainDashboard} />
         
         <Route path="/test-signup" component={TestSignup} />
