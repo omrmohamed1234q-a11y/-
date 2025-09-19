@@ -44,7 +44,6 @@ import {
   Navigation2,
   Gauge,
   Trophy,
-  MapPin,
   Route2
 } from 'lucide-react';
 
