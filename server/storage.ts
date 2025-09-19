@@ -315,7 +315,24 @@ export class MemoryStorage implements IStorage {
   private partners: Partner[] = [];
   private partnerProducts: any[] = [];
   private announcements: Announcement[] = [];
-  private drivers: any[] = [];
+  private drivers: any[] = [
+    {
+      id: 'captain-001',
+      username: 'captain-001',
+      name: 'كابتن التوصيل التجريبي',
+      email: 'captain001@example.com',
+      phone: '+201000000001',
+      password: '123456',
+      status: 'online',
+      isAvailable: true,
+      vehicleType: 'motorcycle',
+      vehicleNumber: 'ABC-123',
+      rating: 4.8,
+      totalDeliveries: 156,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ];
   private termsVersions: any[] = [];
   private smartCampaigns: any[] = [];
   private messageTemplates: any[] = [];
