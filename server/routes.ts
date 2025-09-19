@@ -12052,6 +12052,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     legacyHeaders: false,
   });
   
+  // Initialize test captain if not exists (for development)
+  const initTestCaptain = async () => {
+    try {
+      const drivers = await storage.getAllDrivers();
+      const testCaptain = drivers.find((d: any) => d.username === 'captain001');
+      
+      if (!testCaptain) {
+        await storage.createDriver({
+          name: 'كبتن اختبار',
+          username: 'captain001',
+          password: 'captain123', // Simple password for testing
+          email: 'captain@atbaali.com',
+          phone: '01000000001',
+          vehicleType: 'motorcycle',
+          vehicleNumber: 'ABC-123',
+          rating: 4.9,
+          totalDeliveries: 0,
+          status: 'online',
+          isAvailable: true
+        });
+        console.log('✅ Test captain created: captain001 / captain123');
+      }
+    } catch (error) {
+      console.error('❌ Error creating test captain:', error);
+    }
+  };
+
+  // Initialize test captain
+  initTestCaptain();
+
   // Secure captain login endpoint
   app.post('/api/captain/secure-login', captainLoginLimiter, async (req, res) => {
     try {
