@@ -6490,9 +6490,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Calculate route using Google Directions API
   app.post('/api/orders/calculate-route', async (req, res) => {
     try {
+      console.log('🗺️  Route calculation request received:', JSON.stringify(req.body, null, 2));
+      
       // Validate request with Zod
       const validationResult = calculateRouteSchema.safeParse(req.body);
       if (!validationResult.success) {
+        console.error('❌ Route calculation validation failed:', validationResult.error.errors);
         return res.status(400).json({
           success: false,
           message: 'بيانات غير صحيحة',
@@ -6502,13 +6505,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { orderId, origin, destination, waypoints } = validationResult.data;
 
-      const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+      // Use the Google Maps API key (fallback to VITE_ version for now)
+      const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyAbj_ubPn2MbYn3LYzAhDMMU0UE38lPzZQ';
       if (!googleApiKey) {
+        console.error('❌ Google Maps API key not found in environment variables');
         return res.status(500).json({
           success: false,
           message: 'Google Maps API key not configured'
         });
       }
+      
+      console.log(`🗺️  Calculating route for order ${orderId}: ${origin.lat},${origin.lng} → ${destination.lat},${destination.lng}`);
 
       // Build Google Directions API request
       const originStr = `${origin.lat},${origin.lng}`;
