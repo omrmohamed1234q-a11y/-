@@ -381,7 +381,22 @@ export const orders = pgTable("orders", {
   driverPhone: text("driver_phone"),
   trackingNumber: text("tracking_number"),
   trackingUrl: text("tracking_url"),
-  estimatedDelivery: integer("estimated_delivery"), // Minutes
+  estimatedDelivery: integer("estimated_delivery"), // Minutes (legacy field for business logic)
+  
+  // Advanced location and routing system - النظام المتقدم للمواقع والمسارات
+  deliveryCoordinates: jsonb("delivery_coordinates"), // {lat: number, lng: number, address?: string}
+  routeData: jsonb("route_data"), // Google Directions API response data
+  routeSteps: jsonb("route_steps"), // Detailed turn-by-turn directions
+  encodedPolyline: text("encoded_polyline"), // Google's encoded polyline for route rendering
+  estimatedDistance: integer("estimated_distance"), // Distance in meters
+  estimatedDuration: integer("estimated_duration"), // Duration in seconds
+  routeLastUpdated: timestamp("route_last_updated"),
+  
+  // Real-time tracking enhancements
+  driverCurrentLocation: jsonb("driver_current_location"), // {lat, lng, timestamp, accuracy}
+  customerTrackingEnabled: boolean("customer_tracking_enabled").default(true),
+  routeOptimized: boolean("route_optimized").default(false),
+  alternativeRoutes: jsonb("alternative_routes").default([]), // Alternative route options with default
   
   // Notes and instructions
   deliveryNotes: text("delivery_notes"), // Customer notes for delivery
@@ -469,6 +484,88 @@ export const driverLocations = pgTable("driver_locations", {
   speed: decimal("speed", { precision: 8, scale: 2 }), // Speed in km/h
   bearing: decimal("bearing", { precision: 6, scale: 2 }), // Direction in degrees
   timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// Advanced Route Tracking System - نظام تتبع المسارات المتقدم
+export const routeTracking = pgTable("route_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  driverId: varchar("driver_id").notNull().references(() => drivers.id),
+  
+  // Route Information
+  startLocation: jsonb("start_location").notNull(), // {lat, lng, address}
+  endLocation: jsonb("end_location").notNull(), // {lat, lng, address}
+  waypointLocations: jsonb("waypoint_locations").default([]), // Array of waypoints
+  
+  // Google Directions API Data
+  googleRouteId: text("google_route_id"), // Google's unique route identifier
+  encodedPolyline: text("encoded_polyline").notNull(),
+  routeSteps: jsonb("route_steps").notNull(), // Detailed turn-by-turn directions
+  routeBounds: jsonb("route_bounds"), // Northeast/Southwest bounds
+  
+  // Route Metrics
+  totalDistance: integer("total_distance").notNull(), // Distance in meters
+  estimatedDuration: integer("estimated_duration").notNull(), // Duration in seconds
+  actualDuration: integer("actual_duration"), // Actual delivery time
+  trafficDuration: integer("traffic_duration"), // Duration with traffic
+  
+  // Route Status and Optimization
+  routeStatus: text("route_status").default("active"), // "active", "completed", "cancelled", "optimized"
+  isOptimized: boolean("is_optimized").default(false),
+  optimizationScore: decimal("optimization_score", { precision: 3, scale: 2 }),
+  alternativeRoutes: jsonb("alternative_routes").default([]),
+  
+  // Real-time Progress Tracking
+  currentStep: integer("current_step").default(0), // Current step in route
+  completedSteps: integer("completed_steps").default(0),
+  remainingDistance: integer("remaining_distance"),
+  remainingTime: integer("remaining_time"),
+  progressPercentage: decimal("progress_percentage", { precision: 5, scale: 2 }).default("0.00"),
+  
+  // Route Analytics
+  averageSpeed: decimal("average_speed", { precision: 8, scale: 2 }), // km/h
+  maxSpeed: decimal("max_speed", { precision: 8, scale: 2 }), // km/h
+  idleTime: integer("idle_time").default(0), // Time spent idle in seconds
+  deliveryEfficiency: decimal("delivery_efficiency", { precision: 5, scale: 2 }), // Performance metric
+  
+  // Timestamps
+  routeStartedAt: timestamp("route_started_at"),
+  routeCompletedAt: timestamp("route_completed_at"),
+  lastLocationUpdate: timestamp("last_location_update"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Route Waypoints for detailed tracking - نقاط المسار للتتبع المفصل
+export const routeWaypoints = pgTable("route_waypoints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  routeId: varchar("route_id").notNull().references(() => routeTracking.id),
+  waypointIndex: integer("waypoint_index").notNull(), // Order in the route
+  
+  // Waypoint Location
+  latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
+  address: text("address"),
+  waypointType: text("waypoint_type").notNull(), // "start", "pickup", "delivery", "stop", "end"
+  
+  // Waypoint Status
+  status: text("status").default("pending"), // "pending", "approaching", "arrived", "completed", "skipped"
+  estimatedArrival: timestamp("estimated_arrival"),
+  actualArrival: timestamp("actual_arrival"),
+  departureTime: timestamp("departure_time"),
+  
+  // Waypoint Details
+  instructions: text("instructions"), // Special delivery instructions
+  contactPerson: text("contact_person"),
+  contactPhone: text("contact_phone"),
+  notes: text("notes"),
+  
+  // Performance Tracking
+  waitTime: integer("wait_time").default(0), // Time spent at this waypoint
+  serviceTime: integer("service_time").default(0), // Time to complete service
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const rewards = pgTable("rewards", {
@@ -787,6 +884,28 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   subtotal: z.string().or(z.number()).optional(),
   totalAmount: z.string().or(z.number()).optional(),
   status: z.string().default("pending"),
+  
+  // Advanced routing fields (all optional for backward compatibility)
+  deliveryCoordinates: z.object({
+    lat: z.number(),
+    lng: z.number(),
+    address: z.string().optional(),
+  }).optional(),
+  routeData: z.any().optional(), // Google Directions API response
+  routeSteps: z.array(z.any()).optional(), // Turn-by-turn directions
+  encodedPolyline: z.string().optional(), // Google encoded polyline
+  estimatedDistance: z.number().optional(), // Distance in meters
+  estimatedDuration: z.number().optional(), // Duration in seconds
+  routeLastUpdated: z.date().optional(),
+  driverCurrentLocation: z.object({
+    lat: z.number(),
+    lng: z.number(),
+    timestamp: z.string(),
+    accuracy: z.number().optional(),
+  }).optional(),
+  customerTrackingEnabled: z.boolean().optional().default(true),
+  routeOptimized: z.boolean().optional().default(false),
+  alternativeRoutes: z.array(z.any()).optional().default([]),
 });
 
 export const insertRewardSchema = createInsertSchema(rewards).omit({
@@ -1719,6 +1838,93 @@ export type InsertUserNotification = z.infer<typeof insertUserNotificationSchema
 export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
 export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
 export type InsertRewardTransaction = z.infer<typeof insertRewardTransactionSchema>;
+
+// ===========================================
+// ADVANCED ROUTE TRACKING SYSTEM SCHEMAS
+// ===========================================
+
+export const insertRouteTrackingSchema = createInsertSchema(routeTracking).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRouteWaypointsSchema = createInsertSchema(routeWaypoints).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Route Tracking Types
+export type RouteTracking = typeof routeTracking.$inferSelect;
+export type RouteWaypoints = typeof routeWaypoints.$inferSelect;
+export type InsertRouteTracking = z.infer<typeof insertRouteTrackingSchema>;
+export type InsertRouteWaypoints = z.infer<typeof insertRouteWaypointsSchema>;
+
+// Extended Order Types with Route Data
+export interface OrderWithRouteData extends Order {
+  deliveryCoordinates?: {
+    lat: number;
+    lng: number;
+    address?: string;
+  };
+  routeData?: any; // Google Directions API response
+  routeSteps?: any[]; // Turn-by-turn directions
+  encodedPolyline?: string; // Google encoded polyline
+  estimatedDistance?: number; // meters
+  estimatedDuration?: number; // seconds
+  routeLastUpdated?: Date;
+  driverCurrentLocation?: {
+    lat: number;
+    lng: number;
+    timestamp: string;
+    accuracy?: number;
+  };
+  customerTrackingEnabled?: boolean;
+  routeOptimized?: boolean;
+  alternativeRoutes?: any[];
+}
+
+// Google Directions API Types
+export interface GoogleDirectionsResponse {
+  routes: GoogleRoute[];
+  status: string;
+}
+
+export interface GoogleRoute {
+  overview_polyline: {
+    points: string; // Encoded polyline
+  };
+  legs: GoogleRouteLeg[];
+  bounds: {
+    northeast: { lat: number; lng: number };
+    southwest: { lat: number; lng: number };
+  };
+  summary: string;
+  warnings: string[];
+}
+
+export interface GoogleRouteLeg {
+  distance: { text: string; value: number };
+  duration: { text: string; value: number };
+  duration_in_traffic?: { text: string; value: number };
+  start_address: string;
+  end_address: string;
+  start_location: { lat: number; lng: number };
+  end_location: { lat: number; lng: number };
+  steps: GoogleRouteStep[];
+}
+
+export interface GoogleRouteStep {
+  distance: { text: string; value: number };
+  duration: { text: string; value: number };
+  end_location: { lat: number; lng: number };
+  html_instructions: string;
+  polyline: { points: string };
+  start_location: { lat: number; lng: number };
+  travel_mode: string;
+  maneuver?: string;
+}
 
 // ===========================================
 // UNIFIED CART TYPES (all item types)
