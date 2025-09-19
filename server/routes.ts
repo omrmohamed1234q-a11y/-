@@ -144,8 +144,29 @@ const requireAuth = async (req: any, res: any, next: any) => {
   // Try multiple authentication methods
   let authenticatedUserId = null;
   
-  // Method 1: Direct user ID header (ONLY for development/testing with admin token)
-  if (userId && adminToken && process.env.NODE_ENV !== 'production') {
+  // Method 1: Admin token authentication (for admin users accessing any routes)
+  if (userId && adminToken) {
+    try {
+      // Check if admin token is valid against admin accounts in storage
+      const adminAccounts = await storage.getAdminAccounts();
+      const validAdminAccount = adminAccounts.find(admin => 
+        admin.token === adminToken && admin.user?.id === userId
+      );
+      
+      if (validAdminAccount) {
+        authenticatedUserId = userId;
+        console.log(`👨‍💼 ADMIN AUTH: Using admin user ID ${userId} with valid admin token`);
+      } else {
+        console.log(`❌ ADMIN AUTH: Invalid admin token or user ID combination`);
+      }
+    } catch (error) {
+      console.error('Error validating admin token:', error);
+      // Continue to other auth methods
+    }
+  }
+  
+  // Method 2: Direct user ID header (ONLY for development/testing with admin token)
+  if (!authenticatedUserId && userId && adminToken && process.env.NODE_ENV !== 'production') {
     // Verify admin token for test access
     if (adminToken === process.env.ADMIN_MASTER_TOKEN || adminToken === 'dev-test-token') {
       authenticatedUserId = userId;
@@ -153,7 +174,7 @@ const requireAuth = async (req: any, res: any, next: any) => {
     }
   }
   
-  // Method 2: Supabase JWT token (primary production method)
+  // Method 3: Supabase JWT token (primary production method)
   if (!authenticatedUserId && authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
     try {
