@@ -63,6 +63,29 @@ export async function getAuthHeaders(options: { url?: string; forceAdmin?: boole
       }
     }
 
+    // Check if user has admin credentials (even for non-admin routes)
+    const adminAuth = localStorage.getItem('adminAuth');
+    const adminToken = localStorage.getItem('adminToken');
+    
+    if (adminAuth && adminToken) {
+      try {
+        const adminData = JSON.parse(adminAuth);
+        const token = adminData.token || adminToken;
+        const userId = adminData.user?.id || adminData.admin?.id || adminData.id;
+        
+        console.log(`🔐 Using admin authentication for any route: ${userId}`);
+        return {
+          'x-admin-token': token,
+          'X-User-ID': userId,
+          'X-User-Role': 'admin',
+        };
+      } catch (error) {
+        console.error('Error parsing admin auth:', error);
+        localStorage.removeItem('adminAuth');
+        localStorage.removeItem('adminToken');
+      }
+    }
+
     // For non-admin routes or fallback, use Supabase session
     const { supabase } = await import('./supabase');
     const { data: { session } } = await supabase.auth.getSession();
