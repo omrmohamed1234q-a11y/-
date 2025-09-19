@@ -1,785 +1,712 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { motion, AnimatePresence } from 'framer-motion';
 import { apiRequest } from '@/lib/queryClient';
-import {
-  ShoppingCart,
+import { InvoicePrintable } from '@/components/InvoicePrintable';
+import { 
+  Eye, 
+  ExternalLink, 
+  FileText, 
+  Package,
+  Printer,
+  CheckCircle2,
   Clock,
-  DollarSign,
-  FileText,
-  User,
+  Truck,
   Phone,
   MapPin,
   Calendar,
-  Printer,
-  CheckCircle2,
   AlertCircle,
-  Eye,
-  Edit,
-  Calculator,
-  Package,
-  Truck,
-  Star,
-  MessageCircle,
   Download,
-  Upload,
-  Plus,
-  Filter,
   Search,
-  MoreHorizontal,
-  ArrowRight,
-  ArrowLeft,
-  Trash2
+  Filter,
+  RefreshCw,
+  ArrowUpDown,
+  Users,
+  TrendingUp,
+  Activity,
+  Receipt,
+  Send,
+  UserCheck,
+  Timer
 } from 'lucide-react';
 
-interface Order {
-  id: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
-  items: OrderItem[];
-  totalAmount: number;
-  status: 'pending' | 'pricing' | 'confirmed' | 'printing' | 'ready' | 'delivered' | 'cancelled';
-  orderDate: string;
-  deliveryAddress: string;
-  notes: string;
-  adminNotes: string;
-  estimatedCost: number;
-  finalPrice: number;
-  paymentMethod: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+interface PrintFile {
+  filename: string;
+  fileUrl: string;
+  fileSize: number;
+  fileType: string;
+  copies: number;
+  paperSize: string;
+  paperType: string;
+  colorMode: string;
 }
 
 interface OrderItem {
   id: string;
-  type: 'document' | 'book' | 'custom';
-  name: string;
-  description: string;
-  quantity: number;
-  pages: number;
-  color: boolean;
-  paperSize: string;
-  binding: string;
-  fileUrl?: string;
-  estimatedPrice: number;
-  finalPrice: number;
+  isPrintJob: boolean;
+  printJobData?: PrintFile;
 }
 
-interface Driver {
+interface Order {
   id: string;
-  name: string;
-  username: string;
-  driverCode: string;
-  phone: string;
-  email: string;
-  vehicleType: string;
-  vehiclePlate: string;
-  status: 'online' | 'offline' | 'busy';
-  isAvailable: boolean;
-  currentOrders: number;
-  rating: number;
-  deliveryCount: number;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  totalAmount: number;
+  status: string;
+  statusText: string;
+  createdAt: string;
+  items: OrderItem[];
+  printFiles?: PrintFile[];
 }
 
 export default function OrdersManagement() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [invoicePrintOpen, setInvoicePrintOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showPricingDialog, setShowPricingDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showDriverDialog, setShowDriverDialog] = useState(false);
-  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
-  const [orderToAssign, setOrderToAssign] = useState<Order | null>(null);
-  const [selectedDriverId, setSelectedDriverId] = useState<string>('');
-  const [pricingData, setPricingData] = useState<any>({});
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+  const [lastOrderCount, setLastOrderCount] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: orders = [], isLoading } = useQuery<Order[]>({
-    queryKey: ['/api/admin/orders']
+  // جلب الطلبات من السيرفر
+  const { data: allOrders = [], isLoading, error } = useQuery<Order[]>({
+    queryKey: ['/api/admin/orders'],
+    refetchInterval: 10000, // تحديث تلقائي كل 10 ثواني
+    retry: 3
   });
 
-  // Fetch available drivers
-  const { data: drivers = [] } = useQuery<Driver[]>({
-    queryKey: ['/api/admin/drivers'],
-    retry: false
-  });
+  // فلترة وترتيب الطلبات
+  const orders = allOrders
+    .filter(order => {
+      // فلترة حسب النص
+      const matchesSearch = !searchTerm || 
+        order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customerPhone?.includes(searchTerm) ||
+        order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // فلترة حسب الحالة
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'amount-high':
+          return b.totalAmount - a.totalAmount;
+        case 'amount-low':
+          return a.totalAmount - b.totalAmount;
+        case 'customer':
+          return (a.customerName || '').localeCompare(b.customerName || '');
+        default:
+          return 0;
+      }
+    });
 
-  const updateOrderMutation = useMutation({
-    mutationFn: async (data: { orderId: string; updates: Partial<Order> }) => {
-      return apiRequest('PUT', `/api/admin/orders/${data.orderId}`, data.updates);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+  // إشعار صوتي للطلبات الجديدة
+  useEffect(() => {
+    if (allOrders.length > lastOrderCount && lastOrderCount > 0) {
+      // طلب جديد وصل!
       toast({
-        title: "تم التحديث بنجاح",
-        description: "تم تحديث الطلب بنجاح",
+        title: '🔔 طلب جديد!',
+        description: `تم استلام ${allOrders.length - lastOrderCount} طلب جديد`,
+        duration: 5000
       });
+      
+      // صوت إشعار (متاح في المتصفحات الحديثة)
+      if ('Audio' in window) {
+        try {
+          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj');
+          audio.play().catch(() => {}); // إذا فشل الصوت لا نعمل شيء
+        } catch {}
+      }
     }
-  });
+    setLastOrderCount(allOrders.length);
+  }, [allOrders.length, lastOrderCount, toast]);
 
-  const deleteOrderMutation = useMutation({
+  // حساب الإحصائيات المحسنة
+  const stats = {
+    total: allOrders.length,
+    pending: allOrders.filter(o => o.status === 'pending').length,
+    processing: allOrders.filter(o => o.status === 'processing').length,
+    printing: allOrders.filter(o => o.status === 'printing').length,
+    ready: allOrders.filter(o => o.status === 'ready').length,
+    delivered: allOrders.filter(o => o.status === 'delivered').length,
+    cancelled: allOrders.filter(o => o.status === 'cancelled').length,
+    totalRevenue: allOrders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + o.totalAmount, 0),
+    todayOrders: allOrders.filter(o => {
+      const today = new Date().toDateString();
+      return new Date(o.createdAt).toDateString() === today;
+    }).length
+  };
+
+  // إرسال الطلب للسائقين
+  const assignToCaptainsMutation = useMutation({
     mutationFn: async (orderId: string) => {
-      return apiRequest('DELETE', `/api/admin/orders/${orderId}`);
+      const response = await apiRequest('POST', `/api/admin/orders/${orderId}/assign-to-captains`, {});
+      return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      setShowDeleteDialog(false);
-      setOrderToDelete(null);
       toast({
-        title: "تم الحذف بنجاح",
-        description: "تم حذف الطلب بنجاح",
+        title: '🚛 تم الإرسال بنجاح',
+        description: 'تم إرسال الطلب للكباتن المتاحين'
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
-        title: "خطأ في الحذف",
-        description: "حدث خطأ أثناء حذف الطلب",
-        variant: "destructive",
+        title: '❌ خطأ في الإرسال',
+        description: 'فشل في إرسال الطلب للكباتن',
+        variant: 'destructive'
       });
     }
   });
 
-  // Assign driver mutation
-  const assignDriverMutation = useMutation({
-    mutationFn: async (data: { orderId: string; driverId: string }) => {
-      return apiRequest('POST', `/api/admin/orders/${data.orderId}/assign-driver`, {
-        driverId: data.driverId
-      });
+  // تحديث حالة الطلب
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
+      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, { status });
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // تحديث البيانات المحلية فوراً
+      queryClient.setQueryData(['/api/admin/orders'], (oldOrders: Order[] | undefined) => {
+        if (!oldOrders) return oldOrders;
+        return oldOrders.map(order => 
+          order.id === selectedOrder?.id 
+            ? { ...order, status: (data as any)?.status || selectedOrder?.status }
+            : order
+        );
+      });
+      
+      // إعادة جلب البيانات للتأكد
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      setShowDriverDialog(false);
-      setOrderToAssign(null);
-      setSelectedDriverId('');
+      setDetailsOpen(false);
+      
       toast({
-        title: "تم تعيين السائق",
-        description: "تم تعيين السائق للطلب بنجاح",
+        title: '✅ تم التحديث بنجاح',
+        description: 'تم تحديث حالة الطلب بنجاح'
       });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في التعيين",
-        description: error.message || "حدث خطأ أثناء تعيين السائق",
-        variant: "destructive",
+        title: '❌ خطأ في التحديث',
+        description: 'فشل في تحديث حالة الطلب',
+        variant: 'destructive'
       });
     }
   });
 
-  const statusColors = {
-    pending: 'bg-red-100 text-red-800 border-red-200',
-    pricing: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    confirmed: 'bg-blue-100 text-blue-800 border-blue-200',
-    printing: 'bg-purple-100 text-purple-800 border-purple-200',
-    ready: 'bg-green-100 text-green-800 border-green-200',
-    delivered: 'bg-gray-100 text-gray-800 border-gray-200',
-    cancelled: 'bg-red-100 text-red-800 border-red-200'
-  };
-
-  const statusLabels = {
-    pending: 'في الانتظار',
-    pricing: 'قيد التسعير',
-    confirmed: 'مؤكد',
-    printing: 'قيد الطباعة',
-    ready: 'جاهز للاستلام',
-    delivered: 'تم التسليم',
-    cancelled: 'ملغي'
-  };
-
-  const priorityColors = {
-    low: 'bg-gray-100 text-gray-600',
-    medium: 'bg-blue-100 text-blue-600',
-    high: 'bg-orange-100 text-orange-600',
-    urgent: 'bg-red-100 text-red-600'
-  };
-
-  const priorityLabels = {
-    low: 'عادي',
-    medium: 'متوسط',
-    high: 'عالي',
-    urgent: 'عاجل'
-  };
-
-  const filteredOrders = orders.filter(order => {
-    const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
-    const matchesSearch = order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customerPhone.includes(searchTerm) ||
-                         order.id.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
-
-  const handleStatusUpdate = (orderId: string, newStatus: string) => {
-    updateOrderMutation.mutate({
-      orderId,
-      updates: { status: newStatus as any }
-    });
-  };
-
-  const handlePricing = (order: Order) => {
-    setSelectedOrder(order);
-    setPricingData({
-      orderId: order.id,
-      items: order.items.map(item => ({
-        ...item,
-        estimatedPrice: item.estimatedPrice || 0,
-        finalPrice: item.finalPrice || 0
-      })),
-      totalEstimated: 0,
-      totalFinal: 0,
-      notes: ''
-    });
-    setShowPricingDialog(true);
-  };
-
-  const handleDeleteOrder = (order: Order) => {
-    setOrderToDelete(order);
-    setShowDeleteDialog(true);
-  };
-
-  const confirmDeleteOrder = () => {
-    if (orderToDelete) {
-      deleteOrderMutation.mutate(orderToDelete.id);
+  // تعريف ألوان وأيقونات الحالات
+  const statusConfig = {
+    pending: { 
+      bg: 'bg-yellow-100', 
+      text: 'text-yellow-800', 
+      icon: Clock,
+      label: 'في الانتظار' 
+    },
+    processing: { 
+      bg: 'bg-blue-100', 
+      text: 'text-blue-800', 
+      icon: Package,
+      label: 'جاري المعالجة' 
+    },
+    printing: { 
+      bg: 'bg-purple-100', 
+      text: 'text-purple-800', 
+      icon: Printer,
+      label: 'جاري الطباعة' 
+    },
+    ready: { 
+      bg: 'bg-green-100', 
+      text: 'text-green-800', 
+      icon: CheckCircle2,
+      label: 'جاهز للاستلام' 
+    },
+    delivered: { 
+      bg: 'bg-emerald-100', 
+      text: 'text-emerald-800', 
+      icon: CheckCircle2,
+      label: 'تم التسليم' 
+    },
+    cancelled: { 
+      bg: 'bg-red-100', 
+      text: 'text-red-800', 
+      icon: AlertCircle,
+      label: 'ملغي' 
     }
   };
 
-  const handleAssignDriver = (order: Order) => {
-    setOrderToAssign(order);
-    setShowDriverDialog(true);
-  };
-
-  const confirmAssignDriver = () => {
-    if (orderToAssign && selectedDriverId) {
-      assignDriverMutation.mutate({
-        orderId: orderToAssign.id,
-        driverId: selectedDriverId
-      });
-    }
-  };
-
-  const calculateItemPrice = (item: OrderItem) => {
-    // Base pricing logic
-    let basePrice = 0;
-    const paperCost = item.paperSize === 'A4' ? 0.5 : item.paperSize === 'A3' ? 1 : 0.3;
-    const colorMultiplier = item.color ? 2 : 1;
-    const bindingCost = item.binding === 'spiral' ? 5 : item.binding === 'hardcover' ? 15 : 0;
-    
-    basePrice = (item.pages * paperCost * colorMultiplier + bindingCost) * item.quantity;
-    
-    return Math.ceil(basePrice);
-  };
-
-  const savePricing = () => {
-    const totalFinal = pricingData.items.reduce((sum: number, item: any) => sum + (item.finalPrice || 0), 0);
-    
-    updateOrderMutation.mutate({
-      orderId: pricingData.orderId,
-      updates: {
-        items: pricingData.items,
-        finalPrice: totalFinal,
-        status: 'confirmed',
-        adminNotes: pricingData.notes
-      }
-    });
-    
-    setShowPricingDialog(false);
-  };
-
+  // عرض شاشة التحميل
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل الطلبات...</p>
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-6">إدارة الطلبات</h1>
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-gray-200 rounded w-1/3 mb-3"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
-      {/* Top Header with Back Button */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/admin">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2 hover:bg-gray-100">
-                <ArrowLeft className="w-4 h-4" />
-                <span>العودة للوحة التحكم</span>
-              </Button>
-            </Link>
-            
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-blue-500" />
-              <span className="font-semibold text-gray-800">إدارة الطلبات</span>
-            </div>
-            
-            <div className="w-32"></div> {/* Spacer for centering */}
-          </div>
-        </div>
-      </div>
-
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">إدارة الطلبات الجديدة</h1>
-          <p className="text-gray-600 mt-2">معالجة وتسعير الطلبات الواردة</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-lg px-4 py-2">
-            {filteredOrders.length} طلب
-          </Badge>
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            إضافة طلب يدوي
-          </Button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="البحث بالاسم، الهاتف، أو رقم الطلب..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-10"
-                />
-              </div>
-            </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="تصفية حسب الحالة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الطلبات</SelectItem>
-                <SelectItem value="pending">في الانتظار</SelectItem>
-                <SelectItem value="pricing">قيد التسعير</SelectItem>
-                <SelectItem value="confirmed">مؤكد</SelectItem>
-                <SelectItem value="printing">قيد الطباعة</SelectItem>
-                <SelectItem value="ready">جاهز للاستلام</SelectItem>
-                <SelectItem value="delivered">تم التسليم</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Orders Grid */}
-      <div className="grid gap-6">
-        <AnimatePresence>
-          {filteredOrders.map((order, index) => (
-            <motion.div
-              key={order.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
+  // عرض رسالة الخطأ
+  if (error) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-6">إدارة الطلبات</h1>
+        <Card className="border-red-200">
+          <CardContent className="p-6 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-red-700 mb-2">خطأ في تحميل الطلبات</h3>
+            <p className="text-red-600 mb-4">لم نتمكن من تحميل الطلبات. يرجى المحاولة مرة أخرى.</p>
+            <Button 
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] })}
+              variant="outline"
             >
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
+              إعادة المحاولة
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* رأس الصفحة مع الإحصائيات المتقدمة */}
+      <div className="mb-8">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              📋 إدارة الطلبات المتقدمة
+              <Badge variant="outline" className="bg-gradient-to-r from-blue-50 to-purple-50">
+                {stats.total} طلب
+              </Badge>
+            </h1>
+            <p className="text-gray-600 mt-2 flex items-center gap-4">
+              <span>📅 طلبات اليوم: <span className="font-semibold text-blue-600">{stats.todayOrders}</span></span>
+              <span>💰 إجمالي الإيرادات: <span className="font-semibold text-green-600">{stats.totalRevenue} جنيه</span></span>
+            </p>
+          </div>
+          
+          {/* أزرار التحكم السريع */}
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] })}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              تحديث
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                const csvContent = orders.map(order => 
+                  `${order.orderNumber},${order.customerName},${order.customerPhone},${order.totalAmount},${order.status},${order.createdAt}`
+                ).join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `orders-${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+              }}
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              تصدير
+            </Button>
+          </div>
+        </div>
+
+        {/* شريط البحث والفلاتر */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="البحث في الطلبات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              <SelectValue placeholder="فلترة حسب الحالة" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع الحالات</SelectItem>
+              <SelectItem value="pending">في الانتظار</SelectItem>
+              <SelectItem value="processing">جاري المعالجة</SelectItem>
+              <SelectItem value="printing">جاري الطباعة</SelectItem>
+              <SelectItem value="ready">جاهز للاستلام</SelectItem>
+              <SelectItem value="delivered">تم التسليم</SelectItem>
+              <SelectItem value="cancelled">ملغي</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="flex items-center gap-2">
+              <ArrowUpDown className="w-4 h-4" />
+              <SelectValue placeholder="ترتيب حسب" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">الأحدث أولاً</SelectItem>
+              <SelectItem value="oldest">الأقدم أولاً</SelectItem>
+              <SelectItem value="amount-high">المبلغ (من الأعلى)</SelectItem>
+              <SelectItem value="amount-low">المبلغ (من الأقل)</SelectItem>
+              <SelectItem value="customer">اسم العميل</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <div className="flex items-center justify-center bg-white rounded-md border px-3 py-2">
+            <span className="text-sm text-gray-600 flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              {orders.length} من {stats.total} طلب
+            </span>
+          </div>
+        </div>
+
+        {/* عدادات محسنة مع نسب مئوية */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+          {Object.entries(statusConfig).map(([status, config]) => {
+            const count = stats[status as keyof typeof stats] as number;
+            const percentage = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+            const Icon = config.icon;
+            
+            return (
+              <Card 
+                key={status} 
+                className={`${config.bg} ${config.text} border-none shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer`}
+                onClick={() => setStatusFilter(status)}
+              >
+                <CardContent className="p-4 text-center">
+                  <Icon className="w-8 h-8 mx-auto mb-3" />
+                  <div className="text-3xl font-bold mb-1">{count}</div>
+                  <div className="text-sm font-medium mb-1">{config.label}</div>
+                  <div className="text-xs opacity-75">{percentage}%</div>
+                  <div className="mt-2 w-full bg-white/30 rounded-full h-1">
+                    <div 
+                      className="bg-current h-1 rounded-full transition-all duration-300"
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* إحصائيات سريعة إضافية */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-blue-500 text-white rounded-full">
+                <Activity className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-800">{stats.todayOrders}</div>
+                <div className="text-sm text-blue-600">طلبات اليوم</div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-green-500 text-white rounded-full">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-800">{stats.totalRevenue} جنيه</div>
+                <div className="text-sm text-green-600">إجمالي الإيرادات</div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-purple-500 text-white rounded-full">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-800">
+                  {new Set(allOrders.map(o => o.customerName)).size}
+                </div>
+                <div className="text-sm text-purple-600">عملاء مختلفين</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* قائمة الطلبات */}
+      <div className="space-y-4">
+        {orders.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-medium text-gray-700 mb-2">لا توجد طلبات حتى الآن</h3>
+              <p className="text-gray-500">سيظهر هنا جميع الطلبات الواردة من العملاء</p>
+            </CardContent>
+          </Card>
+        ) : (
+          orders.map(order => {
+            const statusStyle = statusConfig[order.status as keyof typeof statusConfig] || statusConfig.pending;
+            const StatusIcon = statusStyle.icon;
+            
+            // استخراج ملفات الطباعة من الطلب
+            const printFiles = order.printFiles || [];
+            
+            return (
+              <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <CardTitle className="text-xl">طلب #{order.id}</CardTitle>
-                        <Badge className={`${statusColors[order.status]} border`}>
-                          {statusLabels[order.status]}
+                      {/* رأس الطلب */}
+                      <div className="flex items-center gap-3 mb-4">
+                        <h3 className="text-xl font-semibold text-gray-900">
+                          #{order.orderNumber || order.id}
+                        </h3>
+                        <Badge className={`${statusStyle.bg} ${statusStyle.text} hover:${statusStyle.bg} px-3 py-1`}>
+                          <StatusIcon className="w-4 h-4 ml-2" />
+                          {order.statusText || statusStyle.label}
                         </Badge>
-                        <Badge className={`${priorityColors[order.priority]}`}>
-                          {priorityLabels[order.priority]}
-                        </Badge>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {new Date(order.orderDate).toLocaleDateString('ar-EG')}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <User className="w-4 h-4" />
-                          {order.customerName}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Phone className="w-4 h-4" />
-                          {order.customerPhone}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-left">
-                      <div className="text-2xl font-bold text-green-600">
-                        {order.finalPrice || order.estimatedCost || '---'} جنيه
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {order.items.length} عنصر
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* Order Items */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <Package className="w-4 h-4" />
-                      عناصر الطلب
-                    </h4>
-                    <div className="space-y-2">
-                      {order.items.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-white rounded p-3">
-                          <div className="flex-1">
-                            <div className="font-medium">{item.name}</div>
-                            <div className="text-sm text-gray-600">
-                              {item.pages} صفحة • {item.color ? 'ملون' : 'أبيض وأسود'} • {item.paperSize}
-                              {item.binding && ` • ${item.binding}`}
-                            </div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-sm text-gray-500">الكمية</div>
-                            <div className="font-bold">{item.quantity}</div>
-                          </div>
-                          <div className="text-left">
-                            <div className="text-sm text-gray-500">السعر</div>
-                            <div className="font-bold text-green-600">
-                              {item.finalPrice || item.estimatedPrice || '---'} جنيه
-                            </div>
-                          </div>
-                          {item.fileUrl && (
-                            <Button variant="outline" size="sm" className="mr-2">
-                              <Download className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Customer Info */}
-                  {order.deliveryAddress && (
-                    <div className="flex items-start gap-2 text-sm">
-                      <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                      <span className="text-gray-600">{order.deliveryAddress}</span>
-                    </div>
-                  )}
-
-                  {order.notes && (
-                    <div className="flex items-start gap-2 text-sm">
-                      <MessageCircle className="w-4 h-4 text-gray-400 mt-0.5" />
-                      <span className="text-gray-600">{order.notes}</span>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div className="flex items-center gap-2">
-                      {order.status === 'pending' && (
-                        <Button
-                          onClick={() => handlePricing(order)}
-                          className="gap-2 bg-blue-600 hover:bg-blue-700"
-                        >
-                          <Calculator className="w-4 h-4" />
-                          بدء التسعير
-                        </Button>
-                      )}
                       
-                      {order.status === 'confirmed' && (
-                        <Button
-                          onClick={() => handleStatusUpdate(order.id, 'printing')}
-                          className="gap-2 bg-purple-600 hover:bg-purple-700"
-                        >
-                          <Printer className="w-4 h-4" />
-                          بدء الطباعة
-                        </Button>
-                      )}
+                      {/* معلومات العميل والطلب */}
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <Phone className="w-5 h-5 text-gray-500" />
+                            <div>
+                              <span className="font-medium text-gray-900">{order.customerName || 'عميل غير محدد'}</span>
+                              <div className="text-sm text-gray-600">{order.customerPhone || 'رقم غير متوفر'}</div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            <Calendar className="w-5 h-5 text-gray-500" />
+                            <span className="text-sm text-gray-600">
+                              {new Date(order.createdAt).toLocaleDateString('ar-EG', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <Package className="w-5 h-5 text-gray-500" />
+                            <span className="text-sm text-gray-600">
+                              {printFiles.length} ملف للطباعة
+                            </span>
+                          </div>
+                          
+                          <div className="text-xl font-bold text-green-600">
+                            {order.totalAmount} جنيه
+                          </div>
+                        </div>
+                      </div>
 
-                      {order.status === 'printing' && (
-                        <Button
-                          onClick={() => handleStatusUpdate(order.id, 'ready')}
-                          className="gap-2 bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          جاهز للاستلام
-                        </Button>
-                      )}
-
-                      {order.status === 'ready' && (
-                        <>
-                          <Button
-                            onClick={() => handleAssignDriver(order)}
-                            className="gap-2 bg-cyan-600 hover:bg-cyan-700"
-                          >
-                            <Truck className="w-4 h-4" />
-                            تعيين سائق
-                          </Button>
-                          <Button
-                            onClick={() => handleStatusUpdate(order.id, 'delivered')}
-                            className="gap-2 bg-gray-600 hover:bg-gray-700"
-                          >
-                            <CheckCircle2 className="w-4 h-4" />
-                            تم التسليم
-                          </Button>
-                        </>
+                      {/* ملفات الطباعة مع روابط Google Drive */}
+                      {printFiles.length > 0 && (
+                        <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
+                          <h4 className="font-medium mb-3 flex items-center gap-2 text-gray-900">
+                            <FileText className="w-5 h-5" />
+                            ملفات الطباعة ({printFiles.length})
+                          </h4>
+                          <div className="space-y-3">
+                            {printFiles.map((file, index) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-white rounded border shadow-sm">
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm text-gray-900">{file?.filename || 'ملف غير محدد'}</div>
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    {file?.copies || 1} نسخة • {file?.paperSize || 'A4'} • {file?.paperType || 'عادي'} • {file?.colorMode || 'أبيض وأسود'}
+                                  </div>
+                                </div>
+                                {file?.fileUrl && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => window.open(file.fileUrl, '_blank')}
+                                    className="flex items-center gap-2 ml-3"
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                    فتح في Google Drive
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleDeleteOrder(order)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        data-testid={`button-delete-order-${order.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    {/* أزرار التحكم */}
+                    <div className="flex flex-col gap-2 ml-6">
+                      {/* زر إرسال للكباتن */}
+                      {(order.status === 'ready' || order.status === 'processing' || order.status === 'printing') && (
+                        <Button 
+                          size="sm"
+                          onClick={() => assignToCaptainsMutation.mutate(order.id)}
+                          disabled={assignToCaptainsMutation.isPending}
+                          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                        >
+                          {assignToCaptainsMutation.isPending ? (
+                            <Clock className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Truck className="w-4 h-4" />
+                          )}
+                          إرسال للكباتن
+                        </Button>
+                      )}
+
+                      {/* زر فتح Google Drive */}
+                      {printFiles.length > 0 && (
+                        <Button 
+                          size="sm"
+                          onClick={() => {
+                            // فتح كل الملفات في تابات منفصلة
+                            printFiles.forEach(file => {
+                              if (file.fileUrl) {
+                                window.open(file.fileUrl, '_blank');
+                              }
+                            });
+                          }}
+                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          فتح Google Drive ({printFiles.length})
+                        </Button>
+                      )}
+
+                      {/* زر طباعة الفاتورة */}
+                      <Dialog open={invoicePrintOpen && selectedOrder?.id === order.id} onOpenChange={setInvoicePrintOpen}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            size="sm"
+                            onClick={() => setSelectedOrder(order)}
+                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Receipt className="w-4 h-4" />
+                            طباعة الفاتورة
+                          </Button>
+                        </DialogTrigger>
+                        
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl">
+                              فاتورة الطلب #{selectedOrder?.orderNumber}
+                            </DialogTitle>
+                          </DialogHeader>
+                          
+                          {selectedOrder && (
+                            <InvoicePrintable order={selectedOrder} />
+                          )}
+                        </DialogContent>
+                      </Dialog>
+
+                      {/* زر تفاصيل الطلب */}
+                      <Dialog open={detailsOpen && selectedOrder?.id === order.id} onOpenChange={setDetailsOpen}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedOrder(order)}
+                            className="flex items-center gap-2"
+                          >
+                            <Eye className="w-4 h-4" />
+                            تفاصيل
+                          </Button>
+                        </DialogTrigger>
+                        
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl">
+                              تفاصيل الطلب #{selectedOrder?.orderNumber}
+                            </DialogTitle>
+                          </DialogHeader>
+                          
+                          {selectedOrder && (
+                            <div className="space-y-6">
+                              {/* معلومات الطلب */}
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <strong>اسم العميل:</strong>
+                                  <div>{selectedOrder.customerName}</div>
+                                </div>
+                                <div>
+                                  <strong>رقم الهاتف:</strong>
+                                  <div>{selectedOrder.customerPhone}</div>
+                                </div>
+                                <div>
+                                  <strong>تاريخ الطلب:</strong>
+                                  <div>{new Date(selectedOrder.createdAt).toLocaleDateString('ar-EG')}</div>
+                                </div>
+                                <div>
+                                  <strong>إجمالي المبلغ:</strong>
+                                  <div className="text-green-600 font-bold">{selectedOrder.totalAmount} جنيه</div>
+                                </div>
+                              </div>
+
+                              {/* تحديث حالة الطلب */}
+                              <div className="space-y-3">
+                                <h4 className="font-medium">تحديث حالة الطلب</h4>
+                                <Select onValueChange={(status) => updateStatusMutation.mutate({ orderId: selectedOrder.id, status })}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="اختر الحالة الجديدة" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pending">في الانتظار</SelectItem>
+                                    <SelectItem value="processing">جاري المعالجة</SelectItem>
+                                    <SelectItem value="printing">جاري الطباعة</SelectItem>
+                                    <SelectItem value="ready">جاهز للاستلام</SelectItem>
+                                    <SelectItem value="delivered">تم التسليم</SelectItem>
+                                    <SelectItem value="cancelled">ملغي</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          )}
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* Pricing Dialog */}
-      <Dialog open={showPricingDialog} onOpenChange={setShowPricingDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-xl">تسعير الطلب #{selectedOrder?.id}</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-semibold mb-3">معلومات العميل</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>الاسم: {selectedOrder?.customerName}</div>
-                <div>الهاتف: {selectedOrder?.customerPhone}</div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="font-semibold">عناصر الطلب والتسعير</h3>
-              {pricingData.items?.map((item: any, idx: number) => (
-                <Card key={idx}>
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2">
-                        <h4 className="font-medium mb-2">{item.name}</h4>
-                        <div className="text-sm text-gray-600 space-y-1">
-                          <div>عدد الصفحات: {item.pages}</div>
-                          <div>الكمية: {item.quantity}</div>
-                          <div>النوع: {item.color ? 'ملون' : 'أبيض وأسود'}</div>
-                          <div>حجم الورق: {item.paperSize}</div>
-                          {item.binding && <div>التجليد: {item.binding}</div>}
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-sm font-medium">السعر المقدر</label>
-                          <Input
-                            type="number"
-                            value={item.estimatedPrice || calculateItemPrice(item)}
-                            onChange={(e) => {
-                              const newItems = [...pricingData.items];
-                              newItems[idx].estimatedPrice = Number(e.target.value);
-                              setPricingData({...pricingData, items: newItems});
-                            }}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">السعر النهائي</label>
-                          <Input
-                            type="number"
-                            value={item.finalPrice || ''}
-                            onChange={(e) => {
-                              const newItems = [...pricingData.items];
-                              newItems[idx].finalPrice = Number(e.target.value);
-                              setPricingData({...pricingData, items: newItems});
-                            }}
-                            className="mt-1"
-                            placeholder="أدخل السعر النهائي"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="bg-green-50 rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">إجمالي السعر النهائي:</span>
-                <span className="text-2xl font-bold text-green-600">
-                  {pricingData.items?.reduce((sum: number, item: any) => sum + (item.finalPrice || 0), 0)} جنيه
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">ملاحظات إدارية</label>
-              <Textarea
-                value={pricingData.notes || ''}
-                onChange={(e) => setPricingData({...pricingData, notes: e.target.value})}
-                placeholder="أضف ملاحظات حول التسعير أو التنفيذ..."
-                className="mt-1"
-                rows={3}
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button onClick={savePricing} className="flex-1">
-                تأكيد التسعير وتحديث الطلب
-              </Button>
-              <Button variant="outline" onClick={() => setShowPricingDialog(false)}>
-                إلغاء
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-red-600">تأكيد حذف الطلب</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-red-600 mb-2">
-                <AlertCircle className="w-5 h-5" />
-                <span className="font-semibold">تحذير</span>
-              </div>
-              <p className="text-red-700 text-sm">
-                هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.
-              </p>
-            </div>
-
-            {orderToDelete && (
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <div className="font-medium">تفاصيل الطلب:</div>
-                <div className="text-sm space-y-1">
-                  <div>رقم الطلب: <span className="font-semibold">{orderToDelete.id}</span></div>
-                  <div>العميل: <span className="font-semibold">{orderToDelete.customerName}</span></div>
-                  <div>القيمة: <span className="font-semibold">{orderToDelete.totalAmount} جنيه</span></div>
-                  <div>الحالة: <span className="font-semibold">{statusLabels[orderToDelete.status as keyof typeof statusLabels]}</span></div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <Button 
-                variant="destructive" 
-                onClick={confirmDeleteOrder}
-                disabled={deleteOrderMutation.isPending}
-                className="flex-1"
-                data-testid="button-confirm-delete"
-              >
-                {deleteOrderMutation.isPending ? 'جاري الحذف...' : 'حذف الطلب'}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowDeleteDialog(false)}
-                disabled={deleteOrderMutation.isPending}
-                data-testid="button-cancel-delete"
-              >
-                إلغاء
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Assign Driver Dialog */}
-      <Dialog open={showDriverDialog} onOpenChange={setShowDriverDialog}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-xl">تعيين سائق للطلب</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {orderToAssign && (
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <div className="font-medium">تفاصيل الطلب:</div>
-                <div className="text-sm space-y-1">
-                  <div>رقم الطلب: <span className="font-semibold">{orderToAssign.id}</span></div>
-                  <div>العميل: <span className="font-semibold">{orderToAssign.customerName}</span></div>
-                  <div>العنوان: <span className="font-semibold">{orderToAssign.deliveryAddress}</span></div>
-                  <div>القيمة: <span className="font-semibold">{orderToAssign.totalAmount} جنيه</span></div>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="driver-select">اختيار السائق</Label>
-              <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر سائق متاح" />
-                </SelectTrigger>
-                <SelectContent>
-                  {drivers
-                    .filter((driver) => driver.isAvailable && driver.status === 'online')
-                    .map((driver) => (
-                      <SelectItem key={driver.id} value={driver.id}>
-                        <div className="flex items-center gap-2">
-                          <Truck className="w-4 h-4" />
-                          <span>{driver.name}</span>
-                          <span className="text-sm text-gray-500">({driver.driverCode})</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  {drivers.filter((driver) => driver.isAvailable && driver.status === 'online').length === 0 && (
-                    <SelectItem value="" disabled>
-                      لا توجد سائقين متاحين حالياً
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button 
-                onClick={confirmAssignDriver}
-                disabled={!selectedDriverId || assignDriverMutation.isPending}
-                className="flex-1"
-              >
-                {assignDriverMutation.isPending ? 'جاري التعيين...' : 'تعيين السائق'}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setShowDriverDialog(false);
-                  setSelectedDriverId('');
-                }}
-                disabled={assignDriverMutation.isPending}
-              >
-                إلغاء
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+            );
+          })
+        )}
       </div>
     </div>
   );
