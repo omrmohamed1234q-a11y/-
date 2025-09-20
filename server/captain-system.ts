@@ -1015,21 +1015,9 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
           expiresAt: new Date(Date.now() + 300000) // 5 دقائق
         });
 
-        // إشعار مباشر عبر WebSocket للكباتن المتصلين
-        const captainWs = connectedCaptains.get(captain.id);
-        if (captainWs && captainWs.readyState === WebSocket.OPEN) {
-          captainWs.send(JSON.stringify({
-            type: 'new_order_available',
-            order: {
-              id: order.id,
-              orderNumber: order.orderNumber,
-              customerName: order.customerName,
-              deliveryAddress: order.deliveryAddress,
-              totalAmount: order.totalAmount,
-              priority: order.priority || 'normal'
-            }
-          }));
-        }
+        // ملحوظة: إشعارات WebSocket المباشرة معطلة مؤقتاً
+        // سيتم الاعتماد على نظام الإشعارات العادي
+        console.log(`📧 إشعار مُرسل للكابتن ${captain.username || captain.id}`);
       });
 
       await Promise.all(notifications);
