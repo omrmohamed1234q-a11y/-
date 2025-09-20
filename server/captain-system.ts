@@ -542,6 +542,138 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
     }
   });
 
+  // جلب الطلبات الحالية للكبتن (المقبولة/قيد التنفيذ)
+  app.get('/api/captain/:captainId/current-orders', 
+    captainApiLimiter,
+    sanitizeInput,
+    verifyCaptainToken,
+    verifyCaptainStatus,
+    logCaptainActivity('GET_CURRENT_ORDERS'),
+    async (req, res) => {
+    try {
+      const { captainId } = req.params;
+      
+      // جلب الطلبات المُعيّنة للكبتن من قاعدة البيانات
+      const allOrders = await storage.getAllOrders();
+      const currentOrders = allOrders.filter((order: any) => 
+        order.assignedCaptain === captainId && 
+        ['picked_up', 'in_transit', 'accepted'].includes(order.status)
+      );
+
+      // تحويل الطلبات إلى تنسيق الكبتن
+      const captainCurrentOrders: CaptainOrder[] = [];
+      
+      for (const order of currentOrders) {
+        captainCurrentOrders.push({
+          id: order.id,
+          orderNumber: order.orderNumber || order.id,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          deliveryAddress: order.deliveryAddress,
+          deliveryCoordinates: order.deliveryCoordinates,
+          totalAmount: order.totalAmount,
+          paymentMethod: order.paymentMethod || 'cash',
+          items: order.items || [],
+          timeline: order.timeline || [],
+          estimatedDelivery: order.estimatedDelivery,
+          specialInstructions: order.specialInstructions,
+          priority: order.priority || 'normal',
+          // معلومات إضافية للطلبات الحالية
+          status: order.status,
+          invoice: generateInvoiceData(order)
+        });
+      }
+
+      res.json({
+        success: true,
+        orders: captainCurrentOrders,
+        count: captainCurrentOrders.length
+      });
+
+    } catch (error) {
+      console.error('❌ خطأ في جلب الطلبات الحالية:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في جلب الطلبات الحالية'
+      });
+    }
+  });
+
+  // إنهاء/تسليم طلب
+  app.post('/api/captain/:captainId/complete-order/:orderId', 
+    captainApiLimiter,
+    sanitizeInput,
+    verifyCaptainToken,
+    verifyCaptainStatus,
+    logCaptainActivity('COMPLETE_ORDER'),
+    async (req, res) => {
+    try {
+      const { captainId, orderId } = req.params;
+      const { notes, deliveryLocation } = req.body;
+      
+      // التحقق من أن الطلب مُعيّن للكبتن
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          error: 'الطلب غير موجود'
+        });
+      }
+      
+      if (order.assignedCaptain !== captainId) {
+        return res.status(403).json({
+          success: false,
+          error: 'هذا الطلب غير مُعيّن لك'
+        });
+      }
+      
+      // تحديث حالة الطلب إلى "تم التسليم"
+      await storage.updateOrderStatus(orderId, 'delivered');
+      
+      // إضافة ملاحظة التسليم
+      if (notes || deliveryLocation) {
+        const timelineEvent = {
+          timestamp: new Date().toISOString(),
+          status: 'delivered',
+          description: 'تم التسليم بنجاح',
+          location: deliveryLocation || order.deliveryAddress,
+          notes: notes || 'تم التسليم بنجاح'
+        };
+        
+        const updatedTimeline = [...(order.timeline || []), timelineEvent];
+        await storage.updateOrder(orderId, { 
+          timeline: updatedTimeline,
+          deliveryNotes: notes
+        });
+      }
+
+      // تحديث إحصائيات الكبتن
+      const captain = await storage.getDriver(captainId);
+      if (captain) {
+        await storage.updateDriver(captainId, {
+          totalDeliveries: (captain.totalDeliveries || 0) + 1,
+          status: 'online' // العودة لحالة متاح
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'تم إنهاء الطلب بنجاح',
+        order: {
+          id: orderId,
+          status: 'delivered'
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ خطأ في إنهاء الطلب:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في إنهاء الطلب'
+      });
+    }
+  });
+
   // مرحلة 1: محاولة قبول الطلب (حجز مؤقت) مع منع التضارب
   app.post('/api/captain/:captainId/attempt-order/:orderId', async (req, res) => {
     try {
