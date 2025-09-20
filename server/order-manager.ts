@@ -68,7 +68,7 @@ export class OrderManager {
 
       const orderState: OrderState = {
         id: orderId,
-        status: order.status === 'ready' ? 'pending' : order.status,
+        status: (order.status === 'ready' || order.status === 'assigned_to_driver') ? 'pending' : order.status,
         assignedCaptain: order.assignedCaptain,
         acceptanceAttempts: [],
         lastUpdated: Date.now()
