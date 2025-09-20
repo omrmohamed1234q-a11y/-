@@ -25,7 +25,6 @@ import {
   FileText,
   Route,
   User,
-  Star,
   LogOut,
   RefreshCw,
   Play,
@@ -42,8 +41,7 @@ import {
   Clock8,
   Coins,
   Navigation2,
-  Gauge,
-  Trophy
+  Gauge
 } from 'lucide-react';
 
 interface CaptainOrder {
@@ -103,7 +101,6 @@ interface CaptainProfile {
   email: string;
   vehicleType: 'motorcycle' | 'car' | 'bicycle';
   vehicleNumber: string;
-  rating: number;
   totalDeliveries: number;
 }
 
@@ -114,7 +111,6 @@ interface CaptainStats {
   ordersToday: number;
   ordersWeek: number;
   ordersMonth: number;
-  averageRating: number;
   totalDistance: number;
   onlineTime: number;
   completionRate: number;
@@ -141,7 +137,6 @@ export default function CaptainDashboard() {
     ordersToday: 0,
     ordersWeek: 0,
     ordersMonth: 0,
-    averageRating: 4.8,
     totalDistance: 0,
     onlineTime: 0,
     completionRate: 95
@@ -193,7 +188,6 @@ export default function CaptainDashboard() {
         email: parsed.user.email,
         vehicleType: parsed.user.vehicleType || 'motorcycle',
         vehicleNumber: parsed.user.driverCode,
-        rating: 4.8,
         totalDeliveries: 156
       };
       setCaptainData(captain);
@@ -520,10 +514,6 @@ export default function CaptainDashboard() {
                     {captainData.vehicleType === 'motorcycle' ? <span>🏍️</span> : <span>🚗</span>}
                     <span className="font-medium">{captainData.vehicleNumber}</span>
                   </div>
-                  <div className="flex items-center gap-1 text-gray-600">
-                    <Star className="w-4 h-4 text-yellow-500" />
-                    <span className="font-medium">{captainData.rating}</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -605,16 +595,6 @@ export default function CaptainDashboard() {
           <TabsContent value="dashboard" className="space-y-6">
             {/* إحصائيات سريعة محسنة */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50">
-                <CardContent className="p-6 text-center">
-                  <div className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <Star className="w-7 h-7 text-white" />
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900 mb-1">{stats.averageRating}</div>
-                  <div className="text-sm text-gray-600 font-medium">متوسط التقييم</div>
-                  <div className="text-xs text-yellow-600 mt-2">⭐ ممتاز</div>
-                </CardContent>
-              </Card>
               
               <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
                 <CardContent className="p-6 text-center">
@@ -1044,13 +1024,6 @@ export default function CaptainDashboard() {
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">التقييم</span>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                        <span className="font-bold text-purple-700">{stats.averageRating}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">المسافة اليوم</span>
                       <span className="font-bold text-purple-700">{Math.round(stats.totalDistance)} كم</span>
                     </div>
@@ -1062,10 +1035,6 @@ export default function CaptainDashboard() {
                   
                   <Separator />
                   
-                  <div className="text-center">
-                    <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-purple-700">كابتن متميز!</p>
-                  </div>
                 </CardContent>
               </Card>
             </div>
