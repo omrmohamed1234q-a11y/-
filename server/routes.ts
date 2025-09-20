@@ -150,7 +150,7 @@ const requireAuth = async (req: any, res: any, next: any) => {
   // Method 1: Direct user ID header (ONLY for development/testing with admin token)
   if (userId && adminToken && process.env.NODE_ENV !== 'production') {
     // Verify admin token for test access
-    if (adminToken === process.env.ADMIN_MASTER_TOKEN || adminToken === 'dev-test-token') {
+    if (adminToken === process.env.ADMIN_MASTER_TOKEN) {
       authenticatedUserId = userId;
       console.log(`🧪 DEV MODE: Using test user ID ${userId} with admin token`);
     }
@@ -270,7 +270,7 @@ const isAdminAuthenticated = async (req: any, res: any, next: any) => {
   let isValidAdmin = false;
   
   // Development mode bypass for testing
-  if (process.env.NODE_ENV === 'development' && adminToken === 'dev-admin-token') {
+  if (process.env.NODE_ENV === 'development' && adminToken === process.env.DEV_ADMIN_TOKEN) {
     isValidAdmin = true;
     authenticatedUserId = 'dev-admin-user';
     console.log('🚀 Development mode: Admin access granted with dev token');
@@ -3497,67 +3497,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add test order for captain (temporary endpoint for testing - NO AUTH)
-  app.post('/api/orders/add-test-captain-order', async (req, res) => {
-    try {
-      const testOrder = {
-        id: `test-captain-order-${Date.now()}`,
-        orderNumber: `TEST-${Date.now()}`,
-        userId: 'test-user-001',
-        items: [
-          {
-            productId: 'test-product',
-            quantity: 10,
-            price: 15,
-            name: 'طباعة مستندات A4',
-            notes: 'جودة عالية'
-          }
-        ],
-        totalAmount: 150,
-        status: 'ready', // جاهز للتوصيل
-        customerName: 'أحمد محمود التجريبي',
-        customerPhone: '+201234567890',
-        deliveryAddress: 'شارع التحرير، وسط البلد، القاهرة',
-        deliveryCoordinates: {
-          lat: 30.0444196,
-          lng: 31.2357116
-        },
-        paymentMethod: 'cash',
-        specialInstructions: 'اتصل عند الوصول - طلب تجريبي',
-        priority: 'normal',
-        estimatedDelivery: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        timeline: [
-          {
-            timestamp: new Date().toISOString(),
-            status: 'created',
-            description: 'تم إنشاء الطلب التجريبي',
-            location: 'النظام'
-          },
-          {
-            timestamp: new Date().toISOString(),
-            status: 'ready',
-            description: 'جاهز للتوصيل بواسطة الكابتن',
-            location: 'مستودع الطباعة'
-          }
-        ]
-      };
-
-      const createdOrder = await storage.createOrder(testOrder);
-      console.log('🧪 تم إضافة طلب تجريبي للكابتن:', createdOrder.id);
-
-      res.json({
-        success: true,
-        message: 'تم إضافة طلب تجريبي للكابتن',
-        order: createdOrder
-      });
-    } catch (error) {
-      console.error('❌ خطأ في إضافة طلب تجريبي:', error);
-      res.status(500).json({
-        success: false,
-        error: 'فشل في إضافة طلب تجريبي'
-      });
-    }
-  });
 
   // Get all orders for current user
   app.get('/api/orders/user', requireAuth, async (req: any, res) => {
@@ -10175,68 +10114,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // إضافة بيانات تجريبية للاختبار (Admin only)
-  app.post('/api/admin/rewards/add-test-data', isAdminAuthenticated, async (req, res) => {
-    try {
-      console.log('🧪 إضافة بيانات تجريبية للمكافآت...');
-      
-      // إضافة مستخدمين تجريبيين
-      const testUsers = [
-        { username: 'احمد محمد', email: 'ahmed@test.com', bountyPoints: 150, totalPrints: 25, totalReferrals: 3 },
-        { username: 'فاطمة علي', email: 'fatma@test.com', bountyPoints: 75, totalPrints: 12, totalReferrals: 1 },
-        { username: 'محمد حسن', email: 'mohamed@test.com', bountyPoints: 220, totalPrints: 40, totalReferrals: 5 },
-        { username: 'مريم احمد', email: 'mariam@test.com', bountyPoints: 90, totalPrints: 18, totalReferrals: 2 }
-      ];
-      
-      for (const userData of testUsers) {
-        const user = await storage.createUser({
-          ...userData,
-          fullName: userData.username,
-          role: 'customer'
-        });
-        
-        // إضافة معاملات مكافآت للمستخدم
-        await storage.createRewardTransaction({
-          userId: user.id,
-          type: 'earned',
-          amount: 50,
-          balanceAfter: 50,
-          reason: 'مكافأة الترحيب',
-          description: 'تسجيل الدخول الأول'
-        });
-        
-        await storage.createRewardTransaction({
-          userId: user.id,
-          type: 'earned',
-          amount: userData.bountyPoints - 50,
-          balanceAfter: userData.bountyPoints,
-          reason: 'طباعة المستندات',
-          description: `مكافأة طباعة ${userData.totalPrints} ورقة`
-        });
-        
-        if (userData.totalReferrals > 0) {
-          await storage.createRewardTransaction({
-            userId: user.id,
-            type: 'earned',
-            amount: userData.totalReferrals * 10,
-            balanceAfter: userData.bountyPoints + (userData.totalReferrals * 10),
-            reason: 'دعوة الأصدقاء',
-            description: `دعوة ${userData.totalReferrals} أصدقاء`
-          });
-        }
-      }
-      
-      console.log('✅ تم إضافة البيانات التجريبية بنجاح');
-      res.json({
-        success: true,
-        message: 'تم إضافة البيانات التجريبية بنجاح',
-        usersAdded: testUsers.length
-      });
-    } catch (error) {
-      console.error('Error adding test data:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  });
 
   // إحصائيات المكافآت (Admin only) - متصل بـ Supabase
   app.get('/api/admin/rewards/stats', isAdminAuthenticated, async (req, res) => {
