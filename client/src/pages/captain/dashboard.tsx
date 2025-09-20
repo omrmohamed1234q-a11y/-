@@ -820,7 +820,69 @@ export default function CaptainDashboard() {
               </CardHeader>
               <CardContent>
                 {currentLocation ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
+                    {/* Embedded Google Maps */}
+                    {currentLocation && currentRoute && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <MapPin className="h-5 w-5 text-blue-600" />
+                          <h3 className="text-lg font-medium text-gray-900">التتبع المباشر</h3>
+                        </div>
+                        
+                        <div className="relative w-full h-64 bg-gray-100 rounded-lg mb-4 overflow-hidden">
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            style={{ border: 0 }}
+                            loading="lazy"
+                            allowFullScreen
+                            referrerPolicy="no-referrer-when-downgrade"
+                            src={`https://www.google.com/maps/embed/v1/directions?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&origin=${currentLocation.lat},${currentLocation.lng}&destination=${availableOrders.find(o => o.id === currentRoute.orderId)?.deliveryCoordinates?.lat || 0},${availableOrders.find(o => o.id === currentRoute.orderId)?.deliveryCoordinates?.lng || 0}&mode=driving&language=ar`}
+                          ></iframe>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Route Information - Enhanced */}
+                    {currentRoute && (
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Navigation className="h-5 w-5 text-green-600" />
+                          <h3 className="text-lg font-medium text-green-900">معلومات المسار</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="bg-white p-3 rounded-lg text-center border">
+                            <div className="text-2xl font-bold text-green-600">
+                              {Math.round(currentRoute.estimatedDistance / 1000)}
+                            </div>
+                            <div className="text-sm text-gray-600">كم</div>
+                          </div>
+                          <div className="bg-white p-3 rounded-lg text-center border">
+                            <div className="text-2xl font-bold text-blue-600">
+                              {Math.round(currentRoute.estimatedDuration / 60)}
+                            </div>
+                            <div className="text-sm text-gray-600">دقيقة</div>
+                          </div>
+                        </div>
+                        
+                        <Button 
+                          size="sm" 
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                          onClick={() => {
+                            const order = availableOrders.find(o => o.id === currentRoute.orderId);
+                            if (order?.deliveryCoordinates) {
+                              openGoogleNavigation(order.deliveryCoordinates.lat, order.deliveryCoordinates.lng);
+                            }
+                          }}
+                        >
+                          <Navigation className="w-4 h-4 mr-1" />
+                          فتح في Google Maps
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Original GoogleMap component */}
                     <div className="h-96 bg-gray-100 rounded-lg relative overflow-hidden">
                       {currentLocation ? (
                         <GoogleMap
@@ -859,26 +921,34 @@ export default function CaptainDashboard() {
                         </div>
                       )}
                       
-                      {/* معلومات الموقع الحالي */}
+                      {/* معلومات الموقع الحالي - محسنة */}
                       {currentLocation && (
-                        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-md text-left min-w-[200px]">
-                          <div className="grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                              <span className="font-medium text-gray-600">العرض:</span>
-                              <p className="text-blue-700 font-mono text-xs">{currentLocation.lat.toFixed(6)}</p>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-600">الطول:</span>
-                              <p className="text-blue-700 font-mono text-xs">{currentLocation.lng.toFixed(6)}</p>
-                            </div>
+                        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg border border-gray-200 min-w-[260px]">
+                          <div className="mb-3">
+                            <h4 className="font-medium text-gray-800 text-sm mb-2 flex items-center gap-1">
+                              📍 معلومات الموقع الحالي
+                            </h4>
                           </div>
                           
-                          {accuracy && (
-                            <div className="mt-2 pt-2 border-t border-gray-200">
-                              <span className="font-medium text-gray-600 text-xs">دقة GPS:</span>
-                              <p className="text-green-700 text-xs">{Math.round(accuracy)} متر</p>
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-1 gap-2">
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium text-gray-600 text-xs">📐 خط الطول:</span>
+                                <p className="text-blue-700 font-mono text-xs bg-blue-50 px-2 py-1 rounded">{currentLocation.lng.toFixed(6)}</p>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium text-gray-600 text-xs">📐 خط العرض:</span>
+                                <p className="text-blue-700 font-mono text-xs bg-blue-50 px-2 py-1 rounded">{currentLocation.lat.toFixed(6)}</p>
+                              </div>
                             </div>
-                          )}
+                            
+                            {accuracy && (
+                              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                <span className="font-medium text-gray-600 text-xs">🎯 دقة GPS:</span>
+                                <p className="text-green-700 text-xs bg-green-50 px-2 py-1 rounded font-medium">±{Math.round(accuracy)}م</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                       
