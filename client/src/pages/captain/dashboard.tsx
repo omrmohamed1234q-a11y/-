@@ -366,10 +366,10 @@ export default function CaptainDashboard() {
       return;
     }
     
-    // استخدام موقع افتراضي إذا لم يكن GPS متاح
+    // استخدام موقع افتراضي إذا لم يكن GPS متاح (منطقة مختلفة في القاهرة)
     const fallbackLocation = {
-      lat: 30.0444196, // القاهرة - موقع افتراضي
-      lng: 31.2357116
+      lat: 30.064742, // القاهرة الجديدة - موقع افتراضي مختلف
+      lng: 31.249509
     };
     
     const originLocation = currentLocation || fallbackLocation;
