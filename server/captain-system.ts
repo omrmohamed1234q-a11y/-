@@ -462,10 +462,10 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       const { captainId } = req.params;
       
       
-      // جلب جميع الطلبات الجاهزة للتوصيل عبر OrderManager
+      // جلب جميع الطلبات المُرسلة للكباتن عبر OrderManager
       const allOrders = await storage.getAllOrders();
       const availableOrders = allOrders.filter((order: any) => 
-        order.status === 'ready'
+        order.status === 'assigned_to_driver'
       );
 
       // تهيئة الطلبات في OrderManager
