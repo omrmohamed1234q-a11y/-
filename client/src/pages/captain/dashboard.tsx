@@ -366,6 +366,71 @@ export default function CaptainDashboard() {
     refetchInterval: 10000 // تحديث كل 10 ثواني
   });
 
+  // جلب الطلبات الحالية للكبتن (المقبولة/قيد التنفيذ)
+  const { data: currentOrders = [], isLoading: currentOrdersLoading } = useQuery<CaptainOrder[]>({
+    queryKey: ['/api/captain/current-orders', captainData?.id],
+    queryFn: async () => {
+      const captainSession = localStorage.getItem('captain_session') || captainData?.id;
+      const headers: Record<string, string> = {};
+      
+      if (captainSession) {
+        headers['x-captain-session'] = captainSession;
+        headers['Authorization'] = `Bearer ${captainSession}`;
+      }
+      
+      const response = await fetch(`/api/captain/${captainData?.id}/current-orders`, {
+        headers,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // التأكد من إرجاع array
+      if (data.success && data.orders) {
+        return data.orders;
+      }
+      
+      return [];
+    },
+    enabled: !!captainData?.id,
+    refetchInterval: 15000 // تحديث كل 15 ثانية
+  });
+
+  // إنهاء الطلب (تم التوصيل)
+  const completeOrderMutation = useMutation({
+    mutationFn: async ({ orderId, notes, deliveryLocation }: { 
+      orderId: string; 
+      notes?: string; 
+      deliveryLocation?: string 
+    }) => {
+      return await apiRequest('POST', `/api/captain/${captainData?.id}/complete-order/${orderId}`, {
+        notes,
+        deliveryLocation
+      });
+    },
+    onSuccess: (data, { orderId }) => {
+      toast({
+        title: '✅ تم إنهاء الطلب',
+        description: 'تم تسليم الطلب بنجاح! 🎉'
+      });
+      
+      // تحديث قوائم الطلبات
+      queryClient.invalidateQueries({ queryKey: ['/api/captain/current-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: '❌ خطأ في إنهاء الطلب',
+        description: error.error || 'فشل في إنهاء الطلب',
+        variant: 'destructive'
+      });
+    }
+  });
+
   // === النظام الجديد للقبول المنظم ===
   
   // مرحلة 1: محاولة قبول الطلب (حجز مؤقت)
@@ -1169,6 +1234,162 @@ export default function CaptainDashboard() {
               </div>
             )}
             </CardContent>
+            </Card>
+
+            {/* طلباتي الحالية */}
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-100/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="w-5 h-5 text-green-600" />
+                    طلباتي الحالية ({currentOrders.length})
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/captain/current-orders'] })}
+                    disabled={currentOrdersLoading}
+                    data-testid="button-refresh-current"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${currentOrdersLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {currentOrdersLoading ? (
+                  <div className="text-center py-8">
+                    <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600">جاري تحميل طلباتك الحالية...</p>
+                  </div>
+                ) : currentOrders.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Truck className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">لا توجد طلبات حالية</p>
+                    <p className="text-sm text-gray-400 mt-2">ستظهر هنا الطلبات التي قبلتها</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {currentOrders.map((order) => (
+                      <div
+                        key={order.id}
+                        className="border-2 border-green-200 rounded-lg p-4 bg-white/80 backdrop-blur-sm hover:bg-green-50/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold text-gray-900">طلب #{order.orderNumber}</h3>
+                              <Badge className="bg-green-600 text-white text-xs">
+                                🚛 قيد التنفيذ
+                              </Badge>
+                              <Badge 
+                                variant={order.priority === 'urgent' ? 'destructive' : 
+                                       order.priority === 'express' ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {order.priority === 'urgent' ? '⚡ عاجل' : 
+                                 order.priority === 'express' ? '🚀 سريع' : '📦 عادي'}
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4" />
+                                {order.customerName}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-4 h-4" />
+                                {order.customerPhone}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4" />
+                                <span className="truncate">{order.deliveryAddress}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <DollarSign className="w-4 h-4" />
+                                {order.totalAmount} جنيه
+                              </div>
+                            </div>
+
+                            {order.specialInstructions && (
+                              <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                  <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5" />
+                                  <div>
+                                    <p className="text-sm font-medium text-yellow-800">تعليمات خاصة:</p>
+                                    <p className="text-sm text-yellow-700">{order.specialInstructions}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-green-200">
+                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {new Date(order.estimatedDelivery).toLocaleTimeString('ar-EG', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              {new Date(order.estimatedDelivery).toLocaleDateString('ar-EG')}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedOrder(order)}
+                              className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                              data-testid={`button-view-current-details-${order.id}`}
+                            >
+                              <FileText className="w-4 h-4 mr-1" />
+                              التفاصيل
+                            </Button>
+                            
+                            {order.deliveryCoordinates && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => calculateRoute(order.id, order.deliveryCoordinates!.lat, order.deliveryCoordinates!.lng)}
+                                className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                                data-testid={`button-current-route-${order.id}`}
+                              >
+                                <Route className="w-4 h-4 mr-1" />
+                                المسار
+                              </Button>
+                            )}
+                            
+                            {/* زر "تم التوصيل" */}
+                            <Button
+                              size="sm"
+                              onClick={() => completeOrderMutation.mutate({ 
+                                orderId: order.id,
+                                notes: 'تم التسليم بنجاح',
+                                deliveryLocation: order.deliveryAddress
+                              })}
+                              disabled={completeOrderMutation.isPending}
+                              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-300"
+                              data-testid={`button-complete-order-${order.id}`}
+                            >
+                              {completeOrderMutation.isPending ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
+                              ) : (
+                                <CheckCircle2 className="w-4 h-4 mr-1" />
+                              )}
+                              تم التوصيل ✅
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
             </Card>
           </TabsContent>
 
