@@ -75,9 +75,15 @@ export default function GoogleMap({
         return;
       }
 
-      // استخدام API key عام للاختبار (يجب استبداله بمفتاح حقيقي)
+      // استخدام مفتاح Google Maps من متغيرات البيئة
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        setError('مفتاح Google Maps غير مُعرف');
+        return;
+      }
+      
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBhOdIF3Y9382fqJYt5I_sU-PWKBUfYvAg&libraries=geometry,places&language=ar&region=EG`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry,places&language=ar&region=EG`;
       script.async = true;
       script.defer = true;
       
