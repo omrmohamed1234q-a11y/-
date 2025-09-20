@@ -476,8 +476,22 @@ export default function OrderTrackingEnhanced() {
                           <p className="text-sm font-medium">السائق: {orderData.driverName}</p>
                           <p className="text-xs text-gray-600">{orderData.driverPhone}</p>
                           {liveDriverLocation && (
-                            <div className="text-xs text-blue-600 mt-1">
-                              📍 المسافة: {liveDriverLocation.distance} • الوصول خلال: {liveDriverLocation.estimatedArrival} دقيقة
+                            <div className="space-y-1 mt-2">
+                              <div className="text-xs text-blue-600">
+                                📍 المسافة: {liveDriverLocation.distance} • الوصول خلال: {liveDriverLocation.estimatedArrival} دقيقة
+                              </div>
+                              {liveDriverLocation.currentLocation && (
+                                <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                                  <div className="font-medium text-gray-700 mb-1">معلومات الموقع:</div>
+                                  <div className="grid grid-cols-1 gap-1">
+                                    <div>📐 خط الطول: {liveDriverLocation.currentLocation.lng?.toFixed(6) || 'غير متاح'}</div>
+                                    <div>📐 خط العرض: {liveDriverLocation.currentLocation.lat?.toFixed(6) || 'غير متاح'}</div>
+                                    {liveDriverLocation.currentLocation.accuracy && (
+                                      <div>🎯 دقة الموقع: {Math.round(liveDriverLocation.currentLocation.accuracy)}م</div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -523,8 +537,13 @@ export default function OrderTrackingEnhanced() {
                             🚚 السائق في الطريق إليك - تتبع مباشر
                           </span>
                         </div>
-                        <div className="text-xs text-green-600 mt-1">
-                          آخر تحديث: {new Date(liveDriverLocation.lastUpdate).toLocaleTimeString('ar-EG')}
+                        <div className="text-xs text-green-600 mt-1 flex items-center justify-between">
+                          <span>آخر تحديث: {new Date(liveDriverLocation.lastUpdate).toLocaleTimeString('ar-EG')}</span>
+                          {liveDriverLocation.currentLocation?.accuracy && (
+                            <span className="text-xs text-gray-500">
+                              دقة: ±{Math.round(liveDriverLocation.currentLocation.accuracy)}م
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
