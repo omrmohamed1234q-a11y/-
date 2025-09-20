@@ -588,6 +588,24 @@ export class OrderManager {
   }
 
   /**
+   * الحصول على معلومات حجز الطلب
+   */
+  getOrderLockInfo(orderId: string): any {
+    const order = this.orders.get(orderId);
+    if (!order || !order.lockInfo) {
+      return null;
+    }
+    
+    const captain = this.captains.get(order.lockInfo.captainId);
+    return {
+      captainName: captain?.name || 'Unknown',
+      lockedUntil: order.lockInfo.expiresAt,
+      remainingTime: Math.max(0, order.lockInfo.expiresAt - Date.now()),
+      isExpired: order.lockInfo.expiresAt < Date.now()
+    };
+  }
+
+  /**
    * إحصائيات مفصلة لطلب معين
    */
   getOrderDetails(orderId: string): any {
