@@ -482,6 +482,28 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       for (const orderState of availableOrderStates) {
         const order = await storage.getOrder(orderState.id);
         if (order) {
+          // جلب معلومات الحجز والتضارب من OrderManager
+          const lockInfo = orderManager.getOrderLockInfo(order.id);
+          const conflictInfo = conflictPrevention.getOrderConflictDetails(order.id);
+          
+          // تحويل lockInfo إلى التنسيق المطلوب
+          const formattedLockInfo = lockInfo ? {
+            isLocked: true,
+            lockedBy: lockInfo.captainName,
+            lockedUntil: lockInfo.lockedUntil,
+            remainingTime: lockInfo.lockedUntil - Date.now()
+          } : {
+            isLocked: false
+          };
+          
+          // تحويل conflictInfo إلى التنسيق المطلوب
+          const formattedConflictInfo = {
+            attemptsCount: conflictInfo.totalAttempts || 0,
+            competingCaptains: conflictInfo.recentAttempts ? 
+              conflictInfo.recentAttempts.map((attempt: any) => attempt.captainId) : [],
+            lastAttemptAt: conflictInfo.lastAttemptTime || undefined
+          };
+          
           captainOrders.push({
             id: order.id,
             orderNumber: order.orderNumber || order.id,
@@ -496,6 +518,9 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
             estimatedDelivery: order.estimatedDelivery,
             specialInstructions: order.specialInstructions,
             priority: order.priority || 'normal',
+            // إضافة معلومات الحجز والتضارب الجديدة
+            lockInfo: formattedLockInfo,
+            conflictInfo: formattedConflictInfo,
             invoice: generateInvoiceData(order)
           });
         }
@@ -558,8 +583,11 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       
       if (result.success) {
         // إشعار الكباتن المتنافسين
-        conflictPrevention.notifyCompetingCaptains(orderId, 'order_locked_by_competitor', {
-          lockedBy: captain.name
+        conflictPrevention.notifyCompetingCaptains(orderId, 'order_locked', {
+          orderId,
+          lockedBy: captain.name,
+          lockedUntil: result.lockTimeRemaining ? Date.now() + result.lockTimeRemaining : undefined,
+          timeRemaining: result.lockTimeRemaining
         });
         
         res.json({
@@ -606,8 +634,11 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
         conflictPrevention.removeAttempt(captainId, orderId, true);
         
         // إشعار جميع الكباتن المتنافسين بأن الطلب تم تعيينه
-        conflictPrevention.notifyCompetingCaptains(orderId, 'order_assigned_to_competitor', {
-          assignedTo: (await storage.getDriver(captainId)).name
+        conflictPrevention.notifyCompetingCaptains(orderId, 'order_assigned', {
+          orderId,
+          assignedTo: (await storage.getDriver(captainId)).name,
+          captainId,
+          assignedAt: Date.now()
         });
         
         // إضافة حدث في التاريخ الزمني
@@ -680,7 +711,10 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       conflictPrevention.removeAttempt(captainId, orderId, false);
       
       // إشعار الكباتن المتنافسين بأن الطلب متاح مرة أخرى
-      conflictPrevention.notifyCompetingCaptains(orderId, 'order_available_after_cancellation');
+      conflictPrevention.notifyCompetingCaptains(orderId, 'order_available', {
+        orderId,
+        availableAt: Date.now()
+      });
       
       if (result) {
         res.json({

@@ -61,6 +61,18 @@ interface CaptainOrder {
   estimatedDelivery: string;
   specialInstructions?: string;
   priority: 'normal' | 'urgent' | 'express';
+  // نظام إدارة التضارب الجديد
+  lockInfo?: {
+    isLocked: boolean;
+    lockedBy?: string;
+    lockedUntil?: number;
+    remainingTime?: number;
+  };
+  conflictInfo?: {
+    attemptsCount: number;
+    competingCaptains: string[];
+    lastAttemptAt?: number;
+  };
   invoice?: {
     invoiceNumber: string;
     issueDate: string;
@@ -130,6 +142,9 @@ export default function CaptainDashboard() {
   const [selectedOrder, setSelectedOrder] = useState<CaptainOrder | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [activeOrders, setActiveOrders] = useState<CaptainOrder[]>([]);
+  // نظام إدارة التضارب الجديد
+  const [orderAttempts, setOrderAttempts] = useState<Map<string, { status: 'attempting' | 'locked' | 'confirmed' | 'failed', timestamp: number, lockTimeRemaining?: number }>>(new Map());
+  const [conflictNotifications, setConflictNotifications] = useState<Map<string, { message: string; type: string; timestamp: number }>>(new Map());
   const [stats, setStats] = useState<CaptainStats>({
     dailyEarnings: 0,
     weeklyEarnings: 0,
@@ -242,6 +257,81 @@ export default function CaptainDashboard() {
     queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
   });
 
+  // === إشعارات نظام منع التضارب الجديد ===
+  
+  // إشعار عند قفل طلب من كبتن منافس (أسماء مصححة)
+  useWebSocketEvent('order_locked', (data: any) => {
+    const { orderId, lockedBy, timeRemaining } = data;
+    setConflictNotifications(prev => {
+      const newNotifications = new Map(prev);
+      newNotifications.set(orderId, {
+        message: `تم حجز الطلب من كبتن آخر: ${lockedBy}`,
+        type: 'warning',
+        timestamp: Date.now()
+      });
+      return newNotifications;
+    });
+    
+    toast({
+      title: '⚠️ طلب محجوز',
+      description: `تم حجز الطلب من ${lockedBy} - يمكنك المحاولة لاحقاً`,
+      variant: 'destructive'
+    });
+  });
+  
+  // إشعار عند تعيين طلب لكبتن منافس (أسماء مصححة)
+  useWebSocketEvent('order_assigned', (data: any) => {
+    const { orderId, assignedTo, captainId } = data;
+    setConflictNotifications(prev => {
+      const newNotifications = new Map(prev);
+      newNotifications.set(orderId, {
+        message: `تم تعيين الطلب للكبتن: ${assignedTo}`,
+        type: 'info',
+        timestamp: Date.now()
+      });
+      return newNotifications;
+    });
+    
+    // إزالة محاولة القبول المحلية
+    setOrderAttempts(prev => {
+      const newAttempts = new Map(prev);
+      newAttempts.delete(orderId);
+      return newAttempts;
+    });
+    
+    toast({
+      title: '📋 تم تعيين الطلب',
+      description: `تم تعيين الطلب للكبتن ${assignedTo}`,
+      variant: 'default'
+    });
+    
+    // تحديث قائمة الطلبات
+    queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+  });
+  
+  // إشعار عند إتاحة طلب بعد الإلغاء (أسماء مصححة)
+  useWebSocketEvent('order_available', (data: any) => {
+    const { orderId } = data;
+    setConflictNotifications(prev => {
+      const newNotifications = new Map(prev);
+      newNotifications.set(orderId, {
+        message: 'الطلب متاح مرة أخرى للقبول',
+        type: 'success',
+        timestamp: Date.now()
+      });
+      return newNotifications;
+    });
+    
+    toast({
+      title: '✅ طلب متاح',
+      description: 'طلب متاح مرة أخرى للقبول',
+      variant: 'default'
+    });
+    
+    // تحديث قائمة الطلبات
+    queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+  });
+
   // جلب الطلبات المتاحة
   const { data: availableOrders = [], isLoading: ordersLoading } = useQuery<CaptainOrder[]>({
     queryKey: ['/api/captain/available-orders', captainData?.id],
@@ -276,15 +366,191 @@ export default function CaptainDashboard() {
     refetchInterval: 10000 // تحديث كل 10 ثواني
   });
 
-  // قبول طلب
+  // === النظام الجديد للقبول المنظم ===
+  
+  // مرحلة 1: محاولة قبول الطلب (حجز مؤقت)
+  const attemptOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      // تسجيل المحاولة محلياً (مصحح)
+      setOrderAttempts(prev => {
+        const newAttempts = new Map(prev);
+        newAttempts.set(orderId, {
+          status: 'attempting',
+          timestamp: Date.now()
+        });
+        return newAttempts;
+      });
+      
+      return await apiRequest('POST', `/api/captain/${captainData?.id}/attempt-order/${orderId}`, {});
+    },
+    onSuccess: (data, orderId) => {
+      // تحديث حالة المحاولة - نجحت وتم الحجز (مصحح)
+      setOrderAttempts(prev => {
+        const newAttempts = new Map(prev);
+        newAttempts.set(orderId, {
+          status: 'locked',
+          timestamp: Date.now(),
+          lockTimeRemaining: data.lockTimeRemaining
+        });
+        return newAttempts;
+      });
+      
+      toast({
+        title: '🔒 تم حجز الطلب مؤقتاً',
+        description: `لديك ${Math.round(data.lockTimeRemaining / 1000)} ثانية لتأكيد القبول`,
+        duration: 0,
+        action: (
+          <Button 
+            size="sm"
+            onClick={() => confirmOrderMutation.mutate(orderId)}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            تأكيد القبول
+          </Button>
+        )
+      });
+      
+      // إزالة إشعار التضارب إذا كان موجود (مصحح)
+      setConflictNotifications(prev => {
+        const newNotifications = new Map(prev);
+        newNotifications.delete(orderId);
+        return newNotifications;
+      });
+    },
+    onError: (error: any, orderId) => {
+      // تحديث حالة المحاولة - فشلت (مصحح)
+      setOrderAttempts(prev => {
+        const newAttempts = new Map(prev);
+        newAttempts.set(orderId, {
+          status: 'failed',
+          timestamp: Date.now()
+        });
+        return newAttempts;
+      });
+      
+      // إزالة المحاولة بعد 3 ثواني
+      setTimeout(() => {
+        setOrderAttempts(prev => {
+          const newAttempts = new Map(prev);
+          newAttempts.delete(orderId);
+          return newAttempts;
+        });
+      }, 3000);
+      
+      let errorMessage = error.error || 'فشل في محاولة قبول الطلب';
+      let toastVariant: 'destructive' | 'default' = 'destructive';
+      
+      // رسائل خطأ محددة حسب نوع الخطأ
+      if (error.code === 'CONFLICT_PREVENTION') {
+        errorMessage = `يجب الانتظار ${Math.round(error.waitTime / 1000)} ثانية قبل المحاولة مرة أخرى`;
+        toastVariant = 'default';
+      }
+      
+      toast({
+        title: '❌ فشل في حجز الطلب',
+        description: errorMessage,
+        variant: toastVariant
+      });
+    }
+  });
+  
+  // مرحلة 2: تأكيد قبول الطلب (نهائي)
+  const confirmOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      return await apiRequest('POST', `/api/captain/${captainData?.id}/confirm-order/${orderId}`, {});
+    },
+    onSuccess: (data, orderId) => {
+      // تحديث حالة المحاولة - تم التأكيد (مصحح)
+      setOrderAttempts(prev => {
+        const newAttempts = new Map(prev);
+        newAttempts.set(orderId, {
+          status: 'confirmed',
+          timestamp: Date.now()
+        });
+        return newAttempts;
+      });
+      
+      // إزالة المحاولة بعد عرض النجاح
+      setTimeout(() => {
+        setOrderAttempts(prev => {
+          const newAttempts = new Map(prev);
+          newAttempts.delete(orderId);
+          return newAttempts;
+        });
+      }, 2000);
+      
+      toast({
+        title: '🎉 تم قبول الطلب نهائياً!',
+        description: 'تم قبول الطلب بنجاح، ابدأ رحلة التوصيل'
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+    },
+    onError: (error: any, orderId) => {
+      // تحديث حالة المحاولة - فشل التأكيد (مصحح)
+      setOrderAttempts(prev => {
+        const newAttempts = new Map(prev);
+        newAttempts.set(orderId, {
+          status: 'failed',
+          timestamp: Date.now()
+        });
+        return newAttempts;
+      });
+      
+      // إزالة المحاولة
+      setTimeout(() => {
+        setOrderAttempts(prev => {
+          const newAttempts = new Map(prev);
+          newAttempts.delete(orderId);
+          return newAttempts;
+        });
+      }, 3000);
+      
+      toast({
+        title: '❌ فشل في تأكيد القبول',
+        description: error.error || 'انتهت مهلة الحجز أو تم إلغاؤه',
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  // إلغاء محاولة قبول الطلب
+  const cancelOrderAttemptMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      return await apiRequest('POST', `/api/captain/${captainData?.id}/cancel-order/${orderId}`, {});
+    },
+    onSuccess: (data, orderId) => {
+      // إزالة المحاولة
+      setOrderAttempts(prev => {
+        const newAttempts = new Map(prev);
+        newAttempts.delete(orderId);
+        return newAttempts;
+      });
+      
+      toast({
+        title: '↩️ تم إلغاء المحاولة',
+        description: 'تم إلغاء محاولة قبول الطلب بنجاح'
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: '❌ خطأ في الإلغاء',
+        description: error.error || 'فشل في إلغاء المحاولة',
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  // النظام القديم للتوافق (يستخدم النظام الجديد داخلياً)
   const acceptOrderMutation = useMutation({
     mutationFn: async (orderId: string) => {
+      // استخدام النظام القديم للتوافق مع الكود الموجود
       return await apiRequest('POST', `/api/captain/${captainData?.id}/accept-order/${orderId}`, {});
     },
     onSuccess: () => {
       toast({
         title: '✅ تم قبول الطلب',
-        description: 'تم قبول الطلب بنجاح، ابدأ رحلة التوصيل'
+        description: 'تم قبول الطلب بنجاح (النظام القديم)، ابدأ رحلة التوصيل'
       });
       queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
     },
@@ -765,19 +1031,136 @@ export default function CaptainDashboard() {
                           </Button>
                         )}
                         
+                        {/* نظام القبول المتقدم الجديد */}
+                        {(() => {
+                          const attemptState = orderAttempts.get(order.id);
+                          const conflictNotification = conflictNotifications.get(order.id);
+                          
+                          // إذا كان هناك محاولة نشطة
+                          if (attemptState) {
+                            if (attemptState.status === 'attempting') {
+                              return (
+                                <Button
+                                  size="sm"
+                                  disabled
+                                  className="bg-yellow-600 opacity-75"
+                                  data-testid={`button-attempting-${order.id}`}
+                                >
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
+                                  جاري المحاولة...
+                                </Button>
+                              );
+                            }
+                            
+                            if (attemptState.status === 'locked') {
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => confirmOrderMutation.mutate(order.id)}
+                                    disabled={confirmOrderMutation.isPending}
+                                    className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 animate-pulse"
+                                    data-testid={`button-confirm-${order.id}`}
+                                  >
+                                    {confirmOrderMutation.isPending ? (
+                                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
+                                    ) : (
+                                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                                    )}
+                                    تأكيد القبول
+                                  </Button>
+                                  
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => cancelOrderAttemptMutation.mutate(order.id)}
+                                    disabled={cancelOrderAttemptMutation.isPending}
+                                    className="border-red-200 text-red-700 hover:bg-red-50"
+                                    data-testid={`button-cancel-attempt-${order.id}`}
+                                  >
+                                    ❌ إلغاء
+                                  </Button>
+                                </div>
+                              );
+                            }
+                            
+                            if (attemptState.status === 'confirmed') {
+                              return (
+                                <Button
+                                  size="sm"
+                                  disabled
+                                  className="bg-green-600 opacity-75"
+                                  data-testid={`button-confirmed-${order.id}`}
+                                >
+                                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                                  تم القبول ✅
+                                </Button>
+                              );
+                            }
+                            
+                            if (attemptState.status === 'failed') {
+                              return (
+                                <Button
+                                  size="sm"
+                                  disabled
+                                  className="bg-red-600 opacity-75"
+                                  data-testid={`button-failed-${order.id}`}
+                                >
+                                  <AlertCircle className="w-4 h-4 mr-1" />
+                                  فشلت المحاولة
+                                </Button>
+                              );
+                            }
+                          }
+                          
+                          // الحالة الافتراضية - زر المحاولة
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <Button
+                                size="sm"
+                                onClick={() => attemptOrderMutation.mutate(order.id)}
+                                disabled={attemptOrderMutation.isPending}
+                                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300"
+                                data-testid={`button-attempt-order-${order.id}`}
+                              >
+                                {attemptOrderMutation.isPending ? (
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
+                                ) : (
+                                  <Timer className="w-4 h-4 mr-1" />
+                                )}
+                                محاولة قبول
+                              </Button>
+                              
+                              {/* إشعار التضارب إن وجد */}
+                              {conflictNotification && (
+                                <div className={`text-xs px-2 py-1 rounded text-center ${
+                                  conflictNotification.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                                  conflictNotification.type === 'success' ? 'bg-green-100 text-green-800' :
+                                  'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {conflictNotification.message}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                        
+                        {/* زر القبول المباشر (النظام القديم للطوارئ) */}
                         <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => acceptOrderMutation.mutate(order.id)}
                           disabled={acceptOrderMutation.isPending}
-                          className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-300"
-                          data-testid={`button-accept-order-${order.id}`}
+                          className="border-green-200 text-green-700 hover:bg-green-50 text-xs"
+                          data-testid={`button-legacy-accept-${order.id}`}
+                          title="النظام القديم للطوارئ"
                         >
                           {acceptOrderMutation.isPending ? (
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <div className="w-3 h-3 border border-green-600 border-t-transparent rounded-full animate-spin mr-1" />
                           ) : (
-                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                            <Zap className="w-3 h-3 mr-1" />
                           )}
-                          قبول الطلب
+                          فوري
                         </Button>
                       </div>
                     </div>
@@ -1118,24 +1501,184 @@ export default function CaptainDashboard() {
                 </div>
               )}
 
-              {/* أزرار العمل */}
-              <div className="flex gap-3">
-                <Button
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                  onClick={() => {
-                    acceptOrderMutation.mutate(selectedOrder.id);
-                    setSelectedOrder(null);
-                  }}
-                  disabled={acceptOrderMutation.isPending}
-                  data-testid="button-accept-order-modal"
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  قبول الطلب
-                </Button>
+              {/* أزرار العمل المتطورة */}
+              <div className="space-y-4">
+                {/* عرض حالة الطلب ومعلومات التضارب */}
+                {(() => {
+                  const attemptState = orderAttempts.get(selectedOrder.id);
+                  const conflictNotification = conflictNotifications.get(selectedOrder.id);
+                  
+                  if (attemptState || conflictNotification) {
+                    return (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                          <Activity className="w-4 h-4" />
+                          حالة الطلب
+                        </h4>
+                        
+                        {attemptState && (
+                          <div className={`mb-3 p-3 rounded-lg flex items-center gap-2 ${
+                            attemptState.status === 'attempting' ? 'bg-yellow-100 text-yellow-800' :
+                            attemptState.status === 'locked' ? 'bg-blue-100 text-blue-800' :
+                            attemptState.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {attemptState.status === 'attempting' && (
+                              <>
+                                <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
+                                <span>جاري محاولة حجز الطلب...</span>
+                              </>
+                            )}
+                            {attemptState.status === 'locked' && (
+                              <>
+                                <Timer className="w-4 h-4" />
+                                <span>تم حجز الطلب مؤقتاً - يجب تأكيد القبول</span>
+                              </>
+                            )}
+                            {attemptState.status === 'confirmed' && (
+                              <>
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>تم تأكيد قبول الطلب بنجاح!</span>
+                              </>
+                            )}
+                            {attemptState.status === 'failed' && (
+                              <>
+                                <AlertCircle className="w-4 h-4" />
+                                <span>فشلت محاولة قبول الطلب</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        
+                        {conflictNotification && (
+                          <div className={`p-3 rounded-lg flex items-center gap-2 ${
+                            conflictNotification.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                            conflictNotification.type === 'success' ? 'bg-green-100 text-green-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            <AlertCircle className="w-4 h-4" />
+                            <span>{conflictNotification.message}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  
+                  return null;
+                })()}
                 
+                {/* أزرار العمل */}
+                <div className="flex gap-3">
+                  {(() => {
+                    const attemptState = orderAttempts.get(selectedOrder.id);
+                    
+                    // عرض أزرار حسب حالة الطلب
+                    if (attemptState?.status === 'locked') {
+                      return (
+                        <>
+                          <Button
+                            className="flex-1 bg-green-600 hover:bg-green-700 animate-pulse"
+                            onClick={() => {
+                              confirmOrderMutation.mutate(selectedOrder.id);
+                              setSelectedOrder(null);
+                            }}
+                            disabled={confirmOrderMutation.isPending}
+                            data-testid="button-confirm-order-modal"
+                          >
+                            {confirmOrderMutation.isPending ? (
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                            ) : (
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                            )}
+                            تأكيد القبول نهائياً
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              cancelOrderAttemptMutation.mutate(selectedOrder.id);
+                              setSelectedOrder(null);
+                            }}
+                            disabled={cancelOrderAttemptMutation.isPending}
+                            className="border-red-200 text-red-700 hover:bg-red-50"
+                            data-testid="button-cancel-attempt-modal"
+                          >
+                            ❌ إلغاء المحاولة
+                          </Button>
+                        </>
+                      );
+                    }
+                    
+                    if (attemptState?.status === 'confirmed') {
+                      return (
+                        <Button
+                          className="flex-1 bg-green-600 opacity-75"
+                          disabled
+                          data-testid="button-confirmed-modal"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          تم قبول الطلب ✅
+                        </Button>
+                      );
+                    }
+                    
+                    if (attemptState?.status === 'attempting') {
+                      return (
+                        <Button
+                          className="flex-1 bg-yellow-600 opacity-75"
+                          disabled
+                          data-testid="button-attempting-modal"
+                        >
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          جاري المحاولة...
+                        </Button>
+                      );
+                    }
+                    
+                    // الحالة الافتراضية - عرض أزرار القبول
+                    return (
+                      <>
+                        <Button
+                          className="flex-1 bg-blue-600 hover:bg-blue-700"
+                          onClick={() => {
+                            attemptOrderMutation.mutate(selectedOrder.id);
+                            // عدم إغلاق المودال لعرض حالة التقدم
+                          }}
+                          disabled={attemptOrderMutation.isPending}
+                          data-testid="button-attempt-order-modal"
+                        >
+                          {attemptOrderMutation.isPending ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          ) : (
+                            <Timer className="w-4 h-4 mr-2" />
+                          )}
+                          محاولة قبول الطلب
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            acceptOrderMutation.mutate(selectedOrder.id);
+                            setSelectedOrder(null);
+                          }}
+                          disabled={acceptOrderMutation.isPending}
+                          className="border-green-200 text-green-700 hover:bg-green-50"
+                          data-testid="button-legacy-accept-modal"
+                          title="النظام القديم - قبول فوري"
+                        >
+                          <Zap className="w-4 h-4 mr-2" />
+                          قبول فوري
+                        </Button>
+                      </>
+                    );
+                  })()}
+                </div>
+                
+                {/* زر المسار */}
                 {selectedOrder.deliveryCoordinates && (
                   <Button
                     variant="outline"
+                    className="w-full"
                     onClick={() => {
                       const { lat, lng } = selectedOrder.deliveryCoordinates!;
                       window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
