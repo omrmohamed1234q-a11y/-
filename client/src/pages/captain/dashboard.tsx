@@ -821,66 +821,6 @@ export default function CaptainDashboard() {
               <CardContent>
                 {currentLocation ? (
                   <div className="space-y-6">
-                    {/* Embedded Google Maps */}
-                    {currentLocation && currentRoute && (
-                      <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <div className="flex items-center gap-2 mb-3">
-                          <MapPin className="h-5 w-5 text-blue-600" />
-                          <h3 className="text-lg font-medium text-gray-900">التتبع المباشر</h3>
-                        </div>
-                        
-                        <div className="relative w-full h-64 bg-gray-100 rounded-lg mb-4 overflow-hidden">
-                          <iframe
-                            width="100%"
-                            height="100%"
-                            style={{ border: 0 }}
-                            loading="lazy"
-                            allowFullScreen
-                            referrerPolicy="no-referrer-when-downgrade"
-                            src={`https://www.google.com/maps/embed/v1/directions?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&origin=${currentLocation.lat},${currentLocation.lng}&destination=${availableOrders.find(o => o.id === currentRoute.orderId)?.deliveryCoordinates?.lat || 0},${availableOrders.find(o => o.id === currentRoute.orderId)?.deliveryCoordinates?.lng || 0}&mode=driving&language=ar`}
-                          ></iframe>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Route Information - Enhanced */}
-                    {currentRoute && (
-                      <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-6">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Navigation className="h-5 w-5 text-green-600" />
-                          <h3 className="text-lg font-medium text-green-900">معلومات المسار</h3>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div className="bg-white p-3 rounded-lg text-center border">
-                            <div className="text-2xl font-bold text-green-600">
-                              {Math.round(currentRoute.estimatedDistance / 1000)}
-                            </div>
-                            <div className="text-sm text-gray-600">كم</div>
-                          </div>
-                          <div className="bg-white p-3 rounded-lg text-center border">
-                            <div className="text-2xl font-bold text-blue-600">
-                              {Math.round(currentRoute.estimatedDuration / 60)}
-                            </div>
-                            <div className="text-sm text-gray-600">دقيقة</div>
-                          </div>
-                        </div>
-                        
-                        <Button 
-                          size="sm" 
-                          className="w-full bg-blue-600 hover:bg-blue-700"
-                          onClick={() => {
-                            const order = availableOrders.find(o => o.id === currentRoute.orderId);
-                            if (order?.deliveryCoordinates) {
-                              openGoogleNavigation(order.deliveryCoordinates.lat, order.deliveryCoordinates.lng);
-                            }
-                          }}
-                        >
-                          <Navigation className="w-4 h-4 mr-1" />
-                          فتح في Google Maps
-                        </Button>
-                      </div>
-                    )}
 
                     {/* Original GoogleMap component */}
                     <div className="h-96 bg-gray-100 rounded-lg relative overflow-hidden">
