@@ -4,6 +4,8 @@ import { WebSocket } from 'ws';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { MemorySecurityStorage } from './memory-security-storage';
+import { OrderManager, CaptainInfo } from './order-manager';
+import { ConflictPreventionSystem } from './captain-conflict-prevention';
 import {
   captainLoginSchema,
   updateLocationSchema,
@@ -96,16 +98,20 @@ interface CaptainProfile {
   isAvailable: boolean;
 }
 
-// خريطة الكباتن المتصلين
-const connectedCaptains = new Map<string, WebSocket>();
-const captainOrders = new Map<string, CaptainOrder[]>(); // captainId -> orders
-const orderAssignments = new Map<string, string>(); // orderId -> captainId
-
+// إدارة الكباتن والطلبات المتطورة
+let orderManager: OrderManager;
+let conflictPrevention: ConflictPreventionSystem;
 
 export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<string, WebSocket>) {
   
   // Initialize security storage
   const memorySecurityStorage = new MemorySecurityStorage();
+  
+  // Initialize advanced OrderManager
+  orderManager = new OrderManager(storage, wsClients);
+  
+  // Initialize conflict prevention system
+  conflictPrevention = new ConflictPreventionSystem(orderManager);
   
   console.log('🚛 تهيئة نظام الكباتن المتكامل...');
 
@@ -456,34 +462,50 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       const { captainId } = req.params;
       
       
-      // جلب جميع الطلبات الجاهزة للتوصيل
+      // جلب جميع الطلبات الجاهزة للتوصيل عبر OrderManager
       const allOrders = await storage.getAllOrders();
       const availableOrders = allOrders.filter((order: any) => 
-        order.status === 'ready' || order.status === 'assigned_to_driver'
+        order.status === 'ready'
       );
 
-      // تحويل الطلبات إلى تنسيق الكبتن
-      const captainOrders: CaptainOrder[] = availableOrders.map((order: any) => ({
-        id: order.id,
-        orderNumber: order.orderNumber || order.id,
-        customerName: order.customerName,
-        customerPhone: order.customerPhone,
-        deliveryAddress: order.deliveryAddress,
-        deliveryCoordinates: order.deliveryCoordinates,
-        totalAmount: order.totalAmount,
-        paymentMethod: order.paymentMethod || 'cash',
-        items: order.items || [],
-        timeline: order.timeline || [],
-        estimatedDelivery: order.estimatedDelivery,
-        specialInstructions: order.specialInstructions,
-        priority: order.priority || 'normal',
-        invoice: generateInvoiceData(order)
-      }));
+      // تهيئة الطلبات في OrderManager
+      for (const order of availableOrders) {
+        await orderManager.initializeOrder(order.id);
+      }
+
+      // الحصول على الطلبات المتاحة من OrderManager
+      const availableOrderStates = orderManager.getAvailableOrders();
+      
+      // تحويل الطلبات إلى تنسيق الكبتن مع معلومات إضافية
+      const captainOrders: CaptainOrder[] = [];
+      
+      for (const orderState of availableOrderStates) {
+        const order = await storage.getOrder(orderState.id);
+        if (order) {
+          captainOrders.push({
+            id: order.id,
+            orderNumber: order.orderNumber || order.id,
+            customerName: order.customerName,
+            customerPhone: order.customerPhone,
+            deliveryAddress: order.deliveryAddress,
+            deliveryCoordinates: order.deliveryCoordinates,
+            totalAmount: order.totalAmount,
+            paymentMethod: order.paymentMethod || 'cash',
+            items: order.items || [],
+            timeline: order.timeline || [],
+            estimatedDelivery: order.estimatedDelivery,
+            specialInstructions: order.specialInstructions,
+            priority: order.priority || 'normal',
+            invoice: generateInvoiceData(order)
+          });
+        }
+      }
 
       res.json({
         success: true,
         orders: captainOrders,
-        count: captainOrders.length
+        count: captainOrders.length,
+        systemStats: orderManager.getSystemStats()
       });
 
     } catch (error) {
@@ -495,29 +517,23 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
     }
   });
 
-  // قبول طلب من قبل الكبتن
-  app.post('/api/captain/:captainId/accept-order/:orderId', async (req, res) => {
+  // مرحلة 1: محاولة قبول الطلب (حجز مؤقت) مع منع التضارب
+  app.post('/api/captain/:captainId/attempt-order/:orderId', async (req, res) => {
     try {
       const { captainId, orderId } = req.params;
       
-      // التحقق من وجود الطلب
-      const order = await storage.getOrder(orderId);
-      if (!order) {
-        return res.status(404).json({
+      // فحص إمكانية المحاولة عبر نظام منع التضارب
+      const canAttemptCheck = conflictPrevention.canCaptainAttempt(captainId, orderId);
+      if (!canAttemptCheck.canAttempt) {
+        return res.status(429).json({
           success: false,
-          error: 'الطلب غير موجود'
+          error: canAttemptCheck.reason,
+          waitTime: canAttemptCheck.waitTime,
+          code: 'CONFLICT_PREVENTION'
         });
       }
-
-      // التحقق من حالة الطلب
-      if (order.status !== 'ready' && order.status !== 'assigned_to_driver') {
-        return res.status(400).json({
-          success: false,
-          error: 'الطلب غير متاح للقبول'
-        });
-      }
-
-      // جلب بيانات الكبتن
+      
+      // جلب بيانات الكبتن وتسجيله في OrderManager
       const captain = await storage.getDriver(captainId);
       if (!captain) {
         return res.status(404).json({
@@ -526,61 +542,229 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
         });
       }
 
-      // تحديث الطلب وتعيين الكبتن
-      await storage.assignOrderToDriver(orderId, captainId);
-      await storage.updateOrderStatus(orderId, 'picked_up');
-
-      // تسجيل في التاريخ الزمني
-      const timelineEvent = {
-        timestamp: new Date().toISOString(),
-        status: 'picked_up',
-        description: `تم قبول الطلب من الكبتن ${captain.name}`,
-        location: 'مركز التوزيع'
+      const captainInfo: CaptainInfo = {
+        id: captain.id,
+        name: captain.name,
+        status: captain.status === 'online' ? 'online' : 'offline'
       };
+      
+      orderManager.registerCaptain(captainInfo);
+      
+      // تسجيل المحاولة في نظام منع التضارب
+      conflictPrevention.registerAttempt(captainId, orderId);
 
-      await storage.addOrderTimelineEvent(orderId, timelineEvent);
-
-      // تحديث خريطة التعيينات
-      orderAssignments.set(orderId, captainId);
-
-      // إشعار الإدارة
-      await storage.createNotification({
-        userId: 'admin',
-        title: '✅ تم قبول الطلب',
-        message: `الكبتن ${captain.name} قبل طلب رقم ${order.orderNumber}`,
-        type: 'order_accepted',
-        priority: 'normal',
-        isRead: false
-      });
-
-      // إشعار العميل
-      await storage.createNotification({
-        userId: order.userId,
-        title: '🚛 الكبتن في الطريق',
-        message: `الكبتن ${captain.name} قبل طلبك وهو في الطريق إليك`,
-        type: 'order_update',
-        priority: 'normal',
-        isRead: false
-      });
-
-      console.log(`🎉 الكبتن ${captain.name} قبل الطلب ${orderId}`);
-
-      res.json({
-        success: true,
-        message: 'تم قبول الطلب بنجاح',
-        order: {
-          ...order,
-          assignedCaptain: {
-            id: captain.id,
-            name: captain.name,
-            phone: captain.phone,
-            vehicleType: captain.vehicleType
-          }
-        }
-      });
+      // محاولة قبول الطلب عبر OrderManager
+      const result = await orderManager.attemptOrderAcceptance(orderId, captainId);
+      
+      if (result.success) {
+        // إشعار الكباتن المتنافسين
+        conflictPrevention.notifyCompetingCaptains(orderId, 'order_locked_by_competitor', {
+          lockedBy: captain.name
+        });
+        
+        res.json({
+          success: true,
+          message: result.message,
+          lockTimeRemaining: result.lockTimeRemaining,
+          nextStep: 'confirm_acceptance',
+          conflictInfo: conflictPrevention.getOrderConflictDetails(orderId)
+        });
+      } else {
+        // إزالة المحاولة عند الفشل
+        conflictPrevention.removeAttempt(captainId, orderId, false);
+        
+        res.status(400).json({
+          success: false,
+          error: result.message,
+          conflictInfo: result.conflictInfo,
+          lockTimeRemaining: result.lockTimeRemaining
+        });
+      }
 
     } catch (error) {
-      console.error('❌ خطأ في قبول الطلب:', error);
+      // إزالة المحاولة عند حدوث خطأ
+      conflictPrevention.removeAttempt(req.params.captainId, req.params.orderId, false);
+      
+      console.error('❌ خطأ في محاولة قبول الطلب:', error);
+      res.status(500).json({
+        success: false,
+        error: 'حدث خطأ في النظام'
+      });
+    }
+  });
+
+  // مرحلة 2: تأكيد قبول الطلب (نهائي) مع تحديث نظام منع التضارب
+  app.post('/api/captain/:captainId/confirm-order/:orderId', async (req, res) => {
+    try {
+      const { captainId, orderId } = req.params;
+      
+      // تأكيد قبول الطلب عبر OrderManager
+      const result = await orderManager.confirmOrderAcceptance(orderId, captainId);
+      
+      if (result.success) {
+        // إزالة المحاولة عند النجاح
+        conflictPrevention.removeAttempt(captainId, orderId, true);
+        
+        // إشعار جميع الكباتن المتنافسين بأن الطلب تم تعيينه
+        conflictPrevention.notifyCompetingCaptains(orderId, 'order_assigned_to_competitor', {
+          assignedTo: (await storage.getDriver(captainId)).name
+        });
+        
+        // إضافة حدث في التاريخ الزمني
+        const captain = await storage.getDriver(captainId);
+        const timelineEvent = {
+          timestamp: new Date().toISOString(),
+          status: 'picked_up',
+          description: `تم قبول الطلب من الكبتن ${captain.name}`,
+          location: 'مركز التوزيع'
+        };
+        await storage.addOrderTimelineEvent(orderId, timelineEvent);
+
+        // إشعار الإدارة
+        await storage.createNotification({
+          userId: 'admin',
+          title: '✅ تم قبول الطلب',
+          message: `الكبتن ${captain.name} قبل طلب رقم ${result.order?.orderNumber}`,
+          type: 'order_accepted',
+          priority: 'normal',
+          isRead: false
+        });
+
+        // إشعار العميل
+        await storage.createNotification({
+          userId: result.order?.userId,
+          title: '🚛 الكبتن في الطريق',
+          message: `الكبتن ${captain.name} قبل طلبك وهو في الطريق إليك`,
+          type: 'order_update',
+          priority: 'normal',
+          isRead: false
+        });
+
+        console.log(`🎉 تم تأكيد قبول الطلب ${orderId} للكبتن ${captain.name}`);
+
+        res.json({
+          success: true,
+          message: result.message,
+          order: result.order
+        });
+      } else {
+        // إزالة المحاولة عند الفشل
+        conflictPrevention.removeAttempt(captainId, orderId, false);
+        
+        res.status(400).json({
+          success: false,
+          error: result.message
+        });
+      }
+
+    } catch (error) {
+      // إزالة المحاولة عند حدوث خطأ
+      conflictPrevention.removeAttempt(req.params.captainId, req.params.orderId, false);
+      
+      console.error('❌ خطأ في تأكيد قبول الطلب:', error);
+      res.status(500).json({
+        success: false,
+        error: 'حدث خطأ في النظام'
+      });
+    }
+  });
+
+  // إلغاء محاولة قبول الطلب مع تحديث نظام منع التضارب
+  app.post('/api/captain/:captainId/cancel-order/:orderId', async (req, res) => {
+    try {
+      const { captainId, orderId } = req.params;
+      
+      const result = await orderManager.cancelOrderAcceptance(orderId, captainId);
+      
+      // إزالة المحاولة من نظام منع التضارب
+      conflictPrevention.removeAttempt(captainId, orderId, false);
+      
+      // إشعار الكباتن المتنافسين بأن الطلب متاح مرة أخرى
+      conflictPrevention.notifyCompetingCaptains(orderId, 'order_available_after_cancellation');
+      
+      if (result) {
+        res.json({
+          success: true,
+          message: 'تم إلغاء محاولة قبول الطلب'
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: 'لم يتم العثور على حجز صحيح لهذا الطلب'
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ خطأ في إلغاء قبول الطلب:', error);
+      res.status(500).json({
+        success: false,
+        error: 'حدث خطأ في النظام'
+      });
+    }
+  });
+
+  // النظام القديم للتوافق مع الماضي (Backward Compatibility)
+  app.post('/api/captain/:captainId/accept-order/:orderId', async (req, res) => {
+    try {
+      const { captainId, orderId } = req.params;
+      
+      // محاولة قبول مباشرة (للتوافق)
+      const captain = await storage.getDriver(captainId);
+      if (!captain) {
+        return res.status(404).json({
+          success: false,
+          error: 'الكبتن غير موجود'
+        });
+      }
+
+      const captainInfo: CaptainInfo = {
+        id: captain.id,
+        name: captain.name,
+        status: 'online'
+      };
+      
+      orderManager.registerCaptain(captainInfo);
+
+      // محاولة قبول فورية
+      const attemptResult = await orderManager.attemptOrderAcceptance(orderId, captainId);
+      
+      if (attemptResult.success) {
+        // تأكيد فوري
+        const confirmResult = await orderManager.confirmOrderAcceptance(orderId, captainId);
+        
+        if (confirmResult.success) {
+          // إضافة حدث في التاريخ الزمني
+          const timelineEvent = {
+            timestamp: new Date().toISOString(),
+            status: 'picked_up',
+            description: `تم قبول الطلب من الكبتن ${captain.name}`,
+            location: 'مركز التوزيع'
+          };
+          await storage.addOrderTimelineEvent(orderId, timelineEvent);
+
+          console.log(`🎉 قبول فوري للطلب ${orderId} من الكبتن ${captain.name}`);
+
+          res.json({
+            success: true,
+            message: 'تم قبول الطلب بنجاح',
+            order: confirmResult.order
+          });
+        } else {
+          res.status(400).json({
+            success: false,
+            error: confirmResult.message
+          });
+        }
+      } else {
+        res.status(400).json({
+          success: false,
+          error: attemptResult.message,
+          conflictInfo: attemptResult.conflictInfo
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ خطأ في قبول الطلب (النظام القديم):', error);
       res.status(500).json({
         success: false,
         error: 'فشل في قبول الطلب'
@@ -829,6 +1013,149 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       res.status(500).json({
         success: false,
         error: 'فشل في إرسال الطلب للكباتن'
+      });
+    }
+  });
+
+  // === APIs للمراقبة والإحصائيات المتقدمة (للإدارة) ===
+  
+  // الحصول على إحصائيات شاملة للنظام
+  app.get('/api/admin/order-system/stats', async (req, res) => {
+    try {
+      const orderManagerStats = orderManager.getSystemStats();
+      const conflictStats = conflictPrevention.getConflictStats();
+      
+      res.json({
+        success: true,
+        stats: {
+          orderManager: orderManagerStats,
+          conflictPrevention: conflictStats,
+          systemHealth: {
+            uptime: process.uptime(),
+            timestamp: Date.now()
+          }
+        }
+      });
+    } catch (error) {
+      console.error('❌ خطأ في الحصول على إحصائيات النظام:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في الحصول على الإحصائيات'
+      });
+    }
+  });
+  
+  // الحصول على تفاصيل التضارب لطلب معين
+  app.get('/api/admin/order/:orderId/conflict-details', async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const conflictDetails = conflictPrevention.getOrderConflictDetails(orderId);
+      
+      res.json({
+        success: true,
+        conflictDetails
+      });
+    } catch (error) {
+      console.error('❌ خطأ في الحصول على تفاصيل التضارب:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في الحصول على تفاصيل التضارب'
+      });
+    }
+  });
+  
+  // إعادة تعيين فترة انتظار كبتن (للإدارة)
+  app.post('/api/admin/captain/:captainId/reset-cooldown', async (req, res) => {
+    try {
+      const { captainId } = req.params;
+      const result = conflictPrevention.resetCaptainCooldown(captainId);
+      
+      if (result) {
+        res.json({
+          success: true,
+          message: `تم إعادة تعيين فترة انتظار الكبتن ${captainId}`
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          error: 'الكبتن ليس في فترة انتظار'
+        });
+      }
+    } catch (error) {
+      console.error('❌ خطأ في إعادة تعيين فترة الانتظار:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في إعادة تعيين فترة الانتظار'
+      });
+    }
+  });
+  
+  // إنهاء جميع محاولات طلب معين (للطوارئ)
+  app.post('/api/admin/order/:orderId/force-end-attempts', async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      conflictPrevention.forceEndAllAttempts(orderId);
+      
+      res.json({
+        success: true,
+        message: `تم إنهاء جميع محاولات الطلب ${orderId}`
+      });
+    } catch (error) {
+      console.error('❌ خطأ في إنهاء المحاولات:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في إنهاء المحاولات'
+      });
+    }
+  });
+  
+  // الحصول على قائمة الطلبات المحجوزة حالياً
+  app.get('/api/admin/locked-orders', async (req, res) => {
+    try {
+      const lockedOrders = orderManager.getAllLockedOrders();
+      
+      res.json({
+        success: true,
+        lockedOrders,
+        count: lockedOrders.length
+      });
+    } catch (error) {
+      console.error('❌ خطأ في الحصول على الطلبات المحجوزة:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في الحصول على الطلبات المحجوزة'
+      });
+    }
+  });
+  
+  // مراقبة حية للنظام (real-time monitoring)
+  app.get('/api/admin/system/live-monitor', async (req, res) => {
+    try {
+      const systemState = {
+        orderManager: {
+          stats: orderManager.getSystemStats(),
+          availableOrders: orderManager.getAvailableOrders().length,
+          lockedOrders: orderManager.getAllLockedOrders().length
+        },
+        conflictPrevention: {
+          stats: conflictPrevention.getConflictStats()
+        },
+        server: {
+          uptime: process.uptime(),
+          memory: process.memoryUsage(),
+          timestamp: Date.now()
+        }
+      };
+      
+      res.json({
+        success: true,
+        systemState
+      });
+    } catch (error) {
+      console.error('❌ خطأ في المراقبة الحية:', error);
+      res.status(500).json({
+        success: false,
+        error: 'فشل في المراقبة الحية'
       });
     }
   });
