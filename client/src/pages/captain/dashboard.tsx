@@ -32,7 +32,7 @@ import {
   Timer,
   Calendar,
   Receipt,
-  Map,
+  Map as MapIcon,
   Zap,
   Activity,
   TrendingUp,
@@ -848,7 +848,7 @@ export default function CaptainDashboard() {
               لوحة التحكم
             </TabsTrigger>
             <TabsTrigger value="map" className="flex items-center gap-2 data-[state=active]:bg-white">
-              <Map className="w-4 h-4" />
+              <MapIcon className="w-4 h-4" />
               الخريطة
             </TabsTrigger>
             <TabsTrigger value="stats" className="flex items-center gap-2 data-[state=active]:bg-white">
@@ -1217,7 +1217,7 @@ export default function CaptainDashboard() {
                       ) : (
                         <div className="flex items-center justify-center h-full">
                           <div className="text-center">
-                            <Map className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                            <MapIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                             <p className="text-gray-600 font-medium">خريطة Google Maps</p>
                             <p className="text-sm text-gray-500 mt-2">يتم تحديد الموقع...</p>
                           </div>
@@ -1685,7 +1685,7 @@ export default function CaptainDashboard() {
                     }}
                     data-testid="button-open-maps"
                   >
-                    <Map className="w-4 h-4 mr-2" />
+                    <MapIcon className="w-4 h-4 mr-2" />
                     خرائط
                   </Button>
                 )}
