@@ -109,36 +109,6 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
   
   console.log('🚛 تهيئة نظام الكباتن المتكامل...');
 
-  // إضافة كبتن تجريبي للنظام العادي إذا لم يكن موجود
-  const initTestCaptain = async () => {
-    try {
-      const existingDrivers = await storage.getAllDrivers();
-      const testDriverExists = existingDrivers.find((d: any) => d.username === 'captain');
-      
-      if (!testDriverExists) {
-        const hashedPassword = await bcrypt.hash('123456', 10);
-        await storage.createDriver({
-          name: 'كابتن التوصيل الرئيسي',
-          username: 'captain',
-          password: hashedPassword, // كلمة مرور مشفرة
-          email: 'captain@atbaali.com',
-          phone: '01001234567',
-          vehicleType: 'motorcycle',
-          vehicleNumber: 'CAP001',
-          rating: 5.0,
-          totalDeliveries: 0,
-          status: 'online',
-          isAvailable: true
-        });
-        console.log('✅ تم إنشاء كبتن تجريبي في النظام العادي');
-      }
-    } catch (error) {
-      console.error('❌ خطأ في إنشاء الكبتن التجريبي:', error);
-    }
-  };
-  
-  // تهيئة الكبتن التجريبي
-  initTestCaptain();
 
   // === API للكباتن ===
 
@@ -485,57 +455,6 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
     try {
       const { captainId } = req.params;
       
-      // إضافة طلب تجريبي إذا لم يكن موجود
-      const allOrdersCheck = await storage.getAllOrders();
-      const hasTestOrder = allOrdersCheck.some(order => order.id && order.id.includes('test-captain'));
-      
-      if (!hasTestOrder) {
-        console.log('🧪 إضافة طلب تجريبي للكابتن...');
-        const testOrder = {
-          id: `test-captain-order-${Date.now()}`,
-          orderNumber: `TEST-${Date.now()}`,
-          userId: 'test-user-001',
-          items: [
-            {
-              productId: 'test-product',
-              quantity: 10,
-              price: 15,
-              name: 'طباعة مستندات A4',
-              notes: 'جودة عالية'
-            }
-          ],
-          totalAmount: 150,
-          status: 'ready', // جاهز للتوصيل
-          customerName: 'أحمد محمود التجريبي',
-          customerPhone: '+201234567890',
-          deliveryAddress: 'شارع التحرير، وسط البلد، القاهرة',
-          deliveryCoordinates: {
-            lat: 30.0444196,
-            lng: 31.2357116
-          },
-          paymentMethod: 'cash',
-          specialInstructions: 'اتصل عند الوصول - طلب تجريبي',
-          priority: 'normal',
-          estimatedDelivery: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          timeline: [
-            {
-              timestamp: new Date().toISOString(),
-              status: 'created',
-              description: 'تم إنشاء الطلب التجريبي',
-              location: 'النظام'
-            },
-            {
-              timestamp: new Date().toISOString(),
-              status: 'ready',
-              description: 'جاهز للتوصيل بواسطة الكابتن',
-              location: 'مستودع الطباعة'
-            }
-          ]
-        };
-
-        await storage.createOrder(testOrder);
-        console.log('🧪 تم إضافة طلب تجريبي للكابتن:', testOrder.id);
-      }
       
       // جلب جميع الطلبات الجاهزة للتوصيل
       const allOrders = await storage.getAllOrders();
