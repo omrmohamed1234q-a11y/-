@@ -861,9 +861,13 @@ export default function CaptainDashboard() {
                         </div>
                       )}
                       
-                      {/* معلومات الموقع الحالي - محسنة */}
+                    </div>
+                    
+                    {/* المعلومات أسفل الخريطة */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      {/* معلومات الموقع الحالي */}
                       {currentLocation && (
-                        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg border border-gray-200 min-w-[260px]">
+                        <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
                           <div className="mb-3">
                             <h4 className="font-medium text-gray-800 text-sm mb-2 flex items-center gap-1">
                               📍 معلومات الموقع الحالي
@@ -894,12 +898,12 @@ export default function CaptainDashboard() {
                       
                       {/* معلومات المسار */}
                       {currentRoute && (
-                        <div className="absolute top-4 right-4 bg-white rounded-lg p-4 shadow-lg max-w-xs">
+                        <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
                           <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                             <Route className="w-4 h-4" />
                             معلومات المسار
                           </h4>
-                          <div className="space-y-2 text-sm">
+                          <div className="space-y-2 text-sm mb-3">
                             <div className="flex items-center gap-2">
                               <Navigation className="w-4 h-4 text-blue-500" />
                               <span>{Math.round(currentRoute.estimatedDistance/1000)} كم</span>
@@ -912,7 +916,7 @@ export default function CaptainDashboard() {
                           
                           <Button 
                             size="sm" 
-                            className="w-full mt-3 bg-blue-600 hover:bg-blue-700"
+                            className="w-full bg-blue-600 hover:bg-blue-700"
                             onClick={() => {
                               const order = availableOrders.find(o => o.id === currentRoute.orderId);
                               if (order?.deliveryCoordinates) {
