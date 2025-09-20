@@ -1,9 +1,28 @@
-// نظام الكباتن المتكامل - مثل أمازون
+// نظام الكباتن المتكامل مع أنظمة الحماية المتقدمة
 import { Express } from 'express';
 import { WebSocket } from 'ws';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { MemorySecurityStorage } from './memory-security-storage';
+import {
+  captainLoginSchema,
+  updateLocationSchema,
+  updateOrderStatusSchema,
+  addOrderNoteSchema,
+  captainLoginLimiter,
+  captainApiLimiter,
+  locationUpdateLimiter,
+  verifyCaptainToken,
+  verifyCaptainStatus,
+  sanitizeInput,
+  logCaptainActivity,
+  handleCaptainErrors,
+  validateOrderId,
+  validateCoordinates,
+  createSuccessResponse,
+  createErrorResponse
+} from './captain-protection';
+import { setupProtectedCaptainAPIs } from './captain-protected-apis';
 
 // تعريف أنواع البيانات
 interface CaptainOrder {
@@ -97,10 +116,11 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       const testDriverExists = existingDrivers.find((d: any) => d.username === 'captain');
       
       if (!testDriverExists) {
+        const hashedPassword = await bcrypt.hash('123456', 10);
         await storage.createDriver({
           name: 'كابتن التوصيل الرئيسي',
           username: 'captain',
-          password: '123456',
+          password: hashedPassword, // كلمة مرور مشفرة
           email: 'captain@atbaali.com',
           phone: '01001234567',
           vehicleType: 'motorcycle',
@@ -122,17 +142,24 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
 
   // === API للكباتن ===
 
-  // تسجيل دخول آمن للكبتن - Secure Authentication
-  app.post('/api/captain/secure-login', async (req, res) => {
+  // تسجيل دخول آمن للكبتن مع الحماية المتقدمة
+  app.post('/api/captain/secure-login', 
+    captainLoginLimiter, // rate limiting
+    sanitizeInput, // تنظيف المدخلات
+    logCaptainActivity('SECURE_LOGIN'), // تسجيل النشاط
+    async (req, res) => {
     try {
-      const { username, password, driverCode } = req.body;
-      
-      if (!username || !password) {
-        return res.status(400).json({
-          success: false,
-          error: 'اسم المستخدم وكلمة المرور مطلوبان'
-        });
+      // التحقق من صحة البيانات المدخلة
+      const validationResult = captainLoginSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json(createErrorResponse(
+          'بيانات غير صحيحة',
+          'VALIDATION_ERROR',
+          validationResult.error.errors
+        ));
       }
+
+      const { username, password, driverCode } = validationResult.data;
 
       // البحث عن الكبتن في النظام الآمن - استخدام getUserByUsernameOrEmail للبحث بالاسم فقط
       const captain = await memorySecurityStorage.getUserByUsernameOrEmail(username, username);
@@ -231,9 +258,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
       
       console.log(`✅ كبتن ${captain.full_name} سجل دخول آمن بنجاح`);
 
-      res.json({
-        success: true,
-        message: 'تم تسجيل الدخول بنجاح',
+      res.json(createSuccessResponse({
         user: {
           id: captain.id,
           username: captain.username,
@@ -248,7 +273,7 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
         token: captainToken,
         sessionToken: captainToken,
         expiresAt: payload.exp
-      });
+      }, 'تم تسجيل الدخول بنجاح'));
 
     } catch (error) {
       console.error('❌ خطأ في تسجيل دخول الكبتن الآمن:', error);
@@ -268,10 +293,10 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
         console.error('❌ خطأ في تسجيل السجل:', logError);
       }
 
-      res.status(500).json({
-        success: false,
-        error: 'خطأ داخلي في الخادم'
-      });
+      res.status(500).json(createErrorResponse(
+        'خطأ داخلي في الخادم',
+        'INTERNAL_SERVER_ERROR'
+      ));
     }
   });
 
@@ -449,8 +474,14 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
     next();
   };
 
-  // جلب الطلبات المتاحة للكبتن
-  app.get('/api/captain/:captainId/available-orders', requireCaptainAuth, async (req, res) => {
+  // جلب الطلبات المتاحة للكبتن مع الحماية المتقدمة
+  app.get('/api/captain/:captainId/available-orders', 
+    captainApiLimiter, // rate limiting
+    sanitizeInput, // تنظيف المدخلات
+    verifyCaptainToken, // التحقق من التوكن
+    verifyCaptainStatus, // التحقق من الحالة
+    logCaptainActivity('GET_AVAILABLE_ORDERS'), // تسجيل النشاط
+    async (req, res) => {
     try {
       const { captainId } = req.params;
       
@@ -1206,12 +1237,15 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
         });
       }
 
+      // تشفير كلمة المرور قبل الحفظ (حماية أمنية)
+      const hashedPassword = await bcrypt.hash(captainData.password, 10);
+      
       // إنشاء الكبتن الآمن
       const newCaptain = await storage.createDriver({
         name: captainData.full_name || captainData.username,
         username: captainData.username,
         email: captainData.email,
-        password: captainData.password, // في الإنتاج، يجب تشفيرها
+        password: hashedPassword, // كلمة مرور مشفرة آمنة
         phone: captainData.phone || '',
         vehicleType: captainData.vehicle_type || 'motorcycle',
         vehicleNumber: captainData.vehicle_plate || '',
@@ -1244,7 +1278,22 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
     }
   });
 
-  console.log('✅ تم تهيئة نظام الكباتن المتكامل بنجاح');
+  // إعداد APIs المحمية للكباتن
+  setupProtectedCaptainAPIs(app, storage);
+
+  // إضافة error handler شامل لجميع route للكباتن
+  app.use('/api/captain*', handleCaptainErrors);
+
+  console.log('✅ تم تهيئة نظام الكباتن المتكامل مع أنظمة الحماية المتقدمة بنجاح');
+  console.log('🛡️ أنظمة الحماية المفعلة:');
+  console.log('   • Rate Limiting للـ APIs');
+  console.log('   • JWT Token Verification');
+  console.log('   • Input Sanitization');
+  console.log('   • Comprehensive Logging');
+  console.log('   • Zod Schema Validation');
+  console.log('   • Error Handling');
+  console.log('   • Order Authorization Checks');
+  console.log('   • Password Hashing');
 }
 
 // وظائف مساعدة

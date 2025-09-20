@@ -3,6 +3,12 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { googleDriveService } from "./google-drive-service";
 
+// إعداد متغيرات البيئة للأمان
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'atbaali-production-secret-jwt-key-2025-secure-' + Math.random().toString(36).substring(2, 15);
+  console.log('🔑 JWT_SECRET environment variable generated automatically');
+}
+
 const app = express();
 // Increase payload size limit to handle large PDF files (50MB limit)
 app.use(express.json({ limit: '50mb' }));
