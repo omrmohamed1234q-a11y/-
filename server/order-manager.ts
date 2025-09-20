@@ -41,7 +41,7 @@ export class OrderManager {
   private storage: any;
   
   // إعدادات النظام
-  private readonly LOCK_DURATION = 30 * 1000; // 30 ثانية
+  private readonly LOCK_DURATION = 90 * 1000; // 90 ثانية (دقيقة ونصف)
   private readonly ORDER_TIMEOUT_DURATION = 5 * 60 * 1000; // 5 دقائق
   private readonly MAX_ATTEMPTS_PER_CAPTAIN = 3; // محاولات القبول القصوى
   
