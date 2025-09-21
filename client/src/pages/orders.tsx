@@ -246,12 +246,6 @@ export default function Orders() {
               {/* Beautiful reviewing animation filling the whole space */}
               <div className="w-full h-full relative bg-gradient-to-br from-indigo-50 via-white to-purple-50 overflow-hidden">
                 
-                {/* Text at the top */}
-                <div className="absolute top-6 left-0 right-0 text-center z-10">
-                  <h3 className="text-xl font-bold text-[--brand-600] mb-2">جاري مراجعة طلبك</h3>
-                  <p className="text-sm text-gray-600">فريقنا يراجع تفاصيل طلبك بعناية</p>
-                </div>
-                
                 {/* Floating background particles */}
                 <div className="absolute top-16 left-8 w-4 h-4 bg-blue-300/40 rounded-full animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }}></div>
                 <div className="absolute top-20 right-12 w-3 h-3 bg-purple-300/40 rounded-full animate-bounce" style={{ animationDelay: '1s', animationDuration: '4s' }}></div>
