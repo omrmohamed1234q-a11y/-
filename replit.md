@@ -37,7 +37,18 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Automated token refresh.
 
 ## Recent Changes & Updates (September 2025)
-- **System Performance & Security Optimization (Latest - September 14, 2025)**: Successfully implemented critical performance optimization by reducing notifications API polling frequency from 5 seconds to 30 seconds (6x improvement). Fixed JWT token exposure security vulnerability in backend logs with proper redaction. Re-enabled WebSocket functionality with stable authentication and real-time messaging. All changes architect-reviewed and confirmed working. System now operates with enhanced performance, security, and stability.
+- **⚠️ CRITICAL SYSTEM PROTECTION - Captain Management System (September 21, 2025)**: 
+  🔒 **PROTECTED SYSTEM** - DO NOT MODIFY: Complete captain order management system now fully operational and PROTECTED from future changes. Features include: Two-phase order acceptance (attempt→confirm), conflict prevention between captains, 3-order limit per captain, separated Available/Current orders sections, "Order Delivered" functionality, and full GPS/mapping integration. 
+  
+  **🚨 PROTECTED FILES (DO NOT EDIT):**
+  - `client/src/pages/captain/dashboard.tsx` - Captain interface
+  - `server/captain-system.ts` - Captain APIs  
+  - `server/order-manager.ts` - Order processing logic
+  - `server/captain-conflict-prevention.ts` - Conflict prevention
+  
+  **⚡ SYSTEM STATUS**: 100% functional with verified order flow: Available Orders → Accept → Current Orders → Complete. Cache invalidation working properly. Any modifications to captain system require explicit approval and testing.
+
+- **System Performance & Security Optimization (September 14, 2025)**: Successfully implemented critical performance optimization by reducing notifications API polling frequency from 5 seconds to 30 seconds (6x improvement). Fixed JWT token exposure security vulnerability in backend logs with proper redaction. Re-enabled WebSocket functionality with stable authentication and real-time messaging. All changes architect-reviewed and confirmed working. System now operates with enhanced performance, security, and stability.
 - **Persistent Data Storage System with Token Management (September 2, 2025)**: Implemented hybrid storage with local JSON file backup ensuring 100% data persistence. All security dashboard data (users, logs, admin accounts, driver accounts) automatically saves to `security-data.json` and survives server restarts. Combined with Supabase synchronization for cloud backup. Enhanced with token persistence - login tokens are now properly saved and verified across server restarts. Production accounts: `production_admin/admin@production.com/AdminPass123` (admin), `ahmedd/omarr3loush@gmail.com/123456/OM001` (driver).
 - **Complete Admin Route Protection**: All admin pages (/admin, /admin/profile, etc.) now require authentication via secure login. Direct access redirects to secure login page with security warning. Token-based verification prevents unauthorized access.
 - **UI Security Enhancement**: Removed all visible admin access buttons from homepage and quick-access pages. Admin access only possible through direct secure URLs, maintaining complete security lockdown.
