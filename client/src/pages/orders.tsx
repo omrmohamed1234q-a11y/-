@@ -190,8 +190,9 @@ export default function Orders() {
             <GoogleMap
               height="52vh"
               showRoute={true}
-              driverLocation={selectedOrder.driverName ? [30.0444, 31.2357] : undefined}
-              destinationAddress={selectedOrder.deliveryAddress}
+              driverLocation={selectedOrder.driverName ? { lat: 30.0444, lng: 31.2357, timestamp: Date.now() } : undefined}
+              orderDestination={selectedOrder.deliveryAddress ? { lat: 30.0644, lng: 31.2157 } : undefined}
+              customerLocation={{ lat: 30.0344, lng: 31.2457 }}
               className="w-full h-full rounded-none"
             />
           </div>

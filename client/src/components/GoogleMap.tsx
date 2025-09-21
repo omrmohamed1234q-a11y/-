@@ -106,11 +106,29 @@ export default function GoogleMap({
     if (!isLoaded || !mapRef.current) return;
 
     try {
-      // الموقع الافتراضي (القاهرة)
-      const defaultCenter = {
-        lat: customerLocation?.lat || driverLocation?.lat || 30.0444,
-        lng: customerLocation?.lng || driverLocation?.lng || 31.2357
+      // التحقق من صحة الـ coordinates قبل الاستخدام
+      const getValidCoordinate = (coord: any) => {
+        if (coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' && 
+            !isNaN(coord.lat) && !isNaN(coord.lng) && isFinite(coord.lat) && isFinite(coord.lng)) {
+          return coord;
+        }
+        return null;
       };
+
+      // الموقع الافتراضي (القاهرة)
+      let defaultCenter = { lat: 30.0444, lng: 31.2357 };
+      
+      // استخدام موقع العميل إذا كان صحيحاً
+      const validCustomerLocation = getValidCoordinate(customerLocation);
+      if (validCustomerLocation) {
+        defaultCenter = validCustomerLocation;
+      } else {
+        // أو استخدام موقع السائق إذا كان صحيحاً
+        const validDriverLocation = getValidCoordinate(driverLocation);
+        if (validDriverLocation) {
+          defaultCenter = { lat: validDriverLocation.lat, lng: validDriverLocation.lng };
+        }
+      }
 
       mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
         center: defaultCenter,
@@ -133,7 +151,7 @@ export default function GoogleMap({
         ]
       });
 
-      console.log('✅ Google Maps initialized');
+      console.log('✅ Google Maps initialized', { center: defaultCenter });
     } catch (err) {
       console.error('❌ Error initializing Google Maps:', err);
       setError('خطأ في إنشاء الخريطة');
@@ -206,14 +224,24 @@ export default function GoogleMap({
   useEffect(() => {
     if (!mapInstanceRef.current || !window.google) return;
 
+    // التحقق من صحة الـ coordinates قبل الاستخدام
+    const getValidCoordinate = (coord: any) => {
+      if (coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' && 
+          !isNaN(coord.lat) && !isNaN(coord.lng) && isFinite(coord.lat) && isFinite(coord.lng)) {
+        return coord;
+      }
+      return null;
+    };
+
     // علامة العميل
-    if (customerLocation) {
+    const validCustomerLocation = getValidCoordinate(customerLocation);
+    if (validCustomerLocation) {
       if (customerMarkerRef.current) {
         customerMarkerRef.current.setMap(null);
       }
       
       customerMarkerRef.current = new window.google.maps.Marker({
-        position: customerLocation,
+        position: validCustomerLocation,
         map: mapInstanceRef.current,
         title: 'موقع العميل',
         icon: {
@@ -228,13 +256,14 @@ export default function GoogleMap({
     }
 
     // علامة وجهة التسليم
-    if (orderDestination) {
+    const validOrderDestination = getValidCoordinate(orderDestination);
+    if (validOrderDestination) {
       if (destinationMarkerRef.current) {
         destinationMarkerRef.current.setMap(null);
       }
       
       destinationMarkerRef.current = new window.google.maps.Marker({
-        position: orderDestination,
+        position: validOrderDestination,
         map: mapInstanceRef.current,
         title: 'وجهة التسليم',
         icon: {
@@ -253,6 +282,18 @@ export default function GoogleMap({
   useEffect(() => {
     if (!mapInstanceRef.current || !window.google || !driverLocation) return;
 
+    // التحقق من صحة الـ coordinates قبل الاستخدام
+    const getValidCoordinate = (coord: any) => {
+      if (coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' && 
+          !isNaN(coord.lat) && !isNaN(coord.lng) && isFinite(coord.lat) && isFinite(coord.lng)) {
+        return coord;
+      }
+      return null;
+    };
+
+    const validDriverLocation = getValidCoordinate(driverLocation);
+    if (!validDriverLocation) return;
+
     // إزالة العلامة القديمة
     if (driverMarkerRef.current) {
       driverMarkerRef.current.setMap(null);
@@ -260,7 +301,7 @@ export default function GoogleMap({
 
     // إضافة علامة جديدة للكابتن
     driverMarkerRef.current = new window.google.maps.Marker({
-      position: { lat: driverLocation.lat, lng: driverLocation.lng },
+      position: { lat: validDriverLocation.lat, lng: validDriverLocation.lng },
       map: mapInstanceRef.current,
       title: `${driverLocation.driverName || 'الكابتن'} - ${new Date(driverLocation.timestamp).toLocaleTimeString('ar-EG')}`,
       icon: {
