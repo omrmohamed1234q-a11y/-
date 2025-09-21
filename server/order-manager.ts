@@ -248,9 +248,29 @@ export class OrderManager {
         };
       }
 
-      // تحديث الطلب في قاعدة البيانات
+      // 🆕 فحص الحد الأقصى 3 طلبات نشطة للكابتن
+      try {
+        const activeOrders = await this.storage.getOrdersByCaptain(captainId);
+        const activeCount = activeOrders.filter(order => 
+          ['assigned_to_driver', 'accepted', 'picked_up', 'out_for_delivery'].includes(order.status)
+        ).length;
+
+        if (activeCount >= 3) {
+          return {
+            success: false,
+            message: `لديك بالفعل ${activeCount} طلبات نشطة. الحد الأقصى 3 طلبات فقط!`
+          };
+        }
+
+        console.log(`📊 الكابتن ${captain.name} لديه ${activeCount}/3 طلبات نشطة`);
+      } catch (error) {
+        console.error('❌ خطأ في فحص الطلبات النشطة:', error);
+        // نستمر رغم الخطأ لتجنب حجب النظام
+      }
+
+      // تحديث الطلب في قاعدة البيانات - استخدام حالة مناسبة
       await this.storage.assignOrderToDriver(orderId, captainId);
-      await this.storage.updateOrderStatus(orderId, 'picked_up');
+      await this.storage.updateOrderStatus(orderId, 'assigned_to_driver');  // ✅ حالة صحيحة
 
       // تحديث حالة الطلب في النظام
       orderState.status = 'accepted';
@@ -276,11 +296,11 @@ export class OrderManager {
       // جلب بيانات الطلب الكاملة
       const order = await this.storage.getOrder(orderId);
 
-      console.log(`🎉 تم تأكيد قبول الطلب ${orderId} للكبتن ${captain.name}`);
+      console.log(`🎉 تم تأكيد قبول الطلب ${orderId} للكبتن ${captain.name} (${activeCount + 1}/3 طلبات نشطة)`);
 
       return {
         success: true,
-        message: 'تم قبول الطلب بنجاح',
+        message: 'تم قبول الطلب بنجاح! 🎉',
         order: {
           ...order,
           assignedCaptain: captain
