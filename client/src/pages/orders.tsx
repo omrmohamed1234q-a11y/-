@@ -242,87 +242,112 @@ export default function Orders() {
         <div className="relative h-[52vh] w-full bg-gradient-to-br from-gray-50 to-gray-100">
           {/* Animation for Reviewing Stage */}
           {orderStage === 'reviewing' && (
-            <div className="flex flex-col items-center justify-center h-full px-6 py-8">
-              {/* Text moved up and outside animation area */}
+            <div className="flex flex-col items-center justify-center h-full px-6 py-4">
+              {/* Text at the top */}
               <div className="text-center mb-6">
-                <h3 className="text-xl font-bold text-[--brand-600] mb-1">جاري مراجعة طلبك</h3>
+                <h3 className="text-xl font-bold text-[--brand-600] mb-2">جاري مراجعة طلبك</h3>
                 <p className="text-sm text-gray-600">فريقنا يراجع تفاصيل طلبك بعناية</p>
               </div>
               
-              <div className="flex-1 flex items-center justify-center max-w-md mx-auto">
-                {/* Simple clean animation inspired by reference */}
-                <div className="w-72 h-56 relative bg-gradient-to-b from-blue-50 to-blue-100 rounded-2xl shadow-lg overflow-hidden">
+              <div className="flex-1 flex items-center justify-center max-w-lg mx-auto">
+                {/* Beautiful reviewing animation */}
+                <div className="w-80 h-64 relative bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-3xl shadow-2xl border border-white/50 backdrop-blur-sm overflow-hidden">
                   
-                  {/* Orange desk - simple and clean */}
-                  <div className="absolute bottom-16 left-6 right-6 h-12 bg-gradient-to-b from-orange-400 to-orange-500 rounded-lg shadow-xl">
-                    {/* Desk legs - simple rectangles */}
-                    <div className="absolute -bottom-12 left-3 w-4 h-12 bg-orange-600 rounded-b"></div>
-                    <div className="absolute -bottom-12 right-3 w-4 h-12 bg-orange-600 rounded-b"></div>
-                    <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 w-4 h-12 bg-orange-600 rounded-b"></div>
-                    
-                    {/* "اطبعلي" text on desk */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-sm font-bold text-white drop-shadow-lg">اطبعلي</span>
-                    </div>
-                  </div>
+                  {/* Floating background particles */}
+                  <div className="absolute top-6 left-8 w-3 h-3 bg-blue-300/40 rounded-full animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }}></div>
+                  <div className="absolute top-12 right-10 w-2 h-2 bg-purple-300/40 rounded-full animate-bounce" style={{ animationDelay: '1s', animationDuration: '4s' }}></div>
+                  <div className="absolute bottom-20 left-6 w-2 h-2 bg-pink-300/40 rounded-full animate-bounce" style={{ animationDelay: '2s', animationDuration: '3.5s' }}></div>
                   
-                  {/* Simple black person silhouette */}
-                  <div className="absolute bottom-28 left-1/2 transform -translate-x-1/2">
+                  {/* Central documents stack */}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                     <div className="relative">
-                      {/* Head */}
-                      <div className="w-16 h-16 bg-gray-900 rounded-full mx-auto mb-1"></div>
-                      {/* Body */}
-                      <div className="w-20 h-24 bg-gray-900 rounded-t-3xl mx-auto"></div>
-                      {/* Arms */}
-                      <div className="absolute top-16 -left-6 w-12 h-6 bg-gray-900 rounded-full rotate-12"></div>
-                      <div className="absolute top-16 -right-6 w-12 h-6 bg-gray-900 rounded-full -rotate-12"></div>
-                    </div>
-                  </div>
-                  
-                  {/* Stack of papers on desk */}
-                  <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2">
-                    <div className="relative">
-                      {/* Bottom paper */}
-                      <div className="w-16 h-12 bg-white rounded shadow-lg"></div>
-                      {/* Middle paper */}
-                      <div className="absolute -top-1 left-1 w-16 h-12 bg-white rounded shadow-lg">
-                        <div className="h-2 bg-[--brand-500] rounded-t mx-1 mt-1"></div>
-                        <div className="h-0.5 bg-gray-300 rounded mx-1 mt-1"></div>
-                        <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
-                        <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                      {/* Bottom document */}
+                      <div className="w-20 h-16 bg-white rounded-lg shadow-xl border border-gray-100"></div>
+                      
+                      {/* Middle document */}
+                      <div className="absolute -top-2 left-2 w-20 h-16 bg-white rounded-lg shadow-xl border border-gray-100">
+                        <div className="h-3 bg-gradient-to-r from-[--brand-400] to-[--brand-600] rounded-t-lg mx-1 mt-1"></div>
+                        <div className="h-1 bg-gray-200 rounded mx-2 mt-2"></div>
+                        <div className="h-1 bg-gray-200 rounded mx-2 mt-1"></div>
+                        <div className="h-1 bg-gray-300 rounded mx-2 mt-1"></div>
                       </div>
-                      {/* Top paper */}
-                      <div className="absolute -top-2 left-2 w-16 h-12 bg-white rounded shadow-lg animate-pulse">
-                        <div className="h-2 bg-[--brand-500] rounded-t mx-1 mt-1"></div>
-                        <div className="h-0.5 bg-gray-300 rounded mx-1 mt-1"></div>
-                        <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
-                        <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                      
+                      {/* Top document with animation */}
+                      <div className="absolute -top-4 left-4 w-20 h-16 bg-white rounded-lg shadow-2xl border-2 border-[--brand-300] animate-pulse">
+                        <div className="h-3 bg-gradient-to-r from-[--brand-500] to-[--brand-700] rounded-t-lg mx-1 mt-1"></div>
+                        <div className="h-1 bg-gray-200 rounded mx-2 mt-2"></div>
+                        <div className="h-1 bg-gray-200 rounded mx-2 mt-1"></div>
+                        <div className="h-1 bg-gray-300 rounded mx-2 mt-1"></div>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Papers in hands */}
-                  <div className="absolute bottom-36 left-8">
-                    <div className="w-10 h-8 bg-white rounded shadow-lg rotate-12 animate-bounce border-2 border-[--brand-300]"
-                         style={{ animationDelay: '0.5s', animationDuration: '2s' }}>
-                      <div className="h-1 bg-[--brand-500] rounded mx-1 mt-1"></div>
-                      <div className="h-0.5 bg-gray-400 rounded mx-1 mt-0.5"></div>
-                      <div className="h-0.5 bg-gray-400 rounded mx-1 mt-0.5"></div>
+                  {/* Magnifying glass animation */}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 translate-x-8 translate-y-8">
+                    <div className="relative animate-bounce" style={{ animationDuration: '2s' }}>
+                      {/* Magnifying glass circle */}
+                      <div className="w-16 h-16 border-4 border-blue-500 rounded-full bg-white/20 backdrop-blur-sm shadow-xl">
+                        <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-100/50 to-transparent"></div>
+                      </div>
+                      {/* Handle */}
+                      <div className="absolute -bottom-3 -right-3 w-8 h-2 bg-blue-600 rounded-full rotate-45 shadow-lg"></div>
                     </div>
                   </div>
                   
-                  <div className="absolute bottom-36 right-8">
-                    <div className="w-10 h-8 bg-white rounded shadow-lg -rotate-12 animate-bounce border-2 border-[--brand-300]"
-                         style={{ animationDelay: '1s', animationDuration: '2s' }}>
-                      <div className="h-1 bg-[--brand-500] rounded mx-1 mt-1"></div>
-                      <div className="h-0.5 bg-gray-400 rounded mx-1 mt-0.5"></div>
-                      <div className="h-0.5 bg-gray-400 rounded mx-1 mt-0.5"></div>
+                  {/* Check marks appearing */}
+                  <div className="absolute top-8 left-12">
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-ping" style={{ animationDelay: '1s' }}>
+                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
                     </div>
                   </div>
                   
-                  {/* Simple background elements */}
-                  <div className="absolute top-4 left-4 w-8 h-6 bg-white/30 rounded"></div>
-                  <div className="absolute top-4 right-4 w-6 h-6 bg-yellow-300 rounded-full opacity-60 animate-pulse"></div>
+                  <div className="absolute top-16 right-16">
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-ping" style={{ animationDelay: '2s' }}>
+                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  <div className="absolute bottom-8 left-16">
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-ping" style={{ animationDelay: '3s' }}>
+                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  {/* Floating documents around */}
+                  <div className="absolute top-4 right-8">
+                    <div className="w-12 h-8 bg-white rounded shadow-lg rotate-12 animate-bounce border-l-4 border-[--brand-400]" style={{ animationDelay: '0.5s', animationDuration: '3s' }}>
+                      <div className="h-1 bg-gray-200 rounded mx-1 mt-1"></div>
+                      <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                      <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="absolute bottom-12 right-6">
+                    <div className="w-10 h-12 bg-white rounded shadow-lg -rotate-6 animate-bounce border-l-4 border-purple-400" style={{ animationDelay: '1.5s', animationDuration: '2.5s' }}>
+                      <div className="h-1 bg-gray-200 rounded mx-1 mt-1"></div>
+                      <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                      <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                      <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="absolute bottom-4 left-8">
+                    <div className="w-14 h-6 bg-white rounded shadow-lg rotate-6 animate-bounce border-l-4 border-blue-400" style={{ animationDelay: '2.5s', animationDuration: '2.8s' }}>
+                      <div className="h-1 bg-gray-200 rounded mx-1 mt-1"></div>
+                      <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                    </div>
+                  </div>
+                  
+                  {/* Sparkle effects */}
+                  <div className="absolute top-10 left-20 w-1 h-1 bg-yellow-400 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
+                  <div className="absolute top-20 right-12 w-1 h-1 bg-pink-400 rounded-full animate-ping" style={{ animationDelay: '2s' }}></div>
+                  <div className="absolute bottom-16 left-12 w-1 h-1 bg-blue-400 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
                   
                 </div>
               </div>
