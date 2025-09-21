@@ -20,7 +20,15 @@ import {
   ShoppingBag,
   CheckCircle,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Navigation,
+  Timer,
+  MessageCircle,
+  Zap,
+  TrendingUp,
+  Calendar,
+  Award,
+  Target
 } from 'lucide-react';
 import PrintingAnimation from '@/components/PrintingAnimation';
 
@@ -150,73 +158,148 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <ShoppingBag className="h-8 w-8 text-green-600" />
-            <h1 className="text-3xl font-bold text-gray-900">طلباتي</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/20">
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Modern Delivery App Header */}
+        <div className="relative mb-8 overflow-hidden">
+          {/* Background Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 rounded-3xl"></div>
+          <div className="absolute inset-0 bg-black/5 rounded-3xl"></div>
+          
+          {/* Content */}
+          <div className="relative p-8 text-white">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
+                  <Truck className="h-8 w-8" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold">طلباتي 🚚</h1>
+                  <p className="text-green-100 mt-1">تتبع طلباتك بكل سهولة ووضوح</p>
+                </div>
+              </div>
+              
+              {/* Active Orders Badge */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-yellow-300" />
+                    <span className="text-sm font-medium">
+                      {orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length} نشط
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <Package className="h-6 w-6 mx-auto mb-2 text-green-200" />
+                <div className="text-2xl font-bold">{orders.length}</div>
+                <div className="text-xs text-green-100">إجمالي الطلبات</div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <TrendingUp className="h-6 w-6 mx-auto mb-2 text-orange-200" />
+                <div className="text-2xl font-bold">
+                  {orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length}
+                </div>
+                <div className="text-xs text-orange-100">قيد التنفيذ</div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <Award className="h-6 w-6 mx-auto mb-2 text-yellow-200" />
+                <div className="text-2xl font-bold">
+                  {orders.filter((o: Order) => o.status === 'delivered').length}
+                </div>
+                <div className="text-xs text-yellow-100">تم التسليم</div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <Target className="h-6 w-6 mx-auto mb-2 text-blue-200" />
+                <div className="text-2xl font-bold">
+                  {orders.reduce((sum: number, order: Order) => sum + parseFloat(order.totalAmount || '0'), 0).toFixed(0)} ج
+                </div>
+                <div className="text-xs text-blue-100">إجمالي القيمة</div>
+              </div>
+            </div>
           </div>
-          <p className="text-gray-600">تتبع جميع طلباتك وحالتها الحالية</p>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">إجمالي الطلبات</p>
-                  <p className="text-2xl font-bold">{orders.length}</p>
+        {/* Active Orders Section - Prominent Display */}
+        {orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <Zap className="h-6 w-6 text-orange-600" />
                 </div>
-                <Package className="h-8 w-8 opacity-80" />
+                <h2 className="text-2xl font-bold text-gray-900">طلباتي النشطة</h2>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">قيد التنفيذ</p>
-                  <p className="text-2xl font-bold">
-                    {orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length}
-                  </p>
-                </div>
-                <RefreshCw className="h-8 w-8 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">تم التسليم</p>
-                  <p className="text-2xl font-bold">
-                    {orders.filter((o: Order) => o.status === 'delivered').length}
-                  </p>
-                </div>
-                <CheckCircle className="h-8 w-8 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">المبلغ الإجمالي</p>
-                  <p className="text-2xl font-bold">
-                    {orders.reduce((sum: number, order: Order) => sum + parseFloat(order.totalAmount || '0'), 0).toFixed(0)} ج
-                  </p>
-                </div>
-                <Star className="h-8 w-8 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Badge className="bg-orange-100 text-orange-800 border-orange-200 animate-pulse">
+                {orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length} طلب نشط
+              </Badge>
+            </div>
+            
+            <div className="grid gap-4">
+              {orders
+                .filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status))
+                .slice(0, 3)
+                .map((order: Order) => (
+                <Card key={order.id} className="border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-yellow-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-orange-100 rounded-xl">
+                          {getOrderStatusIcon(order.status)}
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-900">طلب #{order.orderNumber}</h3>
+                          <p className="text-sm text-gray-600 flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            {formatDate(order.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <Badge className={`border-2 text-sm px-3 py-1 ${getOrderStatusColor(order.status)}`}>
+                          {order.statusText || order.status}
+                        </Badge>
+                        <div className="mt-2 text-2xl font-bold text-green-600">
+                          {order.totalAmount} ج
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Enhanced Action Buttons */}
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => handleTrackOrder(order.orderNumber)}
+                        className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium h-12"
+                        data-testid={`track-order-${order.orderNumber}`}
+                      >
+                        <Navigation className="h-5 w-5 ml-2" />
+                        تتبع مباشر
+                        <Zap className="h-4 w-4 mr-2" />
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        onClick={() => handleViewOrder(order.id)}
+                        className="px-6 border-2 border-gray-300 hover:border-gray-400 h-12"
+                        data-testid={`view-order-${order.id}`}
+                      >
+                        <Eye className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Orders Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
