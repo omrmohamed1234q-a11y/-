@@ -242,74 +242,74 @@ export default function Orders() {
         <div className="relative h-[52vh] w-full bg-gradient-to-br from-gray-50 to-gray-100">
           {/* Animation for Reviewing Stage */}
           {orderStage === 'reviewing' && (
-            <div className="flex items-center justify-center h-full px-4">
-              <div className="text-center max-w-md mx-auto">
+            <div className="flex flex-col items-center justify-center h-full px-4">
+              <div className="text-center max-w-sm mx-auto">
                 {/* Reviewing Animation */}
-                <div className="w-64 h-64 mx-auto mb-4 relative">
-                  {/* Person silhouette - improved and black */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <svg className="w-32 h-32 text-gray-900" viewBox="0 0 100 100" fill="currentColor">
+                <div className="w-56 h-48 mx-auto mb-6 relative">
+                  
+                  {/* Desk/Table - make it very visible */}
+                  <div className="absolute bottom-4 left-8 right-8 h-8 bg-amber-800 rounded-lg shadow-xl">
+                    {/* Table legs */}
+                    <div className="absolute -bottom-6 left-2 w-2 h-6 bg-amber-900 rounded-full"></div>
+                    <div className="absolute -bottom-6 right-2 w-2 h-6 bg-amber-900 rounded-full"></div>
+                    {/* Table surface detail */}
+                    <div className="w-full h-2 bg-amber-700 rounded-t-lg"></div>
+                  </div>
+                  
+                  {/* Person silhouette - sitting behind desk */}
+                  <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2">
+                    <svg className="w-24 h-24 text-gray-900" viewBox="0 0 100 100" fill="currentColor">
                       {/* Person head */}
-                      <circle cx="50" cy="20" r="10" />
+                      <circle cx="50" cy="25" r="12" />
                       {/* Person body */}
-                      <rect x="44" y="28" width="12" height="25" rx="6" />
+                      <rect x="42" y="35" width="16" height="20" rx="8" />
                       {/* Left arm holding paper */}
-                      <rect x="32" y="32" width="14" height="6" rx="3" />
+                      <rect x="28" y="40" width="16" height="8" rx="4" />
                       {/* Right arm holding paper */}
-                      <rect x="54" y="32" width="14" height="6" rx="3" />
-                      {/* Person legs */}
-                      <rect x="46" y="52" width="8" height="20" rx="4" />
+                      <rect x="56" y="40" width="16" height="8" rx="4" />
                     </svg>
                   </div>
                   
-                  {/* Documents arranged nicely around the person */}
                   {/* Document in left hand */}
-                  <div className="absolute top-16 left-12">
-                    <div className="w-12 h-8 bg-white border-2 border-[--brand-400] rounded shadow-lg rotate-12 animate-pulse" 
+                  <div className="absolute bottom-16 left-6">
+                    <div className="w-10 h-6 bg-white border-2 border-[--brand-400] rounded shadow-lg rotate-12 animate-pulse" 
                          style={{ animationDelay: '0s', animationDuration: '3s' }}>
                       <div className="h-1 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
-                      <div className="h-0.5 bg-gray-400 rounded-full mx-1 mt-0.5"></div>
                       <div className="h-0.5 bg-gray-400 rounded-full mx-1 mt-0.5"></div>
                     </div>
                   </div>
                   
                   {/* Document in right hand */}
-                  <div className="absolute top-16 right-12">
-                    <div className="w-12 h-8 bg-white border-2 border-[--brand-400] rounded shadow-lg -rotate-12 animate-pulse"
+                  <div className="absolute bottom-16 right-6">
+                    <div className="w-10 h-6 bg-white border-2 border-[--brand-400] rounded shadow-lg -rotate-12 animate-pulse"
                          style={{ animationDelay: '1s', animationDuration: '3s' }}>
                       <div className="h-1 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
                       <div className="h-0.5 bg-gray-400 rounded-full mx-1 mt-0.5"></div>
-                      <div className="h-0.5 bg-gray-400 rounded-full mx-1 mt-0.5"></div>
                     </div>
                   </div>
                   
-                  {/* Document on desk/table left */}
-                  <div className="absolute bottom-8 left-8">
-                    <div className="w-10 h-12 bg-white border-2 border-[--brand-300] rounded shadow-lg animate-bounce"
+                  {/* Documents on desk */}
+                  <div className="absolute bottom-6 left-10">
+                    <div className="w-8 h-10 bg-white border-2 border-[--brand-300] rounded shadow-lg animate-bounce"
                          style={{ animationDelay: '0.5s', animationDuration: '2.5s' }}>
-                      <div className="h-1.5 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
-                      <div className="h-0.5 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                      <div className="h-1 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
                       <div className="h-0.5 bg-gray-300 rounded-full mx-1 mt-0.5"></div>
                       <div className="h-0.5 bg-gray-300 rounded-full mx-1 mt-0.5"></div>
                     </div>
                   </div>
                   
-                  {/* Document on desk/table right */}
-                  <div className="absolute bottom-8 right-8">
-                    <div className="w-10 h-12 bg-white border-2 border-[--brand-300] rounded shadow-lg animate-bounce"
+                  <div className="absolute bottom-6 right-10">
+                    <div className="w-8 h-10 bg-white border-2 border-[--brand-300] rounded shadow-lg animate-bounce"
                          style={{ animationDelay: '1.5s', animationDuration: '2.5s' }}>
-                      <div className="h-1.5 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
-                      <div className="h-0.5 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                      <div className="h-1 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
                       <div className="h-0.5 bg-gray-300 rounded-full mx-1 mt-0.5"></div>
                       <div className="h-0.5 bg-gray-300 rounded-full mx-1 mt-0.5"></div>
                     </div>
                   </div>
-                  
-                  {/* Desk surface indication */}
-                  <div className="absolute bottom-2 left-4 right-4 h-2 bg-gray-200 rounded-full opacity-30"></div>
                 </div>
                 
-                <div className="px-2">
+                {/* Text inside the container */}
+                <div className="mt-2">
                   <h3 className="text-lg font-bold text-[--brand-600] mb-1">جاري مراجعة طلبك</h3>
                   <p className="text-sm text-gray-600">فريقنا يراجع تفاصيل طلبك بعناية</p>
                 </div>
