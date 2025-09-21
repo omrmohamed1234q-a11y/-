@@ -553,11 +553,11 @@ export function setupCaptainSystem(app: Express, storage: any, wsClients: Map<st
     try {
       const { captainId } = req.params;
       
-      // جلب الطلبات المُعيّنة للكبتن من قاعدة البيانات
+      // جلب الطلبات المُعيّنة للكبتن من قاعدة البيانات - ✅ شامل جميع الحالات النشطة
       const allOrders = await storage.getAllOrders();
       const currentOrders = allOrders.filter((order: any) => 
         order.assignedCaptain === captainId && 
-        ['picked_up', 'in_transit', 'accepted'].includes(order.status)
+        ['assigned_to_driver', 'accepted', 'picked_up', 'in_transit', 'out_for_delivery'].includes(order.status)
       );
 
       // تحويل الطلبات إلى تنسيق الكبتن

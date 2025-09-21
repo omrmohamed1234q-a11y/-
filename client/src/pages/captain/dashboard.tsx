@@ -548,7 +548,9 @@ export default function CaptainDashboard() {
         title: '🎉 تم قبول الطلب نهائياً!',
         description: 'تم قبول الطلب بنجاح، ابدأ رحلة التوصيل'
       });
+      // تحديث كلا قائمتي الطلبات
       queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/captain/current-orders'] });
     },
     onError: (error: any, orderId) => {
       // تحديث حالة المحاولة - فشل التأكيد (مصحح)
@@ -617,7 +619,9 @@ export default function CaptainDashboard() {
         title: '✅ تم قبول الطلب',
         description: 'تم قبول الطلب بنجاح (النظام القديم)، ابدأ رحلة التوصيل'
       });
+      // تحديث كلا قائمتي الطلبات
       queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/captain/current-orders'] });
     },
     onError: (error: any) => {
       toast({
