@@ -18,7 +18,8 @@ import {
   HeadphonesIcon,
   Clock,
   Star,
-  ArrowLeft
+  ArrowLeft,
+  ArrowRight
 } from "lucide-react";
 
 interface Order {
@@ -158,6 +159,29 @@ export default function Orders() {
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
+      {/* Order Status Header */}
+      {selectedOrder && (
+        <div className="bg-white shadow-sm sticky top-0 z-40 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-[--brand-500] rounded-full animate-pulse"></div>
+              <div>
+                <span className="font-bold text-[--brand-600] text-lg">
+                  {selectedOrder.statusText || 'قيد التجهيز'}
+                </span>
+                <p className="text-xs text-gray-600">
+                  طلب رقم {selectedOrder.orderNumber}
+                </p>
+              </div>
+            </div>
+            <Badge className="bg-[--brand-100] text-[--brand-700] border-[--brand-300] px-3 py-1">
+              <Clock className="h-3 w-3 mr-1" />
+              {calculateETA(selectedOrder.estimatedDelivery)}
+            </Badge>
+          </div>
+        </div>
+      )}
+      
       {/* Top Section: Map with Overlays */}
       {selectedOrder && (
         <div className="relative h-[52vh] w-full">
