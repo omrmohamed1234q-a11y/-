@@ -194,45 +194,50 @@ export default function Orders() {
           {/* Restaurant Card at Bottom of Map */}
           <div className="absolute bottom-3 left-3 right-3 z-20">
             <Card className="bg-white shadow-xl border-0">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
-                    {selectedOrder.restaurantLogo ? (
-                      <img 
-                        src={selectedOrder.restaurantLogo} 
-                        alt="Restaurant"
-                        className="w-full h-full object-cover rounded-xl"
-                      />
-                    ) : (
-                      <Package className="h-6 w-6 text-gray-600" />
-                    )}
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      {selectedOrder.restaurantLogo ? (
+                        <img 
+                          src={selectedOrder.restaurantLogo} 
+                          alt="Restaurant"
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      ) : (
+                        <Package className="h-7 w-7 text-gray-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-gray-900 text-lg truncate">
+                        {selectedOrder.restaurantName || 'اطبعلي للطباعة'}
+                      </h3>
+                      <p className="text-sm text-gray-600">خدمات الطباعة والتصوير</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-900 truncate">
-                      {selectedOrder.restaurantName || 'اطبعلي للطباعة'}
-                    </h3>
-                  </div>
-                  <Badge className="bg-gray-900 text-white border-0 px-3 py-1">
+                  <Badge className="bg-gray-900 text-white border-0 px-4 py-2 text-sm font-bold flex-shrink-0">
                     قيد التوصيل
                   </Badge>
                 </div>
 
                 {/* ETA */}
-                <div className="mb-3">
-                  <p className="text-sm text-gray-600 mb-1">الوصول المتوقع</p>
-                  <p className="text-2xl font-bold text-gray-900" data-testid="text-eta">
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">الوصول المتوقع</p>
+                  <p className="text-3xl font-bold text-gray-900" data-testid="text-eta">
                     {calculateETA(selectedOrder.estimatedDelivery)}
                   </p>
                 </div>
 
                 {/* Alert Message */}
-                <div className="bg-[--brand-50] border border-[--brand-200] rounded-xl p-3 flex items-center gap-3">
-                  <div className="w-6 h-6 bg-[--brand-500] rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">👍</span>
+                <div className="bg-[--brand-50] border-2 border-[--brand-200] rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-[--brand-500] rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-bold">✓</span>
+                    </div>
+                    <p className="text-sm text-[--brand-700] font-medium leading-relaxed">
+                      طلبك في الطريق! سنخبرك عند اقتراب {selectedOrder.driverName || 'الكابتن'}
+                    </p>
                   </div>
-                  <p className="text-sm text-[--brand-700] flex-1">
-                    طلبك في الطريق! سنخبرك عند اقتراب {selectedOrder.driverName || 'الكابتن'}
-                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -244,36 +249,38 @@ export default function Orders() {
       <div className="bg-white">
         {/* Driver Card */}
         {selectedOrder?.driverName && (
-          <div className="p-4 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[--brand-500] rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">
+          <div className="px-6 py-5 border-b border-gray-100 bg-white">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-[--brand-500] rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-xl">
                   {selectedOrder.driverName.charAt(0)}
                 </span>
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-lg">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-gray-900 text-xl mb-1">
                   {selectedOrder.driverName}
                 </h3>
-                <p className="text-sm text-gray-600">
-                  هو كابتن التوصيل اليوم
+                <p className="text-gray-600">
+                  كابتن التوصيل المختص بطلبك اليوم
                 </p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-shrink-0">
                 <button 
-                  className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center"
+                  className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
                   onClick={() => window.location.href = `/chat?order=${selectedOrder.id}`}
                   data-testid="button-chat"
+                  title="محادثة"
                 >
-                  <MessageCircle className="h-5 w-5 text-gray-700" />
+                  <MessageCircle className="h-6 w-6 text-gray-700" />
                 </button>
                 {selectedOrder.driverPhone && (
                   <button 
-                    className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center"
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors"
                     onClick={() => window.open(`tel:${selectedOrder.driverPhone}`)}
                     data-testid="button-call"
+                    title="اتصال"
                   >
-                    <Phone className="h-5 w-5 text-gray-700" />
+                    <Phone className="h-6 w-6 text-green-600" />
                   </button>
                 )}
               </div>
@@ -281,23 +288,6 @@ export default function Orders() {
           </div>
         )}
 
-        {/* Pro Banner */}
-        <div className="m-4 bg-gradient-to-r from-[--brand-500] to-[--brand-600] rounded-2xl p-4 text-white">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <h3 className="font-bold text-lg mb-1">احصل على المزيد مع Pro!</h3>
-              <p className="text-sm opacity-90 mb-3">
-                اشترك في اطبعلي برو للحصول على توصيل مجاني لا محدود والمزيد
-              </p>
-              <button className="text-white underline text-sm font-medium">
-                اشترك الآن
-              </button>
-            </div>
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Star className="h-8 w-8 text-white" />
-            </div>
-          </div>
-        </div>
 
         {/* Order Details */}
         {selectedOrder && (
