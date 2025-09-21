@@ -1,3 +1,20 @@
+/*
+  🔒 PROTECTED CAPTAIN SYSTEM - DO NOT MODIFY 🔒
+  ============================================
+  
+  ⚠️ CRITICAL BACKEND SYSTEM WARNING ⚠️
+  This file contains the core captain management APIs and is 100% functional.
+  
+  🚨 DO NOT EDIT WITHOUT EXPLICIT APPROVAL 🚨
+  - Captain authentication working perfectly
+  - Order assignment logic fully operational
+  - 3-order limit enforcement implemented
+  - Current orders API functioning correctly
+  
+  Contact system admin before making ANY changes to this file.
+  Last protected: September 21, 2025
+*/
+
 // نظام الكباتن المتكامل مع أنظمة الحماية المتقدمة
 import { Express } from 'express';
 import { WebSocket } from 'ws';

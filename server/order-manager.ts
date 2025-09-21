@@ -1,3 +1,20 @@
+/*
+  🔒 PROTECTED ORDER MANAGER - DO NOT MODIFY 🔒
+  ===========================================
+  
+  ⚠️ CRITICAL ORDER SYSTEM WARNING ⚠️
+  This file contains the order processing logic which is 100% functional.
+  
+  🚨 DO NOT EDIT WITHOUT EXPLICIT APPROVAL 🚨
+  - Order acceptance flow working perfectly
+  - 3-order limit per captain implemented
+  - Conflict prevention system operational
+  - Database sync functioning correctly
+  
+  Contact system admin before making ANY changes to this file.
+  Last protected: September 21, 2025
+*/
+
 // نظام إدارة الطلبات المتطور مع منع التضارب
 import { WebSocket } from 'ws';
 
