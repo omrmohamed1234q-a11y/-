@@ -301,13 +301,47 @@ export default function OrdersPage() {
           </div>
         )}
 
-        {/* Orders Tabs */}
+        {/* Modern Orders Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">كل الطلبات</TabsTrigger>
-            <TabsTrigger value="active">قيد التنفيذ</TabsTrigger>
-            <TabsTrigger value="completed">مكتملة</TabsTrigger>
-            <TabsTrigger value="cancelled">ملغية</TabsTrigger>
+          <div className="flex items-center gap-4 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">جميع الطلبات</h2>
+            <div className="flex-1"></div>
+            <Button
+              variant="outline"
+              onClick={() => refetch()}
+              className="bg-white hover:bg-gray-50 border-2"
+              data-testid="refresh-orders"
+            >
+              <RefreshCw className="h-4 w-4 ml-2" />
+              تحديث
+            </Button>
+          </div>
+          
+          <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200 p-1 rounded-xl shadow-sm">
+            <TabsTrigger 
+              value="all" 
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 font-medium rounded-lg"
+            >
+              كل الطلبات ({orders.length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="active"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 font-medium rounded-lg"
+            >
+              قيد التنفيذ ({orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="completed"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 font-medium rounded-lg"
+            >
+              مكتملة ({orders.filter((o: Order) => o.status === 'delivered').length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="cancelled"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-red-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 font-medium rounded-lg"
+            >
+              ملغية ({orders.filter((o: Order) => o.status === 'cancelled').length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4">
@@ -328,149 +362,229 @@ export default function OrdersPage() {
               </Card>
             ) : (
               filteredOrders.map((order: Order) => (
-                <Card key={order.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          {getOrderStatusIcon(order.status)}
+                <Card key={order.id} className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-white overflow-hidden">
+                  {/* Status Indicator Bar */}
+                  <div className={`h-1 ${
+                    order.status === 'delivered' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                    order.status === 'out_for_delivery' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
+                    order.status === 'processing' ? 'bg-gradient-to-r from-purple-500 to-violet-500' :
+                    order.status === 'cancelled' ? 'bg-gradient-to-r from-red-500 to-pink-500' :
+                    'bg-gradient-to-r from-orange-500 to-yellow-500'
+                  }`}></div>
+                  
+                  <CardContent className="p-6">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <div className={`p-3 rounded-2xl ${
+                            order.status === 'delivered' ? 'bg-green-100' :
+                            order.status === 'out_for_delivery' ? 'bg-blue-100' :
+                            order.status === 'processing' ? 'bg-purple-100' :
+                            order.status === 'cancelled' ? 'bg-red-100' :
+                            'bg-orange-100'
+                          }`}>
+                            {getOrderStatusIcon(order.status)}
+                          </div>
+                          {(order.status === 'out_for_delivery' || order.status === 'processing') && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                          )}
                         </div>
                         <div>
-                          <CardTitle className="text-lg">طلب #{order.orderNumber}</CardTitle>
-                          <p className="text-sm text-gray-600">{formatDate(order.createdAt)}</p>
+                          <h3 className="text-xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">
+                            طلب #{order.orderNumber}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Calendar className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-600">{formatDate(order.createdAt)}</span>
+                          </div>
                         </div>
                       </div>
-                      <Badge className={`border ${getOrderStatusColor(order.status)}`}>
-                        {order.statusText || order.status}
-                      </Badge>
+                      
+                      <div className="text-right">
+                        <Badge className={`border-0 text-sm px-4 py-2 font-medium shadow-sm ${
+                          order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                          order.status === 'out_for_delivery' ? 'bg-blue-100 text-blue-800' :
+                          order.status === 'processing' ? 'bg-purple-100 text-purple-800' :
+                          order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
+                          {order.statusText || order.status}
+                        </Badge>
+                        <div className="mt-2 text-2xl font-bold text-green-600">
+                          {order.totalAmount} <span className="text-sm">ج</span>
+                        </div>
+                      </div>
                     </div>
-                  </CardHeader>
 
-                  <CardContent className="space-y-4">
-                    {/* Special animation for processing orders */}
+                    {/* Enhanced Processing Animation */}
                     {order.status === 'processing' && (
-                      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="mb-6 p-5 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-2xl">
                         <div className="flex items-center gap-4">
                           <PrintingAnimation status={order.status} className="flex-shrink-0" />
                           <div className="flex-1">
-                            <h4 className="font-medium text-blue-900 mb-2">طلبك قيد التنفيذ الآن!</h4>
-                            <p className="text-sm text-blue-700">
+                            <h4 className="font-bold text-purple-900 mb-2 text-lg">🖨️ طلبك قيد التنفيذ الآن!</h4>
+                            <p className="text-sm text-purple-700 mb-3">
                               فريقنا يعمل على تحضير طلبك بعناية فائقة. ستحصل على إشعار فور اكتمال العملية.
                             </p>
-                            <div className="mt-2 flex items-center gap-2">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                              <span className="text-xs text-blue-600 font-medium">متوقع الانتهاء خلال 15-30 دقيقة</span>
+                            <div className="flex items-center gap-3 bg-white/70 rounded-lg p-2">
+                              <div className="flex gap-1">
+                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '200ms'}}></div>
+                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '400ms'}}></div>
+                              </div>
+                              <span className="text-xs text-purple-600 font-medium">متوقع الانتهاء خلال 15-30 دقيقة</span>
                             </div>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Order Items */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm text-gray-700">المنتجات:</h4>
-                      <div className="space-y-2">
+                    {/* Enhanced Order Items */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-5 w-5 text-gray-600" />
+                        <h4 className="font-bold text-gray-900">المنتجات</h4>
+                      </div>
+                      <div className="bg-gray-50/80 rounded-2xl p-4 space-y-3">
                         {order.items?.slice(0, 2).map((item: OrderItem) => (
-                          <div key={item.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg relative overflow-hidden">
+                          <div key={item.id} className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm relative overflow-hidden hover:shadow-md transition-shadow">
                             
-                            {/* Printing overlay for processing orders */}
+                            {/* Enhanced Printing overlay for processing orders */}
                             {order.status === 'processing' && (
-                              <div className="absolute inset-0 bg-blue-50 bg-opacity-80 flex items-center justify-center">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '100ms'}}></div>
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '200ms'}}></div>
-                                  <span className="text-xs text-blue-700 font-medium mr-2">طباعة...</span>
+                              <div className="absolute inset-0 bg-gradient-to-r from-purple-100/90 to-blue-100/90 backdrop-blur-sm flex items-center justify-center">
+                                <div className="flex items-center gap-3 bg-white/80 rounded-full px-4 py-2 shadow-lg">
+                                  <div className="flex gap-1">
+                                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                                  </div>
+                                  <span className="text-sm text-purple-700 font-bold">جاري الطباعة...</span>
                                 </div>
                               </div>
                             )}
                             
-                            <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <div className="w-14 h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center shadow-inner">
                               {item.productImage ? (
                                 <img
                                   src={item.productImage}
                                   alt={item.productName || item.name}
-                                  className="w-full h-full object-cover rounded-lg"
+                                  className="w-full h-full object-cover rounded-xl"
                                 />
                               ) : (
-                                <Package className="h-5 w-5 text-gray-400" />
+                                <Package className="h-7 w-7 text-gray-500" />
                               )}
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium line-clamp-1">{item.productName || item.name}</p>
-                              <p className="text-xs text-gray-600">{item.quantity}× بسعر {item.price} جنيه</p>
+                              <p className="font-semibold text-gray-900 line-clamp-1 mb-1">{item.productName || item.name}</p>
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm text-gray-600">الكمية: {item.quantity}×</span>
+                                <span className="text-sm font-bold text-green-600">{item.price} ج</span>
+                              </div>
                             </div>
                           </div>
                         ))}
                         {order.items && order.items.length > 2 && (
-                          <p className="text-xs text-gray-500 text-center">
-                            +{order.items.length - 2} منتج آخر
-                          </p>
+                          <div className="text-center p-2 bg-white/70 rounded-xl">
+                            <p className="text-sm text-gray-600 font-medium">
+                              <span className="text-green-600 font-bold">+{order.items.length - 2}</span> منتج إضافي
+                            </p>
+                          </div>
                         )}
                       </div>
                     </div>
 
-                    <Separator />
-
-                    {/* Order Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-500" />
-                        <span className="font-medium">العنوان:</span>
-                        <span className="text-gray-600 line-clamp-1">{order.deliveryAddress}</span>
+                    {/* Enhanced Order Info */}
+                    <div className="bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-2xl p-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-5 w-5 text-green-600 mt-1 flex-shrink-0" />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-gray-700">عنوان التسليم</span>
+                          <p className="text-gray-900 font-medium mt-1">{order.deliveryAddress}</p>
+                        </div>
                       </div>
                       
-                      <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-gray-500" />
-                        <span className="font-medium">الإجمالي:</span>
-                        <span className="text-green-600 font-bold">{order.totalAmount} جنيه</span>
-                      </div>
+                      {order.estimatedDelivery && (
+                        <div className="flex items-center gap-3">
+                          <Timer className="h-5 w-5 text-orange-600" />
+                          <div>
+                            <span className="text-sm font-medium text-gray-700">وقت التسليم المتوقع</span>
+                            <p className="text-orange-600 font-bold">{order.estimatedDelivery}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Driver Info (if available) */}
+                    {/* Enhanced Driver Info */}
                     {order.driverName && (
-                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Truck className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-900">معلومات الكابتن</span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">الاسم:</span>
-                            <span>{order.driverName}</span>
+                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-5 border-2 border-blue-200">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-blue-100 rounded-xl">
+                            <Truck className="h-5 w-5 text-blue-600" />
                           </div>
+                          <h4 className="font-bold text-blue-900 text-lg">🚚 معلومات الكابتن</h4>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-center gap-3 bg-white/70 rounded-xl p-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 font-bold text-sm">{order.driverName.charAt(0)}</span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-gray-600">الكابتن</span>
+                              <p className="font-bold text-gray-900">{order.driverName}</p>
+                            </div>
+                          </div>
+                          
                           {order.driverPhone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-3 w-3" />
-                              <span>{order.driverPhone}</span>
+                            <div className="flex items-center gap-3 bg-white/70 rounded-xl p-3">
+                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <Phone className="h-4 w-4 text-green-600" />
+                              </div>
+                              <div>
+                                <span className="text-xs text-gray-600">الهاتف</span>
+                                <p className="font-bold text-gray-900">{order.driverPhone}</p>
+                              </div>
                             </div>
                           )}
                         </div>
+                        
+                        {order.driverPhone && (
+                          <div className="mt-4 pt-3 border-t border-blue-200">
+                            <Button
+                              size="sm"
+                              className="w-full bg-green-600 hover:bg-green-700 text-white"
+                              onClick={() => window.open(`tel:${order.driverPhone}`)}
+                            >
+                              <Phone className="h-4 w-4 ml-2" />
+                              اتصال بالكابتن
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 pt-2">
+                    {/* Enhanced Action Buttons */}
+                    <div className="grid grid-cols-2 gap-4 pt-4">
                       <Button
                         variant="outline"
-                        size="sm"
                         onClick={() => handleViewOrder(order.id)}
-                        className="flex-1"
+                        className="h-12 border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 font-medium"
                         data-testid={`view-order-${order.id}`}
                       >
-                        <Eye className="h-4 w-4 ml-1" />
+                        <Eye className="h-5 w-5 ml-2" />
                         عرض التفاصيل
                       </Button>
                       
                       <Button
-                        size="sm"
                         onClick={() => handleTrackOrder(order.orderNumber)}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        className="h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold shadow-lg hover:shadow-xl transition-all"
                         data-testid={`track-order-${order.orderNumber}`}
                       >
-                        <MapPin className="h-4 w-4 ml-1" />
-                        تتبع الطلب
-                        <ChevronRight className="h-4 w-4 mr-1" />
+                        <Navigation className="h-5 w-5 ml-2" />
+                        تتبع مباشر
+                        <Zap className="h-4 w-4 mr-2" />
                       </Button>
                     </div>
                   </CardContent>
@@ -479,19 +593,6 @@ export default function OrdersPage() {
             )}
           </TabsContent>
         </Tabs>
-
-        {/* Refresh Button */}
-        <div className="flex justify-center mt-8">
-          <Button
-            variant="outline"
-            onClick={() => refetch()}
-            className="bg-white hover:bg-gray-50"
-            data-testid="refresh-orders"
-          >
-            <RefreshCw className="h-4 w-4 ml-2" />
-            تحديث الطلبات
-          </Button>
-        </div>
       </div>
     </div>
   );
