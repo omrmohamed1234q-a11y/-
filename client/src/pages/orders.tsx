@@ -361,46 +361,109 @@ export default function Orders() {
           {/* Animation for Preparing Stage */}
           {orderStage === 'preparing' && (
             <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                {/* Printing Animation */}
-                <div className="w-80 h-80 mx-auto mb-6 relative">
-                  {/* Printer */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="relative">
-                      {/* Printer body - bigger and black */}
-                      <div className="w-40 h-28 bg-gray-900 border-4 border-gray-700 rounded-xl shadow-2xl">
-                        <div className="w-full h-4 bg-gray-800 rounded-t-lg"></div>
-                        <div className="flex items-center justify-center h-full">
-                          <div className="w-6 h-6 bg-gray-600 rounded-full animate-spin"></div>
-                        </div>
-                        
-                        {/* Printer details */}
-                        <div className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                        <div className="absolute top-2 left-2 w-8 h-1 bg-gray-600 rounded"></div>
+              {/* Beautiful preparing animation with animated background */}
+              <div className="w-full h-full relative bg-gradient-to-br from-indigo-50 via-white to-purple-50 overflow-hidden">
+                
+                {/* Floating background particles */}
+                <div className="absolute top-16 left-8 w-4 h-4 bg-blue-300/40 rounded-full animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }}></div>
+                <div className="absolute top-20 right-12 w-3 h-3 bg-purple-300/40 rounded-full animate-bounce" style={{ animationDelay: '1s', animationDuration: '4s' }}></div>
+                <div className="absolute bottom-32 left-10 w-3 h-3 bg-pink-300/40 rounded-full animate-bounce" style={{ animationDelay: '2s', animationDuration: '3.5s' }}></div>
+                <div className="absolute top-28 left-1/4 w-2 h-2 bg-yellow-300/40 rounded-full animate-bounce" style={{ animationDelay: '1.5s', animationDuration: '3.8s' }}></div>
+                <div className="absolute bottom-20 right-16 w-3 h-3 bg-green-300/40 rounded-full animate-bounce" style={{ animationDelay: '2.2s', animationDuration: '3.2s' }}></div>
+                
+                {/* Central Printer Animation */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <div className="relative">
+                    {/* Printer body - bigger and black */}
+                    <div className="w-48 h-32 bg-gray-900 border-4 border-gray-700 rounded-xl shadow-2xl">
+                      <div className="w-full h-4 bg-gray-800 rounded-t-lg"></div>
+                      <div className="flex items-center justify-center h-full">
+                        <div className="w-8 h-8 bg-gray-600 rounded-full animate-spin"></div>
                       </div>
                       
-                      {/* Paper coming out - bigger */}
-                      <div className="absolute -bottom-4 left-4 right-4">
-                        <div className="w-32 h-12 bg-white border-2 border-gray-300 rounded-b-lg animate-pulse shadow-xl">
-                          <div className="h-2 bg-gray-800 rounded-full mx-2 mt-2"></div>
-                          <div className="h-1 bg-gray-400 rounded-full mx-2 mt-1"></div>
-                          <div className="h-1 bg-gray-400 rounded-full mx-2 mt-1"></div>
-                          <div className="h-1 bg-gray-400 rounded-full mx-2 mt-1"></div>
-                        </div>
+                      {/* Printer details */}
+                      <div className="absolute top-2 right-2 w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+                      <div className="absolute top-2 left-2 w-10 h-1.5 bg-gray-600 rounded"></div>
+                    </div>
+                    
+                    {/* Paper coming out - bigger */}
+                    <div className="absolute -bottom-6 left-6 right-6">
+                      <div className="w-36 h-16 bg-white border-2 border-gray-300 rounded-b-lg animate-pulse shadow-xl">
+                        <div className="h-3 bg-[--brand-600] rounded-full mx-2 mt-2"></div>
+                        <div className="h-1 bg-gray-400 rounded-full mx-2 mt-2"></div>
+                        <div className="h-1 bg-gray-400 rounded-full mx-2 mt-1"></div>
+                        <div className="h-1 bg-gray-400 rounded-full mx-2 mt-1"></div>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Animated red dots showing printing - keeping red */}
-                  <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                    <div className="w-3 h-3 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-                    <div className="w-3 h-3 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-3 h-3 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+                
+                {/* Animated red dots showing printing progress */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 translate-y-20 flex space-x-3">
+                  <div className="w-4 h-4 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                  <div className="w-4 h-4 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-4 h-4 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+                
+                {/* Floating printed pages around */}
+                <div className="absolute top-16 right-12">
+                  <div className="w-16 h-12 bg-white rounded shadow-lg rotate-12 animate-bounce border-l-4 border-[--brand-400]" style={{ animationDelay: '0.5s', animationDuration: '3s' }}>
+                    <div className="h-2 bg-[--brand-500] rounded-t mx-1 mt-1"></div>
+                    <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                    <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
                   </div>
                 </div>
                 
-                <h3 className="text-xl font-bold text-[--brand-600] mb-2">جاري تجهيز المطبوعات</h3>
-                <p className="text-gray-600">نطبع مستنداتك بأفضل جودة</p>
+                <div className="absolute bottom-20 right-8">
+                  <div className="w-14 h-18 bg-white rounded shadow-lg -rotate-6 animate-bounce border-l-4 border-purple-400" style={{ animationDelay: '1.5s', animationDuration: '2.5s' }}>
+                    <div className="h-2 bg-purple-500 rounded-t mx-1 mt-1"></div>
+                    <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                    <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                    <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                  </div>
+                </div>
+                
+                <div className="absolute bottom-8 left-12">
+                  <div className="w-18 h-10 bg-white rounded shadow-lg rotate-6 animate-bounce border-l-4 border-blue-400" style={{ animationDelay: '2.5s', animationDuration: '2.8s' }}>
+                    <div className="h-2 bg-blue-500 rounded-t mx-1 mt-1"></div>
+                    <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                  </div>
+                </div>
+                
+                <div className="absolute top-40 left-8">
+                  <div className="w-12 h-16 bg-white rounded shadow-lg -rotate-12 animate-bounce border-l-4 border-pink-400" style={{ animationDelay: '3.5s', animationDuration: '3.2s' }}>
+                    <div className="h-2 bg-pink-500 rounded-t mx-1 mt-1"></div>
+                    <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                    <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
+                  </div>
+                </div>
+                
+                {/* Progress indicators - gear icons */}
+                <div className="absolute top-20 left-20">
+                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center animate-spin" style={{ animationDelay: '1s' }}>
+                    <div className="w-4 h-4 border-2 border-white rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="absolute top-28 right-20">
+                  <div className="w-6 h-6 bg-teal-500 rounded-full flex items-center justify-center animate-spin" style={{ animationDelay: '2s', animationDuration: '3s' }}>
+                    <div className="w-3 h-3 border-2 border-white rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="absolute bottom-16 left-16">
+                  <div className="w-7 h-7 bg-indigo-500 rounded-full flex items-center justify-center animate-spin" style={{ animationDelay: '1.5s', animationDuration: '2.5s' }}>
+                    <div className="w-3 h-3 border-2 border-white rounded-full"></div>
+                  </div>
+                </div>
+                
+                {/* Sparkle effects */}
+                <div className="absolute top-20 left-24 w-2 h-2 bg-yellow-400 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
+                <div className="absolute top-36 right-16 w-2 h-2 bg-pink-400 rounded-full animate-ping" style={{ animationDelay: '2s' }}></div>
+                <div className="absolute bottom-24 left-16 w-2 h-2 bg-blue-400 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                <div className="absolute top-28 left-32 w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{ animationDelay: '2.8s' }}></div>
+                <div className="absolute bottom-32 right-24 w-1 h-1 bg-green-400 rounded-full animate-ping" style={{ animationDelay: '1.8s' }}></div>
+                
               </div>
             </div>
           )}
