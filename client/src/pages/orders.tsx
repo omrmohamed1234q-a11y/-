@@ -191,50 +191,52 @@ export default function Orders() {
             <span className="text-sm font-medium">منزل</span>
           </div>
 
-          {/* Restaurant Card at Bottom of Map */}
+          {/* Compact Restaurant Card at Bottom of Map */}
           <div className="absolute bottom-3 left-3 right-3 z-20">
             <Card className="bg-white shadow-xl border-0">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       {selectedOrder.restaurantLogo ? (
                         <img 
                           src={selectedOrder.restaurantLogo} 
                           alt="Restaurant"
-                          className="w-full h-full object-cover rounded-xl"
+                          className="w-full h-full object-cover rounded-lg"
                         />
                       ) : (
-                        <Package className="h-7 w-7 text-gray-600" />
+                        <Package className="h-5 w-5 text-gray-600" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-gray-900 text-lg truncate">
+                      <h3 className="font-bold text-gray-900 text-base truncate">
                         {selectedOrder.restaurantName || 'اطبعلي للطباعة'}
                       </h3>
-                      <p className="text-sm text-gray-600">خدمات الطباعة والتصوير</p>
+                      <p className="text-xs text-gray-600">خدمات الطباعة والتصوير</p>
                     </div>
                   </div>
-                  <Badge className="bg-gray-900 text-white border-0 px-4 py-2 text-sm font-bold flex-shrink-0">
+                  <Badge className="bg-gray-900 text-white border-0 px-2 py-1 text-xs font-bold flex-shrink-0">
                     قيد التوصيل
                   </Badge>
                 </div>
 
-                {/* ETA */}
-                <div className="mb-4">
-                  <p className="text-sm text-gray-600 mb-2">الوصول المتوقع</p>
-                  <p className="text-3xl font-bold text-gray-900" data-testid="text-eta">
-                    {calculateETA(selectedOrder.estimatedDelivery)}
-                  </p>
+                {/* Compact ETA */}
+                <div className="mb-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">الوصول المتوقع</span>
+                    <span className="text-lg font-bold text-gray-900" data-testid="text-eta">
+                      {calculateETA(selectedOrder.estimatedDelivery)}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Alert Message */}
-                <div className="bg-[--brand-50] border-2 border-[--brand-200] rounded-xl p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[--brand-500] rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold">✓</span>
+                {/* Compact Alert Message */}
+                <div className="bg-[--brand-50] border border-[--brand-200] rounded-lg p-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-[--brand-500] rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-xs font-bold">✓</span>
                     </div>
-                    <p className="text-sm text-[--brand-700] font-medium leading-relaxed">
+                    <p className="text-xs text-[--brand-700] font-medium">
                       طلبك في الطريق! سنخبرك عند اقتراب {selectedOrder.driverName || 'الكابتن'}
                     </p>
                   </div>
