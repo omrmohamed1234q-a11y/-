@@ -81,17 +81,50 @@ export default function Orders() {
   const { user } = useAuth();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  // Mock order data for now - will fix API later
+  // Mock order data for testing the 3 stages - will fix API later
+  const [orderStage, setOrderStage] = useState<'reviewing' | 'preparing' | 'delivering'>('reviewing');
+  
+  const getOrderInfo = (stage: string) => {
+    switch(stage) {
+      case 'reviewing':
+        return {
+          status: 'reviewing',
+          statusText: 'جاري مراجعة الطلب',
+          stage: 'reviewing' as const
+        };
+      case 'preparing':
+        return {
+          status: 'preparing',
+          statusText: 'جاري تجهيز المطبوعات',
+          stage: 'preparing' as const
+        };
+      case 'delivering':
+        return {
+          status: 'out_for_delivery',
+          statusText: 'جاري التوصيل',
+          stage: 'delivering' as const
+        };
+      default:
+        return {
+          status: 'reviewing',
+          statusText: 'جاري مراجعة الطلب',
+          stage: 'reviewing' as const
+        };
+    }
+  };
+
+  const currentOrderInfo = getOrderInfo(orderStage);
+  
   const mockOrder: Order = {
     id: 'order-1758465101672',
     orderNumber: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-    status: 'processing',
-    statusText: 'قيد الطباعة',
+    status: currentOrderInfo.status,
+    statusText: currentOrderInfo.statusText,
     totalAmount: 360,
     deliveryAddress: '123 شارع الجامعة، الدقي، الجيزة',
     estimatedDelivery: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 minutes from now
-    driverName: 'محمد أحمد',
-    driverPhone: '+201234567890',
+    driverName: orderStage === 'delivering' ? 'محمد أحمد' : undefined,
+    driverPhone: orderStage === 'delivering' ? '+201234567890' : undefined,
     restaurantName: 'اطبعلي للطباعة',
     restaurantLogo: null,
     createdAt: new Date().toISOString(),
@@ -176,46 +209,166 @@ export default function Orders() {
             </div>
             <Badge className="bg-[--brand-100] text-[--brand-700] border-[--brand-300] px-3 py-1">
               <Clock className="h-3 w-3 mr-1" />
-              {calculateETA(selectedOrder.estimatedDelivery)}
+              {orderStage === 'delivering' ? calculateETA(selectedOrder.estimatedDelivery) : 'قريباً'}
             </Badge>
+          </div>
+          
+          {/* Testing Stage Controls - Remove in production */}
+          <div className="flex gap-2 mt-3 pt-2 border-t border-gray-200">
+            <button 
+              onClick={() => setOrderStage('reviewing')}
+              className={`px-3 py-1 text-xs rounded-full ${orderStage === 'reviewing' ? 'bg-[--brand-500] text-white' : 'bg-gray-100 text-gray-600'}`}
+            >
+              مراجعة
+            </button>
+            <button 
+              onClick={() => setOrderStage('preparing')}
+              className={`px-3 py-1 text-xs rounded-full ${orderStage === 'preparing' ? 'bg-[--brand-500] text-white' : 'bg-gray-100 text-gray-600'}`}
+            >
+              تجهيز
+            </button>
+            <button 
+              onClick={() => setOrderStage('delivering')}
+              className={`px-3 py-1 text-xs rounded-full ${orderStage === 'delivering' ? 'bg-[--brand-500] text-white' : 'bg-gray-100 text-gray-600'}`}
+            >
+              توصيل
+            </button>
           </div>
         </div>
       )}
       
-      {/* Top Section: Map with Overlays */}
+      {/* Top Section: Animation or Map */}
       {selectedOrder && (
-        <div className="relative h-[52vh] w-full">
-          {/* Google Map */}
-          <div className="absolute inset-0">
-            <GoogleMap
-              height="52vh"
-              showRoute={true}
-              driverLocation={selectedOrder.driverName ? { lat: 30.0444, lng: 31.2357, timestamp: Date.now() } : undefined}
-              orderDestination={selectedOrder.deliveryAddress ? { lat: 30.0644, lng: 31.2157 } : undefined}
-              customerLocation={{ lat: 30.0344, lng: 31.2457 }}
-              className="w-full h-full rounded-none"
-            />
-          </div>
+        <div className="relative h-[52vh] w-full bg-gradient-to-br from-gray-50 to-gray-100">
+          {/* Animation for Reviewing Stage */}
+          {orderStage === 'reviewing' && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                {/* Reviewing Animation */}
+                <div className="w-48 h-48 mx-auto mb-6 relative">
+                  {/* Person silhouette */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="w-32 h-32 text-[--brand-500]" viewBox="0 0 100 100" fill="currentColor">
+                      {/* Person body */}
+                      <circle cx="50" cy="25" r="12" className="animate-pulse" />
+                      <rect x="42" y="35" width="16" height="30" rx="8" className="animate-pulse" />
+                      <rect x="30" y="40" width="12" height="20" rx="6" className="animate-pulse" />
+                      <rect x="58" y="40" width="12" height="20" rx="6" className="animate-pulse" />
+                      <rect x="45" y="65" width="10" height="25" rx="5" className="animate-pulse" />
+                    </svg>
+                  </div>
+                  
+                  {/* Floating documents */}
+                  <div className="absolute top-12 right-8">
+                    <div className="w-8 h-10 bg-white border-2 border-[--brand-300] rounded animate-bounce shadow-lg" 
+                         style={{ animationDelay: '0s', animationDuration: '2s' }}>
+                      <div className="h-2 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
+                      <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                      <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="absolute top-20 left-12">
+                    <div className="w-8 h-10 bg-white border-2 border-[--brand-300] rounded animate-bounce shadow-lg"
+                         style={{ animationDelay: '0.7s', animationDuration: '2s' }}>
+                      <div className="h-2 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
+                      <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                      <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="absolute top-6 left-20">
+                    <div className="w-8 h-10 bg-white border-2 border-[--brand-300] rounded animate-bounce shadow-lg"
+                         style={{ animationDelay: '1.4s', animationDuration: '2s' }}>
+                      <div className="h-2 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
+                      <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                      <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <h3 className="text-xl font-bold text-[--brand-600] mb-2">جاري مراجعة طلبك</h3>
+                <p className="text-gray-600">فريقنا يراجع تفاصيل طلبك بعناية</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Animation for Preparing Stage */}
+          {orderStage === 'preparing' && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                {/* Printing Animation */}
+                <div className="w-48 h-48 mx-auto mb-6 relative">
+                  {/* Printer */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="relative">
+                      {/* Printer body */}
+                      <div className="w-24 h-16 bg-white border-4 border-[--brand-500] rounded-lg shadow-lg">
+                        <div className="w-full h-3 bg-[--brand-500] rounded-t-md"></div>
+                        <div className="flex items-center justify-center h-full">
+                          <div className="w-4 h-4 bg-[--brand-300] rounded-full animate-spin"></div>
+                        </div>
+                      </div>
+                      
+                      {/* Paper coming out */}
+                      <div className="absolute -bottom-2 left-2 right-2">
+                        <div className="w-20 h-8 bg-white border border-gray-300 rounded-b animate-pulse shadow-md">
+                          <div className="h-1 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
+                          <div className="h-0.5 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                          <div className="h-0.5 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Animated dots showing printing */}
+                  <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                    <div className="w-2 h-2 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                    <div className="w-2 h-2 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+                
+                <h3 className="text-xl font-bold text-[--brand-600] mb-2">جاري تجهيز المطبوعات</h3>
+                <p className="text-gray-600">نطبع مستنداتك بأفضل جودة</p>
+              </div>
+            </div>
+          )}
 
-          {/* Map Overlays */}
-          {/* Close Button */}
-          <button 
-            className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg z-20"
-            onClick={() => window.history.back()}
-            data-testid="button-close-tracking"
-          >
-            <X className="h-5 w-5 text-gray-700" />
-          </button>
+          {/* Google Map for Delivering Stage */}
+          {orderStage === 'delivering' && (
+            <>
+              <div className="absolute inset-0">
+                <GoogleMap
+                  height="52vh"
+                  showRoute={true}
+                  driverLocation={selectedOrder.driverName ? { lat: 30.0444, lng: 31.2357, timestamp: Date.now() } : undefined}
+                  orderDestination={selectedOrder.deliveryAddress ? { lat: 30.0644, lng: 31.2157 } : undefined}
+                  customerLocation={{ lat: 30.0344, lng: 31.2457 }}
+                  className="w-full h-full rounded-none"
+                />
+              </div>
 
-          {/* Location Badge */}
-          <div 
-            className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-full shadow-lg z-20 flex items-center gap-2"
-            data-testid="pill-location"
-          >
-            <Home className="h-4 w-4" />
-            <span className="text-sm font-medium">منزل</span>
-          </div>
+              {/* Map Overlays */}
+              {/* Close Button */}
+              <button 
+                className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg z-20"
+                onClick={() => window.history.back()}
+                data-testid="button-close-tracking"
+              >
+                <X className="h-5 w-5 text-gray-700" />
+              </button>
 
+              {/* Location Badge */}
+              <div 
+                className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-full shadow-lg z-20 flex items-center gap-2"
+                data-testid="pill-location"
+              >
+                <Home className="h-4 w-4" />
+                <span className="text-sm font-medium">منزل</span>
+              </div>
+            </>
+          )}
         </div>
       )}
 
