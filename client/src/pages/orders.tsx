@@ -245,10 +245,10 @@ export default function Orders() {
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 {/* Reviewing Animation */}
-                <div className="w-48 h-48 mx-auto mb-6 relative">
+                <div className="w-72 h-72 mx-auto mb-6 relative">
                   {/* Person silhouette */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <svg className="w-32 h-32 text-[--brand-500]" viewBox="0 0 100 100" fill="currentColor">
+                    <svg className="w-48 h-48 text-blue-600" viewBox="0 0 100 100" fill="currentColor">
                       {/* Person body */}
                       <circle cx="50" cy="25" r="12" className="animate-pulse" />
                       <rect x="42" y="35" width="16" height="30" rx="8" className="animate-pulse" />
@@ -258,9 +258,9 @@ export default function Orders() {
                     </svg>
                   </div>
                   
-                  {/* Floating documents */}
-                  <div className="absolute top-12 right-8">
-                    <div className="w-8 h-10 bg-white border-2 border-[--brand-300] rounded animate-bounce shadow-lg" 
+                  {/* Floating documents - more spread out */}
+                  <div className="absolute top-2 right-2">
+                    <div className="w-10 h-12 bg-white border-2 border-[--brand-300] rounded animate-bounce shadow-lg" 
                          style={{ animationDelay: '0s', animationDuration: '2s' }}>
                       <div className="h-2 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
                       <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
@@ -268,8 +268,8 @@ export default function Orders() {
                     </div>
                   </div>
                   
-                  <div className="absolute top-20 left-12">
-                    <div className="w-8 h-10 bg-white border-2 border-[--brand-300] rounded animate-bounce shadow-lg"
+                  <div className="absolute top-20 left-2">
+                    <div className="w-10 h-12 bg-white border-2 border-[--brand-300] rounded animate-bounce shadow-lg"
                          style={{ animationDelay: '0.7s', animationDuration: '2s' }}>
                       <div className="h-2 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
                       <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
@@ -277,9 +277,18 @@ export default function Orders() {
                     </div>
                   </div>
                   
-                  <div className="absolute top-6 left-20">
-                    <div className="w-8 h-10 bg-white border-2 border-[--brand-300] rounded animate-bounce shadow-lg"
+                  <div className="absolute bottom-10 right-16">
+                    <div className="w-10 h-12 bg-white border-2 border-[--brand-300] rounded animate-bounce shadow-lg"
                          style={{ animationDelay: '1.4s', animationDuration: '2s' }}>
+                      <div className="h-2 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
+                      <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                      <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="absolute top-8 left-16">
+                    <div className="w-10 h-12 bg-white border-2 border-[--brand-300] rounded animate-bounce shadow-lg"
+                         style={{ animationDelay: '2.1s', animationDuration: '2s' }}>
                       <div className="h-2 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
                       <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
                       <div className="h-1 bg-gray-300 rounded-full mx-1 mt-1"></div>
@@ -298,34 +307,39 @@ export default function Orders() {
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 {/* Printing Animation */}
-                <div className="w-48 h-48 mx-auto mb-6 relative">
+                <div className="w-80 h-80 mx-auto mb-6 relative">
                   {/* Printer */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="relative">
-                      {/* Printer body */}
-                      <div className="w-24 h-16 bg-white border-4 border-[--brand-500] rounded-lg shadow-lg">
-                        <div className="w-full h-3 bg-[--brand-500] rounded-t-md"></div>
+                      {/* Printer body - bigger and black */}
+                      <div className="w-40 h-28 bg-gray-900 border-4 border-gray-700 rounded-xl shadow-2xl">
+                        <div className="w-full h-4 bg-gray-800 rounded-t-lg"></div>
                         <div className="flex items-center justify-center h-full">
-                          <div className="w-4 h-4 bg-[--brand-300] rounded-full animate-spin"></div>
+                          <div className="w-6 h-6 bg-gray-600 rounded-full animate-spin"></div>
                         </div>
+                        
+                        {/* Printer details */}
+                        <div className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <div className="absolute top-2 left-2 w-8 h-1 bg-gray-600 rounded"></div>
                       </div>
                       
-                      {/* Paper coming out */}
-                      <div className="absolute -bottom-2 left-2 right-2">
-                        <div className="w-20 h-8 bg-white border border-gray-300 rounded-b animate-pulse shadow-md">
-                          <div className="h-1 bg-[--brand-500] rounded-full mx-1 mt-1"></div>
-                          <div className="h-0.5 bg-gray-300 rounded-full mx-1 mt-1"></div>
-                          <div className="h-0.5 bg-gray-300 rounded-full mx-1 mt-1"></div>
+                      {/* Paper coming out - bigger */}
+                      <div className="absolute -bottom-4 left-4 right-4">
+                        <div className="w-32 h-12 bg-white border-2 border-gray-300 rounded-b-lg animate-pulse shadow-xl">
+                          <div className="h-2 bg-gray-800 rounded-full mx-2 mt-2"></div>
+                          <div className="h-1 bg-gray-400 rounded-full mx-2 mt-1"></div>
+                          <div className="h-1 bg-gray-400 rounded-full mx-2 mt-1"></div>
+                          <div className="h-1 bg-gray-400 rounded-full mx-2 mt-1"></div>
                         </div>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Animated dots showing printing */}
-                  <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                    <div className="w-2 h-2 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-                    <div className="w-2 h-2 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  {/* Animated red dots showing printing - keeping red */}
+                  <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                    <div className="w-3 h-3 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                    <div className="w-3 h-3 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-3 h-3 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                   </div>
                 </div>
                 
