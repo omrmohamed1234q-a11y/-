@@ -82,8 +82,11 @@ export default function Orders() {
 
   // Fetch orders
   const { data: orders = [], isLoading, refetch } = useQuery({
-    queryKey: ['orders'],
-    enabled: !!user
+    queryKey: ['orders', 'user'],
+    queryFn: () => fetch('/api/orders/user').then(res => res.json()),
+    enabled: !!user,
+    retry: 3,
+    refetchOnWindowFocus: false
   });
 
   // Get the active order (first order that's being delivered or processed)
