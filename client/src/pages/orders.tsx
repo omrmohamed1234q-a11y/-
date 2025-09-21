@@ -1,598 +1,391 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import GoogleMap from "@/components/GoogleMap";
 import { 
-  Package, 
-  Clock, 
-  MapPin, 
+  X, 
+  MessageCircle, 
   Phone,
-  Truck,
-  Star,
-  Eye,
-  ChevronRight,
-  ShoppingBag,
-  CheckCircle,
-  AlertCircle,
-  RefreshCw,
-  Navigation,
-  Timer,
-  MessageCircle,
-  Zap,
-  TrendingUp,
+  Home,
   Calendar,
-  Award,
-  Target
-} from 'lucide-react';
-import PrintingAnimation from '@/components/PrintingAnimation';
-
-interface OrderItem {
-  id: string;
-  productName: string;
-  quantity: number;
-  price: string;
-  productImage?: string;
-}
+  Truck,
+  Package,
+  CreditCard,
+  HeadphonesIcon,
+  Clock,
+  Star,
+  ArrowLeft
+} from "lucide-react";
 
 interface Order {
   id: string;
   orderNumber: string;
-  items: OrderItem[];
-  totalAmount: string;
   status: string;
-  statusText: string;
+  statusText?: string;
+  totalAmount: number;
   deliveryAddress: string;
-  deliveryMethod: string;
-  paymentMethod: string;
-  createdAt: string;
   estimatedDelivery?: string;
   driverName?: string;
   driverPhone?: string;
+  restaurantName?: string;
+  restaurantLogo?: string;
+  items?: OrderItem[];
+  createdAt: string;
 }
 
-const getOrderStatusColor = (status: string) => {
-  switch (status) {
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'confirmed':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'processing':
-      return 'bg-purple-100 text-purple-800 border-purple-200';
-    case 'ready':
-      return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'out_for_delivery':
-      return 'bg-green-100 text-green-800 border-green-200';
-    case 'delivered':
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-    case 'cancelled':
-      return 'bg-red-100 text-red-800 border-red-200';
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+interface OrderItem {
+  id: string;
+  name: string;
+  productName?: string;
+  quantity: number;
+  price: number;
+}
+
+// Calculate ETA in minutes from estimatedDelivery
+function calculateETA(estimatedDelivery?: string): string {
+  if (!estimatedDelivery) return "within 15 minutes";
+  
+  try {
+    const deliveryTime = new Date(estimatedDelivery);
+    const now = new Date();
+    const diffMs = deliveryTime.getTime() - now.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    
+    if (diffMins <= 0) return "arriving now";
+    if (diffMins <= 5) return "within 5 minutes";
+    if (diffMins <= 15) return "within 15 minutes";
+    if (diffMins <= 30) return "within 30 minutes";
+    return `within ${diffMins} minutes`;
+  } catch {
+    return "within 15 minutes";
   }
-};
+}
 
-const getOrderStatusIcon = (status: string) => {
-  switch (status) {
-    case 'pending':
-      return <Clock className="h-4 w-4" />;
-    case 'confirmed':
-      return <CheckCircle className="h-4 w-4" />;
-    case 'processing':
-      return <RefreshCw className="h-4 w-4" />;
-    case 'ready':
-      return <Package className="h-4 w-4" />;
-    case 'out_for_delivery':
-      return <Truck className="h-4 w-4" />;
-    case 'delivered':
-      return <Star className="h-4 w-4" />;
-    case 'cancelled':
-      return <AlertCircle className="h-4 w-4" />;
-    default:
-      return <Package className="h-4 w-4" />;
-  }
-};
+// Format date for delivery
+function formatDeliveryDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const options: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  };
+  return date.toLocaleDateString('ar-EG', options);
+}
 
-export default function OrdersPage() {
-  const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState('all');
-  const { toast } = useToast();
+export default function Orders() {
+  const { user } = useAuth();
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  // Fetch user orders
+  // Fetch orders
   const { data: orders = [], isLoading, refetch } = useQuery({
-    queryKey: ['/api/orders/user'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/orders/user');
-      return response.json();
-    },
+    queryKey: ['orders'],
+    enabled: !!user
   });
 
-  const handleTrackOrder = (orderNumber: string) => {
-    setLocation(`/order-tracking-enhanced/${orderNumber}`);
-  };
+  // Get the active order (first order that's being delivered or processed)
+  const activeOrder = orders.find((order: Order) => 
+    ['out_for_delivery', 'ready', 'processing', 'confirmed', 'pending'].includes(order.status)
+  ) || orders[0];
 
-  const handleViewOrder = (orderId: string) => {
-    setLocation(`/order-tracking/${orderId}`);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ar-EG', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const filterOrders = (status: string) => {
-    if (status === 'all') return orders;
-    if (status === 'active') {
-      return orders.filter((order: Order) => 
-        ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(order.status)
-      );
+  // Set first order as selected by default
+  useEffect(() => {
+    if (activeOrder && !selectedOrderId) {
+      setSelectedOrderId(activeOrder.id);
     }
-    if (status === 'completed') {
-      return orders.filter((order: Order) => order.status === 'delivered');
-    }
-    return orders.filter((order: Order) => order.status === status);
-  };
+  }, [activeOrder, selectedOrderId]);
 
-  const filteredOrders = filterOrders(activeTab);
+  const selectedOrder = selectedOrderId 
+    ? orders.find((o: Order) => o.id === selectedOrderId) 
+    : activeOrder;
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-[--brand-500] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري تحميل طلباتك...</p>
         </div>
       </div>
     );
   }
 
+  if (!orders.length) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <Card className="max-w-md mx-auto text-center">
+          <CardContent className="p-8">
+            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 mb-2">لا توجد طلبات</h2>
+            <p className="text-gray-600 mb-6">ابدأ التسوق الآن لترى طلباتك هنا</p>
+            <Button 
+              className="bg-[--brand-500] hover:bg-[--brand-600]"
+              onClick={() => window.location.href = '/'}
+            >
+              ابدأ التسوق الآن
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/20">
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* Modern Delivery App Header */}
-        <div className="relative mb-8 overflow-hidden">
-          {/* Background Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 rounded-3xl"></div>
-          <div className="absolute inset-0 bg-black/5 rounded-3xl"></div>
-          
-          {/* Content */}
-          <div className="relative p-8 text-white">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
-                  <Truck className="h-8 w-8" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold">طلباتي 🚚</h1>
-                  <p className="text-green-100 mt-1">تتبع طلباتك بكل سهولة ووضوح</p>
-                </div>
-              </div>
-              
-              {/* Active Orders Badge */}
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-yellow-300" />
-                    <span className="text-sm font-medium">
-                      {orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length} نشط
-                    </span>
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* Top Section: Map with Overlays */}
+      {selectedOrder && (
+        <div className="relative h-[52vh] w-full">
+          {/* Google Map */}
+          <div className="absolute inset-0">
+            <GoogleMap
+              height="52vh"
+              showRoute={true}
+              driverLocation={selectedOrder.driverName ? [30.0444, 31.2357] : undefined}
+              destinationAddress={selectedOrder.deliveryAddress}
+              className="w-full h-full rounded-none"
+            />
+          </div>
+
+          {/* Map Overlays */}
+          {/* Close Button */}
+          <button 
+            className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg z-20"
+            onClick={() => window.history.back()}
+            data-testid="button-close-tracking"
+          >
+            <X className="h-5 w-5 text-gray-700" />
+          </button>
+
+          {/* Location Badge */}
+          <div 
+            className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-full shadow-lg z-20 flex items-center gap-2"
+            data-testid="pill-location"
+          >
+            <Home className="h-4 w-4" />
+            <span className="text-sm font-medium">منزل</span>
+          </div>
+
+          {/* Restaurant Card at Bottom of Map */}
+          <div className="absolute bottom-3 left-3 right-3 z-20">
+            <Card className="bg-white shadow-xl border-0">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                    {selectedOrder.restaurantLogo ? (
+                      <img 
+                        src={selectedOrder.restaurantLogo} 
+                        alt="Restaurant"
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    ) : (
+                      <Package className="h-6 w-6 text-gray-600" />
+                    )}
                   </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-900 truncate">
+                      {selectedOrder.restaurantName || 'اطبعلي للطباعة'}
+                    </h3>
+                  </div>
+                  <Badge className="bg-gray-900 text-white border-0 px-3 py-1">
+                    قيد التوصيل
+                  </Badge>
                 </div>
-              </div>
-            </div>
-            
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                <Package className="h-6 w-6 mx-auto mb-2 text-green-200" />
-                <div className="text-2xl font-bold">{orders.length}</div>
-                <div className="text-xs text-green-100">إجمالي الطلبات</div>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                <TrendingUp className="h-6 w-6 mx-auto mb-2 text-orange-200" />
-                <div className="text-2xl font-bold">
-                  {orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length}
+
+                {/* ETA */}
+                <div className="mb-3">
+                  <p className="text-sm text-gray-600 mb-1">الوصول المتوقع</p>
+                  <p className="text-2xl font-bold text-gray-900" data-testid="text-eta">
+                    {calculateETA(selectedOrder.estimatedDelivery)}
+                  </p>
                 </div>
-                <div className="text-xs text-orange-100">قيد التنفيذ</div>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                <Award className="h-6 w-6 mx-auto mb-2 text-yellow-200" />
-                <div className="text-2xl font-bold">
-                  {orders.filter((o: Order) => o.status === 'delivered').length}
+
+                {/* Alert Message */}
+                <div className="bg-[--brand-50] border border-[--brand-200] rounded-xl p-3 flex items-center gap-3">
+                  <div className="w-6 h-6 bg-[--brand-500] rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xs">👍</span>
+                  </div>
+                  <p className="text-sm text-[--brand-700] flex-1">
+                    طلبك في الطريق! سنخبرك عند اقتراب {selectedOrder.driverName || 'الكابتن'}
+                  </p>
                 </div>
-                <div className="text-xs text-yellow-100">تم التسليم</div>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                <Target className="h-6 w-6 mx-auto mb-2 text-blue-200" />
-                <div className="text-2xl font-bold">
-                  {orders.reduce((sum: number, order: Order) => sum + parseFloat(order.totalAmount || '0'), 0).toFixed(0)} ج
-                </div>
-                <div className="text-xs text-blue-100">إجمالي القيمة</div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
+      )}
 
-        {/* Active Orders Section - Prominent Display */}
-        {orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <Zap className="h-6 w-6 text-orange-600" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900">طلباتي النشطة</h2>
+      {/* Bottom Section: Scrollable Content */}
+      <div className="bg-white">
+        {/* Driver Card */}
+        {selectedOrder?.driverName && (
+          <div className="p-4 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-[--brand-500] rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-lg">
+                  {selectedOrder.driverName.charAt(0)}
+                </span>
               </div>
-              <Badge className="bg-orange-100 text-orange-800 border-orange-200 animate-pulse">
-                {orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length} طلب نشط
-              </Badge>
-            </div>
-            
-            <div className="grid gap-4">
-              {orders
-                .filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status))
-                .slice(0, 3)
-                .map((order: Order) => (
-                <Card key={order.id} className="border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-yellow-50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-orange-100 rounded-xl">
-                          {getOrderStatusIcon(order.status)}
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900">طلب #{order.orderNumber}</h3>
-                          <p className="text-sm text-gray-600 flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            {formatDate(order.createdAt)}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="text-right">
-                        <Badge className={`border-2 text-sm px-3 py-1 ${getOrderStatusColor(order.status)}`}>
-                          {order.statusText || order.status}
-                        </Badge>
-                        <div className="mt-2 text-2xl font-bold text-green-600">
-                          {order.totalAmount} ج
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Enhanced Action Buttons */}
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => handleTrackOrder(order.orderNumber)}
-                        className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium h-12"
-                        data-testid={`track-order-${order.orderNumber}`}
-                      >
-                        <Navigation className="h-5 w-5 ml-2" />
-                        تتبع مباشر
-                        <Zap className="h-4 w-4 mr-2" />
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        onClick={() => handleViewOrder(order.id)}
-                        className="px-6 border-2 border-gray-300 hover:border-gray-400 h-12"
-                        data-testid={`view-order-${order.id}`}
-                      >
-                        <Eye className="h-5 w-5" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 text-lg">
+                  {selectedOrder.driverName}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  هو كابتن التوصيل اليوم
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center"
+                  onClick={() => window.location.href = `/chat?order=${selectedOrder.id}`}
+                  data-testid="button-chat"
+                >
+                  <MessageCircle className="h-5 w-5 text-gray-700" />
+                </button>
+                {selectedOrder.driverPhone && (
+                  <button 
+                    className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center"
+                    onClick={() => window.open(`tel:${selectedOrder.driverPhone}`)}
+                    data-testid="button-call"
+                  >
+                    <Phone className="h-5 w-5 text-gray-700" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Modern Orders Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="flex items-center gap-4 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">جميع الطلبات</h2>
-            <div className="flex-1"></div>
-            <Button
-              variant="outline"
-              onClick={() => refetch()}
-              className="bg-white hover:bg-gray-50 border-2"
-              data-testid="refresh-orders"
+        {/* Pro Banner */}
+        <div className="m-4 bg-gradient-to-r from-[--brand-500] to-[--brand-600] rounded-2xl p-4 text-white">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <h3 className="font-bold text-lg mb-1">احصل على المزيد مع Pro!</h3>
+              <p className="text-sm opacity-90 mb-3">
+                اشترك في اطبعلي برو للحصول على توصيل مجاني لا محدود والمزيد
+              </p>
+              <button className="text-white underline text-sm font-medium">
+                اشترك الآن
+              </button>
+            </div>
+            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+              <Star className="h-8 w-8 text-white" />
+            </div>
+          </div>
+        </div>
+
+        {/* Order Details */}
+        {selectedOrder && (
+          <div className="p-4 space-y-6">
+            {/* Delivering To */}
+            <div data-testid="section-delivery">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Home className="h-4 w-4 text-gray-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900">توصيل إلى</h3>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Calendar className="h-3 w-3" />
+                    <span>{formatDeliveryDate(selectedOrder.createdAt)}</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-gray-700 mr-11">{selectedOrder.deliveryAddress}</p>
+            </div>
+
+            <Separator />
+
+            {/* Your Order From */}
+            <div data-testid="section-restaurant">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-1">طلبك من</h3>
+                  <h4 className="text-lg font-bold text-gray-900">
+                    {selectedOrder.restaurantName || 'اطبعلي للطباعة'}
+                  </h4>
+                  <p className="text-sm text-gray-600">خدمات الطباعة والتصوير</p>
+                </div>
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                  {selectedOrder.restaurantLogo ? (
+                    <img 
+                      src={selectedOrder.restaurantLogo} 
+                      alt="Restaurant"
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  ) : (
+                    <Package className="h-6 w-6 text-gray-600" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Order Items */}
+            {selectedOrder.items && selectedOrder.items.length > 0 && (
+              <div data-testid="section-items">
+                <h3 className="font-bold text-gray-900 mb-4">المنتجات</h3>
+                <div className="space-y-3">
+                  {selectedOrder.items.map((item: OrderItem, index: number) => (
+                    <div key={item.id} className="flex items-center gap-3">
+                      <span className="w-6 h-6 bg-gray-100 rounded text-sm flex items-center justify-center font-medium">
+                        {item.quantity}
+                      </span>
+                      <span className="flex-1 text-gray-900">
+                        {item.productName || item.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Payment Details */}
+            <div data-testid="section-payment">
+              <h3 className="font-bold text-gray-900 mb-4">تفاصيل الدفع</h3>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-900 font-medium">الإجمالي</span>
+                <span className="text-lg font-bold text-gray-900">
+                  {selectedOrder.totalAmount} جنيه
+                </span>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Support */}
+            <div data-testid="section-support">
+              <h3 className="font-bold text-gray-900 mb-3">الدعم</h3>
+              <p className="text-sm text-gray-600">
+                طلب #{selectedOrder.orderNumber}
+              </p>
+              
+              <Button 
+                variant="outline" 
+                className="w-full mt-4 border-2 h-12"
+                onClick={() => window.location.href = `/support?order=${selectedOrder.orderNumber}`}
+              >
+                <HeadphonesIcon className="h-5 w-5 ml-2" />
+                تواصل مع الدعم
+              </Button>
+            </div>
+
+            {/* Back to Orders Button */}
+            <Button 
+              variant="outline" 
+              className="w-full border-2 h-12 mt-6"
+              onClick={() => window.location.href = '/orders-list'}
             >
-              <RefreshCw className="h-4 w-4 ml-2" />
-              تحديث
+              <ArrowLeft className="h-5 w-5 ml-2" />
+              العودة لقائمة الطلبات
             </Button>
           </div>
-          
-          <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200 p-1 rounded-xl shadow-sm">
-            <TabsTrigger 
-              value="all" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 font-medium rounded-lg"
-            >
-              كل الطلبات ({orders.length})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="active"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 font-medium rounded-lg"
-            >
-              قيد التنفيذ ({orders.filter((o: Order) => ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery'].includes(o.status)).length})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="completed"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 font-medium rounded-lg"
-            >
-              مكتملة ({orders.filter((o: Order) => o.status === 'delivered').length})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="cancelled"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-red-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 font-medium rounded-lg"
-            >
-              ملغية ({orders.filter((o: Order) => o.status === 'cancelled').length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="space-y-4">
-            {filteredOrders.length === 0 ? (
-              <Card>
-                <CardContent className="py-20 text-center">
-                  <Package className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-semibold mb-2">لا توجد طلبات</h3>
-                  <p className="text-gray-600 mb-6">
-                    {activeTab === 'all' ? 'لم تقم بإنشاء أي طلبات بعد' : 
-                     activeTab === 'active' ? 'لا توجد طلبات قيد التنفيذ حالياً' :
-                     activeTab === 'completed' ? 'لا توجد طلبات مكتملة' : 'لا توجد طلبات ملغية'}
-                  </p>
-                  <Button onClick={() => setLocation('/')} className="bg-green-600 hover:bg-green-700">
-                    ابدأ التسوق الآن
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredOrders.map((order: Order) => (
-                <Card key={order.id} className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-white overflow-hidden">
-                  {/* Status Indicator Bar */}
-                  <div className={`h-1 ${
-                    order.status === 'delivered' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-                    order.status === 'out_for_delivery' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
-                    order.status === 'processing' ? 'bg-gradient-to-r from-purple-500 to-violet-500' :
-                    order.status === 'cancelled' ? 'bg-gradient-to-r from-red-500 to-pink-500' :
-                    'bg-gradient-to-r from-orange-500 to-yellow-500'
-                  }`}></div>
-                  
-                  <CardContent className="p-6">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <div className={`p-3 rounded-2xl ${
-                            order.status === 'delivered' ? 'bg-green-100' :
-                            order.status === 'out_for_delivery' ? 'bg-blue-100' :
-                            order.status === 'processing' ? 'bg-purple-100' :
-                            order.status === 'cancelled' ? 'bg-red-100' :
-                            'bg-orange-100'
-                          }`}>
-                            {getOrderStatusIcon(order.status)}
-                          </div>
-                          {(order.status === 'out_for_delivery' || order.status === 'processing') && (
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">
-                            طلب #{order.orderNumber}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Calendar className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">{formatDate(order.createdAt)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="text-right">
-                        <Badge className={`border-0 text-sm px-4 py-2 font-medium shadow-sm ${
-                          order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                          order.status === 'out_for_delivery' ? 'bg-blue-100 text-blue-800' :
-                          order.status === 'processing' ? 'bg-purple-100 text-purple-800' :
-                          order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                          'bg-orange-100 text-orange-800'
-                        }`}>
-                          {order.statusText || order.status}
-                        </Badge>
-                        <div className="mt-2 text-2xl font-bold text-green-600">
-                          {order.totalAmount} <span className="text-sm">ج</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Enhanced Processing Animation */}
-                    {order.status === 'processing' && (
-                      <div className="mb-6 p-5 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-2xl">
-                        <div className="flex items-center gap-4">
-                          <PrintingAnimation status={order.status} className="flex-shrink-0" />
-                          <div className="flex-1">
-                            <h4 className="font-bold text-purple-900 mb-2 text-lg">🖨️ طلبك قيد التنفيذ الآن!</h4>
-                            <p className="text-sm text-purple-700 mb-3">
-                              فريقنا يعمل على تحضير طلبك بعناية فائقة. ستحصل على إشعار فور اكتمال العملية.
-                            </p>
-                            <div className="flex items-center gap-3 bg-white/70 rounded-lg p-2">
-                              <div className="flex gap-1">
-                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '200ms'}}></div>
-                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '400ms'}}></div>
-                              </div>
-                              <span className="text-xs text-purple-600 font-medium">متوقع الانتهاء خلال 15-30 دقيقة</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Enhanced Order Items */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-5 w-5 text-gray-600" />
-                        <h4 className="font-bold text-gray-900">المنتجات</h4>
-                      </div>
-                      <div className="bg-gray-50/80 rounded-2xl p-4 space-y-3">
-                        {order.items?.slice(0, 2).map((item: OrderItem) => (
-                          <div key={item.id} className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm relative overflow-hidden hover:shadow-md transition-shadow">
-                            
-                            {/* Enhanced Printing overlay for processing orders */}
-                            {order.status === 'processing' && (
-                              <div className="absolute inset-0 bg-gradient-to-r from-purple-100/90 to-blue-100/90 backdrop-blur-sm flex items-center justify-center">
-                                <div className="flex items-center gap-3 bg-white/80 rounded-full px-4 py-2 shadow-lg">
-                                  <div className="flex gap-1">
-                                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                                  </div>
-                                  <span className="text-sm text-purple-700 font-bold">جاري الطباعة...</span>
-                                </div>
-                              </div>
-                            )}
-                            
-                            <div className="w-14 h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center shadow-inner">
-                              {item.productImage ? (
-                                <img
-                                  src={item.productImage}
-                                  alt={item.productName || item.name}
-                                  className="w-full h-full object-cover rounded-xl"
-                                />
-                              ) : (
-                                <Package className="h-7 w-7 text-gray-500" />
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-900 line-clamp-1 mb-1">{item.productName || item.name}</p>
-                              <div className="flex items-center gap-3">
-                                <span className="text-sm text-gray-600">الكمية: {item.quantity}×</span>
-                                <span className="text-sm font-bold text-green-600">{item.price} ج</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                        {order.items && order.items.length > 2 && (
-                          <div className="text-center p-2 bg-white/70 rounded-xl">
-                            <p className="text-sm text-gray-600 font-medium">
-                              <span className="text-green-600 font-bold">+{order.items.length - 2}</span> منتج إضافي
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Enhanced Order Info */}
-                    <div className="bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-2xl p-4 space-y-3">
-                      <div className="flex items-start gap-3">
-                        <MapPin className="h-5 w-5 text-green-600 mt-1 flex-shrink-0" />
-                        <div className="flex-1">
-                          <span className="text-sm font-medium text-gray-700">عنوان التسليم</span>
-                          <p className="text-gray-900 font-medium mt-1">{order.deliveryAddress}</p>
-                        </div>
-                      </div>
-                      
-                      {order.estimatedDelivery && (
-                        <div className="flex items-center gap-3">
-                          <Timer className="h-5 w-5 text-orange-600" />
-                          <div>
-                            <span className="text-sm font-medium text-gray-700">وقت التسليم المتوقع</span>
-                            <p className="text-orange-600 font-bold">{order.estimatedDelivery}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Enhanced Driver Info */}
-                    {order.driverName && (
-                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-5 border-2 border-blue-200">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-2 bg-blue-100 rounded-xl">
-                            <Truck className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <h4 className="font-bold text-blue-900 text-lg">🚚 معلومات الكابتن</h4>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="flex items-center gap-3 bg-white/70 rounded-xl p-3">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-blue-600 font-bold text-sm">{order.driverName.charAt(0)}</span>
-                            </div>
-                            <div>
-                              <span className="text-xs text-gray-600">الكابتن</span>
-                              <p className="font-bold text-gray-900">{order.driverName}</p>
-                            </div>
-                          </div>
-                          
-                          {order.driverPhone && (
-                            <div className="flex items-center gap-3 bg-white/70 rounded-xl p-3">
-                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                <Phone className="h-4 w-4 text-green-600" />
-                              </div>
-                              <div>
-                                <span className="text-xs text-gray-600">الهاتف</span>
-                                <p className="font-bold text-gray-900">{order.driverPhone}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {order.driverPhone && (
-                          <div className="mt-4 pt-3 border-t border-blue-200">
-                            <Button
-                              size="sm"
-                              className="w-full bg-green-600 hover:bg-green-700 text-white"
-                              onClick={() => window.open(`tel:${order.driverPhone}`)}
-                            >
-                              <Phone className="h-4 w-4 ml-2" />
-                              اتصال بالكابتن
-                              <MessageCircle className="h-4 w-4 mr-2" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Enhanced Action Buttons */}
-                    <div className="grid grid-cols-2 gap-4 pt-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => handleViewOrder(order.id)}
-                        className="h-12 border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 font-medium"
-                        data-testid={`view-order-${order.id}`}
-                      >
-                        <Eye className="h-5 w-5 ml-2" />
-                        عرض التفاصيل
-                      </Button>
-                      
-                      <Button
-                        onClick={() => handleTrackOrder(order.orderNumber)}
-                        className="h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold shadow-lg hover:shadow-xl transition-all"
-                        data-testid={`track-order-${order.orderNumber}`}
-                      >
-                        <Navigation className="h-5 w-5 ml-2" />
-                        تتبع مباشر
-                        <Zap className="h-4 w-4 mr-2" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
+        )}
       </div>
     </div>
   );
