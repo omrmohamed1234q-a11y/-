@@ -26,6 +26,19 @@
   --success: hsl(142 71% 45%);
   --warning: hsl(38 92% 50%);
   --error: hsl(0 84% 60%);
+  
+  /* Brand Colors - Red Theme inspired by اطبعلي logo */
+  --brand-50: hsl(0 85% 97%);
+  --brand-100: hsl(0 93% 94%);
+  --brand-200: hsl(0 90% 86%);
+  --brand-300: hsl(0 84% 74%);
+  --brand-400: hsl(0 78% 62%);
+  --brand-500: hsl(0 80% 56%);
+  --brand-600: hsl(0 72% 47%);
+  --brand-700: hsl(0 74% 42%);
+  --brand-800: hsl(0 70% 35%);
+  --brand-900: hsl(0 63% 31%);
+  
   --font-arabic: 'IBM Plex Sans Arabic', sans-serif;
   --font-latin: 'Inter', sans-serif;
   --radius: 0.75rem;
