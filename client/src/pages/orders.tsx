@@ -112,6 +112,11 @@ export default function Orders() {
       case 'out_for_delivery':
       case 'delivering':
         return 'جاري التوصيل';
+      case 'cancelled':
+        return 'تم إلغاء الطلب';
+      case 'completed':
+      case 'delivered':
+        return 'تم تسليم الطلب';
       default:
         return 'جاري مراجعة الطلب';
     }
@@ -123,28 +128,35 @@ export default function Orders() {
     refetchInterval: 10000 // تحديث كل 10 ثوان للحصول على طلبات جديدة
   });
   
-  // Get the active order (first order that's being delivered or processed)
-  const activeOrder = ordersArray.find((order: Order) => 
-    ['out_for_delivery', 'ready', 'processing', 'confirmed', 'pending'].includes(order.status)
-  ) || ordersArray[0];
+  // Filter out cancelled orders - only show active orders
+  const visibleOrders = useMemo(() => 
+    ordersArray.filter(order => order.status !== 'cancelled'), 
+    [ordersArray]
+  );
+  
+  // Get the active order from visible orders only
+  const activeOrder = visibleOrders.find((order: Order) => 
+    ['out_for_delivery', 'ready', 'processing', 'confirmed', 'pending', 'preparing', 'printing', 'reviewing'].includes(order.status)
+  ) || visibleOrders[0];
 
-  // Get the selected order with real-time status updates
+  // Get the selected order with real-time status updates (from visible orders only)
   const selectedOrder = useMemo(() => {
     if (!selectedOrderId) return activeOrder;
     
-    // First try to get from main orders list
-    const orderFromList = ordersArray.find((o: Order) => o.id === selectedOrderId);
+    // First try to get from visible orders list (excludes cancelled)
+    const orderFromList = visibleOrders.find((o: Order) => o.id === selectedOrderId);
     
-    // If we have real-time data from the specific order API, merge it
-    if (orderData?.order && orderFromList) {
+    // If we have real-time data and it's not cancelled, merge it
+    if (orderData?.order && orderFromList && orderData.order.status !== 'cancelled') {
       return {
         ...orderFromList,
         ...orderData.order
       };
     }
     
+    // If order became cancelled or not found, return activeOrder or null
     return orderFromList || activeOrder;
-  }, [selectedOrderId, ordersArray, orderData?.order, activeOrder]);
+  }, [selectedOrderId, visibleOrders, orderData?.order, activeOrder]);
 
   // Determine order stage from selected order status (real-time)
   const orderStage = useMemo(() => {
@@ -164,6 +176,11 @@ export default function Orders() {
       case 'out_for_delivery':
       case 'delivering':
         return 'delivering';
+      case 'cancelled':
+        return 'cancelled';
+      case 'completed':
+      case 'delivered':
+        return 'delivered';
       default:
         return 'reviewing';
     }
@@ -208,6 +225,11 @@ export default function Orders() {
     console.log('📱 Real-time order status update received:', data);
     
     if (data.orderId === selectedOrderId || ordersArray.some(o => o.id === data.orderId)) {
+      // If order became cancelled and it's currently selected, clear selection
+      if (data.newStatus === 'cancelled' && data.orderId === selectedOrderId) {
+        setSelectedOrderId(null);
+      }
+      
       // Invalidate and refetch order data
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       if (selectedOrderId) {
@@ -245,7 +267,7 @@ export default function Orders() {
     );
   }
 
-  if (!ordersArray.length) {
+  if (!visibleOrders.length) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <Card className="max-w-md mx-auto text-center">
@@ -556,6 +578,7 @@ export default function Orders() {
               </div>
             </>
           )}
+
         </div>
       )}
 
