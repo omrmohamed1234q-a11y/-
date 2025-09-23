@@ -1391,31 +1391,55 @@ export default function CaptainDashboard() {
                               <Button
                                 size="sm"
                                 onClick={() => {
-                                  // تحديث حالة الطلب إلى "جاري التوصيل"
-                                  apiRequest('PATCH', `/api/orders/${order.id}/status`, {
+                                  // تحديث حالة الطلب إلى "جاري التوصيل" باستخدام الـ API المحمي للكابتن
+                                  const requestData = {
+                                    orderId: order.id,
                                     status: 'out_for_delivery',
-                                    statusText: 'جاري التوصيل - تم بدء رحلة التوصيل',
-                                    captainId: captainData?.id
-                                  }).then(() => {
-                                    toast({
-                                      title: '🚚 تم بدء التوصيل!',
-                                      description: 'تم بدء رحلة التوصيل بنجاح - يمكنك الآن تتبع موقعك'
+                                    notes: 'تم بدء رحلة التوصيل بواسطة الكابتن',
+                                    location: currentLocation ? {
+                                      lat: currentLocation.lat,
+                                      lng: currentLocation.lng,
+                                      accuracy: accuracy,
+                                      timestamp: new Date().toISOString()
+                                    } : undefined
+                                  };
+                                  
+                                  apiRequest('POST', '/api/captain/order/status', requestData)
+                                    .then(() => {
+                                      toast({
+                                        title: '🚚 تم بدء التوصيل!',
+                                        description: 'تم بدء رحلة التوصيل بنجاح مع تتبع GPS',
+                                        duration: 5000
+                                      });
+                                      
+                                      // تحديث الطلبات
+                                      queryClient.invalidateQueries({ queryKey: ['/api/captain/current-orders'] });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/captain/available-orders'] });
+                                      
+                                      // بدء تتبع GPS إذا لم يكن مفعل
+                                      if (!isTracking) {
+                                        startTracking();
+                                        toast({
+                                          title: '📍 تم تفعيل تتبع GPS',
+                                          description: 'سيتم تحديث موقعك كل 15 ثانية',
+                                          duration: 3000
+                                        });
+                                      }
+                                      
+                                      // إرسال إشعار عبر WebSocket للعميل
+                                      if (wsState.isConnected) {
+                                        // سيتم إرسال الإشعار من الخادم تلقائياً
+                                      }
+                                    })
+                                    .catch((error) => {
+                                      console.error('خطأ في بدء التوصيل:', error);
+                                      toast({
+                                        title: '❌ خطأ في بدء التوصيل',
+                                        description: error.message || 'فشل في بدء رحلة التوصيل - تحقق من الاتصال',
+                                        variant: 'destructive',
+                                        duration: 7000
+                                      });
                                     });
-                                    
-                                    // تحديث الطلبات
-                                    queryClient.invalidateQueries({ queryKey: ['/api/captain/current-orders'] });
-                                    
-                                    // بدء تتبع GPS إذا لم يكن مفعل
-                                    if (!isTracking) {
-                                      startTracking();
-                                    }
-                                  }).catch((error) => {
-                                    toast({
-                                      title: '❌ خطأ في بدء التوصيل',
-                                      description: error.message || 'فشل في بدء رحلة التوصيل',
-                                      variant: 'destructive'
-                                    });
-                                  });
                                 }}
                                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300"
                                 data-testid={`button-start-delivery-${order.id}`}
