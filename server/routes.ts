@@ -2568,6 +2568,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Send real-time update to all subscribers of this order
+      const orderUpdateMessage = {
+        type: 'order_status_update',
+        orderId: orderId,
+        newStatus: status,
+        statusText: getOrderStatusText(status),
+        timestamp: new Date().toISOString(),
+        order: {
+          ...updatedOrder,
+          statusText: getOrderStatusText(status)
+        }
+      };
+      
+      // Broadcast to all order subscribers
+      console.log(`📡 Broadcasting order status update to subscribers: ${orderId} -> ${status}`);
+      broadcastToOrderSubscribers(orderId, orderUpdateMessage);
+      
       res.json({
         success: true,
         order: {
