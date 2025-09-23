@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
@@ -81,67 +81,83 @@ export default function Orders() {
   const { user } = useAuth();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  // Mock order data for testing the 3 stages - will fix API later
-  const [orderStage, setOrderStage] = useState<'reviewing' | 'preparing' | 'delivering'>('reviewing');
+  // Real order data from API
+  const [selectedOrderData, setSelectedOrderData] = useState<any>(null);
   
-  const getOrderInfo = (stage: string) => {
-    switch(stage) {
+  // Fetch order data from API
+  const { data: orderData, isLoading: orderLoading } = useQuery<any>({
+    queryKey: ['/api/orders', selectedOrderId],
+    enabled: !!selectedOrderId,
+    refetchInterval: 5000 // تحديث كل 5 ثوان للحصول على التحديثات الفورية
+  });
+  
+  // Determine order stage from real order status
+  const orderStage = useMemo(() => {
+    if (!orderData?.order) return 'reviewing';
+    
+    const status = orderData.order.status;
+    
+    // Map backend status to frontend stages
+    switch(status) {
       case 'reviewing':
-        return {
-          status: 'reviewing',
-          statusText: 'جاري مراجعة الطلب',
-          stage: 'reviewing' as const
-        };
+      case 'pending':
+        return 'reviewing';
       case 'preparing':
-        return {
-          status: 'preparing',
-          statusText: 'جاري تجهيز المطبوعات',
-          stage: 'preparing' as const
-        };
+      case 'processing':
+      case 'printing':
+        return 'preparing';
+      case 'out_for_delivery':
       case 'delivering':
-        return {
-          status: 'out_for_delivery',
-          statusText: 'جاري التوصيل',
-          stage: 'delivering' as const
-        };
+        return 'delivering';
       default:
-        return {
-          status: 'reviewing',
-          statusText: 'جاري مراجعة الطلب',
-          stage: 'reviewing' as const
-        };
+        return 'reviewing';
+    }
+  }, [orderData?.order?.status]);
+  
+  // Get order info from real data
+  const getOrderInfo = () => {
+    if (!orderData?.order) {
+      return {
+        status: 'reviewing',
+        statusText: 'جاري مراجعة الطلب',
+        stage: 'reviewing' as const
+      };
+    }
+    
+    const order = orderData.order;
+    return {
+      status: order.status,
+      statusText: order.statusText || getStatusText(order.status),
+      stage: orderStage
+    };
+  };
+  
+  // Helper function to get status text
+  const getStatusText = (status: string) => {
+    switch(status) {
+      case 'reviewing':
+      case 'pending':
+        return 'جاري مراجعة الطلب';
+      case 'preparing':
+      case 'processing':
+        return 'جاري تجهيز المطبوعات';
+      case 'printing':
+        return 'جاري الطباعة';
+      case 'out_for_delivery':
+      case 'delivering':
+        return 'جاري التوصيل';
+      default:
+        return 'جاري مراجعة الطلب';
     }
   };
 
-  const currentOrderInfo = getOrderInfo(orderStage);
+  const currentOrderInfo = getOrderInfo();
   
-  const mockOrder: Order = {
-    id: 'order-1758465101672',
-    orderNumber: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-    status: currentOrderInfo.status,
-    statusText: currentOrderInfo.statusText,
-    totalAmount: 360,
-    deliveryAddress: '123 شارع الجامعة، الدقي، الجيزة',
-    estimatedDelivery: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 minutes from now
-    driverName: orderStage === 'delivering' ? 'محمد أحمد' : undefined,
-    driverPhone: orderStage === 'delivering' ? '+201234567890' : undefined,
-    restaurantName: 'اطبعلي للطباعة',
-    restaurantLogo: null,
-    createdAt: new Date().toISOString(),
-    items: [
-      {
-        id: '1',
-        name: 'طباعة ملف PDF',
-        productName: 'Omar Aloush_merged.pdf',
-        quantity: 6,
-        price: 30
-      }
-    ]
-  };
-
-  const ordersArray = [mockOrder];
-  const isLoading = false;
-  const refetch = () => Promise.resolve();
+  // Fetch all orders for the user
+  const { data: ordersArray = [], isLoading, refetch } = useQuery<Order[]>({
+    queryKey: ['/api/orders'],
+    refetchInterval: 10000 // تحديث كل 10 ثوان للحصول على طلبات جديدة
+  });
   
   // Get the active order (first order that's being delivered or processed)
   const activeOrder = ordersArray.find((order: Order) => 
@@ -155,9 +171,24 @@ export default function Orders() {
     }
   }, [activeOrder, selectedOrderId]);
 
-  const selectedOrder = selectedOrderId 
-    ? ordersArray.find((o: Order) => o.id === selectedOrderId) 
-    : activeOrder;
+  // Get the selected order with real-time status updates
+  const selectedOrder = useMemo(() => {
+    if (!selectedOrderId) return activeOrder;
+    
+    // First try to get from main orders list
+    const orderFromList = ordersArray.find((o: Order) => o.id === selectedOrderId);
+    
+    // If we have real-time data from the specific order API, merge it
+    if (orderData?.order && orderFromList) {
+      return {
+        ...orderFromList,
+        ...orderData.order,
+        ...currentOrderInfo // Apply real-time status updates
+      };
+    }
+    
+    return orderFromList || activeOrder;
+  }, [selectedOrderId, ordersArray, orderData?.order, activeOrder, currentOrderInfo]);
 
   if (isLoading) {
     return (
@@ -213,27 +244,6 @@ export default function Orders() {
             </Badge>
           </div>
           
-          {/* Testing Stage Controls - Remove in production */}
-          <div className="flex gap-2 mt-3 pt-2 border-t border-gray-200">
-            <button 
-              onClick={() => setOrderStage('reviewing')}
-              className={`px-3 py-1 text-xs rounded-full ${orderStage === 'reviewing' ? 'bg-[--brand-500] text-white' : 'bg-gray-100 text-gray-600'}`}
-            >
-              مراجعة
-            </button>
-            <button 
-              onClick={() => setOrderStage('preparing')}
-              className={`px-3 py-1 text-xs rounded-full ${orderStage === 'preparing' ? 'bg-[--brand-500] text-white' : 'bg-gray-100 text-gray-600'}`}
-            >
-              تجهيز
-            </button>
-            <button 
-              onClick={() => setOrderStage('delivering')}
-              className={`px-3 py-1 text-xs rounded-full ${orderStage === 'delivering' ? 'bg-[--brand-500] text-white' : 'bg-gray-100 text-gray-600'}`}
-            >
-              توصيل
-            </button>
-          </div>
         </div>
       )}
       
