@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useWebSocket, useWebSocketEvent } from "@/hooks/use-websocket";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,6 +85,11 @@ export default function Orders() {
 
   // Real order data from API
   const [selectedOrderData, setSelectedOrderData] = useState<any>(null);
+  
+  // WebSocket for real-time updates
+  const { state: wsState, subscribeToOrderUpdates } = useWebSocket();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Fetch order data from API
   const { data: orderData, isLoading: orderLoading } = useQuery<any>({
@@ -171,6 +178,43 @@ export default function Orders() {
     }
   }, [activeOrder, selectedOrderId]);
 
+  // Subscribe to real-time order updates via WebSocket
+  useEffect(() => {
+    if (selectedOrderId && wsState.isConnected) {
+      subscribeToOrderUpdates(selectedOrderId);
+    }
+  }, [selectedOrderId, wsState.isConnected, subscribeToOrderUpdates]);
+  
+  // Listen for order status updates
+  useWebSocketEvent('order_status_update', (data: any) => {
+    console.log('📱 Real-time order status update received:', data);
+    
+    if (data.orderId === selectedOrderId || ordersArray.some(o => o.id === data.orderId)) {
+      // Invalidate and refetch order data
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      if (selectedOrderId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/orders', selectedOrderId] });
+      }
+      
+      // Show toast notification
+      toast({
+        title: '📱 تحديث حالة الطلب',
+        description: `تم تحديث حالة الطلب: ${data.statusText || data.status}`,
+        duration: 5000
+      });
+    }
+  });
+  
+  // Listen for delivery location updates
+  useWebSocketEvent('driver_location_update', (data: any) => {
+    console.log('🚚 Driver location update received:', data);
+    
+    if (data.orderId === selectedOrderId) {
+      // This could trigger map updates in the future
+      console.log('📍 Driver location for current order updated');
+    }
+  });
+  
   // Get the selected order with real-time status updates
   const selectedOrder = useMemo(() => {
     if (!selectedOrderId) return activeOrder;

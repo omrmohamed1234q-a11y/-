@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useWebSocket, useWebSocketEvent } from '@/hooks/use-websocket';
 import { apiRequest } from '@/lib/queryClient';
 import { InvoicePrintable } from '@/components/InvoicePrintable';
 import { 
@@ -76,6 +77,38 @@ export default function AdminOrders() {
   const [lastOrderCount, setLastOrderCount] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // WebSocket for real-time updates
+  const { state: wsState } = useWebSocket();
+  
+  // Listen for order status updates from captains
+  useWebSocketEvent('order_status_update', (data: any) => {
+    console.log('🎯 Admin received order status update:', data);
+    
+    // Invalidate orders query to refresh the admin interface
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+    
+    // Show notification toast
+    toast({
+      title: '📱 تحديث حالة الطلب',
+      description: `تم تحديث طلب #${data.orderNumber || data.orderId}: ${data.statusText || data.status}`,
+      duration: 4000
+    });
+  });
+  
+  // Listen for new order assignments
+  useWebSocketEvent('order_assigned', (data: any) => {
+    console.log('🚚 Order assigned to captain:', data);
+    
+    // Refresh orders to show updated assignment status
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+    
+    toast({
+      title: '🚚 تم تعيين طلب للكابتن',
+      description: `تم تعيين الطلب للكابتن ${data.assignedTo}`,
+      duration: 3000
+    });
+  });
 
   // جلب الطلبات من السيرفر
   const { data: allOrders = [], isLoading, error } = useQuery<Order[]>({
