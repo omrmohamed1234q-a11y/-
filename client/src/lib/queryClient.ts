@@ -162,11 +162,13 @@ export const getQueryFn: <T>(options: {
       // Enhanced error logging for JSON parsing issues
       console.error(`❌ JSON parsing failed for endpoint: ${queryKey.join("/")}`);
       console.error(`Response status: ${res.status} ${res.statusText}`);
-      console.error(`Response headers:`, res.headers);
       
-      // Try to get response text to see what was returned
+      // Clone response before trying to read text to avoid "Response body already used" error
+      let responseText = 'Unable to read response';
       try {
-        const responseText = await res.clone().text();
+        // Create a new response from the same body stream
+        const clonedRes = res.clone();
+        responseText = await clonedRes.text();
         console.error(`Response body preview:`, responseText.substring(0, 500));
         
         // If response looks like HTML error page, throw a more descriptive error
@@ -174,7 +176,7 @@ export const getQueryFn: <T>(options: {
           throw new Error(`Server returned HTML error page instead of JSON for ${queryKey.join("/")}`);
         }
       } catch (textError) {
-        console.error(`Could not read response text:`, textError);
+        console.error(`Could not read response text:`, textError.message);
       }
       
       throw new Error(`Invalid JSON response from ${queryKey.join("/")}: ${jsonError.message}`);

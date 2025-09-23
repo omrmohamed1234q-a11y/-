@@ -3498,6 +3498,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Basic orders endpoint that returns user orders (for customer interface)
+  app.get('/api/orders', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const allOrders = await storage.getAllOrders();
+      console.log('📋 Customer orders request - Total orders in storage:', allOrders.length);
+      
+      // Filter orders for current user
+      const userOrders = allOrders.filter((order: any) => order.userId === userId);
+      console.log('👤 Customer orders for', userId, ':', userOrders.length);
+      
+      res.json(userOrders);
+    } catch (error) {
+      console.error("Error fetching customer orders:", error);
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
   // Get all orders for current user
   app.get('/api/orders/user', requireAuth, async (req: any, res) => {
     try {
