@@ -612,15 +612,17 @@ export default function Orders() {
               </Badge>
             </div>
 
-            {/* ETA Section */}
-            <div className="mb-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">الوصول المتوقع</span>
-                <span className="text-2xl font-bold text-gray-900" data-testid="text-eta">
-                  {calculateETA(selectedOrder.estimatedDelivery)}
-                </span>
+            {/* ETA Section - يظهر فقط في حالة التوصيل */}
+            {orderStage === 'delivering' && (
+              <div className="mb-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">الوصول المتوقع</span>
+                  <span className="text-2xl font-bold text-gray-900" data-testid="text-eta">
+                    {calculateETA(selectedOrder.estimatedDelivery)}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Status Alert */}
             <div className="bg-[--brand-50] border border-[--brand-200] rounded-xl p-3">
