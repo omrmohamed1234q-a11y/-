@@ -4793,11 +4793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Update order status to processing for demo
-      setTimeout(async () => {
-        await storage.updateOrderStatus(order.id, 'processing');
-        console.log('🖨️ Order status changed to processing:', order.id);
-      }, 2000);
+      // Order stays in 'reviewing' status for admin control
       
       // Clear cart after successful order
       await storage.clearCart(userId);
@@ -7256,7 +7252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...orderData,
         id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         createdAt: new Date(),
-        status: orderData.status || 'pending',
+        status: orderData.status || 'reviewing',
         priority: orderData.priority || 'medium',
         adminNotes: orderData.adminNotes || '',
         estimatedCost: orderData.estimatedCost || 0,
