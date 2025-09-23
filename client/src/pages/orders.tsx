@@ -98,7 +98,37 @@ export default function Orders() {
     refetchInterval: 5000 // تحديث كل 5 ثوان للحصول على التحديثات الفورية
   });
   
-  // Get the selected order with real-time status updates first
+  // Helper function to get status text
+  const getStatusText = (status: string) => {
+    switch(status) {
+      case 'reviewing':
+      case 'pending':
+        return 'جاري مراجعة الطلب';
+      case 'preparing':
+      case 'processing':
+        return 'جاري تجهيز المطبوعات';
+      case 'printing':
+        return 'جاري الطباعة';
+      case 'out_for_delivery':
+      case 'delivering':
+        return 'جاري التوصيل';
+      default:
+        return 'جاري مراجعة الطلب';
+    }
+  };
+  
+  // Fetch all orders for the user
+  const { data: ordersArray = [], isLoading, refetch } = useQuery<Order[]>({
+    queryKey: ['/api/orders'],
+    refetchInterval: 10000 // تحديث كل 10 ثوان للحصول على طلبات جديدة
+  });
+  
+  // Get the active order (first order that's being delivered or processed)
+  const activeOrder = ordersArray.find((order: Order) => 
+    ['out_for_delivery', 'ready', 'processing', 'confirmed', 'pending'].includes(order.status)
+  ) || ordersArray[0];
+
+  // Get the selected order with real-time status updates
   const selectedOrder = useMemo(() => {
     if (!selectedOrderId) return activeOrder;
     
@@ -156,38 +186,8 @@ export default function Orders() {
       stage: orderStage
     };
   };
-  
-  // Helper function to get status text
-  const getStatusText = (status: string) => {
-    switch(status) {
-      case 'reviewing':
-      case 'pending':
-        return 'جاري مراجعة الطلب';
-      case 'preparing':
-      case 'processing':
-        return 'جاري تجهيز المطبوعات';
-      case 'printing':
-        return 'جاري الطباعة';
-      case 'out_for_delivery':
-      case 'delivering':
-        return 'جاري التوصيل';
-      default:
-        return 'جاري مراجعة الطلب';
-    }
-  };
 
   const currentOrderInfo = getOrderInfo();
-  
-  // Fetch all orders for the user
-  const { data: ordersArray = [], isLoading, refetch } = useQuery<Order[]>({
-    queryKey: ['/api/orders'],
-    refetchInterval: 10000 // تحديث كل 10 ثوان للحصول على طلبات جديدة
-  });
-  
-  // Get the active order (first order that's being delivered or processed)
-  const activeOrder = ordersArray.find((order: Order) => 
-    ['out_for_delivery', 'ready', 'processing', 'confirmed', 'pending'].includes(order.status)
-  ) || ordersArray[0];
 
   // Set first order as selected by default
   useEffect(() => {
