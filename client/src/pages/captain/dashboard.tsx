@@ -1385,25 +1385,70 @@ export default function CaptainDashboard() {
                               </Button>
                             )}
                             
-                            {/* زر "تم التوصيل" */}
-                            <Button
-                              size="sm"
-                              onClick={() => completeOrderMutation.mutate({ 
-                                orderId: order.id,
-                                notes: 'تم التسليم بنجاح',
-                                deliveryLocation: order.deliveryAddress
-                              })}
-                              disabled={completeOrderMutation.isPending}
-                              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-300"
-                              data-testid={`button-complete-order-${order.id}`}
-                            >
-                              {completeOrderMutation.isPending ? (
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
-                              ) : (
-                                <CheckCircle2 className="w-4 h-4 mr-1" />
-                              )}
-                              تم التوصيل ✅
-                            </Button>
+                            {/* أزرار التحكم في التوصيل - حسب حالة الطلب */}
+                            {order.status === 'ready' || order.status === 'preparing' ? (
+                              /* زر "بدا توصيل الطلب" للطلبات المجهزة */
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  // تحديث حالة الطلب إلى "جاري التوصيل"
+                                  apiRequest('PATCH', `/api/orders/${order.id}/status`, {
+                                    status: 'out_for_delivery',
+                                    statusText: 'جاري التوصيل - تم بدء رحلة التوصيل',
+                                    captainId: captainData?.id
+                                  }).then(() => {
+                                    toast({
+                                      title: '🚚 تم بدء التوصيل!',
+                                      description: 'تم بدء رحلة التوصيل بنجاح - يمكنك الآن تتبع موقعك'
+                                    });
+                                    
+                                    // تحديث الطلبات
+                                    queryClient.invalidateQueries({ queryKey: ['/api/captain/current-orders'] });
+                                    
+                                    // بدء تتبع GPS إذا لم يكن مفعل
+                                    if (!isTracking) {
+                                      startTracking();
+                                    }
+                                  }).catch((error) => {
+                                    toast({
+                                      title: '❌ خطأ في بدء التوصيل',
+                                      description: error.message || 'فشل في بدء رحلة التوصيل',
+                                      variant: 'destructive'
+                                    });
+                                  });
+                                }}
+                                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300"
+                                data-testid={`button-start-delivery-${order.id}`}
+                              >
+                                <Truck className="w-4 h-4 mr-1" />
+                                🚚 بدا توصيل الطلب
+                              </Button>
+                            ) : order.status === 'out_for_delivery' ? (
+                              /* زر "تم التوصيل" للطلبات الجاري توصيلها */
+                              <Button
+                                size="sm"
+                                onClick={() => completeOrderMutation.mutate({ 
+                                  orderId: order.id,
+                                  notes: 'تم التسليم بنجاح',
+                                  deliveryLocation: order.deliveryAddress
+                                })}
+                                disabled={completeOrderMutation.isPending}
+                                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-300"
+                                data-testid={`button-complete-order-${order.id}`}
+                              >
+                                {completeOrderMutation.isPending ? (
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
+                                ) : (
+                                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                                )}
+                                تم التوصيل ✅
+                              </Button>
+                            ) : (
+                              /* للطلبات المكتملة أو المخالفة */
+                              <Badge className="bg-gray-500 text-white">
+                                {order.status === 'delivered' ? '✅ مكتمل' : order.status}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
