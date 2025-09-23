@@ -2606,11 +2606,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   function getOrderStatusText(status: string): string {
     const statusMap: Record<string, string> = {
       pending: "في انتظار المراجعة",
-      processing: "جاري المعالجة", 
+      reviewing: "قيد المراجعة",
+      processing: "جاري المعالجة",
+      preparing: "قيد التجهيز", 
       printing: "جاري الطباعة",
       ready: "جاهز للاستلام",
+      shipped: "تم الشحن",
+      out_for_delivery: "خارج للتوصيل",
       delivered: "تم التسليم",
-      cancelled: "تم الإلغاء"
+      cancelled: "تم الإلغاء",
+      rejected: "مرفوض",
+      on_hold: "معلق مؤقتاً"
     };
     return statusMap[status] || "حالة غير معروفة";
   }
@@ -4719,7 +4725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerEmail,
         subtotal: cart.subtotal.toString(),
         totalAmount: cart.subtotal.toString(),
-        status: 'ready',
+        status: 'reviewing',
         deliveryAddress,
         deliveryCoordinates: deliveryCoordinates || null,
         deliveryMethod,
