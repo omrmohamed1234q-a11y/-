@@ -275,7 +275,7 @@ export default function Orders() {
               <div className="w-3 h-3 bg-[--brand-500] rounded-full animate-pulse"></div>
               <div>
                 <span className="font-bold text-[--brand-600] text-lg">
-                  {selectedOrder.statusText || 'قيد التجهيز'}
+                  {selectedOrder.statusText || getStatusText(selectedOrder.status)}
                 </span>
                 <p className="text-xs text-gray-600">
                   طلب رقم {selectedOrder.orderNumber}
