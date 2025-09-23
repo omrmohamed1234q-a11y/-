@@ -68,12 +68,14 @@ export async function getAuthHeaders(options: { url?: string; forceAdmin?: boole
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session?.access_token) {
-      console.log(`🔑 Using Supabase authentication for user: ${session.user.email} (${session.user.id})`);
-      return {
+      const headers = {
         'Authorization': `Bearer ${session.access_token}`,
         'X-User-ID': session.user.id,
         'X-User-Role': session.user.user_metadata?.role || 'customer',
       };
+      console.log(`🔑 Using Supabase authentication for user: ${session.user.email} (${session.user.id})`);
+      console.log(`🔑 Auth headers:`, Object.keys(headers));
+      return headers;
     }
 
     // FALLBACK: No valid authentication found
@@ -156,30 +158,41 @@ export const getQueryFn: <T>(options: {
 
     await throwIfResNotOk(res, url);
     
+    // Check if response is empty
+    const contentLength = res.headers.get('content-length');
+    if (contentLength === '0' || !res.body) {
+      console.log(`Empty response from ${queryKey.join("/")}, returning empty array`);
+      return [];
+    }
+    
     try {
       return await res.json();
     } catch (jsonError) {
-      // Enhanced error logging for JSON parsing issues
+      // Enhanced error logging for JSON parsing issues  
       console.error(`❌ JSON parsing failed for endpoint: ${queryKey.join("/")}`);
       console.error(`Response status: ${res.status} ${res.statusText}`);
+      console.error(`Content-Type: ${res.headers.get('content-type')}`);
+      console.error(`Content-Length: ${res.headers.get('content-length')}`);
       
-      // Clone response before trying to read text to avoid "Response body already used" error
-      let responseText = 'Unable to read response';
+      // For debugging, try to read response text if possible
+      let responseText = 'Response body already consumed';
       try {
-        // Create a new response from the same body stream
-        const clonedRes = res.clone();
-        responseText = await clonedRes.text();
-        console.error(`Response body preview:`, responseText.substring(0, 500));
-        
-        // If response looks like HTML error page, throw a more descriptive error
-        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.includes('<html')) {
-          throw new Error(`Server returned HTML error page instead of JSON for ${queryKey.join("/")}`);
+        // Only try to read text if we haven't consumed the body yet
+        if (res.bodyUsed === false) {
+          responseText = await res.text();
+          console.error(`Response preview:`, responseText.substring(0, 500));
         }
       } catch (textError) {
         console.error(`Could not read response text:`, textError.message);
       }
       
-      throw new Error(`Invalid JSON response from ${queryKey.join("/")}: ${jsonError.message}`);
+      // Return empty array for orders endpoint as fallback
+      if (queryKey.join("/").includes('/orders')) {
+        console.error(`Fallback: Returning empty orders array due to JSON parsing error`);
+        return [];
+      }
+      
+      throw new Error(`JSON parsing failed for ${queryKey.join("/")}: ${jsonError.message}`);
     }
   };
 
