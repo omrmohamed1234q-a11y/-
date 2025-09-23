@@ -608,7 +608,7 @@ export default function AdminOrders() {
                     {/* أزرار التحكم */}
                     <div className="flex flex-col gap-2 ml-6">
                       {/* زر إرسال للكباتن */}
-                      {(order.status === 'ready' || order.status === 'processing' || order.status === 'printing') && (
+                      {(order.status === 'reviewing' || order.status === 'ready' || order.status === 'processing' || order.status === 'printing') && (
                         <Button 
                           size="sm"
                           onClick={() => assignToCaptainsMutation.mutate(order.id)}
