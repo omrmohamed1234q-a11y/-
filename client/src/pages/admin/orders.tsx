@@ -678,9 +678,18 @@ export default function AdminOrders() {
                                 </div>
                               </div>
 
-                              {/* تحديث الحالة */}
+                              {/* تحديث الحالة - حسب الأدوار */}
                               <div className="space-y-3">
-                                <h3 className="font-semibold text-lg border-b pb-2">تحديث حالة الطلب</h3>
+                                <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
+                                  🎯 تحديث حالة الطلب (الأدمن فقط)
+                                </h3>
+                                <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                                  <p className="text-sm text-blue-800 mb-3">
+                                    <strong>الأدمن يتحكم في:</strong> مراجعة، تجهيز، إلغاء
+                                    <br />
+                                    <strong>الكابتن يتحكم في:</strong> بدء التوصيل
+                                  </p>
+                                </div>
                                 <Select 
                                   value={selectedOrder.status} 
                                   onValueChange={(status) => {
@@ -695,18 +704,40 @@ export default function AdminOrders() {
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="pending">في انتظار المراجعة</SelectItem>
-                                    <SelectItem value="processing">جاري المعالجة</SelectItem>
-                                    <SelectItem value="printing">جاري الطباعة</SelectItem>
-                                    <SelectItem value="ready">جاهز للاستلام</SelectItem>
-                                    <SelectItem value="delivered">تم التسليم</SelectItem>
-                                    <SelectItem value="cancelled">تم الإلغاء</SelectItem>
+                                    <SelectItem value="reviewing">
+                                      🔍 مراجعة - جاري مراجعة تفاصيل الطلب
+                                    </SelectItem>
+                                    <SelectItem value="preparing">
+                                      🖨️ تجهيز - جاري تجهيز وطباعة المستندات
+                                    </SelectItem>
+                                    <SelectItem value="cancelled">
+                                      ❌ ملغي - تم إلغاء الطلب
+                                    </SelectItem>
+                                    {/* حالات أخرى للعرض فقط */}
+                                    {selectedOrder.status === 'out_for_delivery' && (
+                                      <SelectItem value="out_for_delivery" disabled>
+                                        🚚 جاري التوصيل (يتحكم فيها الكابتن)
+                                      </SelectItem>
+                                    )}
+                                    {selectedOrder.status === 'delivered' && (
+                                      <SelectItem value="delivered" disabled>
+                                        ✅ تم التسليم (مكتمل)
+                                      </SelectItem>
+                                    )}
                                   </SelectContent>
                                 </Select>
                                 
                                 {updateStatusMutation.isPending && (
-                                  <p className="text-sm text-blue-600">جاري التحديث...</p>
+                                  <div className="flex items-center gap-2 text-blue-600">
+                                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-sm">جاري التحديث...</p>
+                                  </div>
                                 )}
+                                
+                                {/* رسالة نجاح التحديث */}
+                                <div className="text-sm text-green-600 bg-green-50 p-2 rounded border-l-4 border-green-400">
+                                  <strong>ملاحظة:</strong> التحديثات ستظهر فوراً في صفحة الطلبات للعميل (/orders)
+                                </div>
                               </div>
                             </div>
                           )}
