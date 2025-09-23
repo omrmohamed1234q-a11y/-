@@ -98,11 +98,29 @@ export default function Orders() {
     refetchInterval: 5000 // تحديث كل 5 ثوان للحصول على التحديثات الفورية
   });
   
-  // Determine order stage from real order status
-  const orderStage = useMemo(() => {
-    if (!orderData?.order) return 'reviewing';
+  // Get the selected order with real-time status updates first
+  const selectedOrder = useMemo(() => {
+    if (!selectedOrderId) return activeOrder;
     
-    const status = orderData.order.status;
+    // First try to get from main orders list
+    const orderFromList = ordersArray.find((o: Order) => o.id === selectedOrderId);
+    
+    // If we have real-time data from the specific order API, merge it
+    if (orderData?.order && orderFromList) {
+      return {
+        ...orderFromList,
+        ...orderData.order
+      };
+    }
+    
+    return orderFromList || activeOrder;
+  }, [selectedOrderId, ordersArray, orderData?.order, activeOrder]);
+
+  // Determine order stage from selected order status (real-time)
+  const orderStage = useMemo(() => {
+    if (!selectedOrder) return 'reviewing';
+    
+    const status = selectedOrder.status;
     
     // Map backend status to frontend stages
     switch(status) {
@@ -119,7 +137,7 @@ export default function Orders() {
       default:
         return 'reviewing';
     }
-  }, [orderData?.order?.status]);
+  }, [selectedOrder?.status]);
   
   // Get order info from real data
   const getOrderInfo = () => {
@@ -215,24 +233,6 @@ export default function Orders() {
     }
   });
   
-  // Get the selected order with real-time status updates
-  const selectedOrder = useMemo(() => {
-    if (!selectedOrderId) return activeOrder;
-    
-    // First try to get from main orders list
-    const orderFromList = ordersArray.find((o: Order) => o.id === selectedOrderId);
-    
-    // If we have real-time data from the specific order API, merge it
-    if (orderData?.order && orderFromList) {
-      return {
-        ...orderFromList,
-        ...orderData.order,
-        ...currentOrderInfo // Apply real-time status updates
-      };
-    }
-    
-    return orderFromList || activeOrder;
-  }, [selectedOrderId, ordersArray, orderData?.order, activeOrder, currentOrderInfo]);
 
   if (isLoading) {
     return (
