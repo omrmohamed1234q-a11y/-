@@ -6,7 +6,6 @@ const navItems = [
   { path: '/', label: 'الرئيسية', icon: 'fas fa-home' },
   { path: '/print', label: 'طباعة', icon: 'fas fa-print' },
   { path: '/store', label: 'المتجر', icon: 'fas fa-store' },
-  { path: '/rewards', label: 'المكافآت', icon: 'fas fa-trophy' },
   { path: '/profile', label: 'الملف الشخصي', icon: 'fas fa-user' },
 ];
 
@@ -18,7 +17,7 @@ export default function BottomNav() {
       <div className="flex items-center justify-around max-w-md mx-auto">
         {navItems.map((item) => {
           const isActive = location === item.path;
-          
+
           return (
             <Link key={item.path} href={item.path}>
               <button

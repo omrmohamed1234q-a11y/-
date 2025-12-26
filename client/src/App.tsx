@@ -17,7 +17,6 @@ import SecureAdminLogin from "@/pages/auth/secure-admin-login";
 import Home from "@/pages/home-new";
 import Print from "@/pages/print";
 import Store from "@/pages/store";
-import RewardsNew from "@/pages/rewards-new";
 import Profile from "@/pages/profile";
 import Payment from "@/pages/payment";
 import Scan from "@/pages/scan";
@@ -47,7 +46,6 @@ import OrderTracking from "@/pages/order-tracking";
 import DriversManagement from "@/pages/admin/drivers";
 import AdminPartners from "@/pages/admin/partners";
 import SecurityManagement from "@/pages/admin/security-management";
-import RewardsManagement from "@/pages/admin/rewards-management";
 import QuickAccess from "@/pages/quick-access";
 import TestAnnouncements from "@/pages/test-announcements";
 import ArticlePage from "@/pages/article";
@@ -119,7 +117,7 @@ function AppRouter() {
           <Route path="/auth/signup" component={Signup} />
           <Route path="/auth/admin-signup" component={AdminSignup} />
           <Route path="/auth/callback" component={AuthCallback} />
-          
+
           {/* Hidden secure routes - direct access only */}
           <Route path="/admin/secure-login" component={SecureAdminLogin} />
           <Route path="/secure-admin-login" component={SecureAdminLogin} />
@@ -168,7 +166,7 @@ function AppRouter() {
           <Route path="/terms-and-conditions" component={TermsAndConditions} />
           <Route path="/terms" component={TermsAndConditions} />
           <Route path="/privacy-policy" component={PrivacyPolicy} />
-          
+
           <Route path="/" component={EnhancedLanding} />
           <Route component={NotFound} />
         </Switch>
@@ -189,7 +187,6 @@ function AppRouter() {
         <Route path="/store" component={Store} />
         <Route path="/checkout" component={CheckoutPage} />
         <Route path="/orders" component={OrdersPage} />
-        <Route path="/rewards" component={RewardsNew} />
         <Route path="/profile" component={Profile} />
         <Route path="/payment" component={Payment} />
         <Route path="/payment-success" component={PaymentSuccess} />
@@ -198,7 +195,7 @@ function AppRouter() {
         <Route path="/order-tracking-enhanced/:orderNumber?" component={OrderTrackingTalabatStyle} />
         <Route path="/student/teachers" component={StudentTeachers} />
         <Route path="/donations" component={DonationsPage} />
-        
+
         {/* Admin routes - available for authenticated users too */}
         <Route path="/admin" component={() => <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
         <Route path="/admin/profile" component={() => <AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
@@ -221,18 +218,17 @@ function AppRouter() {
         <Route path="/admin/apis" component={() => <AdminProtectedRoute><ApiDocumentation /></AdminProtectedRoute>} />
         <Route path="/admin/terms-management" component={() => <AdminProtectedRoute><TermsManagement /></AdminProtectedRoute>} />
         <Route path="/admin/privacy-policy-management" component={() => <AdminProtectedRoute><PrivacyPolicyManagement /></AdminProtectedRoute>} />
-        <Route path="/admin/rewards-management" component={() => <AdminProtectedRoute><RewardsManagement /></AdminProtectedRoute>} />
         <Route path="/admin/storage-dashboard" component={() => <AdminProtectedRoute><StorageDashboard /></AdminProtectedRoute>} />
 
-        
+
         {/* Driver routes - New Professional System */}
-        
+
         {/* Secure login routes - available always */}
         <Route path="/admin/secure-login" component={SecureAdminLogin} />
         <Route path="/secure-admin-login" component={SecureAdminLogin} />
         <Route path="/captain/secure-login" component={CaptainSimpleLogin} />
         <Route path="/captain/dashboard" component={CaptainDashboard} />
-        
+
         <Route path="/test-signup" component={TestSignup} />
         <Route path="/cloudinary-test" component={CloudinaryTest} />
         <Route path="/websocket-test" component={WebSocketTest} />
@@ -244,12 +240,12 @@ function AppRouter() {
         <Route path="/connectivity" component={ConnectivityDashboard} />
         <Route path="/sql-generator" component={SQLGenerator} />
         <Route path="/article/:id" component={ArticlePage} />
-        
+
         {/* Terms and Privacy Policy pages - available for authenticated users */}
         <Route path="/terms-and-conditions" component={TermsAndConditions} />
         <Route path="/terms" component={TermsAndConditions} />
         <Route path="/privacy-policy" component={PrivacyPolicy} />
-        
+
         <Route component={NotFound} />
       </Switch>
     </Router>
@@ -263,10 +259,10 @@ function App() {
         <div className="min-h-screen bg-background font-arabic text-foreground" dir="rtl">
           <Toaster />
           <AppRouter />
-          
+
           {/* 🎯 GLOBAL PROGRESS OVERLAY: Shows detailed progress for all operations */}
           <div className="fixed bottom-4 right-4 z-50 max-w-sm">
-            <DetailedProgress 
+            <DetailedProgress
               className="bg-white dark:bg-gray-900 border shadow-lg rounded-lg p-4"
               showSteps={true}
               showTimeEstimate={true}
