@@ -176,6 +176,39 @@ export class PostgresStorage implements IStorage {
     }
 
     // ============================================
+    // PENDING UPLOADS (Print Service)
+    // ============================================
+
+    async getPendingUploads(userId: string): Promise<any[]> {
+        // TODO: Implement pending uploads repository
+        // For now, return empty array to prevent errors
+        console.log('⚠️  getPendingUploads not yet implemented, returning empty array');
+        return [];
+    }
+
+    async addPendingUpload(upload: any): Promise<any> {
+        // TODO: Implement
+        console.log('⚠️  addPendingUpload not yet implemented');
+        return upload;
+    }
+
+    async updatePendingUpload(id: string, updates: any): Promise<any> {
+        // TODO: Implement
+        console.log('⚠️  updatePendingUpload not yet implemented');
+        return updates;
+    }
+
+    async deletePendingUpload(id: string): Promise<void> {
+        // TODO: Implement
+        console.log('⚠️  deletePendingUpload not yet implemented');
+    }
+
+    async clearPendingUploads(userId: string): Promise<void> {
+        // TODO: Implement
+        console.log('⚠️  clearPendingUploads not yet implemented');
+    }
+
+    // ============================================
     // PLACEHOLDER METHODS (to be implemented)
     // ============================================
 
