@@ -6066,4 +6066,16 @@ class MemStorage implements IStorage {
 // Use MemStorage temporarily due to database connection issues
 // Will switch to DatabaseStorage when database is ready
 // تبديل إلى Memory Storage مؤقتاً
-export const storage = new MemoryStorage();
+// Export PostgreSQL storage (persistent database)
+import { PostgresStorage } from './db/PostgresStorage';
+export const storage = new PostgresStorage();
+
+// Initialize database connection on startup
+storage.initialize().catch(err => {
+  console.error('❌ Failed to initialize PostgreSQL storage:', err);
+  console.log('⚠️  Falling back to MemoryStorage');
+  // Could fall back to MemoryStorage here if needed
+});
+
+// Keep MemoryStorage as backup (commented out)
+// export const storage = new MemoryStorage();
