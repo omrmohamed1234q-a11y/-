@@ -8,6 +8,7 @@ import { ProductRepository } from './ProductRepository';
 import { UserRepository } from './UserRepository';
 import { OrderRepository } from './OrderRepository';
 import { CartRepository } from './CartRepository';
+import { PendingUploadsRepository } from './PendingUploadsRepository';
 import { testConnection } from './client';
 
 export class PostgresStorage implements IStorage {
@@ -15,6 +16,7 @@ export class PostgresStorage implements IStorage {
     private userRepo = new UserRepository();
     private orderRepo = new OrderRepository();
     private cartRepo = new CartRepository();
+    private pendingUploadsRepo = new PendingUploadsRepository();
     private initialized = false;
 
     async initialize(): Promise<void> {
@@ -180,32 +182,23 @@ export class PostgresStorage implements IStorage {
     // ============================================
 
     async getPendingUploads(userId: string): Promise<any[]> {
-        // TODO: Implement pending uploads repository
-        // For now, return empty array to prevent errors
-        console.log('⚠️  getPendingUploads not yet implemented, returning empty array');
-        return [];
+        return this.pendingUploadsRepo.findByUserId(userId);
     }
 
     async addPendingUpload(upload: any): Promise<any> {
-        // TODO: Implement
-        console.log('⚠️  addPendingUpload not yet implemented');
-        return upload;
+        return this.pendingUploadsRepo.create(upload);
     }
 
     async updatePendingUpload(id: string, updates: any): Promise<any> {
-        // TODO: Implement
-        console.log('⚠️  updatePendingUpload not yet implemented');
-        return updates;
+        return this.pendingUploadsRepo.update(id, updates);
     }
 
     async deletePendingUpload(id: string): Promise<void> {
-        // TODO: Implement
-        console.log('⚠️  deletePendingUpload not yet implemented');
+        await this.pendingUploadsRepo.delete(id);
     }
 
     async clearPendingUploads(userId: string): Promise<void> {
-        // TODO: Implement
-        console.log('⚠️  clearPendingUploads not yet implemented');
+        await this.pendingUploadsRepo.deleteByUserId(userId);
     }
 
     // ============================================
