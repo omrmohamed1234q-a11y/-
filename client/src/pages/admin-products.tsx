@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ProductForm } from '@/components/ProductForm';
 import { apiRequest } from '@/lib/queryClient';
 import { toast } from '@/hooks/use-toast';
@@ -32,8 +32,7 @@ export default function AdminProductsPage() {
   // Create product mutation
   const createProductMutation = useMutation({
     mutationFn: async (productData: any) => {
-      const response = await apiRequest('POST', '/api/admin/products', productData);
-      return response.json();
+      return await apiRequest('POST', '/api/admin/products', productData);
     },
     onSuccess: () => {
       toast({
@@ -42,6 +41,7 @@ export default function AdminProductsPage() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
       setShowProductForm(false);
+      setEditingProduct(null);
     },
     onError: (error: any) => {
       toast({
@@ -55,8 +55,7 @@ export default function AdminProductsPage() {
   // Update product mutation
   const updateProductMutation = useMutation({
     mutationFn: async ({ id, productData }: { id: string; productData: any }) => {
-      const response = await apiRequest('PUT', `/api/admin/products/${id}`, productData);
-      return response.json();
+      return await apiRequest('PUT', `/api/admin/products/${id}`, productData);
     },
     onSuccess: () => {
       toast({
@@ -79,17 +78,36 @@ export default function AdminProductsPage() {
   // Delete product mutation
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const response = await apiRequest('DELETE', `/api/admin/products/${productId}`);
-      return response.json();
+      console.log('🚀 Mutation function called for:', productId);
+      return await apiRequest('DELETE', `/api/admin/products/${productId}`);
     },
-    onSuccess: () => {
+    onSuccess: (_data, productId) => {
+      console.log('✅ Delete mutation succeeded for:', productId);
+
+      // CRITICAL FIX: Manually update cache instead of refetching
+      // because staleTime: Infinity prevents refetch from working
+      queryClient.setQueryData(['/api/admin/products'], (oldData: Product[] | undefined) => {
+        if (!oldData) return [];
+        const newData = oldData.filter(p => p.id !== productId);
+        console.log(`📊 Admin cache updated: ${oldData.length} → ${newData.length} products`);
+        return newData;
+      });
+
+      // ALSO update public products cache (for store page)
+      queryClient.setQueryData(['/api/products'], (oldData: Product[] | undefined) => {
+        if (!oldData) return [];
+        const newData = oldData.filter(p => p.id !== productId);
+        console.log(`📊 Store cache updated: ${oldData.length} → ${newData.length} products`);
+        return newData;
+      });
+
       toast({
         title: 'تم حذف المنتج بنجاح',
         description: 'تم حذف المنتج من المتجر',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
     },
     onError: (error: any) => {
+      console.log('❌ Delete mutation failed:', error);
       toast({
         title: 'خطأ في حذف المنتج',
         description: error.message || 'حدث خطأ أثناء حذف المنتج',
@@ -121,9 +139,25 @@ export default function AdminProductsPage() {
     setShowProductForm(true);
   };
 
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = (productId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+
+    console.log('🗑️ handleDeleteProduct called with ID:', productId);
+
+    // Prevent double execution
+    if (deleteProductMutation.isPending) {
+      console.log('⏳ Delete already in progress, ignoring...');
+      return;
+    }
+
     if (window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+      console.log('✅ User confirmed deletion, calling mutation...');
       deleteProductMutation.mutate(productId);
+    } else {
+      console.log('❌ User cancelled deletion');
     }
   };
 
@@ -295,9 +329,9 @@ export default function AdminProductsPage() {
             <div>
               <p className="text-xs text-gray-500">القيمة</p>
               <p className="text-lg font-bold text-gray-900">
-                {Math.round(products.reduce((sum, p) => {
+                {products.reduce((sum, p) => {
                   return sum + (parseFloat(p.price) * (p.availableCopies || 0));
-                }, 0) / 1000).toLocaleString('ar-EG')}k
+                }, 0).toLocaleString('ar-EG')} جنيه
               </p>
             </div>
           </div>
@@ -368,12 +402,20 @@ export default function AdminProductsPage() {
           </CardHeader>
           <CardContent>
             {filteredProducts.length === 0 ? (
-              <div className="text-center py-16">
-                <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">لا توجد منتجات</h3>
-                <p className="text-gray-500 mb-6">ابدأ بإضافة منتجك الأول</p>
-                <Button onClick={handleAddNewProduct} className="bg-blue-500 hover:bg-blue-600">
-                  <Plus className="w-4 h-4 ml-2" />
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl flex items-center justify-center mb-6">
+                  <Package className="w-12 h-12 text-blue-500" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">لا توجد منتجات</h3>
+                <p className="text-gray-500 mb-8 max-w-md text-center">
+                  ابدأ رحلتك بإضافة منتجك الأول وشاهد مبيعاتك تنمو
+                </p>
+                <Button
+                  onClick={handleAddNewProduct}
+                  size="lg"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg"
+                >
+                  <Plus className="w-5 h-5 ml-2" />
                   إضافة منتج جديد
                 </Button>
               </div>
@@ -539,10 +581,15 @@ export default function AdminProductsPage() {
 
       {/* Product Form Dialog */}
       <Dialog open={showProductForm} onOpenChange={setShowProductForm}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingProduct ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+            </DialogTitle>
+          </DialogHeader>
           <ProductForm
             editingProduct={editingProduct}
-            onSave={editingProduct ? handleUpdateProduct : handleCreateProduct}
+            onSubmit={handleSaveProduct}
             onCancel={() => {
               setShowProductForm(false);
               setEditingProduct(null);

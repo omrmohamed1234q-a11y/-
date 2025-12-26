@@ -17,10 +17,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [, setLocation] = useLocation();
   const [expandedPreview, setExpandedPreview] = useState<string | null>(null);
 
-  const { 
-    cart, 
-    isLoading, 
-    updateQuantity, 
+  const {
+    cart,
+    isLoading,
+    updateQuantity,
     removeItem,
     isUpdatingQuantity,
     isRemovingItem
@@ -74,9 +74,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           <img
             src={previewUrl}
             alt={item.productName}
-            className={`w-full h-full object-cover cursor-pointer transition-all duration-200 ${
-              isExpanded ? 'scale-105' : 'hover:scale-105'
-            }`}
+            className={`w-full h-full object-cover cursor-pointer transition-all duration-200 ${isExpanded ? 'scale-105' : 'hover:scale-105'
+              }`}
             onClick={() => setExpandedPreview(isExpanded ? null : item.id)}
           />
           <div className="absolute top-1 right-1 bg-black/60 text-white text-xs px-1 py-0.5 rounded">
@@ -104,8 +103,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent 
-        className="w-full sm:max-w-md flex flex-col h-full" 
+      <SheetContent
+        className="w-full sm:max-w-md flex flex-col h-full"
         data-testid="cart-drawer"
       >
         <SheetHeader className="flex-shrink-0">
@@ -182,39 +181,37 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             <h4 className="font-semibold text-base text-gray-800 mb-2" data-testid={`item-name-${item.id}`}>
                               {item.productName}
                             </h4>
-                            
+
                             {/* Clean attributes display with badges */}
                             <div className="flex flex-wrap gap-1.5 mb-2">
                               {/* Paper size badge with color coding for large formats */}
-                              <Badge 
-                                variant="secondary" 
-                                className={`text-xs font-medium ${
-                                  ['A0', 'A1', 'A2'].includes(item.variant?.paperSize) 
-                                    ? 'bg-purple-100 text-purple-700 border-purple-200' 
+                              <Badge
+                                variant="secondary"
+                                className={`text-xs font-medium ${['A0', 'A1', 'A2'].includes(item.variant?.paperSize)
+                                    ? 'bg-purple-100 text-purple-700 border-purple-200'
                                     : 'bg-blue-100 text-blue-700 border-blue-200'
-                                }`}
+                                  }`}
                               >
                                 {item.variant?.paperSize || 'A4'} • {item.variant?.pages || 1} صفحة
                               </Badge>
-                              
+
                               {/* Color mode badge */}
-                              <Badge 
-                                variant="outline" 
-                                className={`text-xs font-medium ${
-                                  item.variant?.colorMode === 'color' 
-                                    ? 'bg-pink-100 text-pink-700 border-pink-200' 
+                              <Badge
+                                variant="outline"
+                                className={`text-xs font-medium ${item.variant?.colorMode === 'color'
+                                    ? 'bg-pink-100 text-pink-700 border-pink-200'
                                     : 'bg-gray-100 text-gray-700 border-gray-200'
-                                }`}
+                                  }`}
                               >
                                 {item.variant?.colorMode === 'color' ? 'ملون' : 'أبيض وأسود'}
                               </Badge>
-                              
+
                               {/* Paper type badge */}
                               <Badge variant="outline" className="text-xs font-medium bg-green-100 text-green-700 border-green-200">
                                 {item.variant?.paperType === 'plain' ? 'ورق عادي' : item.variant?.paperType}
                               </Badge>
                             </div>
-                            
+
                             {/* Double sided indicator */}
                             {item.variant?.doubleSided && (
                               <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-fit">
@@ -222,7 +219,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                               </div>
                             )}
                           </div>
-                          
+
                           <Button
                             variant="ghost"
                             size="sm"
@@ -263,7 +260,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                               <Plus className="h-4 w-4" />
                             </Button>
                           </div>
-                          
+
                           {/* Enhanced pricing display */}
                           <div className="text-right">
                             <div className="text-lg font-bold text-gray-900" data-testid={`item-total-${item.id}`}>
@@ -284,7 +281,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
               {/* Cart Summary */}
               <Separator className="my-4" />
-              
+
               <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">المجموع الفرعي:</span>
@@ -292,9 +289,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     {formatPrice(subtotal)} جنيه
                   </span>
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="flex justify-between items-center text-lg font-bold">
                   <span>الإجمالي:</span>
                   <span data-testid="cart-total">
@@ -318,7 +315,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 المتابعة للدفع ({cart.totalQuantity} عنصر)
               </Button>
-              
+
               <Button
                 onClick={handleContinueShopping}
                 variant="outline"

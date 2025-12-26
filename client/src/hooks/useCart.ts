@@ -49,12 +49,11 @@ export function useCart() {
       quantity?: number;
       variant?: { size?: string; color?: string; }; // 🔒 FIXED: Replaced 'any' with proper type
     }) => {
-      const response = await apiRequest('POST', '/api/cart/add', {
+      return await apiRequest('POST', '/api/cart/add', {
         productId,
         quantity,
         variant,
       });
-      return await response.json(); // 🔒 FIXED: Parse JSON from Response
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -76,8 +75,7 @@ export function useCart() {
   // Update quantity mutation
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ itemId, quantity }: { itemId: string; quantity: number }) => {
-      const response = await apiRequest('PUT', `/api/cart/items/${itemId}`, { quantity });
-      return await response.json(); // 🔒 FIXED: Parse JSON from Response
+      return await apiRequest('PUT', `/api/cart/items/${itemId}`, { quantity });
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -99,8 +97,7 @@ export function useCart() {
   // Remove item mutation
   const removeItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
-      const response = await apiRequest('DELETE', `/api/cart/items/${itemId}`);
-      return await response.json(); // 🔒 FIXED: Parse JSON from Response
+      return await apiRequest('DELETE', `/api/cart/items/${itemId}`);
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -122,8 +119,7 @@ export function useCart() {
   // Clear cart mutation
   const clearCartMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('DELETE', '/api/cart/clear');
-      return await response.json(); // 🔒 FIXED: Parse JSON from Response
+      return await apiRequest('DELETE', '/api/cart/clear');
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -156,8 +152,7 @@ export function useCart() {
         type: string;
       } | null;
     }) => {
-      const response = await apiRequest('POST', '/api/checkout', checkoutData);
-      return await response.json(); // 🔒 FIXED: Parse JSON from Response
+      return await apiRequest('POST', '/api/checkout', checkoutData);
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -181,21 +176,21 @@ export function useCart() {
     cart: cart || { items: [], totalQuantity: 0, subtotal: 0, currency: 'جنيه' },
     cartCount: cartCount?.count || 0,
     isLoading,
-    
+
     // Actions
     addToCart: addToCartMutation.mutate,
     updateQuantity: updateQuantityMutation.mutate,
     removeItem: removeItemMutation.mutate,
     clearCart: clearCartMutation.mutate,
     checkout: checkoutMutation.mutate,
-    
+
     // States
     isAddingToCart: addToCartMutation.isPending,
     isUpdatingQuantity: updateQuantityMutation.isPending,
     isRemovingItem: removeItemMutation.isPending,
     isClearingCart: clearCartMutation.isPending,
     isCheckingOut: checkoutMutation.isPending,
-    
+
     // Error states
     addToCartError: addToCartMutation.error,
     updateQuantityError: updateQuantityMutation.error,

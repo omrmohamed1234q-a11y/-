@@ -66,14 +66,14 @@ export function PartnerProductsSection({ partnerId, partnerName }: PartnerProduc
   // Fetch partner products
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['/api/partners', partnerId, 'products'],
-    queryFn: () => apiRequest('GET', `/api/partners/${partnerId}/products`).then(res => res.json())
+    queryFn: () => apiRequest('GET', `/api/partners/${partnerId}/products`)
   });
 
   // Create product mutation
   const createProductMutation = useMutation({
-    mutationFn: (productData: any) => 
-      apiRequest('POST', '/api/admin/partner-products', { 
-        ...productData, 
+    mutationFn: (productData: any) =>
+      apiRequest('POST', '/api/admin/partner-products', {
+        ...productData,
         partnerId,
         tags: productData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
       }),
@@ -96,7 +96,7 @@ export function PartnerProductsSection({ partnerId, partnerName }: PartnerProduc
 
   // Update product mutation
   const updateProductMutation = useMutation({
-    mutationFn: ({ id, ...productData }: any) => 
+    mutationFn: ({ id, ...productData }: any) =>
       apiRequest('PUT', `/api/admin/partner-products/${id}`, {
         ...productData,
         tags: productData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
@@ -183,7 +183,7 @@ export function PartnerProductsSection({ partnerId, partnerName }: PartnerProduc
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const productData = {
       ...formData,
       price: parseFloat(formData.price).toFixed(2),
@@ -500,11 +500,11 @@ export function PartnerProductsSection({ partnerId, partnerName }: PartnerProduc
                             <Badge variant="destructive">نفد المخزون</Badge>
                           )}
                         </div>
-                        
+
                         <p className="text-sm text-muted-foreground mb-2" data-testid={`text-product-description-${product.id}`}>
                           {product.description}
                         </p>
-                        
+
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             {getCategoryIcon(product.category)}
@@ -517,7 +517,7 @@ export function PartnerProductsSection({ partnerId, partnerName }: PartnerProduc
                             {product.quantity} {product.unit}
                           </span>
                         </div>
-                        
+
                         {product.tags && product.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {product.tags.map((tag, index) => (
@@ -534,7 +534,7 @@ export function PartnerProductsSection({ partnerId, partnerName }: PartnerProduc
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="flex gap-2 flex-shrink-0">
                       <Button
                         variant="outline"

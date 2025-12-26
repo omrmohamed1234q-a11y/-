@@ -25,15 +25,14 @@ export default function PaymentSuccess() {
     const verifyAndFetchOrder = async () => {
       try {
         setLoading(true);
-        
+
         if (!orderId) {
           throw new Error('معرف الطلب مفقود');
         }
-        
+
         // 🔒 SECURE: Fetch order from server using authenticated API
         // The server should verify payment status with Paymob before returning order details
-        const response = await apiRequest('GET', `/api/orders/verify-payment/${orderId}`);
-        const result = await response.json(); // apiRequest returns Response object
+        const result = await apiRequest('GET', `/api/orders/verify-payment/${orderId}`);
 
         if (result.success && result.order) {
           setOrderDetails(result.order);
@@ -52,7 +51,7 @@ export default function PaymentSuccess() {
           description: error.message || 'لا يمكن التحقق من حالة الدفع',
           variant: "destructive",
         });
-        
+
         // 🔒 SECURE: Don't create fake orders on error
         // Redirect to home or show error instead
         setTimeout(() => {
@@ -264,7 +263,7 @@ export default function PaymentSuccess() {
                 <span className="text-blue-600 text-sm font-bold">3</span>
               </div>
               <p className="text-sm">
-                {orderDetails.deliveryMethod === 'delivery' 
+                {orderDetails.deliveryMethod === 'delivery'
                   ? 'سيتم إرسال الكابتن لتوصيل الطلب'
                   : 'ستتلقى إشعار عندما يكون الطلب جاهز للاستلام'
                 }

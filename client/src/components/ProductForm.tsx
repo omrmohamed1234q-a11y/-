@@ -11,12 +11,12 @@ import { X, Upload, Plus } from "lucide-react";
 
 interface ProductFormProps {
   editingProduct?: any;
-  onSave: (productData: any) => void;
+  onSubmit: (productData: any) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
-export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: ProductFormProps) {
+export function ProductForm({ editingProduct, onSubmit, onCancel, isLoading }: ProductFormProps) {
   const [formData, setFormData] = useState({
     name: editingProduct?.name || '',
     nameEn: editingProduct?.nameEn || '',
@@ -25,31 +25,35 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
     category: editingProduct?.category || '',
     price: editingProduct?.price || '',
     originalPrice: editingProduct?.originalPrice || '',
-    
+
     // Educational Fields
     curriculumType: editingProduct?.curriculumType || '',
     subject: editingProduct?.subject || '',
     gradeLevel: editingProduct?.gradeLevel || '',
     authorPublisher: editingProduct?.authorPublisher || '',
-    
+
     // Product Types
     productTypes: editingProduct?.productTypes || [],
     isDigital: editingProduct?.isDigital || false,
     downloadUrl: editingProduct?.downloadUrl || '',
     downloadLimits: editingProduct?.downloadLimits || 'unlimited',
-    
+
     // Print Options
     coverType: editingProduct?.coverType || 'color',
     availableCopies: editingProduct?.availableCopies || 0,
     canPrintDirectly: editingProduct?.canPrintDirectly || false,
-    
+
     // Features
     featured: editingProduct?.featured || false,
     teacherOnly: editingProduct?.teacherOnly || false,
     vip: editingProduct?.vip || false,
-    
+
     // Media
-    imageUrl: editingProduct?.imageUrl || ''
+    imageUrl: editingProduct?.imageUrl || '',
+
+    // Delivery Type
+    deliveryType: editingProduct?.deliveryType || 'same_day', // 'same_day' or 'reservation'
+    reservationDays: editingProduct?.reservationDays || 0
   });
 
   const curriculumOptions = [
@@ -133,14 +137,14 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    onSubmit(formData);
   };
 
   const uploadToCloudinary = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
-    
+
     try {
       const response = await fetch(
         `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
@@ -183,13 +187,13 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
           </Button>
         </div>
       </CardHeader>
-      
+
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">المعلومات الأساسية</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">اسم المنتج (بالعربية) *</Label>
@@ -201,7 +205,7 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
                   required
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="nameEn">اسم المنتج (بالإنجليزية)</Label>
                 <Input
@@ -238,7 +242,7 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
           {/* Educational Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">المعلومات التعليمية</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="curriculumType">نوع المنهج</Label>
@@ -303,7 +307,7 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
           {/* Product Categories and Types */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">فئة ونوع المنتج</h3>
-            
+
             <div>
               <Label htmlFor="category">فئة المنتج</Label>
               <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
@@ -354,7 +358,7 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
           {/* Pricing */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">السعر والتوفر</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="price">السعر (جنيه مصري) *</Label>
@@ -397,7 +401,7 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
           {/* Digital Content Options */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">خيارات المحتوى الرقمي</h3>
-            
+
             <div className="flex items-center space-x-2 space-x-reverse">
               <Checkbox
                 id="isDigital"
@@ -439,7 +443,7 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
           {/* Print Options */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">خيارات الطباعة</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="coverType">نوع الغلاف</Label>
@@ -465,36 +469,65 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
             </div>
           </div>
 
-          {/* Image Upload */}
+          {/* Image URL */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">صورة المنتج</h3>
-            
+
             <div>
-              <Label htmlFor="imageUpload">رفع صورة المنتج</Label>
-              <div className="mt-2">
-                <label htmlFor="imageUpload" className="cursor-pointer">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                    <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm text-gray-600">اضغط لرفع صورة أو اسحب الصورة هنا</p>
-                    <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF حتى 10MB</p>
-                  </div>
-                </label>
-                <input
-                  id="imageUpload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
-              
+              <Label htmlFor="imageUrl">رابط صورة المنتج</Label>
+              <Input
+                id="imageUrl"
+                value={formData.imageUrl}
+                onChange={(e) => handleInputChange('imageUrl', e.target.value)}
+                placeholder="https://example.com/image.jpg"
+              />
+              <p className="text-xs text-gray-500 mt-1">الصق رابط الصورة من Cloudinary أو أي مصدر آخر</p>
+
               {formData.imageUrl && (
                 <div className="mt-4">
                   <img
                     src={formData.imageUrl}
                     alt="Product preview"
                     className="w-32 h-32 object-cover rounded-lg border"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=Invalid+URL';
+                    }}
                   />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Delivery Type */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">نوع التوصيل</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="deliveryType">طريقة التوصيل</Label>
+                <Select value={formData.deliveryType} onValueChange={(value) => handleInputChange('deliveryType', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر طريقة التوصيل" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="same_day">شحن في نفس اليوم</SelectItem>
+                    <SelectItem value="reservation">بالحجز (الاستلام بعد مدة)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.deliveryType === 'reservation' && (
+                <div>
+                  <Label htmlFor="reservationDays">عدد الأيام للاستلام</Label>
+                  <Input
+                    id="reservationDays"
+                    type="number"
+                    min="1"
+                    value={formData.reservationDays}
+                    onChange={(e) => handleInputChange('reservationDays', parseInt(e.target.value) || 0)}
+                    placeholder="عدد الأيام"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">مثال: 7 أيام للاستلام</p>
                 </div>
               )}
             </div>
@@ -503,7 +536,7 @@ export function ProductForm({ editingProduct, onSave, onCancel, isLoading }: Pro
           {/* Features */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">المميزات الخاصة</h3>
-            
+
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center space-x-2 space-x-reverse">
                 <Checkbox

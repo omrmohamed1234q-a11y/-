@@ -33,6 +33,7 @@ export default function AdminActionsMenu({
   itemId,
   itemType = 'item'
 }: AdminActionsMenuProps) {
+  console.log('🎯 AdminActionsMenu:', itemId, 'showDelete:', showDelete, 'hasOnDelete:', !!onDelete);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -53,28 +54,31 @@ export default function AdminActionsMenu({
             عرض التفاصيل
           </DropdownMenuItem>
         )}
-        
+
         {showEdit && onEdit && (
           <DropdownMenuItem onClick={onEdit} data-testid={`action-edit-${itemId}`}>
             <Edit className="ml-2 h-4 w-4" />
             تعديل
           </DropdownMenuItem>
         )}
-        
+
         {showDuplicate && onDuplicate && (
           <DropdownMenuItem onClick={onDuplicate} data-testid={`action-duplicate-${itemId}`}>
             <Copy className="ml-2 h-4 w-4" />
             نسخ
           </DropdownMenuItem>
         )}
-        
+
         {(showEdit || showView || showDuplicate) && showDelete && (
           <DropdownMenuSeparator />
         )}
-        
+
         {showDelete && onDelete && (
-          <DropdownMenuItem 
-            onClick={onDelete} 
+          <DropdownMenuItem
+            onClick={() => {
+              console.log('🗑️ Delete clicked for item:', itemId);
+              onDelete();
+            }}
             className="text-red-600 focus:text-red-600"
             data-testid={`action-delete-${itemId}`}
           >

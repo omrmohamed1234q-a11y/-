@@ -39,14 +39,13 @@ export default function UsersManagement() {
   // Fetch users from Supabase
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["/api/admin/users"],
-    queryFn: () => apiRequest("GET", "/api/admin/users").then(res => res.json()),
+    queryFn: () => apiRequest("GET", "/api/admin/users"),
   });
 
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async (userData: Partial<User> & { id: string }) => {
-      const response = await apiRequest("PUT", `/api/admin/users/${userData.id}`, userData);
-      return response.json();
+      return await apiRequest("PUT", `/api/admin/users/${userData.id}`, userData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -69,8 +68,7 @@ export default function UsersManagement() {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const response = await apiRequest("DELETE", `/api/admin/users/${userId}`);
-      return response.json();
+      return await apiRequest("DELETE", `/api/admin/users/${userId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -91,8 +89,7 @@ export default function UsersManagement() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: Partial<User>) => {
-      const response = await apiRequest("POST", "/api/admin/users", userData);
-      return response.json();
+      return await apiRequest("POST", "/api/admin/users", userData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -115,13 +112,13 @@ export default function UsersManagement() {
   // Filter users based on search and filters
   const filteredUsers = users.filter((user: User) => {
     const matchesSearch = user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.lastName?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.lastName?.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesRole = filterRole === "all" || user.role === filterRole;
     const matchesStatus = filterStatus === "all" || user.status === filterStatus;
-    
+
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -141,7 +138,7 @@ export default function UsersManagement() {
       ...userData,
       age: userData.age && typeof userData.age === 'string' ? parseInt(userData.age) : userData.age
     };
-    
+
     if (selectedUser) {
       updateUserMutation.mutate({ ...cleanedData, id: selectedUser.id });
     } else {
@@ -226,7 +223,7 @@ export default function UsersManagement() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -238,7 +235,7 @@ export default function UsersManagement() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -250,7 +247,7 @@ export default function UsersManagement() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -278,7 +275,7 @@ export default function UsersManagement() {
                 data-testid="input-search-users"
               />
             </div>
-            
+
             <Select value={filterRole} onValueChange={setFilterRole}>
               <SelectTrigger className="w-full md:w-48" data-testid="select-filter-role">
                 <SelectValue placeholder="فلترة بالدور" />
@@ -290,7 +287,7 @@ export default function UsersManagement() {
                 <SelectItem value="student">طالب</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-full md:w-48" data-testid="select-filter-status">
                 <SelectValue placeholder="فلترة بالحالة" />
@@ -352,10 +349,10 @@ export default function UsersManagement() {
                     </td>
                     <td className="p-3">
                       <Badge className={`${getStatusBadgeColor(user.status, user.emailConfirmed)}`}>
-                        {!user.emailConfirmed ? 'غير مؤكد' : 
-                         user.status === 'active' ? 'نشط' : 
-                         user.status === 'suspended' ? 'معلق' : 
-                         user.status === 'pending' ? 'في الانتظار' : 'غير محدد'}
+                        {!user.emailConfirmed ? 'غير مؤكد' :
+                          user.status === 'active' ? 'نشط' :
+                            user.status === 'suspended' ? 'معلق' :
+                              user.status === 'pending' ? 'في الانتظار' : 'غير محدد'}
                       </Badge>
                     </td>
                     <td className="p-3">{user.gradeLevel || 'غير محدد'}</td>
@@ -386,7 +383,7 @@ export default function UsersManagement() {
                 ))}
               </tbody>
             </table>
-            
+
             {filteredUsers.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 لا توجد مستخدمين مطابقين للبحث
@@ -404,7 +401,7 @@ export default function UsersManagement() {
               {selectedUser ? 'تعديل المستخدم' : 'إضافة مستخدم جديد'}
             </DialogTitle>
           </DialogHeader>
-          
+
           <UserForm
             user={selectedUser}
             onSave={handleSaveUser}
@@ -449,19 +446,19 @@ function UserForm({ user, onSave, onCancel, isLoading }: UserFormProps) {
         <Input
           type="email"
           value={formData.email}
-          onChange={(e) => setFormData({...formData, email: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           required
           disabled={!!user} // Disable email editing for existing users
           data-testid="input-user-email"
         />
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">الاسم الأول</label>
           <Input
             value={formData.firstName}
-            onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
             data-testid="input-user-first-name"
           />
         </div>
@@ -469,25 +466,25 @@ function UserForm({ user, onSave, onCancel, isLoading }: UserFormProps) {
           <label className="block text-sm font-medium mb-1">الاسم الأخير</label>
           <Input
             value={formData.lastName}
-            onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
             data-testid="input-user-last-name"
           />
         </div>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium mb-1">الاسم الكامل</label>
         <Input
           value={formData.fullName}
-          onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
           data-testid="input-user-full-name"
         />
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">الدور</label>
-          <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
+          <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
             <SelectTrigger data-testid="select-user-role">
               <SelectValue />
             </SelectTrigger>
@@ -498,10 +495,10 @@ function UserForm({ user, onSave, onCancel, isLoading }: UserFormProps) {
             </SelectContent>
           </Select>
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium mb-1">الحالة</label>
-          <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+          <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
             <SelectTrigger data-testid="select-user-status">
               <SelectValue />
             </SelectTrigger>
@@ -513,13 +510,13 @@ function UserForm({ user, onSave, onCancel, isLoading }: UserFormProps) {
           </Select>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">المرحلة الدراسية</label>
           <Input
             value={formData.gradeLevel}
-            onChange={(e) => setFormData({...formData, gradeLevel: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, gradeLevel: e.target.value })}
             placeholder="مثل: الصف الثالث الثانوي"
             data-testid="input-user-grade-level"
           />
@@ -529,22 +526,22 @@ function UserForm({ user, onSave, onCancel, isLoading }: UserFormProps) {
           <Input
             type="number"
             value={formData.age}
-            onChange={(e) => setFormData({...formData, age: parseInt(e.target.value) || ''})}
+            onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || '' })}
             data-testid="input-user-age"
           />
         </div>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium mb-1">رقم الهاتف</label>
         <Input
           value={formData.phone}
-          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           placeholder="+20 123 456 7890"
           data-testid="input-user-phone"
         />
       </div>
-      
+
       <div className="flex gap-2 pt-4">
         <Button type="submit" disabled={isLoading} data-testid="button-save-user">
           {isLoading ? 'جاري الحفظ...' : 'حفظ'}

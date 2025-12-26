@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Star, Clock, Heart, Tag, Sparkles } from 'lucide-react';
+import { ProductDetailsModal } from '@/components/ProductDetailsModal';
 
 interface Product {
     id: string;
@@ -27,6 +28,10 @@ interface Product {
     subject?: string | null;
     availableCopies?: number;
     tags?: string[] | null;
+    deliveryType?: string;
+    reservationDays?: number;
+    curriculumType?: string | null;
+    authorPublisher?: string | null;
     createdAt?: string;
 }
 
@@ -37,6 +42,9 @@ export default function Store() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFilter, setSelectedFilter] = useState<string>('all');
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [showProductModal, setShowProductModal] = useState(false);
+    const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
     const { data: allProducts = [], isLoading } = useQuery<Product[]>({
         queryKey: ['/api/products'],
@@ -73,17 +81,43 @@ export default function Store() {
         return filtered;
     }, [allProducts, searchQuery, selectedFilter]);
 
+    const handleProductClick = (product: Product) => {
+        setSelectedProduct(product);
+        setShowProductModal(true);
+    };
+
+    const toggleFavorite = (productId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setFavorites(prev => {
+            const newFavorites = new Set(prev);
+            if (newFavorites.has(productId)) {
+                newFavorites.delete(productId);
+                toast({
+                    title: 'تمت الإزالة',
+                    description: 'تم إزالة المنتج من المفضلة',
+                });
+            } else {
+                newFavorites.add(productId);
+                toast({
+                    title: 'تمت الإضافة',
+                    description: 'تم إضافة المنتج للمفضلة',
+                });
+            }
+            return newFavorites;
+        });
+    };
+
     const handleAddToCart = async (product: Product) => {
         try {
             await addToCart({
                 productId: product.id,
                 quantity: 1,
-                source: 'store',
             });
             toast({
                 title: 'تمت الإضافة',
                 description: `تم إضافة ${product.name} إلى السلة`,
             });
+            setShowProductModal(false);
         } catch (error) {
             toast({
                 title: 'خطأ',
@@ -203,8 +237,8 @@ export default function Store() {
                         {products.map((product: Product) => (
                             <Card
                                 key={product.id}
-                                className="overflow-hidden hover:shadow-md transition-all duration-200 border-gray-200"
-                                onClick={() => handleAddToCart(product)}
+                                className="overflow-hidden hover:shadow-md transition-all duration-200 border-gray-200 cursor-pointer"
+                                onClick={() => handleProductClick(product)}
                             >
                                 <CardContent className="p-0">
                                     <div className="flex gap-3">
@@ -223,9 +257,14 @@ export default function Store() {
 
                                             <button
                                                 className="absolute top-2 left-2 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-sm flex items-center justify-center hover:bg-white transition-colors"
-                                                onClick={(e) => e.stopPropagation()}
+                                                onClick={(e) => toggleFavorite(product.id, e)}
                                             >
-                                                <Heart className="w-3.5 h-3.5 text-gray-600" />
+                                                <Heart
+                                                    className={`w-3.5 h-3.5 transition-colors ${favorites.has(product.id)
+                                                            ? 'fill-red-500 text-red-500'
+                                                            : 'text-gray-600'
+                                                        }`}
+                                                />
                                             </button>
 
                                             {product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price) && (
@@ -304,6 +343,15 @@ export default function Store() {
             </main>
 
             <BottomNav />
+
+            {/* Product Details Modal */}
+            <ProductDetailsModal
+                product={selectedProduct}
+                isOpen={showProductModal}
+                onClose={() => setShowProductModal(false)}
+                onAddToCart={handleAddToCart}
+                isAddingToCart={isAddingToCart}
+            />
         </div>
     );
 }

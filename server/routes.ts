@@ -3282,6 +3282,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public products endpoint (for store page)
+  app.get('/api/products', async (req: any, res) => {
+    try {
+      console.log('📦 GET /api/products - Fetching public products');
+      const products = await storage.getAllProducts();
+      console.log(`📊 Returning ${products.length} products to store`);
+      res.json(products);
+    } catch (error) {
+      console.error("❌ Error fetching public products:", error);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
   app.get('/api/admin/products', isAdminAuthenticated, async (req: any, res) => {
     try {
       const products = await storage.getAllProducts();
@@ -3334,10 +3347,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/products/:id', isAdminAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
+      console.log('🗑️ DELETE /api/admin/products/:id called with ID:', id);
+
+      // Get product before deletion for logging
+      const products = await storage.getAllProducts();
+      const productToDelete = products.find(p => p.id === id);
+      console.log('🔍 Product to delete:', productToDelete ? productToDelete.name : 'NOT FOUND');
+
       await storage.deleteProduct(id);
+
+      // Verify deletion
+      const productsAfter = await storage.getAllProducts();
+      const stillExists = productsAfter.find(p => p.id === id);
+      console.log('✅ Product deleted successfully. Still exists?', !!stillExists);
+      console.log('📊 Products count before:', products.length, 'after:', productsAfter.length);
+
       res.json({ success: true });
     } catch (error) {
-      console.error("Error deleting product:", error);
+      console.error("❌ Error deleting product:", error);
       res.status(500).json({ message: "Failed to delete product" });
     }
   });
@@ -4586,15 +4613,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const currentPartnerName = firstItem.partnerName;
 
     // Rule 1: Check source compatibility
-    if (currentSource !== newItem.source) {
+    // Helper: atbaali and print_service are compatible with each other
+    const areSourcesCompatible = (source1: CartSource, source2: CartSource): boolean => {
+      const internalSources = ['atbaali', 'print_service'];
+      if (internalSources.includes(source1) && internalSources.includes(source2)) {
+        return true; // Allow mixing atbaali and print_service
+      }
+      return source1 === source2; // Otherwise must match exactly
+    };
+
+    if (!areSourcesCompatible(currentSource, newItem.source)) {
       let message = '';
 
       if (currentSource === 'partner') {
         message = `لديك منتجات من ${currentPartnerName} في السلة. يجب إفراغ السلة أولاً لإضافة منتجات من مصدر آخر.`;
-      } else if (currentSource === 'print_service') {
-        message = 'لديك طلبات طباعة في السلة. يجب إفراغ السلة أولاً لإضافة منتجات.';
-      } else if (currentSource === 'atbaali') {
-        message = 'لديك منتجات من المتجر في السلة. يجب إفراغ السلة أولاً لإضافة منتجات من الشركاء.';
+      } else if (newItem.source === 'partner') {
+        message = 'لديك منتجات من المتجر أو الطباعة في السلة. يجب إفراغ السلة أولاً لإضافة منتجات من الشركاء.';
       }
 
       return {

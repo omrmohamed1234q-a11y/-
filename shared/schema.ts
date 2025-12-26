@@ -33,19 +33,19 @@ export const secureAdmins = pgTable("secure_admins", {
   fullName: text("full_name").notNull(),
   role: text("role").notNull().default("admin"), // admin, super_admin
   permissions: text("permissions").array().default(["read", "write"]), // Array of permissions
-  
+
   // Security Features
   isActive: boolean("is_active").default(true),
   lastLogin: timestamp("last_login"),
   failedAttempts: integer("failed_attempts").default(0),
   lockedUntil: timestamp("locked_until"),
   mustChangePassword: boolean("must_change_password").default(false),
-  
+
   // Audit Trail
   createdBy: varchar("created_by"),
   ipWhitelist: text("ip_whitelist").array(), // Array of allowed IPs
   sessionTimeout: integer("session_timeout").default(900), // 15 minutes default
-  
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -59,28 +59,28 @@ export const secureDrivers = pgTable("secure_drivers", {
   driverCode: text("driver_code").notNull().unique(), // Unique driver code
   fullName: text("full_name").notNull(),
   phone: text("phone").notNull(),
-  
+
   // Driver Info
   licenseNumber: text("license_number").notNull(),
   vehicleType: text("vehicle_type").notNull(), // "motorcycle", "car", "truck"
   vehiclePlate: text("vehicle_plate").notNull(),
-  
+
   // Security Features
   isActive: boolean("is_active").default(true),
   status: text("status").notNull().default("offline"), // "online", "offline", "busy", "suspended"
   lastLogin: timestamp("last_login"),
   failedAttempts: integer("failed_attempts").default(0),
   lockedUntil: timestamp("locked_until"),
-  
+
   // Performance Metrics
   totalDeliveries: integer("total_deliveries").default(0),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("5.00"),
   ratingCount: integer("rating_count").default(0),
-  
+
   // Audit Trail
   createdBy: varchar("created_by"),
   sessionTimeout: integer("session_timeout").default(900), // 15 minutes default
-  
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -91,21 +91,21 @@ export const securityLogs = pgTable("security_logs", {
   userId: varchar("user_id"), // Can be admin or driver ID
   userType: text("user_type").notNull(), // "admin", "driver"
   action: text("action").notNull(), // "login", "logout", "failed_login", "password_change", etc.
-  
+
   // Security Context
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   location: text("location"), // Geolocation if available
-  
+
   // Request Details
   endpoint: text("endpoint"),
   method: text("method"),
   success: boolean("success").default(false),
   errorMessage: text("error_message"),
-  
+
   // Additional Data
   metadata: jsonb("metadata"), // Additional context data
-  
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -161,18 +161,18 @@ export const privacyPolicy = pgTable("privacy_policy", {
   isActive: boolean("is_active").default(false),
   effectiveDate: timestamp("effective_date").notNull(),
   lastUpdated: varchar("last_updated").default('سبتمبر 2025'),
-  
+
   // Content sections
   introduction: text("introduction"),
   dataCollection: text("data_collection").notNull(),
-  dataUsage: text("data_usage").notNull(), 
+  dataUsage: text("data_usage").notNull(),
   dataSharing: text("data_sharing").notNull(),
   userRights: text("user_rights").notNull(),
   dataSecurity: text("data_security").notNull(),
   contactInfo: text("contact_info").notNull(),
   cookiePolicy: text("cookie_policy"),
   policyUpdates: text("policy_updates"),
-  
+
   // Metadata
   createdBy: varchar("created_by"), // Admin ID
   lastUpdatedBy: varchar("last_updated_by"), // Admin ID
@@ -189,7 +189,7 @@ export const partners = pgTable("partners", {
   shortDescription: text("short_description"), // Brief description for cards
   logoUrl: text("logo_url"),
   coverImageUrl: text("cover_image_url"),
-  
+
   // Contact & Location
   phone: text("phone"),
   email: text("email"),
@@ -197,36 +197,36 @@ export const partners = pgTable("partners", {
   city: text("city").notNull(),
   governorate: text("governorate").notNull(),
   coordinates: jsonb("coordinates"), // {lat: number, lng: number}
-  
+
   // Business Info
   businessType: text("business_type").notNull(), // "print_shop" | "bookstore" | "library" | "stationery"
   establishedYear: integer("established_year"),
   workingHours: jsonb("working_hours"), // {open: "09:00", close: "22:00", days: ["sunday", "monday"...]}
-  
+
   // Services & Offerings
   services: text("services").array(), // ["printing", "binding", "scanning", "design", "books", "stationery"]
   specialties: text("specialties").array(), // ["textbooks", "exam_materials", "university_notes", "art_supplies"]
-  
+
   // Media Gallery
   galleryImages: text("gallery_images").array(), // Array of image URLs
   videoUrl: text("video_url"), // Introduction video
-  
+
   // Ratings & Reviews
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"), // Average rating
   reviewCount: integer("review_count").default(0),
-  
+
   // Operational Status
   isActive: boolean("is_active").default(true),
   isVerified: boolean("is_verified").default(false),
   isFeatured: boolean("is_featured").default(false), // For homepage display
   displayOrder: integer("display_order").default(0), // For sorting on homepage
-  
+
   // Business Features
   hasDelivery: boolean("has_delivery").default(false),
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }),
   minOrderForDelivery: decimal("min_order_for_delivery", { precision: 10, scale: 2 }),
   acceptsOnlinePayment: boolean("accepts_online_payment").default(false),
-  
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -244,17 +244,17 @@ export const announcements = pgTable("announcements", {
   backgroundColor: text("background_color").default("#ff6b35"), // Orange like talabat
   textColor: text("text_color").default("#ffffff"),
   category: text("category").default("service"), // "service" | "promotion" | "announcement" | "article"
-  
+
   // Article content fields
   articleContent: text("article_content"), // Rich text content for articles
   articleAuthor: text("article_author"), // Author name for articles
   articleReadTime: integer("article_read_time"), // Estimated read time in minutes
   articleTags: text("article_tags").array(), // Tags for categorization
-  
+
   // Homepage display control
   showOnHomepage: boolean("show_on_homepage").default(false), // Whether to show on homepage
   homepagePriority: integer("homepage_priority").default(0), // Priority for homepage display (1-4)
-  
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -269,30 +269,30 @@ export const products = pgTable("products", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }),
   imageUrl: text("image_url"),
-  
+
   // Educational Curriculum Fields
   curriculumType: text("curriculum_type"), // "egyptian_arabic" | "egyptian_languages" | "azhar" | "igcse" | "american" | "ib" | "stem"
   subject: text("subject"), // "arabic" | "math" | "science" | "chemistry" | "physics" | "biology" | etc.
   gradeLevel: text("grade_level"), // "primary_1" | "primary_2" | ... | "secondary_12" | "university"
   authorPublisher: text("author_publisher"), // Teacher/Author/Publisher name
-  
+
   // Product Type and Format
   productTypes: text("product_types").array(), // ["book", "pdf", "worksheets", "exams", "solutions"]
   isDigital: boolean("is_digital").default(false),
   downloadUrl: text("download_url"),
-  
+
   // Print Options
   coverType: text("cover_type"), // "color" | "black_white"
   availableCopies: integer("available_copies").default(0),
   downloadLimits: text("download_limits"), // "once" | "unlimited"
   canPrintDirectly: boolean("can_print_directly").default(false),
-  
+
   // Legacy fields for backwards compatibility
   grade: text("grade"),
   publisher: text("publisher"),
   curriculum: text("curriculum"),
   stock: integer("stock").default(0),
-  
+
   // Enhanced Inventory Management
   currentStock: integer("current_stock").default(0),
   minStockLevel: integer("min_stock_level").default(5),
@@ -304,7 +304,7 @@ export const products = pgTable("products", {
   lastStockUpdate: timestamp("last_stock_update").defaultNow(),
   totalSold: integer("total_sold").default(0),
   averageMonthlySales: integer("average_monthly_sales").default(0),
-  
+
   // Ratings and engagement
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
   ratingCount: integer("rating_count").default(0),
@@ -313,6 +313,11 @@ export const products = pgTable("products", {
   teacherOnly: boolean("teacher_only").default(false),
   vip: boolean("vip").default(false),
   variants: jsonb("variants").default([]), // Array of {name, price, stock}
+
+  // Delivery Options
+  deliveryType: text("delivery_type").default("same_day"), // "same_day" | "reservation"
+  reservationDays: integer("reservation_days").default(0), // Number of days for reservation delivery
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -355,7 +360,7 @@ export const orders = pgTable("orders", {
   receivedAt: timestamp("received_at"), // When staff received the order
   printingStartedAt: timestamp("printing_started_at"), // When printing started
   printingCompletedAt: timestamp("printing_completed_at"), // When printing finished
-  
+
   // Address and delivery
   deliveryAddress: text("delivery_address"),
   shippingAddress: jsonb("shipping_address"), // Detailed address object
@@ -363,18 +368,18 @@ export const orders = pgTable("orders", {
   deliverySlot: text("delivery_slot"), // "asap" | "scheduled"
   scheduledDate: text("scheduled_date"),
   scheduledTime: text("scheduled_time"),
-  
+
   // Payment
   paymentMethod: text("payment_method"), // "cash" | "card" | "vodafone_cash" | "paymob" | "paytabs" | "fawry"
   paymentMethodText: text("payment_method_text"), // Arabic payment method text
   paymentStatus: text("payment_status").default("pending"),
-  
+
   // Points and vouchers
   pointsUsed: integer("points_used").default(0),
   pointsEarned: integer("points_earned").default(0),
   voucherCode: text("voucher_code"),
   voucherDiscount: decimal("voucher_discount", { precision: 10, scale: 2 }).default("0"),
-  
+
   // Driver and tracking
   driverId: varchar("driver_id"),
   driverName: text("driver_name"),
@@ -382,7 +387,7 @@ export const orders = pgTable("orders", {
   trackingNumber: text("tracking_number"),
   trackingUrl: text("tracking_url"),
   estimatedDelivery: integer("estimated_delivery"), // Minutes (legacy field for business logic)
-  
+
   // Advanced location and routing system - النظام المتقدم للمواقع والمسارات
   deliveryCoordinates: jsonb("delivery_coordinates"), // {lat: number, lng: number, address?: string}
   routeData: jsonb("route_data"), // Google Directions API response data
@@ -391,22 +396,22 @@ export const orders = pgTable("orders", {
   estimatedDistance: integer("estimated_distance"), // Distance in meters
   estimatedDuration: integer("estimated_duration"), // Duration in seconds
   routeLastUpdated: timestamp("route_last_updated"),
-  
+
   // Real-time tracking enhancements
   driverCurrentLocation: jsonb("driver_current_location"), // {lat, lng, timestamp, accuracy}
   customerTrackingEnabled: boolean("customer_tracking_enabled").default(true),
   routeOptimized: boolean("route_optimized").default(false),
   alternativeRoutes: jsonb("alternative_routes").default([]), // Alternative route options with default
-  
+
   // Notes and instructions
   deliveryNotes: text("delivery_notes"), // Customer notes for delivery
   driverNotes: text("driver_notes"), // Driver notes about delivery
   adminNotes: text("admin_notes"), // Admin internal notes
-  
+
   // Ratings and feedback
   rating: integer("rating"), // 1-5 stars
   review: text("review"),
-  
+
   // Timeline tracking
   timeline: jsonb("timeline").default([]), // Array of {event, timestamp, note}
   confirmedAt: timestamp("confirmed_at"),
@@ -415,7 +420,7 @@ export const orders = pgTable("orders", {
   outForDeliveryAt: timestamp("out_for_delivery_at"),
   deliveredAt: timestamp("delivered_at"),
   cancelledAt: timestamp("cancelled_at"),
-  
+
   // System fields
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -430,13 +435,13 @@ export const drivers = pgTable("drivers", {
   email: text("email").unique(), // Made optional
   phone: text("phone").notNull(),
   countryCode: text("country_code").default("+20"),
-  
+
   // Vehicle information
   vehicleType: text("vehicle_type"), // "motorcycle", "car", "bicycle", "walking"
   vehiclePlate: text("vehicle_plate"),
   vehicleModel: text("vehicle_model"),
   vehicleColor: text("vehicle_color"),
-  
+
   // Work information
   status: text("status").default("offline"), // "online", "offline", "busy", "suspended"
   isAvailable: boolean("is_available").default(true),
@@ -444,32 +449,32 @@ export const drivers = pgTable("drivers", {
   workingArea: text("working_area"), // Assigned delivery area
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
   ratingCount: integer("rating_count").default(0),
-  
+
   // Performance metrics
   totalDeliveries: integer("total_deliveries").default(0),
   completedDeliveries: integer("completed_deliveries").default(0),
   cancelledDeliveries: integer("cancelled_deliveries").default(0),
   averageDeliveryTime: integer("average_delivery_time"), // in minutes
   earnings: decimal("earnings", { precision: 10, scale: 2 }).default("0.00"),
-  
+
   // Account information
   nationalId: text("national_id"),
   dateOfBirth: timestamp("date_of_birth"),
   address: text("address"),
   emergencyContact: text("emergency_contact"),
   emergencyPhone: text("emergency_phone"),
-  
+
   // Authentication
   password: text("password"), // Hashed password for driver login
   isVerified: boolean("is_verified").default(false),
   documentsVerified: boolean("documents_verified").default(false),
-  
+
   // Activity tracking
   lastActiveAt: timestamp("last_active_at").defaultNow(),
   lastLocationUpdate: timestamp("last_location_update"),
   shiftStartTime: timestamp("shift_start_time"),
   shiftEndTime: timestamp("shift_end_time"),
-  
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -491,43 +496,43 @@ export const routeTracking = pgTable("route_tracking", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   orderId: varchar("order_id").notNull().references(() => orders.id),
   driverId: varchar("driver_id").notNull().references(() => drivers.id),
-  
+
   // Route Information
   startLocation: jsonb("start_location").notNull(), // {lat, lng, address}
   endLocation: jsonb("end_location").notNull(), // {lat, lng, address}
   waypointLocations: jsonb("waypoint_locations").default([]), // Array of waypoints
-  
+
   // Google Directions API Data
   googleRouteId: text("google_route_id"), // Google's unique route identifier
   encodedPolyline: text("encoded_polyline").notNull(),
   routeSteps: jsonb("route_steps").notNull(), // Detailed turn-by-turn directions
   routeBounds: jsonb("route_bounds"), // Northeast/Southwest bounds
-  
+
   // Route Metrics
   totalDistance: integer("total_distance").notNull(), // Distance in meters
   estimatedDuration: integer("estimated_duration").notNull(), // Duration in seconds
   actualDuration: integer("actual_duration"), // Actual delivery time
   trafficDuration: integer("traffic_duration"), // Duration with traffic
-  
+
   // Route Status and Optimization
   routeStatus: text("route_status").default("active"), // "active", "completed", "cancelled", "optimized"
   isOptimized: boolean("is_optimized").default(false),
   optimizationScore: decimal("optimization_score", { precision: 3, scale: 2 }),
   alternativeRoutes: jsonb("alternative_routes").default([]),
-  
+
   // Real-time Progress Tracking
   currentStep: integer("current_step").default(0), // Current step in route
   completedSteps: integer("completed_steps").default(0),
   remainingDistance: integer("remaining_distance"),
   remainingTime: integer("remaining_time"),
   progressPercentage: decimal("progress_percentage", { precision: 5, scale: 2 }).default("0.00"),
-  
+
   // Route Analytics
   averageSpeed: decimal("average_speed", { precision: 8, scale: 2 }), // km/h
   maxSpeed: decimal("max_speed", { precision: 8, scale: 2 }), // km/h
   idleTime: integer("idle_time").default(0), // Time spent idle in seconds
   deliveryEfficiency: decimal("delivery_efficiency", { precision: 5, scale: 2 }), // Performance metric
-  
+
   // Timestamps
   routeStartedAt: timestamp("route_started_at"),
   routeCompletedAt: timestamp("route_completed_at"),
@@ -541,29 +546,29 @@ export const routeWaypoints = pgTable("route_waypoints", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   routeId: varchar("route_id").notNull().references(() => routeTracking.id),
   waypointIndex: integer("waypoint_index").notNull(), // Order in the route
-  
+
   // Waypoint Location
   latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
   longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
   address: text("address"),
   waypointType: text("waypoint_type").notNull(), // "start", "pickup", "delivery", "stop", "end"
-  
+
   // Waypoint Status
   status: text("status").default("pending"), // "pending", "approaching", "arrived", "completed", "skipped"
   estimatedArrival: timestamp("estimated_arrival"),
   actualArrival: timestamp("actual_arrival"),
   departureTime: timestamp("departure_time"),
-  
+
   // Waypoint Details
   instructions: text("instructions"), // Special delivery instructions
   contactPerson: text("contact_person"),
   contactPhone: text("contact_phone"),
   notes: text("notes"),
-  
+
   // Performance Tracking
   waitTime: integer("wait_time").default(0), // Time spent at this waypoint
   serviceTime: integer("service_time").default(0), // Time to complete service
-  
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -626,12 +631,12 @@ export const cartItems = pgTable("cart_items", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   variant: text("variant"),
   notes: text("notes"),
-  
+
   // Cart source control fields - للتحكم في مصدر المنتجات
   productSource: text("product_source").notNull(), // "atbaali" | "partner" | "print_service"
   partnerId: varchar("partner_id"), // فقط للمنتجات من الشركاء
   partnerName: text("partner_name"), // اسم الشريك للعرض
-  
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -884,7 +889,7 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   subtotal: z.string().or(z.number()).optional(),
   totalAmount: z.string().or(z.number()).optional(),
   status: z.string().default("pending"),
-  
+
   // Advanced routing fields (all optional for backward compatibility)
   deliveryCoordinates: z.object({
     lat: z.number(),
@@ -1431,38 +1436,38 @@ export type PrivacyPolicy = typeof privacyPolicy.$inferSelect;
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(), // Reference to users table
-  
+
   // Notification content
   title: text("title").notNull(),
   message: text("message").notNull(),
   type: varchar("type", { length: 50 }).notNull().default("general"), // 'order', 'system', 'promotion', 'delivery', 'print', 'general'
   category: varchar("category", { length: 50 }), // Optional subcategory
-  
+
   // Visual & interaction
   iconType: varchar("icon_type", { length: 50 }), // Icon identifier for frontend
   actionUrl: text("action_url"), // Optional action URL when clicked
   actionData: jsonb("action_data"), // Additional data for actions
-  
+
   // Status tracking
   isRead: boolean("is_read").default(false),
   isClicked: boolean("is_clicked").default(false),
   isPinned: boolean("is_pinned").default(false), // Important notifications
   priority: varchar("priority", { length: 20 }).default("normal"), // 'low', 'normal', 'high', 'urgent'
-  
+
   // Metadata
   sourceId: varchar("source_id"), // Reference to related entity (order ID, etc.)
   sourceType: varchar("source_type", { length: 50 }), // 'order', 'print_job', 'campaign', etc.
   metadata: jsonb("metadata").default({}),
-  
+
   // Scheduling
   scheduledFor: timestamp("scheduled_for"), // Future delivery time
   expiresAt: timestamp("expires_at"), // Auto-expire time
-  
+
   // Delivery tracking
   deliveredAt: timestamp("delivered_at"),
   readAt: timestamp("read_at"),
   clickedAt: timestamp("clicked_at"),
-  
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1471,13 +1476,13 @@ export const notifications = pgTable("notifications", {
 export const notificationPreferences = pgTable("notification_preferences", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique(), // One record per user
-  
+
   // Channel preferences
   enableEmail: boolean("enable_email").default(true),
   enableSMS: boolean("enable_sms").default(false),
   enablePush: boolean("enable_push").default(true),
   enableInApp: boolean("enable_in_app").default(true),
-  
+
   // Notification type preferences
   orderUpdates: boolean("order_updates").default(true),
   deliveryNotifications: boolean("delivery_notifications").default(true),
@@ -1485,23 +1490,23 @@ export const notificationPreferences = pgTable("notification_preferences", {
   promotionalOffers: boolean("promotional_offers").default(true),
   systemAlerts: boolean("system_alerts").default(true),
   educationalContent: boolean("educational_content").default(false),
-  
+
   // Timing preferences
   quietHoursStart: varchar("quiet_hours_start", { length: 5 }), // "22:00"
   quietHoursEnd: varchar("quiet_hours_end", { length: 5 }), // "08:00"
   timezone: varchar("timezone", { length: 50 }).default("Africa/Cairo"),
   preferredDeliveryTime: varchar("preferred_delivery_time", { length: 5 }), // "14:00"
-  
+
   // Frequency controls
   maxDailyNotifications: integer("max_daily_notifications").default(10),
   digestMode: boolean("digest_mode").default(false), // Bundle notifications
   digestFrequency: varchar("digest_frequency", { length: 20 }).default("daily"), // 'hourly', 'daily', 'weekly'
-  
+
   // Advanced preferences
   priorityFilter: varchar("priority_filter", { length: 20 }).default("normal"), // Minimum priority to receive
   optOutUntil: timestamp("opt_out_until"), // Temporary opt-out
   language: varchar("language", { length: 10 }).default("ar"), // Notification language
-  
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

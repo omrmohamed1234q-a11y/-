@@ -144,10 +144,13 @@ export default function AdminProducts() {
 
   const deleteProductMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log('🚀 [admin/products] Deleting product:', id);
       await apiRequest('DELETE', `/api/admin/products/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      console.log('✅ [admin/products] Delete succeeded, refetching...');
+      // Force immediate refetch instead of just invalidating
+      queryClient.refetchQueries({ queryKey: ['/api/admin/products'] });
       toast({
         title: 'تم الحذف',
         description: 'تم حذف المنتج بنجاح'
@@ -485,8 +488,8 @@ export default function AdminProducts() {
 
                       {/* Stock Display */}
                       <div className={`text-center py-2 rounded-lg mb-3 ${isOutOfStock ? 'bg-red-100 text-red-700' :
-                          isLowStock ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
+                        isLowStock ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-green-100 text-green-700'
                         }`}>
                         <span className="font-semibold">
                           {isOutOfStock ? 'نفذ المخزون' : `${stock} متوفر`}
