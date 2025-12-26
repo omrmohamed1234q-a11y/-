@@ -8,8 +8,10 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
+const REPLIT_DOMAINS = process.env.REPLIT_DOMAINS || 'localhost';
+
+if (!REPLIT_DOMAINS || REPLIT_DOMAINS === 'localhost') {
+  console.log("⚠️ Running in local mode (REPLIT_DOMAINS not set)");
 }
 
 const getOidcConfig = memoize(

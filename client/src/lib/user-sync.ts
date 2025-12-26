@@ -14,19 +14,19 @@ export interface UserSyncResult {
 export async function syncUserAccount(supabaseUser: User): Promise<UserSyncResult> {
   try {
     console.log(`🔄 Syncing user account: ${supabaseUser.id}`);
-    
+
     const userData = {
       email: supabaseUser.email,
-      fullName: supabaseUser.user_metadata?.full_name || 
-               supabaseUser.user_metadata?.name || 
-               'مستخدم جديد',
+      fullName: supabaseUser.user_metadata?.full_name ||
+        supabaseUser.user_metadata?.name ||
+        'مستخدم جديد',
       username: supabaseUser.email?.split('@')[0] || `user${supabaseUser.id.slice(0, 8)}`,
       role: supabaseUser.user_metadata?.role || 'customer'
     };
 
     const response = await apiRequest('POST', '/api/users/sync', userData);
-    const result = await response.json();
-    
+    const result = response;
+
     if (result.success) {
       console.log('✅ User account synced successfully');
       return {
@@ -53,10 +53,9 @@ export async function syncUserAccount(supabaseUser: User): Promise<UserSyncResul
 export async function testUserConnection(): Promise<UserSyncResult> {
   try {
     console.log('🔍 Testing user connection...');
-    
-    const response = await apiRequest('GET', '/api/auth/user');
-    const user = await response.json();
-    
+
+    const user = await apiRequest('GET', '/api/auth/user');
+
     console.log('✅ User connection successful:', user);
     return {
       success: true,

@@ -4,401 +4,306 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCart } from '@/hooks/useCart';
 import Header from '@/components/layout/header';
 import BottomNav from '@/components/layout/bottom-nav';
-import ProductCard from '@/components/ProductCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { Search, Star, Clock, Heart, Tag, Sparkles } from 'lucide-react';
 
 interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: string;
-  originalPrice?: string | null;
-  imageUrl?: string | null;
-  category: string;
-  rating?: string;
-  ratingCount?: number;
-  featured?: boolean;
-  isDigital?: boolean;
-  grade?: string | null;
-  subject?: string | null;
-  availableCopies?: number;
-  tags?: string[] | null;
-  createdAt?: string;
+    id: string;
+    name: string;
+    description: string;
+    price: string;
+    originalPrice?: string | null;
+    imageUrl?: string | null;
+    category: string;
+    rating?: string;
+    ratingCount?: number;
+    featured?: boolean;
+    isDigital?: boolean;
+    grade?: string | null;
+    subject?: string | null;
+    availableCopies?: number;
+    tags?: string[] | null;
+    createdAt?: string;
 }
 
-const bookCategories = [
-  {
-    id: 'teachers',
-    name: 'كتب المعلمين',
-    icon: 'fas fa-chalkboard-teacher',
-    color: 'from-blue-50 to-blue-100',
-    iconColor: 'text-blue-600',
-  },
-  {
-    id: 'students',
-    name: 'كتب الطلاب',
-    icon: 'fas fa-graduation-cap',
-    color: 'from-green-50 to-green-100',
-    iconColor: 'text-green-600',
-  },
-  {
-    id: 'digital',
-    name: 'كتب رقمية',
-    icon: 'fas fa-download',
-    color: 'from-orange-50 to-orange-100',
-    iconColor: 'text-orange-600',
-  },
-];
-
-const habshetnakCategories = [
-  {
-    id: 'time-organization',
-    name: 'تنظيم الوقت',
-    icon: 'fas fa-clock',
-    color: 'from-purple-50 to-purple-100',
-    iconColor: 'text-purple-600',
-  },
-  {
-    id: 'focus-tools',
-    name: 'أدوات التركيز',
-    icon: 'fas fa-target',
-    color: 'from-red-50 to-red-100',
-    iconColor: 'text-red-600',
-  },
-  {
-    id: 'planning',
-    name: 'التخطيط والجداول',
-    icon: 'fas fa-calendar-alt',
-    color: 'from-blue-50 to-blue-100',
-    iconColor: 'text-blue-600',
-  },
-  {
-    id: 'mind-maps',
-    name: 'الخرائط الذهنية',
-    icon: 'fas fa-project-diagram',
-    color: 'from-green-50 to-green-100',
-    iconColor: 'text-green-600',
-  },
-];
-
 export default function Store() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const { addToCart, isAddingToCart } = useCart();
-  
-  const [activeTab, setActiveTab] = useState<string>('books');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<string>('featured');
-  const [priceRange, setPriceRange] = useState<string>('all');
+    const { user } = useAuth();
+    const { toast } = useToast();
+    const { addToCart, isAddingToCart } = useCart();
 
-  // Fetch products
-  const { data: allProducts = [], isLoading } = useQuery<Product[]>({
-    queryKey: ['/api/products'],
-  });
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedFilter, setSelectedFilter] = useState<string>('all');
 
-  // Filter and sort products
-  const products = useMemo(() => {
-    let filtered = [...(allProducts as Product[])];
-
-    // Search filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(product => 
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.subject && product.subject.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (product.grade && product.grade.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-
-    // Tab filter (books vs habshetnak)
-    filtered = filtered.filter(product => {
-      if (activeTab === 'books') {
-        return product.category === 'book' || product.category.includes('book') || 
-               product.category.includes('teacher') || product.category.includes('student') || 
-               product.isDigital;
-      } else if (activeTab === 'habshetnak') {
-        return product.category === 'habshetnak' || product.category === 'tools' || 
-               product.category === 'supplies' || product.category === 'planning';
-      }
-      return true;
+    const { data: allProducts = [], isLoading } = useQuery<Product[]>({
+        queryKey: ['/api/products'],
     });
 
-    // Category filter
-    if (selectedCategory) {
-      filtered = filtered.filter(product => {
-        // Book categories
-        if (activeTab === 'books') {
-          switch (selectedCategory) {
-            case 'teachers':
-              return product.category.includes('teacher');
-            case 'students':
-              return product.category.includes('student');
-            case 'digital':
-              return product.isDigital;
-            default:
-              return true;
-          }
+    const products = useMemo(() => {
+        let filtered = [...(allProducts as Product[])];
+
+        if (searchQuery.trim()) {
+            filtered = filtered.filter(product =>
+                product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                product.description.toLowerCase().includes(searchQuery.toLowerCase())
+            );
         }
-        // Habshetnak categories  
-        else if (activeTab === 'habshetnak') {
-          switch (selectedCategory) {
-            case 'time-organization':
-              return product.category.includes('time') || product.category.includes('organization');
-            case 'focus-tools':
-              return product.category.includes('focus') || product.category.includes('concentration');
-            case 'planning':
-              return product.category.includes('planning') || product.category.includes('schedule');
-            case 'mind-maps':
-              return product.category.includes('mind-map') || product.category.includes('diagram');
-            default:
-              return true;
-          }
+
+        if (selectedFilter === 'books') {
+            filtered = filtered.filter(p =>
+                p.category.includes('book') || p.category.includes('teacher') || p.category.includes('student')
+            );
+        } else if (selectedFilter === 'featured') {
+            filtered = filtered.filter(p => p.featured);
+        } else if (selectedFilter === 'offers') {
+            filtered = filtered.filter(p =>
+                p.originalPrice && parseFloat(p.originalPrice) > parseFloat(p.price)
+            );
         }
-        return true;
-      });
+
+        filtered.sort((a, b) => {
+            if (a.featured && !b.featured) return -1;
+            if (!a.featured && b.featured) return 1;
+            return 0;
+        });
+
+        return filtered;
+    }, [allProducts, searchQuery, selectedFilter]);
+
+    const handleAddToCart = async (product: Product) => {
+        try {
+            await addToCart({
+                productId: product.id,
+                quantity: 1,
+                source: 'store',
+            });
+            toast({
+                title: 'تمت الإضافة',
+                description: `تم إضافة ${product.name} إلى السلة`,
+            });
+        } catch (error) {
+            toast({
+                title: 'خطأ',
+                description: 'فشل في إضافة المنتج للسلة',
+                variant: 'destructive',
+            });
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 pb-20">
+                <Header />
+                <div className="max-w-4xl mx-auto px-4 py-4">
+                    <div className="h-10 bg-gray-200 rounded-lg animate-pulse mb-3"></div>
+                    <div className="h-12 bg-gray-200 rounded-xl animate-pulse mb-4"></div>
+                    <div className="flex gap-2 mb-4">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-8 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+                        ))}
+                    </div>
+                    <div className="space-y-3">
+                        {[1, 2, 3, 4, 5].map(i => (
+                            <div key={i} className="h-28 bg-gray-200 rounded-xl animate-pulse"></div>
+                        ))}
+                    </div>
+                </div>
+                <BottomNav />
+            </div>
+        );
     }
 
-    // Price range filter
-    if (priceRange && priceRange !== 'all') {
-      filtered = filtered.filter(product => {
-        const price = parseFloat(product.price);
-        switch (priceRange) {
-          case 'under-50':
-            return price < 50;
-          case '50-100':
-            return price >= 50 && price <= 100;
-          case '100-200':
-            return price >= 100 && price <= 200;
-          case 'over-200':
-            return price > 200;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Sort products
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'featured':
-          if (a.featured && !b.featured) return -1;
-          if (!a.featured && b.featured) return 1;
-          return 0;
-        case 'newest':
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-        case 'price_low':
-          return parseFloat(a.price) - parseFloat(b.price);
-        case 'price_high':
-          return parseFloat(b.price) - parseFloat(a.price);
-        case 'rating':
-          return parseFloat(b.rating || '0') - parseFloat(a.rating || '0');
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [allProducts, searchQuery, selectedCategory, priceRange, sortBy]);
-
-  const handleCategoryFilter = (category: string) => {
-    setSelectedCategory(selectedCategory === category ? '' : category);
-  };
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    setSelectedCategory(''); // Reset category when switching tabs
-  };
-
-  const getCurrentCategories = () => {
-    return activeTab === 'books' ? bookCategories : habshetnakCategories;
-  };
-
-  const formatPrice = (price: string) => {
-    return parseFloat(price).toLocaleString('ar-EG');
-  };
-
-  if (isLoading) {
     return (
-      <div className="min-h-screen bg-background pb-20">
-        <Header />
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <div className="w-full h-40 bg-muted animate-pulse"></div>
-                <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="h-4 bg-muted rounded animate-pulse"></div>
-                    <div className="h-3 bg-muted rounded animate-pulse w-3/4"></div>
-                    <div className="h-6 bg-muted rounded animate-pulse w-1/2"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <div className="min-h-screen bg-gray-50 pb-20">
+            <Header />
+
+            <main className="max-w-4xl mx-auto px-4 py-4">
+
+
+                <div className="mb-4">
+                    <div className="relative">
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Input
+                            placeholder="ابحث عن منتج..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pr-10 h-11 rounded-xl border-gray-200 bg-white"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+                    <Button
+                        variant={selectedFilter === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedFilter('all')}
+                        className="rounded-full whitespace-nowrap h-9 px-4"
+                    >
+                        الكل
+                    </Button>
+                    <Button
+                        variant={selectedFilter === 'featured' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedFilter('featured')}
+                        className="rounded-full whitespace-nowrap h-9 px-4"
+                    >
+                        <Sparkles className="w-3.5 h-3.5 ml-1" />
+                        مميز
+                    </Button>
+                    <Button
+                        variant={selectedFilter === 'offers' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedFilter('offers')}
+                        className="rounded-full whitespace-nowrap h-9 px-4"
+                    >
+                        <Tag className="w-3.5 h-3.5 ml-1" />
+                        عروض
+                    </Button>
+                    <Button
+                        variant={selectedFilter === 'books' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedFilter('books')}
+                        className="rounded-full whitespace-nowrap h-9 px-4"
+                    >
+                        كتب
+                    </Button>
+                </div>
+
+                {products.length > 0 && (
+                    <div className="mb-3">
+                        <h2 className="text-base font-bold text-gray-900">
+                            {selectedFilter === 'featured' ? 'المنتجات المميزة' :
+                                selectedFilter === 'offers' ? 'العروض الحالية' :
+                                    selectedFilter === 'books' ? 'الكتب المتاحة' :
+                                        'جميع المنتجات'}
+                        </h2>
+                        <p className="text-xs text-gray-500">{products.length} منتج متاح</p>
+                    </div>
+                )}
+
+                {products.length === 0 ? (
+                    <Card className="mt-8">
+                        <CardContent className="p-12 text-center">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Search className="w-8 h-8 text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">لا توجد منتجات</h3>
+                            <p className="text-gray-600 mb-4">جرب البحث بكلمات أخرى</p>
+                            <Button onClick={() => {
+                                setSearchQuery('');
+                                setSelectedFilter('all');
+                            }}>مسح البحث</Button>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="space-y-3">
+                        {products.map((product: Product) => (
+                            <Card
+                                key={product.id}
+                                className="overflow-hidden hover:shadow-md transition-all duration-200 border-gray-200"
+                                onClick={() => handleAddToCart(product)}
+                            >
+                                <CardContent className="p-0">
+                                    <div className="flex gap-3">
+                                        <div className="w-28 h-28 flex-shrink-0 bg-gray-100 relative rounded-l-xl overflow-hidden">
+                                            {product.imageUrl ? (
+                                                <img
+                                                    src={product.imageUrl}
+                                                    alt={product.name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                                    <div className="w-10 h-10 bg-white/80 rounded-lg"></div>
+                                                </div>
+                                            )}
+
+                                            <button
+                                                className="absolute top-2 left-2 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-sm flex items-center justify-center hover:bg-white transition-colors"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <Heart className="w-3.5 h-3.5 text-gray-600" />
+                                            </button>
+
+                                            {product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price) && (
+                                                <div className="absolute bottom-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded">
+                                                    {Math.round((1 - parseFloat(product.price) / parseFloat(product.originalPrice)) * 100)}%
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex-1 py-2.5 pr-3 min-w-0">
+                                            <div className="flex gap-1.5 mb-1.5 flex-wrap">
+                                                {product.featured && (
+                                                    <Badge className="bg-blue-50 text-blue-700 text-[10px] px-1.5 py-0 font-medium border-0">
+                                                        مميز
+                                                    </Badge>
+                                                )}
+                                                {product.isDigital && (
+                                                    <Badge className="bg-purple-50 text-purple-700 text-[10px] px-1.5 py-0 font-medium border-0">
+                                                        رقمي
+                                                    </Badge>
+                                                )}
+                                            </div>
+
+                                            <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 text-sm leading-tight">
+                                                {product.name}
+                                            </h3>
+
+                                            <div className="flex items-center gap-1.5 text-xs text-gray-600 mb-1.5">
+                                                {product.rating && Number(product.rating) > 0 ? (
+                                                    <>
+                                                        <div className="flex items-center gap-0.5">
+                                                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                                            <span className="font-semibold text-gray-900">
+                                                                {Number(product.rating).toFixed(1)}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-gray-400">({product.ratingCount}+)</span>
+                                                        <span className="text-gray-400">•</span>
+                                                    </>
+                                                ) : null}
+                                                <div className="flex items-center gap-0.5">
+                                                    <Clock className="w-3 h-3" />
+                                                    <span>15-30 دقيقة</span>
+                                                </div>
+                                                {product.grade && (
+                                                    <>
+                                                        <span className="text-gray-400">•</span>
+                                                        <span>{product.grade}</span>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-gray-900 text-base">
+                                                    {parseFloat(product.price).toLocaleString('ar-EG')} جنيه
+                                                </span>
+                                                {product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price) && (
+                                                    <span className="text-xs text-gray-400 line-through">
+                                                        {parseFloat(product.originalPrice).toLocaleString('ar-EG')}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {product.availableCopies !== undefined && product.availableCopies === 0 && (
+                                                <div className="text-[10px] text-red-600 font-medium mt-1">
+                                                    غير متوفر حالياً
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+            </main>
+
+            <BottomNav />
         </div>
-        <BottomNav />
-      </div>
     );
-  }
-
-  return (
-    <div className="min-h-screen bg-background pb-20">
-      <Header />
-      
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">متجر اطبعلي</h1>
-          <p className="text-muted-foreground">تسوق من أفضل الكتب التعليمية وحبشتكنات اطبعلي المميزة</p>
-        </div>
-
-        {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="books" className="text-lg font-semibold">
-              📚 الكتب
-            </TabsTrigger>
-            <TabsTrigger value="habshetnak" className="text-lg font-semibold">
-              🎯 حبشتكنات اطبعلي
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="mt-6">
-
-        {/* Search and Filters */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-1">
-                <Input
-                  placeholder="ابحث عن منتج..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="ترتيب حسب" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="featured">المميزة</SelectItem>
-                    <SelectItem value="newest">الأحدث</SelectItem>
-                    <SelectItem value="price_low">السعر: من الأقل للأعلى</SelectItem>
-                    <SelectItem value="price_high">السعر: من الأعلى للأقل</SelectItem>
-                    <SelectItem value="rating">الأعلى تقييماً</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Select value={priceRange} onValueChange={setPriceRange}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="فلترة بالسعر" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">جميع الأسعار</SelectItem>
-                    <SelectItem value="under-50">أقل من 50 جنيه</SelectItem>
-                    <SelectItem value="50-100">50 - 100 جنيه</SelectItem>
-                    <SelectItem value="100-200">100 - 200 جنيه</SelectItem>
-                    <SelectItem value="over-200">أكثر من 200 جنيه</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Category Filters */}
-            <div className="flex flex-wrap gap-3">
-              {getCurrentCategories().map((category) => (
-                <Button
-                  key={category.id}
-                  variant={selectedCategory === category.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleCategoryFilter(category.id)}
-                  className="flex items-center space-x-2 space-x-reverse"
-                >
-                  <i className={`${category.icon} text-sm`}></i>
-                  <span>{category.name}</span>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-            {/* Results Summary */}
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-muted-foreground">
-                {isLoading ? 'جاري التحميل...' : 
-                  `تم العثور على ${products.length} ${activeTab === 'books' ? 'كتاب' : 'منتج من حبشتكنات اطبعلي'}`
-                }
-                {searchQuery && ` عن "${searchQuery}"`}
-              </p>
-              {(searchQuery || selectedCategory || (priceRange && priceRange !== 'all')) && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory('');
-                    setPriceRange('all');
-                  }}
-                  className="text-sm"
-                >
-                  مسح الفلاتر
-                </Button>
-              )}
-            </div>
-
-            {/* Products Grid */}
-            {products.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <i className={`fas ${activeTab === 'books' ? 'fa-book' : 'fa-lightbulb'} text-4xl text-muted-foreground mb-4`}></i>
-                  <h3 className="text-lg font-semibold mb-2">
-                    {activeTab === 'books' ? 'لا توجد كتب' : 'لا توجد حبشتكنات'}
-                  </h3>
-                  <p className="text-muted-foreground">
-                    {activeTab === 'books' ? 
-                      'جرب البحث عن كتب أخرى أو تعديل الفلاتر' :
-                      'جرب البحث عن منتجات أخرى من حبشتكنات اطبعلي'
-                    }
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map((product: Product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={{
-                      id: product.id,
-                      name: product.name,
-                      description: product.description,
-                      price: product.price,
-                      originalPrice: product.originalPrice || undefined,
-                      imageUrl: product.imageUrl || undefined,
-                      category: product.category,
-                      rating: product.rating,
-                      ratingCount: product.ratingCount,
-                      featured: product.featured,
-                      gradeLevel: product.grade || undefined,
-                      subject: product.subject || undefined,
-                      stock: product.availableCopies,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </main>
-      
-      <BottomNav />
-    </div>
-  );
 }

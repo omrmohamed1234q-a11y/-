@@ -14,11 +14,11 @@ interface CameraCaptureProps {
   quality?: number;
 }
 
-export function CameraCapture({ 
-  onCapture, 
+export function CameraCapture({
+  onCapture,
   allowedTypes = ['document', 'image'],
   maxFileSize = 10 * 1024 * 1024, // 10MB
-  quality = 0.8 
+  quality = 0.8
 }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -39,7 +39,7 @@ export function CameraCapture({
           height: { ideal: 1080 }
         }
       });
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
         setStream(mediaStream);
@@ -97,30 +97,30 @@ export function CameraCapture({
         if (!blob) return;
 
         const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
-        
+
         // Try Cloud Storage first, fallback to Cloudinary
         let result = await uploadFileToGoogleDrive(file);
         if (!result.success) {
           console.log('🔄 Cloud Storage failed, trying Cloudinary fallback...');
           result = await uploadFile(file);
         }
-        
+
         if (!result.success) {
           throw new Error(result.error || 'Upload failed on both Cloud Storage and Cloudinary');
         }
-        
+
         const downloadUrl = result.downloadUrl || result.url;
         if (!downloadUrl) {
           throw new Error('No download URL received from upload');
         }
-        
+
         onCapture(file, downloadUrl);
-        
+
         toast({
           title: 'تم الحفظ بنجاح',
-          description: `تم رفع الصورة بنجاح عبر ${result.provider === 'google_drive' ? 'التخزين السحابي' : 'Cloudinary'}`
+          description: 'تم رفع الصورة بنجاح'
         });
-        
+
         setIsOpen(false);
         setCapturedImage(null);
       }, 'image/jpeg', quality);
@@ -154,32 +154,32 @@ export function CameraCapture({
     setIsUploading(true);
     try {
       console.log('Starting upload process...');
-      // Try التخزين السحابي first, fallback to Cloudinary
+      // Try Google Drive first, fallback to Cloudinary
       let result = await uploadFileToGoogleDrive(file);
       if (!result.success) {
-        console.log('🔄 التخزين السحابي failed, trying Cloudinary fallback...');
+        console.log('🔄 Google Drive failed, trying Cloudinary fallback...');
         result = await uploadFile(file);
       }
-      
+
       if (!result.success) {
-        throw new Error(result.error || 'Upload failed on both التخزين السحابي and Cloudinary');
+        throw new Error(result.error || 'Upload failed on both Google Drive and Cloudinary');
       }
-      
+
       const downloadUrl = result.downloadUrl || result.url;
       if (!downloadUrl) {
         throw new Error('No download URL received from upload');
       }
       console.log('Upload successful, URL:', downloadUrl);
-      
+
       onCapture(file, downloadUrl);
-      
+
       toast({
         title: 'تم الرفع بنجاح',
-        description: `تم رفع الملف بنجاح عبر ${result.provider === 'google_drive' ? 'التخزين السحابي' : 'Cloudinary'}`
+        description: 'تم رفع الملف بنجاح'
       });
-      
+
       setIsOpen(false);
-      
+
       // Clear the input value to allow selecting the same file again
       if (event.target) {
         event.target.value = '';
@@ -207,7 +207,7 @@ export function CameraCapture({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button 
+        <Button
           className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
           data-testid="button-camera-capture"
         >
@@ -215,14 +215,14 @@ export function CameraCapture({
           التقط صورة أو ارفع ملف
         </Button>
       </DialogTrigger>
-      
+
       <DialogContent className="sm:max-w-lg" dir="rtl">
         <DialogHeader>
           <DialogTitle className="text-center">
             التقاط الصور ورفع الملفات
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {/* Type badges */}
           <div className="flex justify-center space-x-2 space-x-reverse">
@@ -253,7 +253,7 @@ export function CameraCapture({
                     className="w-full h-64 bg-gray-100 rounded-lg object-cover"
                   />
                   <canvas ref={canvasRef} className="hidden" />
-                  
+
                   {!stream && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
                       <Button onClick={startCamera} data-testid="button-start-camera">
@@ -268,9 +268,9 @@ export function CameraCapture({
           ) : (
             <Card>
               <CardContent className="p-4">
-                <img 
-                  src={capturedImage} 
-                  alt="Captured" 
+                <img
+                  src={capturedImage}
+                  alt="Captured"
                   className="w-full h-64 object-cover rounded-lg"
                 />
               </CardContent>
@@ -281,16 +281,16 @@ export function CameraCapture({
           <div className="space-y-3">
             {stream && !capturedImage && (
               <div className="flex space-x-2 space-x-reverse">
-                <Button 
-                  onClick={capturePhoto} 
+                <Button
+                  onClick={capturePhoto}
                   className="flex-1 bg-red-600 hover:bg-red-700"
                   data-testid="button-capture-photo"
                 >
                   <Camera className="w-4 h-4 ml-2" />
                   التقط صورة
                 </Button>
-                <Button 
-                  onClick={toggleCamera} 
+                <Button
+                  onClick={toggleCamera}
                   variant="outline"
                   data-testid="button-toggle-camera"
                 >
@@ -301,8 +301,8 @@ export function CameraCapture({
 
             {capturedImage && (
               <div className="flex space-x-2 space-x-reverse">
-                <Button 
-                  onClick={confirmCapture} 
+                <Button
+                  onClick={confirmCapture}
                   disabled={isUploading}
                   className="flex-1 bg-green-600 hover:bg-green-700"
                   data-testid="button-confirm-capture"
@@ -319,8 +319,8 @@ export function CameraCapture({
                     </>
                   )}
                 </Button>
-                <Button 
-                  onClick={retakePhoto} 
+                <Button
+                  onClick={retakePhoto}
                   variant="outline"
                   disabled={isUploading}
                   data-testid="button-retake-photo"
@@ -341,9 +341,9 @@ export function CameraCapture({
                 className="hidden"
                 data-testid="input-file-upload"
               />
-              <Button 
+              <Button
                 onClick={() => fileInputRef.current?.click()}
-                variant="outline" 
+                variant="outline"
                 className="w-full"
                 disabled={isUploading}
                 data-testid="button-file-upload"

@@ -2,24 +2,26 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcrypt';
 
 // Supabase configuration for security system
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase configuration for security system');
+  console.warn('⚠️ Supabase configuration missing for security system - using memory storage fallback');
 }
 
 // Create Supabase client with service role key for admin operations
-export const supabaseSecure = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+export const supabaseSecure = (supabaseUrl && supabaseServiceKey)
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+  : null as any;
 
 // Database interface for security operations with Supabase
 export class SupabaseSecurityStorage {
-  
+
   async getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined> {
     try {
       const { data, error } = await supabaseSecure
@@ -28,12 +30,12 @@ export class SupabaseSecurityStorage {
         .eq('username', username)
         .eq('email', email)
         .single();
-      
+
       if (error && error.code !== 'PGRST116') {
         console.error('Error getting secure admin:', error);
         return undefined;
       }
-      
+
       return data;
     } catch (error) {
       console.error('Error getting secure admin by credentials:', error);
@@ -48,18 +50,18 @@ export class SupabaseSecurityStorage {
         .select('*')
         .eq('username', username)
         .eq('email', email);
-      
+
       if (driverCode) {
         query = query.eq('driver_code', driverCode);
       }
-      
+
       const { data, error } = await query.single();
-      
+
       if (error && error.code !== 'PGRST116') {
         console.error('Error getting secure driver:', error);
         return undefined;
       }
-      
+
       return data;
     } catch (error) {
       console.error('Error getting secure driver by credentials:', error);
@@ -82,12 +84,12 @@ export class SupabaseSecurityStorage {
         })
         .select()
         .single();
-      
+
       if (error) {
         console.error('Error creating secure admin:', error);
         throw new Error('Failed to create secure admin');
       }
-      
+
       console.log(`🔐 New secure admin created: ${data.username}`);
       return data;
     } catch (error) {
@@ -112,12 +114,12 @@ export class SupabaseSecurityStorage {
         })
         .select()
         .single();
-      
+
       if (error) {
         console.error('Error creating secure driver:', error);
         throw new Error('Failed to create secure driver');
       }
-      
+
       console.log(`🚚 New secure driver created: ${data.username}`);
       return data;
     } catch (error) {
@@ -137,12 +139,12 @@ export class SupabaseSecurityStorage {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) {
         console.error('Error updating secure admin:', error);
         throw new Error('Failed to update secure admin');
       }
-      
+
       console.log(`🔐 Secure admin updated: ${id}`);
       return data;
     } catch (error) {
@@ -162,12 +164,12 @@ export class SupabaseSecurityStorage {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) {
         console.error('Error updating secure driver:', error);
         throw new Error('Failed to update secure driver');
       }
-      
+
       console.log(`🚚 Secure driver updated: ${id}`);
       return data;
     } catch (error) {
@@ -185,12 +187,12 @@ export class SupabaseSecurityStorage {
           is_active, last_login, created_at
         `)
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('Error getting all secure admins:', error);
         return [];
       }
-      
+
       return data || [];
     } catch (error) {
       console.error('Error getting all secure admins:', error);
@@ -208,12 +210,12 @@ export class SupabaseSecurityStorage {
           last_login, rating, total_deliveries, created_at
         `)
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('Error getting all secure drivers:', error);
         return [];
       }
-      
+
       return data || [];
     } catch (error) {
       console.error('Error getting all secure drivers:', error);
@@ -231,12 +233,12 @@ export class SupabaseSecurityStorage {
         })
         .select()
         .single();
-      
+
       if (error) {
         console.error('Error creating security log:', error);
         throw new Error('Failed to create security log');
       }
-      
+
       return data;
     } catch (error) {
       console.error('Error creating security log:', error);
@@ -247,24 +249,24 @@ export class SupabaseSecurityStorage {
   async getSecurityLogs(options: any = {}): Promise<any[]> {
     try {
       let query = supabaseSecure.from('security_logs').select('*');
-      
+
       if (options.userType) {
         query = query.eq('user_type', options.userType);
       }
-      
+
       if (options.action) {
         query = query.eq('action', options.action);
       }
-      
+
       const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(options.limit || 50);
-      
+
       if (error) {
         console.error('Error getting security logs:', error);
         return [];
       }
-      
+
       return data || [];
     } catch (error) {
       console.error('Error getting security logs:', error);
@@ -323,22 +325,22 @@ export async function checkSecurityTablesExist(): Promise<boolean> {
       .from('secure_admins')
       .select('id')
       .limit(1);
-    
+
     const { error: driverError } = await supabaseSecure
       .from('secure_drivers')
       .select('id')
       .limit(1);
-    
+
     const { error: logsError } = await supabaseSecure
       .from('security_logs')
       .select('id')
       .limit(1);
-    
+
     // Tables exist if queries don't return table not found errors
     const tablesExist = !adminError?.message.includes('Could not find the table') &&
-                      !driverError?.message.includes('Could not find the table') &&
-                      !logsError?.message.includes('Could not find the table');
-    
+      !driverError?.message.includes('Could not find the table') &&
+      !logsError?.message.includes('Could not find the table');
+
     if (tablesExist) {
       console.log('✅ Security tables already exist in Supabase');
     } else {
@@ -348,7 +350,7 @@ export async function checkSecurityTablesExist(): Promise<boolean> {
       console.log('2. Run the SQL script found in supabase-schema.sql');
       console.log('3. Or create tables: secure_admins, secure_drivers, security_logs');
     }
-    
+
     return tablesExist;
   } catch (error) {
     console.error('Error checking security tables:', error);

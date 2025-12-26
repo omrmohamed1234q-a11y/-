@@ -21,7 +21,7 @@ export default function AdminProductsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  
+
   const queryClient = useQueryClient();
 
   // Fetch products
@@ -135,7 +135,7 @@ export default function AdminProductsPage() {
   // Filter products based on search
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (product.nameEn && product.nameEn.toLowerCase().includes(searchQuery.toLowerCase()));
+      (product.nameEn && product.nameEn.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -219,12 +219,12 @@ export default function AdminProductsPage() {
                 <span>العودة للوحة التحكم</span>
               </Button>
             </Link>
-            
+
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-blue-500" />
               <span className="font-semibold text-gray-800">إدارة المنتجات</span>
             </div>
-            
+
             <Button
               onClick={handleAddNewProduct}
               className="bg-blue-500 hover:bg-blue-600 text-white gap-2"
@@ -238,53 +238,69 @@ export default function AdminProductsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-white shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">إجمالي المنتجات</p>
-                  <p className="text-3xl font-bold text-gray-900">{products.length}</p>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <Package className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Compact Stats - Horizontal Scroll */}
+        <div className="flex gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+          {/* Total */}
+          <div className="flex items-center gap-3 bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-100 min-w-fit">
+            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Package className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">إجمالي</p>
+              <p className="text-xl font-bold text-gray-900">{products.length}</p>
+            </div>
+          </div>
 
-          <Card className="bg-white shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+          {/* Out of Stock - Alert */}
+          {products.filter(p => (p.availableCopies || 0) === 0).length > 0 && (
+            <div className="flex items-center gap-3 bg-red-50 rounded-lg px-4 py-3 shadow-sm border border-red-200 min-w-fit animate-pulse">
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Package className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xs text-red-600 font-medium">نفذ!</p>
+                <p className="text-xl font-bold text-red-700">
+                  {products.filter(p => (p.availableCopies || 0) === 0).length}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Low Stock - Warning */}
+          {products.filter(p => {
+            const stock = p.availableCopies || 0;
+            return stock > 0 && stock <= 5;
+          }).length > 0 && (
+              <div className="flex items-center gap-3 bg-yellow-50 rounded-lg px-4 py-3 shadow-sm border border-yellow-200 min-w-fit">
+                <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Tag className="w-5 h-5 text-yellow-600" />
+                </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">المنتجات المميزة</p>
-                  <p className="text-3xl font-bold text-amber-600">
-                    {products.filter(p => p.featured).length}
+                  <p className="text-xs text-yellow-600 font-medium">منخفض</p>
+                  <p className="text-xl font-bold text-yellow-700">
+                    {products.filter(p => {
+                      const stock = p.availableCopies || 0;
+                      return stock > 0 && stock <= 5;
+                    }).length}
                   </p>
                 </div>
-                <div className="p-3 bg-amber-50 rounded-lg">
-                  <Tag className="w-6 h-6 text-amber-600" />
-                </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
 
-          <Card className="bg-white shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">منتجات VIP</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    {products.filter(p => p.vip).length}
-                  </p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <DollarSign className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Inventory Value */}
+          <div className="flex items-center gap-3 bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-100 min-w-fit">
+            <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <DollarSign className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">القيمة</p>
+              <p className="text-lg font-bold text-gray-900">
+                {Math.round(products.reduce((sum, p) => {
+                  return sum + (parseFloat(p.price) * (p.availableCopies || 0));
+                }, 0) / 1000).toLocaleString('ar-EG')}k
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -303,7 +319,7 @@ export default function AdminProductsPage() {
                   />
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-gray-500" />
                 <select
@@ -316,7 +332,7 @@ export default function AdminProductsPage() {
                     <option key={cat.value} value={cat.value}>{cat.label}</option>
                   ))}
                 </select>
-                
+
                 <div className="flex items-center bg-gray-100 rounded-lg p-1">
                   <Button
                     variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -386,7 +402,7 @@ export default function AdminProductsPage() {
                           {product.nameEn && (
                             <p className="text-sm text-gray-500">{product.nameEn}</p>
                           )}
-                          
+
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-bold text-xl text-green-600">
@@ -491,7 +507,7 @@ export default function AdminProductsPage() {
                                 <Badge variant="outline">{product.category}</Badge>
                               )}
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
                               <span className="text-sm text-gray-600">متوفر: {product.availableCopies}</span>
                               <Button

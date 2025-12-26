@@ -13,13 +13,13 @@ export interface IStorage {
   upsertUser(user: any): Promise<User>;
   getAllUsers(): Promise<User[]>;
   deleteUser(id: string): Promise<boolean>;
-  
+
   // Product operations
   getAllProducts(): Promise<Product[]>;
   createProduct(product: any): Promise<Product>;
   updateProduct(id: string, updates: any): Promise<Product>;
   deleteProduct(id: string): Promise<void>;
-  
+
   // Order operations
   getAllOrders(): Promise<Order[]>;
   getOrder(id: string): Promise<Order | undefined>;
@@ -33,13 +33,13 @@ export interface IStorage {
   getActiveOrders(): Promise<Order[]>;
   getOrdersByStatus(status: string): Promise<Order[]>;
   deleteOrder(id: string): Promise<boolean>;
-  
+
   // Print Job operations
   getAllPrintJobs(): Promise<PrintJob[]>;
   getPrintJobsByUserId(userId: string): Promise<PrintJob[]>;
   createPrintJob(printJob: any): Promise<PrintJob>;
   updatePrintJobStatus(id: string, status: string): Promise<PrintJob>;
-  
+
   // Pending uploads operations (temporary file storage like shopping cart)
   getPendingUploads(userId: string): Promise<PendingUpload[]>;
   createPendingUpload(upload: InsertPendingUpload): Promise<PendingUpload>;
@@ -47,7 +47,7 @@ export interface IStorage {
   deletePendingUpload(id: string): Promise<boolean>;
   clearPendingUploads(userId: string): Promise<boolean>;
   updatePendingUploadSettings(id: string, printSettings: any): Promise<PendingUpload>;
-  
+
   // Unified Cart operations (supports all item types: products, print jobs, partner products)
   getCart(userId: string): Promise<any>;
   addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<CartItem>;
@@ -55,27 +55,27 @@ export interface IStorage {
   removeCartItem(itemId: string): Promise<boolean>;
   clearCart(userId: string): Promise<boolean>;
   getCartItemCount(userId: string): Promise<number>;
-  
+
   // Cart Order operations  
   createCartOrder(order: InsertCartOrder): Promise<CartOrder>;
   getAllCartOrders(): Promise<CartOrder[]>;
   getCartOrder(orderId: string): Promise<CartOrder | undefined>;
   updateCartOrder(orderId: string, updates: Partial<CartOrder>): Promise<CartOrder>;
   getUserCartOrders(userId: string): Promise<CartOrder[]>;
-  
+
   // Admin statistics
   getAdminStats(): Promise<any>;
-  
+
   // Teacher plan operations  
   getAllTeacherPlans(): Promise<any[]>;
   getAllTeacherSubscriptions(): Promise<any[]>;
-  
+
   // Teacher operations
   getAllTeachers(): Promise<any[]>;
   createTeacher(teacher: any): Promise<any>;
   updateTeacher(id: string, updates: any): Promise<any>;
   deleteTeacher(id: string): Promise<void>;
-  
+
   // Smart targeting operations for notifications
   getUsersByGradeLevel(gradeLevels: string[]): Promise<User[]>;
   getUsersByRole(roles: string[]): Promise<User[]>;
@@ -83,7 +83,7 @@ export interface IStorage {
   getUsersByActivity(daysInactive?: number): Promise<User[]>;
   getActiveTeachers(): Promise<User[]>;
   getHighValueUsers(): Promise<User[]>;
-  
+
   // User notifications operations
   getAllNotifications(userId?: string): Promise<any[]>;
   getNotification(id: string): Promise<any | undefined>;
@@ -93,12 +93,12 @@ export interface IStorage {
   markNotificationAsClicked(id: string): Promise<any>;
   deleteNotification(id: string): Promise<boolean>;
   getUserUnreadNotificationsCount(userId: string): Promise<number>;
-  
+
   // User notification preferences operations
   getUserNotificationPreferences(userId: string): Promise<any | undefined>;
   updateUserNotificationPreferences(userId: string, preferences: any): Promise<any>;
   createUserNotificationPreferences(preferences: any): Promise<any>;
-  
+
   // Coupon operations
   getAllCoupons(): Promise<any[]>;
   createCoupon(coupon: any): Promise<any>;
@@ -151,7 +151,7 @@ export interface IStorage {
   createPartner(partner: InsertPartner): Promise<Partner>;
   updatePartner(id: string, updates: Partial<Partner>): Promise<Partner | undefined>;
   deletePartner(id: string): Promise<boolean>;
-  
+
   // Partner Products operations
   getPartnerProducts(partnerId: string): Promise<SelectPartnerProduct[]>;
   getAllPartnerProducts(): Promise<SelectPartnerProduct[]>;
@@ -159,7 +159,7 @@ export interface IStorage {
   updatePartnerProduct(id: string, updates: Partial<InsertPartnerProduct>): Promise<SelectPartnerProduct>;
   deletePartnerProduct(id: string): Promise<boolean>;
   getPartnerProductsByCategory(partnerId: string, category: string): Promise<SelectPartnerProduct[]>;
-  
+
   // Security System operations
   getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined>;
   getSecureDriverByCredentials(username: string, email: string, driverCode?: string): Promise<any | undefined>;
@@ -169,6 +169,7 @@ export interface IStorage {
   updateSecureDriver(id: string, updates: any): Promise<any>;
   getAllSecureAdmins(): Promise<any[]>;
   getAllSecureDrivers(): Promise<any[]>;
+  getAllSecurityUsers(): Promise<any[]>;
   createSecurityLog(log: any): Promise<any>;
   getSecurityLogs(options: any): Promise<any[]>;
 
@@ -184,7 +185,7 @@ export interface IStorage {
   getUserTermsStatus(userId: string): Promise<any>;
   getTermsAnalytics(): Promise<any>;
   getUsersPendingTermsAcceptance(): Promise<any[]>;
-  
+
   // Privacy Policy operations  
   getCurrentActivePrivacyPolicy(): Promise<any>;
   getAllPrivacyPolicyVersions(): Promise<any[]>;
@@ -202,25 +203,25 @@ export interface IStorage {
   deleteSmartCampaign(id: string): Promise<boolean>;
   pauseSmartCampaign(id: string): Promise<SmartCampaign>;
   resumeSmartCampaign(id: string): Promise<SmartCampaign>;
-  
+
   // Message Templates operations
   getAllMessageTemplates(): Promise<MessageTemplate[]>;
   getMessageTemplate(id: string): Promise<MessageTemplate | undefined>;
   createMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate>;
   updateMessageTemplate(id: string, updates: Partial<InsertMessageTemplate>): Promise<MessageTemplate>;
   deleteMessageTemplate(id: string): Promise<boolean>;
-  
+
   // Targeting Rules operations
   getTargetingRules(campaignId: string): Promise<TargetingRule[]>;
   createTargetingRule(rule: InsertTargetingRule): Promise<TargetingRule>;
   updateTargetingRule(id: string, updates: Partial<InsertTargetingRule>): Promise<TargetingRule>;
   deleteTargetingRule(id: string): Promise<boolean>;
-  
+
   // User Behavior operations
   getUserBehavior(userId: string): Promise<UserBehavior | undefined>;
   updateUserBehavior(userId: string, updates: Partial<InsertUserBehavior>): Promise<UserBehavior>;
   createUserBehavior(behavior: InsertUserBehavior): Promise<UserBehavior>;
-  
+
   // Sent Messages operations
   getSentMessages(campaignId?: string): Promise<SentMessage[]>;
   createSentMessage(message: InsertSentMessage): Promise<SentMessage>;
@@ -343,7 +344,7 @@ export class MemoryStorage implements IStorage {
   private notifications: any[] = [];
   private notificationPreferences: any[] = [];
   private pendingUploads: PendingUpload[] = [];
-  
+
   // Professional Profile System Arrays
   private userPreferencesData: UserPreferences[] = [];
   private userAddressesData: UserAddress[] = [];
@@ -429,7 +430,7 @@ export class MemoryStorage implements IStorage {
       updatedAt: new Date('2025-09-01').toISOString(),
     }
   ];
-  
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     return this.users.find(u => u.id === id);
@@ -498,13 +499,13 @@ export class MemoryStorage implements IStorage {
 
   // Smart targeting operations for notifications
   async getUsersByGradeLevel(gradeLevels: string[]): Promise<User[]> {
-    return this.users.filter(user => 
+    return this.users.filter(user =>
       user.gradeLevel && gradeLevels.includes(user.gradeLevel)
     );
   }
 
   async getUsersByRole(roles: string[]): Promise<User[]> {
-    return this.users.filter(user => 
+    return this.users.filter(user =>
       roles.includes(user.role)
     );
   }
@@ -520,10 +521,10 @@ export class MemoryStorage implements IStorage {
 
   async getUsersByActivity(daysInactive?: number): Promise<User[]> {
     if (!daysInactive) return this.users;
-    
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysInactive);
-    
+
     return this.users.filter(user => {
       const userDate = new Date(user.createdAt);
       return userDate >= cutoffDate;
@@ -531,14 +532,14 @@ export class MemoryStorage implements IStorage {
   }
 
   async getActiveTeachers(): Promise<User[]> {
-    return this.users.filter(user => 
+    return this.users.filter(user =>
       user.isTeacher === true && user.role !== 'admin'
     );
   }
 
   async getHighValueUsers(): Promise<User[]> {
-    return this.users.filter(user => 
-      (user.totalPurchases || 0) > 500 || 
+    return this.users.filter(user =>
+      (user.totalPurchases || 0) > 500 ||
       (user.bountyPoints || 0) > 1000 ||
       user.role === 'VIP'
     );
@@ -547,11 +548,11 @@ export class MemoryStorage implements IStorage {
   // User notifications operations
   async getAllNotifications(userId?: string): Promise<any[]> {
     if (userId) {
-      return this.notifications.filter(n => n.userId === userId).sort((a, b) => 
+      return this.notifications.filter(n => n.userId === userId).sort((a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     }
-    return [...this.notifications].sort((a, b) => 
+    return [...this.notifications].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -576,10 +577,10 @@ export class MemoryStorage implements IStorage {
     if (index === -1) {
       throw new Error('Notification not found');
     }
-    this.notifications[index] = { 
-      ...this.notifications[index], 
-      ...updates, 
-      updatedAt: new Date() 
+    this.notifications[index] = {
+      ...this.notifications[index],
+      ...updates,
+      updatedAt: new Date()
     };
     return this.notifications[index];
   }
@@ -589,7 +590,7 @@ export class MemoryStorage implements IStorage {
     if (!notification) {
       throw new Error('Notification not found');
     }
-    
+
     return await this.updateNotification(id, {
       isRead: true,
       readAt: new Date()
@@ -601,7 +602,7 @@ export class MemoryStorage implements IStorage {
     if (!notification) {
       throw new Error('Notification not found');
     }
-    
+
     return await this.updateNotification(id, {
       isClicked: true,
       clickedAt: new Date()
@@ -621,7 +622,7 @@ export class MemoryStorage implements IStorage {
   }
 
   async getUserUnreadCount(userId: string): Promise<number> {
-    return this.notifications.filter(n => 
+    return this.notifications.filter(n =>
       n.userId === userId && !n.isRead
     ).length;
   }
@@ -640,11 +641,11 @@ export class MemoryStorage implements IStorage {
         userId
       });
     }
-    
-    this.notificationPreferences[index] = { 
-      ...this.notificationPreferences[index], 
+
+    this.notificationPreferences[index] = {
+      ...this.notificationPreferences[index],
       ...preferences,
-      updatedAt: new Date() 
+      updatedAt: new Date()
     };
     return this.notificationPreferences[index];
   }
@@ -694,17 +695,17 @@ export class MemoryStorage implements IStorage {
   // Cart operations
   async getCart(userId: string): Promise<any> {
     const items = this.cartItems.filter(item => item.userId === userId);
-    
+
     // Convert all item prices to numbers and calculate totalPrice for each item
     const itemsWithNumericPrices = items.map(item => ({
       ...item,
       price: parseFloat(item.price.toString()),
       totalPrice: parseFloat(item.price.toString()) * (item.quantity || 0)
     }));
-    
+
     const totalQuantity = itemsWithNumericPrices.reduce((sum, item) => sum + (item.quantity || 0), 0);
     const subtotal = itemsWithNumericPrices.reduce((sum, item) => sum + item.totalPrice, 0);
-    
+
     return {
       items: itemsWithNumericPrices,
       totalQuantity,
@@ -716,7 +717,12 @@ export class MemoryStorage implements IStorage {
   async addToCart(userId: string, productId: string, quantity: number, variant?: any, customPrice?: string): Promise<CartItem> {
     // For print jobs or when custom price is provided, use it directly
     let finalPrice = customPrice || '10.00';
-    
+
+    // Extract cart source metadata from variant
+    const productSource = variant?.productSource || 'atbaali';
+    const partnerId = variant?.partnerId || null;
+    const partnerName = variant?.partnerName || null;
+
     // If it's a print job, extract price from variant
     if (variant?.isPrintJob && variant?.printJob?.cost) {
       finalPrice = variant.printJob.cost;
@@ -724,6 +730,10 @@ export class MemoryStorage implements IStorage {
     } else if (variant?.isPrintJob && variant?.printJob?.calculatedPrice) {
       finalPrice = variant.printJob.calculatedPrice;
       console.log(`💰 Print job pricing: Using calculated price ${finalPrice} جنيه`);
+    } else if (variant?.price) {
+      // Use price from variant if provided (for partner products)
+      finalPrice = variant.price.toString();
+      console.log(`💰 Partner product pricing: Using variant price ${finalPrice} جنيه`);
     } else {
       // Try to get product price for regular products
       const product = this.products.find(p => p.id === productId);
@@ -743,10 +753,13 @@ export class MemoryStorage implements IStorage {
       price: finalPrice,
       variant: variant || null,
       notes: null,
+      productSource: productSource as any,
+      partnerId: partnerId,
+      partnerName: partnerName,
       createdAt: new Date()
     };
-    
-    console.log(`🛒 Adding to cart: ${productId} - ${finalPrice} جنيه (quantity: ${quantity})`);
+
+    console.log(`🛒 Adding to cart: ${productId} - ${finalPrice} جنيه (quantity: ${quantity}, source: ${productSource}${partnerId ? `, partner: ${partnerName}` : ''})`);
     this.cartItems.push(cartItem);
     return cartItem;
   }
@@ -777,15 +790,15 @@ export class MemoryStorage implements IStorage {
   }
 
   // Order operations
-  async getAllOrders(): Promise<Order[]> { 
-    return [...this.orders]; 
+  async getAllOrders(): Promise<Order[]> {
+    return [...this.orders];
   }
-  
-  async getOrder(id: string): Promise<Order | undefined> { 
-    return this.orders.find(order => order.id === id); 
+
+  async getOrder(id: string): Promise<Order | undefined> {
+    return this.orders.find(order => order.id === id);
   }
-  
-  async createOrder(order: any): Promise<Order> { 
+
+  async createOrder(order: any): Promise<Order> {
     const newOrder: Order = {
       id: `order-${Date.now()}`,
       ...order,
@@ -795,32 +808,32 @@ export class MemoryStorage implements IStorage {
     this.orders.push(newOrder);
     return newOrder;
   }
-  
-  async updateOrder(id: string, updates: any): Promise<Order> { 
+
+  async updateOrder(id: string, updates: any): Promise<Order> {
     const orderIndex = this.orders.findIndex(order => order.id === id);
     if (orderIndex === -1) {
       throw new Error(`Order not found: ${id}`);
     }
-    
-    this.orders[orderIndex] = { 
-      ...this.orders[orderIndex], 
-      ...updates, 
-      updatedAt: new Date() 
+
+    this.orders[orderIndex] = {
+      ...this.orders[orderIndex],
+      ...updates,
+      updatedAt: new Date()
     };
-    
+
     console.log('📋 Updated order:', id, 'with updates:', Object.keys(updates));
     return this.orders[orderIndex];
   }
-  
-  async updateOrderStatus(id: string, status: string): Promise<Order> { 
+
+  async updateOrderStatus(id: string, status: string): Promise<Order> {
     const orderIndex = this.orders.findIndex(order => order.id === id);
     if (orderIndex === -1) {
       throw new Error(`Order not found: ${id}`);
     }
-    
+
     const statusTimestamps: any = {};
     const now = new Date();
-    
+
     // Set appropriate timestamp based on status
     switch (status) {
       case 'confirmed':
@@ -842,54 +855,54 @@ export class MemoryStorage implements IStorage {
         statusTimestamps.cancelledAt = now;
         break;
     }
-    
-    this.orders[orderIndex] = { 
-      ...this.orders[orderIndex], 
-      status, 
+
+    this.orders[orderIndex] = {
+      ...this.orders[orderIndex],
+      status,
       ...statusTimestamps,
-      updatedAt: now 
+      updatedAt: now
     };
-    
+
     console.log('📋 Updated order status:', id, '->', status);
     return this.orders[orderIndex];
   }
-  
-  async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> { 
+
+  async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> {
     const orderIndex = this.orders.findIndex(order => order.id === id);
     if (orderIndex === -1) {
       throw new Error(`Order not found: ${id}`);
     }
-    
-    this.orders[orderIndex] = { 
-      ...this.orders[orderIndex], 
-      rating, 
+
+    this.orders[orderIndex] = {
+      ...this.orders[orderIndex],
+      rating,
       review: review || this.orders[orderIndex].review,
-      updatedAt: new Date() 
+      updatedAt: new Date()
     };
-    
+
     console.log('📋 Updated order rating:', id, 'rating:', rating);
     return this.orders[orderIndex];
   }
-  
-  async cancelOrder(id: string): Promise<Order> { 
+
+  async cancelOrder(id: string): Promise<Order> {
     return await this.updateOrderStatus(id, 'cancelled');
   }
-  
-  async addDriverNote(id: string, note: string): Promise<Order> { 
+
+  async addDriverNote(id: string, note: string): Promise<Order> {
     const orderIndex = this.orders.findIndex(order => order.id === id);
     if (orderIndex === -1) {
       throw new Error(`Order not found: ${id}`);
     }
-    
+
     const existingNotes = this.orders[orderIndex].driverNotes || '';
     const newNotes = existingNotes ? `${existingNotes}\n${note}` : note;
-    
-    this.orders[orderIndex] = { 
-      ...this.orders[orderIndex], 
+
+    this.orders[orderIndex] = {
+      ...this.orders[orderIndex],
       driverNotes: newNotes,
-      updatedAt: new Date() 
+      updatedAt: new Date()
     };
-    
+
     console.log('📋 Added driver note to order:', id);
     return this.orders[orderIndex];
   }
@@ -903,42 +916,42 @@ export class MemoryStorage implements IStorage {
 
     // Add timeline event to order (for now, just log it - can be extended later)
     console.log(`📅 Timeline event for order ${orderId}:`, event);
-    
+
     // Could store timeline in order object if schema supports it
     // this.orders[orderIndex].timeline = this.orders[orderIndex].timeline || [];
     // this.orders[orderIndex].timeline.push(event);
   }
-  
-  async getActiveOrders(): Promise<Order[]> { 
-    return this.orders.filter(order => 
+
+  async getActiveOrders(): Promise<Order[]> {
+    return this.orders.filter(order =>
       !['delivered', 'cancelled'].includes(order.status)
-    ); 
+    );
   }
-  
-  async getOrdersByStatus(status: string): Promise<Order[]> { 
-    return this.orders.filter(order => order.status === status); 
+
+  async getOrdersByStatus(status: string): Promise<Order[]> {
+    return this.orders.filter(order => order.status === status);
   }
-  
-  async deleteOrder(id: string): Promise<boolean> { 
+
+  async deleteOrder(id: string): Promise<boolean> {
     const orderIndex = this.orders.findIndex(order => order.id === id);
     if (orderIndex === -1) return false;
     this.orders.splice(orderIndex, 1);
     console.log('📋 Deleted order:', id);
     return true;
   }
-  
+
   // Print jobs
   printJobs: PrintJob[] = [];
 
-  async getAllPrintJobs(): Promise<PrintJob[]> { 
-    return this.printJobs; 
+  async getAllPrintJobs(): Promise<PrintJob[]> {
+    return this.printJobs;
   }
 
   async getPrintJobsByUserId(userId: string): Promise<PrintJob[]> {
     return this.printJobs.filter(pj => pj.userId === userId);
   }
-  
-  async createPrintJob(printJobData: any): Promise<PrintJob> { 
+
+  async createPrintJob(printJobData: any): Promise<PrintJob> {
     const printJob: PrintJob = {
       id: `pj-${Date.now()}`,
       userId: printJobData.userId,
@@ -962,37 +975,37 @@ export class MemoryStorage implements IStorage {
       createdAt: new Date(),
       completedAt: null
     };
-    
+
     this.printJobs.push(printJob);
     console.log('📋 Created print job:', printJob.id, 'for', printJob.filename);
     return printJob;
   }
-  
-  async updatePrintJobStatus(id: string, status: string): Promise<PrintJob> { 
+
+  async updatePrintJobStatus(id: string, status: string): Promise<PrintJob> {
     const printJob = this.printJobs.find(pj => pj.id === id);
     if (!printJob) {
       throw new Error(`Print job not found: ${id}`);
     }
-    
+
     printJob.status = status;
     if (status === 'completed') {
       printJob.completedAt = new Date();
       printJob.progress = 100;
     }
-    
+
     console.log('📋 Updated print job status:', id, '->', status);
     return printJob;
   }
-  
+
   // Admin stats
-  async getAdminStats(): Promise<any> { 
+  async getAdminStats(): Promise<any> {
     return {
       totalUsers: this.users.length,
       totalProducts: this.products.length,
       totalOrders: this.orders.length
     };
   }
-  
+
   // Stubs for all other methods - to be implemented as needed
   async getAllTeacherPlans(): Promise<any[]> { return []; }
   async getAllTeacherSubscriptions(): Promise<any[]> { return []; }
@@ -1000,11 +1013,11 @@ export class MemoryStorage implements IStorage {
   async createTeacher(teacher: any): Promise<any> { throw new Error('Not implemented'); }
   async updateTeacher(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
   async deleteTeacher(id: string): Promise<void> { throw new Error('Not implemented'); }
-  
+
   createNotification(data: any): any { return { id: `notif-${Date.now()}`, ...data }; }
   getUserNotifications(userId: string): any[] { return []; }
   markNotificationAsRead(notificationId: string): void { }
-  
+
   async getAllCoupons(): Promise<any[]> { return []; }
   async createCoupon(coupon: any): Promise<any> { throw new Error('Not implemented'); }
   async updateCoupon(id: string, updates: any): Promise<any> { throw new Error('Not implemented'); }
@@ -1012,13 +1025,13 @@ export class MemoryStorage implements IStorage {
   async deleteCoupon(id: string): Promise<boolean> { return false; }
   async validateCoupon(code: string, orderTotal: number, userId: string): Promise<any> { return null; }
   async applyCoupon(code: string, orderId: string, orderTotal: number, userId: string): Promise<any> { return null; }
-  
+
   async getAllInquiries(): Promise<any[]> { return []; }
   async createInquiry(inquiry: any): Promise<any> { throw new Error('Not implemented'); }
   async sendInquiry(inquiryId: string): Promise<any> { throw new Error('Not implemented'); }
   async getInquiryResponses(inquiryId: string): Promise<any[]> { return []; }
   async createInquiryNotifications(notifications: any[]): Promise<void> { }
-  
+
   async getAllDrivers(): Promise<any[]> { return this.drivers; }
   async getDriver(id: string): Promise<any | undefined> { return this.drivers.find(d => d.id === id); }
   async getDriverByEmail(email: string): Promise<any | undefined> { return undefined; }
@@ -1055,36 +1068,36 @@ export class MemoryStorage implements IStorage {
   async assignOrderToDriver(orderId: string, driverId: string): Promise<any> {
     const order = this.orders.find(o => o.id === orderId);
     if (!order) throw new Error('Order not found');
-    
+
     const driver = this.drivers.find(d => d.id === driverId);
     if (!driver) throw new Error('Driver not found');
-    
+
     order.driverId = driverId;
     order.driverName = driver.name;
     order.driverPhone = driver.phone;
     order.status = 'assigned_to_driver';
     order.updatedAt = new Date();
-    
+
     console.log(`🚚 Order ${orderId} assigned to driver ${driver.name}`);
     return order;
   }
-  async getDriverOrders(driverId: string): Promise<any[]> { 
+  async getDriverOrders(driverId: string): Promise<any[]> {
     return this.orders.filter(o => o.driverId === driverId);
   }
   async deleteDriver(id: string): Promise<boolean> { return false; }
-  
+
   async getCoupon(id: string): Promise<any> { return null; }
   async createCouponNotifications(notifications: any[]): Promise<void> { }
   async getCouponUsageAnalytics(couponId: string): Promise<any> { return {}; }
-  
+
   // Partners
-  async getFeaturedPartners(): Promise<Partner[]> { 
+  async getFeaturedPartners(): Promise<Partner[]> {
     return this.partners.filter(partner => partner.isFeatured && partner.isActive);
   }
-  async getAllPartners(): Promise<Partner[]> { 
-    return this.partners; 
+  async getAllPartners(): Promise<Partner[]> {
+    return this.partners;
   }
-  async getPartnerById(id: string): Promise<Partner | undefined> { 
+  async getPartnerById(id: string): Promise<Partner | undefined> {
     return this.partners.find(partner => partner.id === id);
   }
   async createPartner(partner: any): Promise<Partner> {
@@ -1103,7 +1116,7 @@ export class MemoryStorage implements IStorage {
   async updatePartner(id: string, updates: any): Promise<Partner> {
     const index = this.partners.findIndex(p => p.id === id);
     if (index === -1) throw new Error('Partner not found');
-    
+
     this.partners[index] = {
       ...this.partners[index],
       ...updates,
@@ -1115,20 +1128,20 @@ export class MemoryStorage implements IStorage {
   async deletePartner(id: string): Promise<boolean> {
     const index = this.partners.findIndex(p => p.id === id);
     if (index === -1) return false;
-    
+
     this.partners.splice(index, 1);
     console.log(`🤝 Partner deleted: ${id}`);
     return true;
   }
-  
+
   // Partner Products
-  async getPartnerProducts(partnerId: string): Promise<any[]> { 
+  async getPartnerProducts(partnerId: string): Promise<any[]> {
     return this.partnerProducts.filter(product => product.partnerId === partnerId);
   }
-  async getAllPartnerProducts(): Promise<any[]> { 
-    return this.partnerProducts; 
+  async getAllPartnerProducts(): Promise<any[]> {
+    return this.partnerProducts;
   }
-  async createPartnerProduct(product: any): Promise<any> { 
+  async createPartnerProduct(product: any): Promise<any> {
     const newProduct = {
       id: `product-${Date.now()}`,
       ...product,
@@ -1139,10 +1152,10 @@ export class MemoryStorage implements IStorage {
     console.log(`📦 New partner product created: ${newProduct.name} for partner ${newProduct.partnerId}`);
     return newProduct;
   }
-  async updatePartnerProduct(id: string, updates: any): Promise<any> { 
+  async updatePartnerProduct(id: string, updates: any): Promise<any> {
     const index = this.partnerProducts.findIndex(p => p.id === id);
     if (index === -1) throw new Error('Partner product not found');
-    
+
     this.partnerProducts[index] = {
       ...this.partnerProducts[index],
       ...updates,
@@ -1151,33 +1164,33 @@ export class MemoryStorage implements IStorage {
     console.log(`📦 Partner product updated: ${id}`);
     return this.partnerProducts[index];
   }
-  async deletePartnerProduct(id: string): Promise<boolean> { 
+  async deletePartnerProduct(id: string): Promise<boolean> {
     const index = this.partnerProducts.findIndex(p => p.id === id);
     if (index === -1) return false;
-    
+
     this.partnerProducts.splice(index, 1);
     console.log(`📦 Partner product deleted: ${id}`);
     return true;
   }
-  async getPartnerProductsByCategory(partnerId: string, category: string): Promise<any[]> { 
-    return this.partnerProducts.filter(product => 
+  async getPartnerProductsByCategory(partnerId: string, category: string): Promise<any[]> {
+    return this.partnerProducts.filter(product =>
       product.partnerId === partnerId && product.category === category
     );
   }
-  
+
   // Announcements
-  async getActiveAnnouncements(): Promise<Announcement[]> { 
+  async getActiveAnnouncements(): Promise<Announcement[]> {
     return this.announcements.filter(ann => ann.isActive && (!ann.expiresAt || new Date(ann.expiresAt) > new Date()));
   }
-  async getHomepageAnnouncements(): Promise<Announcement[]> { 
+  async getHomepageAnnouncements(): Promise<Announcement[]> {
     return this.announcements.filter(ann => ann.showOnHomepage && ann.isActive)
       .sort((a, b) => (b.homepagePriority || 0) - (a.homepagePriority || 0));
   }
   async getAllAnnouncements(): Promise<Announcement[]> { return this.announcements; }
-  async getAnnouncement(id: string): Promise<Announcement | undefined> { 
+  async getAnnouncement(id: string): Promise<Announcement | undefined> {
     return this.announcements.find(ann => ann.id === id);
   }
-  async createAnnouncement(announcementData: any): Promise<Announcement> { 
+  async createAnnouncement(announcementData: any): Promise<Announcement> {
     const announcement: Announcement = {
       id: `ann-${Date.now()}`,
       ...announcementData,
@@ -1187,26 +1200,26 @@ export class MemoryStorage implements IStorage {
     this.announcements.push(announcement);
     return announcement;
   }
-  async updateAnnouncement(id: string, updates: any): Promise<Announcement> { 
+  async updateAnnouncement(id: string, updates: any): Promise<Announcement> {
     const index = this.announcements.findIndex(ann => ann.id === id);
     if (index === -1) throw new Error('Announcement not found');
     this.announcements[index] = { ...this.announcements[index], ...updates, updatedAt: new Date().toISOString() };
     return this.announcements[index];
   }
-  async deleteAnnouncement(id: string): Promise<boolean> { 
+  async deleteAnnouncement(id: string): Promise<boolean> {
     const index = this.announcements.findIndex(ann => ann.id === id);
     if (index === -1) return false;
     this.announcements.splice(index, 1);
     return true;
   }
-  
+
   // Terms and Conditions operations
   async getCurrentActiveTerms(): Promise<any> {
     return this.termsVersions.find(t => t.isActive) || null;
   }
 
   async getAllTermsVersions(): Promise<any[]> {
-    return this.termsVersions.sort((a, b) => 
+    return this.termsVersions.sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -1222,7 +1235,7 @@ export class MemoryStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     this.termsVersions.push(newTerms);
     console.log(`📋 Created terms version: ${newTerms.version} (${newTerms.id})`);
     return newTerms;
@@ -1231,13 +1244,13 @@ export class MemoryStorage implements IStorage {
   async updateTermsVersion(id: string, updates: any): Promise<any> {
     const index = this.termsVersions.findIndex(t => t.id === id);
     if (index === -1) return null;
-    
+
     this.termsVersions[index] = {
       ...this.termsVersions[index],
       ...updates,
       updatedAt: new Date().toISOString()
     };
-    
+
     console.log(`📋 Updated terms version: ${id}`);
     return this.termsVersions[index];
   }
@@ -1245,14 +1258,14 @@ export class MemoryStorage implements IStorage {
   async activateTermsVersion(id: string): Promise<any> {
     // Deactivate all existing versions
     this.termsVersions.forEach(t => t.isActive = false);
-    
+
     // Activate the specified version
     const index = this.termsVersions.findIndex(t => t.id === id);
     if (index === -1) return null;
-    
+
     this.termsVersions[index].isActive = true;
     this.termsVersions[index].activatedAt = new Date().toISOString();
-    
+
     console.log(`📋 Activated terms version: ${id}`);
     return this.termsVersions[index];
   }
@@ -1260,12 +1273,12 @@ export class MemoryStorage implements IStorage {
   async deleteTermsVersion(id: string): Promise<boolean> {
     const index = this.termsVersions.findIndex(t => t.id === id);
     if (index === -1) return false;
-    
+
     // Don't allow deletion of active version
     if (this.termsVersions[index].isActive) {
       throw new Error('لا يمكن حذف الإصدار النشط من الشروط والأحكام');
     }
-    
+
     this.termsVersions.splice(index, 1);
     console.log(`📋 Deleted terms version: ${id}`);
     return true;
@@ -1307,7 +1320,7 @@ export class MemoryStorage implements IStorage {
   }
 
   async getAllPrivacyPolicyVersions(): Promise<any[]> {
-    return this.privacyPolicies.sort((a, b) => 
+    return this.privacyPolicies.sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -1323,7 +1336,7 @@ export class MemoryStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     this.privacyPolicies.push(newPolicy);
     console.log(`📋 Created privacy policy version: ${newPolicy.version} (${newPolicy.id})`);
     return newPolicy;
@@ -1332,13 +1345,13 @@ export class MemoryStorage implements IStorage {
   async updatePrivacyPolicy(id: string, updates: any): Promise<any> {
     const index = this.privacyPolicies.findIndex(p => p.id === id);
     if (index === -1) return null;
-    
+
     this.privacyPolicies[index] = {
       ...this.privacyPolicies[index],
       ...updates,
       updatedAt: new Date().toISOString()
     };
-    
+
     console.log(`📋 Updated privacy policy version: ${id}`);
     return this.privacyPolicies[index];
   }
@@ -1346,14 +1359,14 @@ export class MemoryStorage implements IStorage {
   async activatePrivacyPolicy(id: string): Promise<any> {
     // Deactivate all existing versions
     this.privacyPolicies.forEach(p => p.isActive = false);
-    
+
     // Activate the specified version
     const index = this.privacyPolicies.findIndex(p => p.id === id);
     if (index === -1) return null;
-    
+
     this.privacyPolicies[index].isActive = true;
     this.privacyPolicies[index].updatedAt = new Date().toISOString();
-    
+
     console.log(`📋 Activated privacy policy version: ${id}`);
     return this.privacyPolicies[index];
   }
@@ -1361,12 +1374,12 @@ export class MemoryStorage implements IStorage {
   async deletePrivacyPolicy(id: string): Promise<boolean> {
     const index = this.privacyPolicies.findIndex(p => p.id === id);
     if (index === -1) return false;
-    
+
     // Don't allow deletion of active version
     if (this.privacyPolicies[index].isActive) {
       throw new Error('لا يمكن حذف الإصدار النشط من سياسة الخصوصية');
     }
-    
+
     this.privacyPolicies.splice(index, 1);
     console.log(`📋 Deleted privacy policy version: ${id}`);
     return true;
@@ -1384,7 +1397,7 @@ export class MemoryStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
+
     this.pendingUploads.push(newUpload);
     console.log(`📁 Created pending upload: ${upload.fileName} for user ${upload.userId}`);
     return newUpload;
@@ -1393,13 +1406,13 @@ export class MemoryStorage implements IStorage {
   async updatePendingUpload(id: string, updates: Partial<PendingUpload>): Promise<PendingUpload> {
     const index = this.pendingUploads.findIndex(upload => upload.id === id);
     if (index === -1) throw new Error('Pending upload not found');
-    
+
     this.pendingUploads[index] = {
       ...this.pendingUploads[index],
       ...updates,
       updatedAt: new Date()
     };
-    
+
     console.log(`📁 Updated pending upload: ${id}`);
     return this.pendingUploads[index];
   }
@@ -1407,7 +1420,7 @@ export class MemoryStorage implements IStorage {
   async deletePendingUpload(id: string): Promise<boolean> {
     const index = this.pendingUploads.findIndex(upload => upload.id === id);
     if (index === -1) return false;
-    
+
     this.pendingUploads.splice(index, 1);
     console.log(`📁 Deleted pending upload: ${id}`);
     return true;
@@ -1417,7 +1430,7 @@ export class MemoryStorage implements IStorage {
     const initialLength = this.pendingUploads.length;
     this.pendingUploads = this.pendingUploads.filter(upload => upload.userId !== userId);
     const deletedCount = initialLength - this.pendingUploads.length;
-    
+
     console.log(`📁 Cleared ${deletedCount} pending uploads for user ${userId}`);
     return deletedCount > 0;
   }
@@ -1425,7 +1438,7 @@ export class MemoryStorage implements IStorage {
   async updatePendingUploadSettings(id: string, printSettings: any): Promise<PendingUpload> {
     const index = this.pendingUploads.findIndex(upload => upload.id === id);
     if (index === -1) throw new Error('Pending upload not found');
-    
+
     // Server-side validation: compute binding price from binding type to prevent client tampering
     const validatedSettings = { ...printSettings };
     if (validatedSettings.bindingType) {
@@ -1434,14 +1447,14 @@ export class MemoryStorage implements IStorage {
     if (validatedSettings.bookPrinting === false) {
       validatedSettings.bindingPrice = 0;
     }
-    
+
     // Update the pending upload directly (book printing fields are top-level properties)
     this.pendingUploads[index] = {
       ...this.pendingUploads[index],
       ...validatedSettings,
       updatedAt: new Date()
     };
-    
+
     console.log(`📁 Updated print settings for pending upload: ${id}`);
     return this.pendingUploads[index];
   }
@@ -1537,7 +1550,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUsersByBehavior(criteria: { minPrints?: number; minPurchases?: number; minPoints?: number }): Promise<User[]> {
     let conditions: any[] = [];
-    
+
     if (criteria.minPrints) {
       conditions.push(sql`${users.totalPrints} >= ${criteria.minPrints}`);
     }
@@ -1561,10 +1574,10 @@ export class DatabaseStorage implements IStorage {
     if (!daysInactive) {
       return await this.getAllUsers();
     }
-    
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysInactive);
-    
+
     return await db.select().from(users).where(
       sql`${users.createdAt} >= ${cutoffDate.toISOString()}`
     );
@@ -1590,7 +1603,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Import notifications from schema if not already available
       const { notifications } = await import("../shared/schema");
-      
+
       if (userId) {
         return await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
       }
@@ -1692,18 +1705,18 @@ export class DatabaseStorage implements IStorage {
   async updateUserNotificationPreferences(userId: string, preferences: any): Promise<any> {
     try {
       const { notificationPreferences } = await import("../shared/schema");
-      
+
       // Try to update first
       const [updated] = await db
         .update(notificationPreferences)
         .set({ ...preferences, updatedAt: new Date() })
         .where(eq(notificationPreferences.userId, userId))
         .returning();
-        
+
       if (updated) {
         return updated;
       }
-      
+
       // If no rows updated, create new preferences
       return await this.createUserNotificationPreferences({
         ...preferences,
@@ -1776,7 +1789,7 @@ export class DatabaseStorage implements IStorage {
   async updateOrderStatus(id: string, status: string): Promise<Order> {
     const [order] = await db
       .update(orders)
-      .set({ 
+      .set({
         status,
         updatedAt: new Date()
       })
@@ -1798,7 +1811,7 @@ export class DatabaseStorage implements IStorage {
   async updateOrderRating(id: string, rating: number, review?: string): Promise<Order> {
     const [order] = await db
       .update(orders)
-      .set({ 
+      .set({
         rating,
         review,
         updatedAt: new Date()
@@ -1811,7 +1824,7 @@ export class DatabaseStorage implements IStorage {
   async cancelOrder(id: string): Promise<Order> {
     const [order] = await db
       .update(orders)
-      .set({ 
+      .set({
         status: 'cancelled',
         statusText: 'ملغي',
         cancelledAt: new Date(),
@@ -1825,10 +1838,10 @@ export class DatabaseStorage implements IStorage {
   async addDriverNote(id: string, note: string): Promise<Order> {
     const [existingOrder] = await db.select().from(orders).where(eq(orders.id, id));
     const currentNotes = existingOrder.driverNotes || '';
-    
+
     const [order] = await db
       .update(orders)
-      .set({ 
+      .set({
         driverNotes: currentNotes + '\n' + note,
         updatedAt: new Date()
       })
@@ -1958,7 +1971,7 @@ export class DatabaseStorage implements IStorage {
       {
         id: "1",
         fullName: "أحمد محمد علي",
-        email: "ahmed.ali@school.edu.eg", 
+        email: "ahmed.ali@school.edu.eg",
         phone: "1012345678",
         countryCode: "+20",
         specialization: "math",
@@ -1978,13 +1991,13 @@ export class DatabaseStorage implements IStorage {
         status: "active"
       },
       {
-        id: "2", 
+        id: "2",
         fullName: "فاطمة حسن محمود",
         email: "fatma.hassan@school.edu.eg",
         phone: "1098765432",
         countryCode: "+20",
         specialization: "arabic",
-        school: "مدرسة الأمل الإعدادية", 
+        school: "مدرسة الأمل الإعدادية",
         educationLevel: "master",
         university: "جامعة الأزهر",
         graduationYear: 2012,
@@ -2001,7 +2014,7 @@ export class DatabaseStorage implements IStorage {
       },
       {
         id: "3",
-        fullName: "محمد سمير إبراهيم", 
+        fullName: "محمد سمير إبراهيم",
         email: "mohamed.samir@school.edu.eg",
         phone: "1123456789",
         countryCode: "+20",
@@ -2105,7 +2118,7 @@ export class DatabaseStorage implements IStorage {
 
   // Inquiry operations using global storage
   async getAllInquiries(): Promise<any[]> {
-    return [...globalInquiryStorage].sort((a, b) => 
+    return [...globalInquiryStorage].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -2293,7 +2306,7 @@ export class DatabaseStorage implements IStorage {
         createdAt: new Date(),
         updatedAt: new Date()
       }).returning();
-      
+
       console.log(`🚚 New driver created: ${newDriver.name} (@${newDriver.username})`);
       return newDriver;
     } catch (error) {
@@ -2308,7 +2321,7 @@ export class DatabaseStorage implements IStorage {
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(drivers.id, id))
         .returning();
-      
+
       console.log(`🚚 Driver updated: ${id}`);
       return updatedDriver;
     } catch (error) {
@@ -2320,15 +2333,15 @@ export class DatabaseStorage implements IStorage {
   async updateDriverStatus(id: string, status: string): Promise<any> {
     try {
       const [updatedDriver] = await db.update(drivers)
-        .set({ 
-          status, 
+        .set({
+          status,
           isAvailable: status === 'online',
           lastActiveAt: new Date(),
           updatedAt: new Date()
         })
         .where(eq(drivers.id, id))
         .returning();
-      
+
       console.log(`🚚 Driver status updated: ${id} -> ${status}`);
       return updatedDriver;
     } catch (error) {
@@ -2347,7 +2360,7 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(drivers.id, id))
         .returning();
-      
+
       return updatedDriver;
     } catch (error) {
       console.error('Error updating driver location:', error);
@@ -2359,14 +2372,14 @@ export class DatabaseStorage implements IStorage {
     console.log(`🏢 DatabaseStorage: authenticateDriver called`);
     try {
       console.log(`🔍 Looking for driver with identifier: ${identifier}`);
-      
+
       // Try to find driver by email first, then by username
       let driver = await this.getDriverByEmail(identifier);
       if (!driver) {
         console.log(`📧 No driver found by email, trying username...`);
         driver = await this.getDriverByUsername(identifier);
       }
-      
+
       if (!driver) {
         console.log(`❌ No driver found with identifier: ${identifier}`);
         return null;
@@ -2382,7 +2395,7 @@ export class DatabaseStorage implements IStorage {
         await this.updateDriver(driver.id, { lastActiveAt: new Date() });
         return driver;
       }
-      
+
       console.log(`❌ Password mismatch for driver ${driver.name}`);
       return null;
     } catch (error) {
@@ -2493,7 +2506,7 @@ export class DatabaseStorage implements IStorage {
   async addToCart(userId: string, productId: string, quantity: number, variant?: any, customPrice?: string): Promise<CartItem> {
     try {
       let finalPrice = customPrice;
-      
+
       // Handle print jobs with calculated pricing
       if (variant?.isPrintJob) {
         if (variant?.printJob?.cost) {
@@ -2503,7 +2516,7 @@ export class DatabaseStorage implements IStorage {
           finalPrice = variant.printJob.calculatedPrice;
           console.log(`💰 Print job DB pricing: Using calculated price ${finalPrice} جنيه`);
         }
-        
+
         // For print jobs, we don't need to look up a product since it's a service
         // Check if item already exists in cart by variant (print job)
         const [existingItem] = await db
@@ -2520,7 +2533,7 @@ export class DatabaseStorage implements IStorage {
           const newQuantity = existingItem.quantity + quantity;
           const [updatedItem] = await db
             .update(cartItems)
-            .set({ 
+            .set({
               quantity: newQuantity,
               updatedAt: new Date()
             })
@@ -2569,7 +2582,7 @@ export class DatabaseStorage implements IStorage {
           const newQuantity = existingItem.quantity + quantity;
           const [updatedItem] = await db
             .update(cartItems)
-            .set({ 
+            .set({
               quantity: newQuantity,
               updatedAt: new Date()
             })
@@ -2617,13 +2630,13 @@ export class DatabaseStorage implements IStorage {
 
       const [updatedItem] = await db
         .update(cartItems)
-        .set({ 
+        .set({
           quantity,
           updatedAt: new Date()
         })
         .where(eq(cartItems.id, itemId))
         .returning();
-      
+
       console.log(`✅ Cart item ${itemId} updated to quantity ${quantity}`);
       return updatedItem;
     } catch (error) {
@@ -2699,11 +2712,11 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(secureDrivers)
         .where(and(eq(secureDrivers.username, username), eq(secureDrivers.email, email)));
-      
+
       if (driverCode) {
         query = query.where(eq(secureDrivers.driverCode, driverCode));
       }
-      
+
       const [driver] = await query.limit(1);
       return driver;
     } catch (error) {
@@ -2726,7 +2739,7 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date()
         })
         .returning();
-      
+
       console.log(`🔐 New secure admin created: ${newAdmin.username}`);
       return newAdmin;
     } catch (error) {
@@ -2750,7 +2763,7 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date()
         })
         .returning();
-      
+
       console.log(`🚚 New secure driver created: ${newDriver.username}`);
       return newDriver;
     } catch (error) {
@@ -2769,11 +2782,11 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(secureAdmins.id, id))
         .returning();
-      
+
       if (!updatedAdmin) {
         throw new Error('Secure admin not found');
       }
-      
+
       console.log(`🔐 Secure admin updated: ${id}`);
       return updatedAdmin;
     } catch (error) {
@@ -2792,11 +2805,11 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(secureDrivers.id, id))
         .returning();
-      
+
       if (!updatedDriver) {
         throw new Error('Secure driver not found');
       }
-      
+
       console.log(`🚚 Secure driver updated: ${id}`);
       return updatedDriver;
     } catch (error) {
@@ -2821,7 +2834,7 @@ export class DatabaseStorage implements IStorage {
         })
         .from(secureAdmins)
         .orderBy(desc(secureAdmins.createdAt));
-      
+
       return admins;
     } catch (error) {
       console.error('Error getting all secure admins:', error);
@@ -2850,7 +2863,7 @@ export class DatabaseStorage implements IStorage {
         })
         .from(secureDrivers)
         .orderBy(desc(secureDrivers.createdAt));
-      
+
       return drivers;
     } catch (error) {
       console.error('Error getting all secure drivers:', error);
@@ -2867,7 +2880,7 @@ export class DatabaseStorage implements IStorage {
           createdAt: new Date()
         })
         .returning();
-      
+
       return newLog;
     } catch (error) {
       console.error('Error creating security log:', error);
@@ -2878,19 +2891,19 @@ export class DatabaseStorage implements IStorage {
   async getSecurityLogs(options: any): Promise<any[]> {
     try {
       let query = db.select().from(securityLogs);
-      
+
       if (options.userType) {
         query = query.where(eq(securityLogs.userType, options.userType));
       }
-      
+
       if (options.action) {
         query = query.where(eq(securityLogs.action, options.action));
       }
-      
+
       const logs = await query
         .orderBy(desc(securityLogs.createdAt))
         .limit(options.limit || 50);
-      
+
       return logs;
     } catch (error) {
       console.error('Error getting security logs:', error);
@@ -2992,10 +3005,10 @@ class MemStorage implements IStorage {
   // Method to clean up duplicate priorities in existing data
   private cleanupHomepagePriorities(): void {
     console.log('🧹 Cleaning up homepage priority conflicts...');
-    
+
     const homepageAnnouncements = this.announcements.filter(ann => ann.showOnHomepage);
     const priorityMap: { [key: number]: Announcement[] } = {};
-    
+
     // Group announcements by priority
     homepageAnnouncements.forEach(ann => {
       if (!priorityMap[ann.homepagePriority]) {
@@ -3003,15 +3016,15 @@ class MemStorage implements IStorage {
       }
       priorityMap[ann.homepagePriority].push(ann);
     });
-    
+
     // Fix conflicts
     Object.keys(priorityMap).forEach(priorityStr => {
       const priority = parseInt(priorityStr);
       const anns = priorityMap[priority];
-      
+
       if (anns.length > 1) {
         console.log(`🚨 Found ${anns.length} announcements with priority ${priority}`);
-        
+
         // Keep the first one, reassign others
         for (let i = 1; i < anns.length; i++) {
           const newPriority = this.getNextAvailablePriority(priority);
@@ -3020,7 +3033,7 @@ class MemStorage implements IStorage {
         }
       }
     });
-    
+
     console.log('✅ Homepage priority cleanup completed');
   }
 
@@ -3086,7 +3099,7 @@ class MemStorage implements IStorage {
           fileUrl: 'https://example.com/math-booklet.pdf'
         },
         {
-          id: 'item-2', 
+          id: 'item-2',
           type: 'book',
           name: 'كتاب الفيزياء للصف الثاني الثانوي',
           description: 'كتاب وزارة التربية والتعليم',
@@ -3300,7 +3313,7 @@ class MemStorage implements IStorage {
     } catch (error) {
       console.error('Database error, fallback to memory:', error);
       // Fallback to memory
-      return this.users.filter(user => 
+      return this.users.filter(user =>
         user.gradeLevel && gradeLevels.includes(user.gradeLevel)
       );
     }
@@ -3316,7 +3329,7 @@ class MemStorage implements IStorage {
     } catch (error) {
       console.error('Database error, fallback to memory:', error);
       // Fallback to memory
-      return this.users.filter(user => 
+      return this.users.filter(user =>
         roles.includes(user.role)
       );
     }
@@ -3326,7 +3339,7 @@ class MemStorage implements IStorage {
     try {
       // Try database first
       let conditions: any[] = [];
-      
+
       if (criteria.minPrints) {
         conditions.push(sql`${users.totalPrints} >= ${criteria.minPrints}`);
       }
@@ -3361,10 +3374,10 @@ class MemStorage implements IStorage {
     if (!daysInactive) {
       return await this.getAllUsers();
     }
-    
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysInactive);
-    
+
     try {
       // Try database first
       const dbUsers = await db.select().from(users).where(
@@ -3394,7 +3407,7 @@ class MemStorage implements IStorage {
     } catch (error) {
       console.error('Database error, fallback to memory:', error);
       // Fallback to memory
-      return this.users.filter(user => 
+      return this.users.filter(user =>
         user.isTeacher === true && user.role !== 'admin'
       );
     }
@@ -3410,8 +3423,8 @@ class MemStorage implements IStorage {
     } catch (error) {
       console.error('Database error, fallback to memory:', error);
       // Fallback to memory
-      return this.users.filter(user => 
-        (user.totalPurchases || 0) > 500 || 
+      return this.users.filter(user =>
+        (user.totalPurchases || 0) > 500 ||
         (user.bountyPoints || 0) > 1000 ||
         user.role === 'VIP'
       );
@@ -3523,18 +3536,18 @@ class MemStorage implements IStorage {
   async updateUserNotificationPreferences(userId: string, preferences: any): Promise<any> {
     try {
       const { notificationPreferences } = await import("../shared/schema");
-      
+
       // Try to update first
       const [updated] = await db
         .update(notificationPreferences)
         .set({ ...preferences, updatedAt: new Date() })
         .where(eq(notificationPreferences.userId, userId))
         .returning();
-        
+
       if (updated) {
         return updated;
       }
-      
+
       // If no rows updated, create new preferences
       return await this.createUserNotificationPreferences({
         ...preferences,
@@ -3665,7 +3678,7 @@ class MemStorage implements IStorage {
   }
 
   async getActiveOrders(): Promise<Order[]> {
-    return this.orders.filter(o => 
+    return this.orders.filter(o =>
       o.status !== 'delivered' && o.status !== 'cancelled'
     );
   }
@@ -3724,14 +3737,15 @@ class MemStorage implements IStorage {
       lastModified: new Date()
     };
     this.pendingUploads.push(upload);
-    console.log(`📁 Created pending upload: ${upload.originalName} for user ${upload.userId}`);
+    console.log(`📁 Created pending upload: ${upload.id} for user ${upload.userId}`);
+    console.log(`📊 Upload object fileSize: ${upload.fileSize} bytes`);
     return upload;
   }
 
   async updatePendingUpload(id: string, updates: Partial<PendingUpload>): Promise<PendingUpload> {
     const index = this.pendingUploads.findIndex(u => u.id === id);
     if (index === -1) throw new Error('Pending upload not found');
-    
+
     this.pendingUploads[index] = {
       ...this.pendingUploads[index],
       ...updates,
@@ -3755,7 +3769,7 @@ class MemStorage implements IStorage {
   async deletePendingUpload(id: string): Promise<boolean> {
     const index = this.pendingUploads.findIndex(u => u.id === id);
     if (index === -1) return false;
-    
+
     const upload = this.pendingUploads[index];
     this.pendingUploads.splice(index, 1);
     console.log(`🗑️ Deleted pending upload: ${upload.originalName}`);
@@ -3772,13 +3786,13 @@ class MemStorage implements IStorage {
 
   async addToCart(userId: string, productId: string, quantity: number, variant?: any): Promise<any> {
     console.log(`🛒 Adding to cart: userId=${userId}, productId=${productId}, quantity=${quantity}`);
-    
+
     // Determine product source and get product details
     let productSource = 'atbaali';
     let partnerId = null;
     let partnerName = null;
     let product = null;
-    
+
     if (productId === 'print-service') {
       productSource = 'print_service';
       // Use the correctly calculated totalCost from printJob.calculatedPrice, printJob.cost, or fallback to '1.00'
@@ -3815,12 +3829,12 @@ class MemStorage implements IStorage {
     if (existingCartItems.length > 0) {
       const existingSource = existingCartItems[0].productSource;
       const existingPartnerId = existingCartItems[0].partnerId;
-      
+
       if (existingSource !== productSource) {
         console.log(`❌ Cannot mix ${existingSource} products with ${productSource} products`);
         throw new Error(`لا يمكن الجمع بين منتجات ${existingSource === 'atbaali' ? 'اطبعلي' : existingSource === 'partner' ? 'الشركاء' : 'الطباعة'} و منتجات ${productSource === 'atbaali' ? 'اطبعلي' : productSource === 'partner' ? 'الشركاء' : 'الطباعة'} في نفس السلة`);
       }
-      
+
       if (productSource === 'partner' && existingPartnerId !== partnerId) {
         console.log(`❌ Cannot mix products from different partners`);
         throw new Error('لا يمكن الطلب من أكثر من شريك واحد في نفس الوقت. يرجى إنهاء الطلب الحالي أولاً');
@@ -3828,7 +3842,7 @@ class MemStorage implements IStorage {
     }
 
     // Check if item already exists in cart
-    const existingItemIndex = this.cartItems.findIndex(item => 
+    const existingItemIndex = this.cartItems.findIndex(item =>
       item.userId === userId && item.productId === productId
     );
 
@@ -3863,12 +3877,12 @@ class MemStorage implements IStorage {
       console.log(`🛒 Getting cart for user: ${userId}`);
       const userCartItems = this.cartItems.filter(item => item.userId === userId);
       console.log(`📦 Found ${userCartItems.length} cart items for user ${userId}`);
-      
+
       const items = userCartItems.map(item => {
         let product = null;
         let productName = 'منتج';
         let productImage = '';
-        
+
         if (item.productSource === 'partner') {
           product = this.partnerProducts.find(p => p.id === item.productId);
           productName = product?.name || 'منتج شريك';
@@ -3882,7 +3896,7 @@ class MemStorage implements IStorage {
           productName = product?.name || 'منتج';
           productImage = product?.imageUrl || '';
         }
-        
+
         return {
           id: item.id,
           productId: item.productId,
@@ -3910,7 +3924,7 @@ class MemStorage implements IStorage {
         subtotal,
         currency: 'جنيه',
       };
-      
+
       console.log(`🛒 Cart response:`, cart);
       return cart;
     } catch (error) {
@@ -3924,7 +3938,7 @@ class MemStorage implements IStorage {
     if (itemIndex === -1) {
       throw new Error('Cart item not found');
     }
-    
+
     this.cartItems[itemIndex].quantity = quantity;
     this.cartItems[itemIndex].updatedAt = new Date();
     return this.cartItems[itemIndex];
@@ -3935,7 +3949,7 @@ class MemStorage implements IStorage {
     if (itemIndex === -1) {
       return false;
     }
-    
+
     this.cartItems.splice(itemIndex, 1);
     return true;
   }
@@ -3993,7 +4007,7 @@ class MemStorage implements IStorage {
       {
         id: "1",
         fullName: "أحمد محمد علي",
-        email: "ahmed.ali@school.edu.eg", 
+        email: "ahmed.ali@school.edu.eg",
         phone: "1012345678",
         countryCode: "+20",
         specialization: "math",
@@ -4013,13 +4027,13 @@ class MemStorage implements IStorage {
         status: "active"
       },
       {
-        id: "2", 
+        id: "2",
         fullName: "فاطمة حسن محمود",
         email: "fatma.hassan@school.edu.eg",
         phone: "1098765432",
         countryCode: "+20",
         specialization: "arabic",
-        school: "مدرسة الأمل الإعدادية", 
+        school: "مدرسة الأمل الإعدادية",
         educationLevel: "master",
         university: "جامعة الأزهر",
         graduationYear: 2012,
@@ -4060,11 +4074,11 @@ class MemStorage implements IStorage {
 
   // Notification operations
   createNotification(data: any): any {
-    const notification = { 
-      id: Math.random().toString(36).substr(2, 9), 
-      ...data, 
+    const notification = {
+      id: Math.random().toString(36).substr(2, 9),
+      ...data,
       read: false,
-      createdAt: new Date() 
+      createdAt: new Date()
     };
     this.notifications.push(notification);
     return notification;
@@ -4088,9 +4102,9 @@ class MemStorage implements IStorage {
   }
 
   // ==================== COUPON OPERATIONS ====================
-  
+
   async getAllCoupons(): Promise<any[]> {
-    return [...globalCouponStorage].sort((a, b) => 
+    return [...globalCouponStorage].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -4110,10 +4124,10 @@ class MemStorage implements IStorage {
   async updateCoupon(id: string, updates: any): Promise<any> {
     const index = globalCouponStorage.findIndex(c => c.id === id);
     if (index !== -1) {
-      globalCouponStorage[index] = { 
-        ...globalCouponStorage[index], 
-        ...updates, 
-        updatedAt: new Date() 
+      globalCouponStorage[index] = {
+        ...globalCouponStorage[index],
+        ...updates,
+        updatedAt: new Date()
       };
       return globalCouponStorage[index];
     }
@@ -4123,10 +4137,10 @@ class MemStorage implements IStorage {
   async updateCouponStatus(id: string, isActive: boolean): Promise<any> {
     const index = globalCouponStorage.findIndex(c => c.id === id);
     if (index !== -1) {
-      globalCouponStorage[index] = { 
-        ...globalCouponStorage[index], 
-        isActive, 
-        updatedAt: new Date() 
+      globalCouponStorage[index] = {
+        ...globalCouponStorage[index],
+        isActive,
+        updatedAt: new Date()
       };
       return globalCouponStorage[index];
     }
@@ -4163,9 +4177,9 @@ class MemStorage implements IStorage {
 
     const minOrder = parseFloat(coupon.minimumOrderValue || '0');
     if (orderTotal < minOrder) {
-      return { 
-        valid: false, 
-        error: `الحد الأدنى للطلب ${minOrder} جنيه` 
+      return {
+        valid: false,
+        error: `الحد الأدنى للطلب ${minOrder} جنيه`
       };
     }
 
@@ -4189,7 +4203,7 @@ class MemStorage implements IStorage {
 
   async applyCoupon(code: string, orderId: string, orderTotal: number, userId: string): Promise<any> {
     const validation = await this.validateCoupon(code, orderTotal, userId);
-    
+
     if (!validation.valid) {
       return validation;
     }
@@ -4267,7 +4281,7 @@ class MemStorage implements IStorage {
 
   // Inquiry operations using global storage
   async getAllInquiries(): Promise<any[]> {
-    return [...globalInquiryStorage].sort((a, b) => 
+    return [...globalInquiryStorage].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -4445,7 +4459,7 @@ class MemStorage implements IStorage {
   ];
 
   async getAllDrivers(): Promise<any[]> {
-    return [...this.drivers].sort((a, b) => 
+    return [...this.drivers].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -4488,10 +4502,10 @@ class MemStorage implements IStorage {
   async updateDriver(id: string, updates: any): Promise<any> {
     const index = this.drivers.findIndex(d => d.id === id);
     if (index !== -1) {
-      this.drivers[index] = { 
-        ...this.drivers[index], 
-        ...updates, 
-        updatedAt: new Date() 
+      this.drivers[index] = {
+        ...this.drivers[index],
+        ...updates,
+        updatedAt: new Date()
       };
       console.log(`🚚 Driver updated: ${id}`);
       return this.drivers[index];
@@ -4533,19 +4547,19 @@ class MemStorage implements IStorage {
     console.log(`[MEMSTORAGE] authenticateDriver CALLED!!! identifier=${identifier}, password=${password}`);
     console.log(`[MEMSTORAGE] drivers count: ${this.drivers.length}`);
     console.log(`[MEMSTORAGE] drivers:`, this.drivers.map(d => `${d.name}(user:${d.username},pass:${d.password})`));
-    
+
     // Try to find driver by email or username
-    const driver = this.drivers.find(d => 
+    const driver = this.drivers.find(d =>
       (d.email === identifier || d.username === identifier) && d.password === password
     );
-    
+
     if (driver) {
       console.log(`✅ MemStorage: Driver found and authenticated: ${driver.name}`);
       // Update last active time
       await this.updateDriver(driver.id, { lastActiveAt: new Date() });
       return driver;
     }
-    
+
     console.log(`❌ MemStorage: No matching driver found for: ${identifier}`);
     return null;
   }
@@ -4630,9 +4644,9 @@ class MemStorage implements IStorage {
   }
 
   async updateDriverStatus(id: string, status: string): Promise<any> {
-    return this.updateDriver(id, { 
-      status, 
-      lastActiveAt: new Date() 
+    return this.updateDriver(id, {
+      status,
+      lastActiveAt: new Date()
     });
   }
 
@@ -4648,7 +4662,7 @@ class MemStorage implements IStorage {
   async getAvailableOrdersForDriver(driverId: string): Promise<any[]> {
     // Return orders that are pending or waiting for pickup
     const availableOrders = this.orders
-      .filter(order => 
+      .filter(order =>
         ['pending', 'confirmed', 'preparing'].includes(order.status) &&
         !order.driverId
       )
@@ -4687,12 +4701,12 @@ class MemStorage implements IStorage {
     const orderIndex = this.orders.findIndex(order => order.id === orderId);
     if (orderIndex !== -1) {
       const updates: any = { status };
-      
+
       if (status === 'picked_up') {
         updates.pickedUpAt = new Date().toISOString();
       } else if (status === 'delivered') {
         updates.deliveredAt = new Date().toISOString();
-        
+
         // Update driver earnings when order is delivered
         if (driverId) {
           const driverIndex = this.drivers.findIndex(d => d.id === driverId);
@@ -4700,7 +4714,7 @@ class MemStorage implements IStorage {
             const order = this.orders[orderIndex];
             const deliveryFee = parseFloat(order.total) * 0.1; // 10% commission
             const currentEarnings = parseFloat(this.drivers[driverIndex].earnings || '0');
-            
+
             this.drivers[driverIndex] = {
               ...this.drivers[driverIndex],
               earnings: (currentEarnings + deliveryFee).toFixed(2),
@@ -4761,9 +4775,9 @@ class MemStorage implements IStorage {
     if (index === -1) {
       throw new Error('Announcement not found');
     }
-    
+
     const currentAnnouncement = this.announcements[index];
-    
+
     // Handle priority conflicts for homepage announcements
     if (updates.showOnHomepage && updates.homepagePriority && updates.homepagePriority > 0) {
       // Only adjust if the priority is actually changing
@@ -4771,13 +4785,13 @@ class MemStorage implements IStorage {
         this.adjustHomepagePriorities(updates.homepagePriority, id);
       }
     }
-    
+
     this.announcements[index] = {
       ...this.announcements[index],
       ...updates,
       updatedAt: new Date(),
     };
-    
+
     return this.announcements[index];
   }
 
@@ -4786,7 +4800,7 @@ class MemStorage implements IStorage {
     if (index === -1) {
       return false;
     }
-    
+
     this.announcements.splice(index, 1);
     return true;
   }
@@ -4794,10 +4808,10 @@ class MemStorage implements IStorage {
   // Helper method to adjust homepage priorities and avoid conflicts
   private adjustHomepagePriorities(newPriority: number, excludeId?: string): void {
     console.log(`🔄 Checking priority conflicts for priority ${newPriority}, excluding ${excludeId}`);
-    
+
     // Find announcements with conflicting priority
-    const conflictingAnnouncements = this.announcements.filter(ann => 
-      ann.showOnHomepage && 
+    const conflictingAnnouncements = this.announcements.filter(ann =>
+      ann.showOnHomepage &&
       ann.homepagePriority === newPriority &&
       ann.id !== excludeId
     );
@@ -4810,15 +4824,15 @@ class MemStorage implements IStorage {
       const nextAvailablePriority = this.getNextAvailablePriority(newPriority, excludeId);
       ann.homepagePriority = nextAvailablePriority;
       ann.updatedAt = new Date();
-      
+
       console.log(`📌 Moved announcement "${ann.title}" from priority ${oldPriority} to ${nextAvailablePriority}`);
     });
   }
 
   private getNextAvailablePriority(startFrom: number, excludeId?: string): number {
     for (let priority = startFrom + 1; priority <= 4; priority++) {
-      const exists = this.announcements.some(ann => 
-        ann.showOnHomepage && 
+      const exists = this.announcements.some(ann =>
+        ann.showOnHomepage &&
         ann.homepagePriority === priority &&
         ann.id !== excludeId
       );
@@ -4827,11 +4841,11 @@ class MemStorage implements IStorage {
         return priority;
       }
     }
-    
+
     // If all priorities 1-4 are taken, try to find any available slot from 1-4
     for (let priority = 1; priority <= 4; priority++) {
-      const exists = this.announcements.some(ann => 
-        ann.showOnHomepage && 
+      const exists = this.announcements.some(ann =>
+        ann.showOnHomepage &&
         ann.homepagePriority === priority &&
         ann.id !== excludeId
       );
@@ -4840,7 +4854,7 @@ class MemStorage implements IStorage {
         return priority;
       }
     }
-    
+
     console.warn(`⚠️ All priority slots 1-4 are taken, assigning priority 5 (will not display)`);
     return 5;
   }
@@ -4878,7 +4892,7 @@ class MemStorage implements IStorage {
   async updatePartner(id: string, updates: Partial<Partner>): Promise<Partner | undefined> {
     const index = this.partners.findIndex(p => p.id === id);
     if (index === -1) return undefined;
-    
+
     this.partners[index] = {
       ...this.partners[index],
       ...updates,
@@ -4891,7 +4905,7 @@ class MemStorage implements IStorage {
   async deletePartner(id: string): Promise<boolean> {
     const index = this.partners.findIndex(p => p.id === id);
     if (index === -1) return false;
-    
+
     this.partners.splice(index, 1);
     console.log(`🤝 Partner deleted: ${id}`);
     return true;
@@ -4923,10 +4937,10 @@ class MemStorage implements IStorage {
   async updatePartnerProduct(id: string, updates: Partial<InsertPartnerProduct>): Promise<SelectPartnerProduct> {
     const index = this.partnerProducts.findIndex(p => p.id === id);
     if (index !== -1) {
-      this.partnerProducts[index] = { 
-        ...this.partnerProducts[index], 
-        ...updates, 
-        updatedAt: new Date() 
+      this.partnerProducts[index] = {
+        ...this.partnerProducts[index],
+        ...updates,
+        updatedAt: new Date()
       };
       console.log(`📦 Partner product updated: ${id}`);
       return this.partnerProducts[index];
@@ -4945,7 +4959,7 @@ class MemStorage implements IStorage {
   }
 
   async getPartnerProductsByCategory(partnerId: string, category: string): Promise<SelectPartnerProduct[]> {
-    return this.partnerProducts.filter(p => 
+    return this.partnerProducts.filter(p =>
       p.partnerId === partnerId && p.category === category
     );
   }
@@ -4953,15 +4967,15 @@ class MemStorage implements IStorage {
   // Security System operations are initialized in constructor
 
   async getSecureAdminByCredentials(username: string, email: string): Promise<any | undefined> {
-    return this.secureAdmins.find(admin => 
+    return this.secureAdmins.find(admin =>
       admin.username === username && admin.email === email
     );
   }
 
   async getSecureDriverByCredentials(username: string, email: string, driverCode?: string): Promise<any | undefined> {
-    return this.secureDrivers.find(driver => 
-      driver.username === username && 
-      driver.email === email && 
+    return this.secureDrivers.find(driver =>
+      driver.username === username &&
+      driver.email === email &&
       (!driverCode || driver.driverCode === driverCode)
     );
   }
@@ -5048,38 +5062,38 @@ class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.securityLogs.push(newLog);
-    
+
     // Keep only last 1000 logs to prevent memory overflow
     if (this.securityLogs.length > 1000) {
       this.securityLogs = this.securityLogs.slice(-1000);
     }
-    
+
     return newLog;
   }
 
   async getSecurityLogs(options: any): Promise<any[]> {
     let logs = [...this.securityLogs];
-    
+
     // Filter by user type if specified
     if (options.userType) {
       logs = logs.filter(log => log.userType === options.userType);
     }
-    
+
     // Filter by action if specified
     if (options.action) {
       logs = logs.filter(log => log.action === options.action);
     }
-    
+
     // Sort by date (newest first)
     logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
+
     // Limit results
     const limit = options.limit || 100;
     return logs.slice(0, limit);
   }
 
   // ===== TERMS AND CONDITIONS IMPLEMENTATION =====
-  
+
   private termsVersions: any[] = [];
   private userTermsAcceptance: any[] = [];
 
@@ -5088,7 +5102,7 @@ class MemStorage implements IStorage {
   }
 
   async getAllTermsVersions(): Promise<any[]> {
-    return this.termsVersions.sort((a, b) => 
+    return this.termsVersions.sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -5104,7 +5118,7 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     this.termsVersions.push(newTerms);
     console.log(`📋 Created terms version: ${newTerms.version} (${newTerms.id})`);
     return newTerms;
@@ -5113,13 +5127,13 @@ class MemStorage implements IStorage {
   async updateTermsVersion(id: string, updates: any): Promise<any> {
     const index = this.termsVersions.findIndex(t => t.id === id);
     if (index === -1) return null;
-    
+
     this.termsVersions[index] = {
       ...this.termsVersions[index],
       ...updates,
       updatedAt: new Date().toISOString()
     };
-    
+
     console.log(`📋 Updated terms version: ${id}`);
     return this.termsVersions[index];
   }
@@ -5127,14 +5141,14 @@ class MemStorage implements IStorage {
   async activateTermsVersion(id: string): Promise<any> {
     // Deactivate all existing versions
     this.termsVersions.forEach(t => t.isActive = false);
-    
+
     // Activate the specified version
     const index = this.termsVersions.findIndex(t => t.id === id);
     if (index === -1) return null;
-    
+
     this.termsVersions[index].isActive = true;
     this.termsVersions[index].activatedAt = new Date().toISOString();
-    
+
     console.log(`📋 Activated terms version: ${this.termsVersions[index].version} (${id})`);
     return this.termsVersions[index];
   }
@@ -5142,12 +5156,12 @@ class MemStorage implements IStorage {
   async deleteTermsVersion(id: string): Promise<boolean> {
     const index = this.termsVersions.findIndex(t => t.id === id);
     if (index === -1) return false;
-    
+
     // Don't allow deletion of active version
     if (this.termsVersions[index].isActive) {
       throw new Error('لا يمكن حذف الإصدار النشط من الشروط والأحكام');
     }
-    
+
     this.termsVersions.splice(index, 1);
     console.log(`📋 Deleted terms version: ${id}`);
     return true;
@@ -5159,12 +5173,12 @@ class MemStorage implements IStorage {
       ...acceptanceData,
       acceptedAt: new Date().toISOString()
     };
-    
+
     // Remove any previous acceptance for this user and version
     this.userTermsAcceptance = this.userTermsAcceptance.filter(
       a => !(a.userId === acceptanceData.userId && a.termsVersion === acceptanceData.termsVersion)
     );
-    
+
     this.userTermsAcceptance.push(acceptance);
     console.log(`📋 User ${acceptanceData.userId} accepted terms version ${acceptanceData.termsVersion}`);
     return acceptance;
@@ -5180,15 +5194,15 @@ class MemStorage implements IStorage {
         lastAcceptance: null
       };
     }
-    
+
     const userAcceptance = this.userTermsAcceptance.find(
       a => a.userId === userId && a.termsVersion === activeTerms.version
     );
-    
+
     const lastAcceptance = this.userTermsAcceptance
       .filter(a => a.userId === userId)
       .sort((a, b) => new Date(b.acceptedAt).getTime() - new Date(a.acceptedAt).getTime())[0];
-    
+
     return {
       hasActiveTerms: true,
       hasAccepted: !!userAcceptance,
@@ -5203,34 +5217,34 @@ class MemStorage implements IStorage {
     const activeTerms = await this.getCurrentActiveTerms();
     const totalUsers = this.users.length;
     const totalAcceptances = this.userTermsAcceptance.length;
-    
+
     let currentVersionAcceptances = 0;
     if (activeTerms) {
       currentVersionAcceptances = this.userTermsAcceptance.filter(
         a => a.termsVersion === activeTerms.version
       ).length;
     }
-    
+
     const acceptanceRate = totalUsers > 0 ? (currentVersionAcceptances / totalUsers) * 100 : 0;
-    
+
     // Group acceptances by version
     const acceptancesByVersion = this.userTermsAcceptance.reduce((acc, acceptance) => {
       acc[acceptance.termsVersion] = (acc[acceptance.termsVersion] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    
+
     // Group acceptances by date (last 30 days)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const recentAcceptances = this.userTermsAcceptance.filter(
       a => new Date(a.acceptedAt) >= thirtyDaysAgo
     );
-    
+
     const acceptancesByDate = recentAcceptances.reduce((acc, acceptance) => {
       const date = new Date(acceptance.acceptedAt).toISOString().split('T')[0];
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    
+
     return {
       totalTermsVersions: this.termsVersions.length,
       activeVersion: activeTerms?.version || null,
@@ -5250,13 +5264,13 @@ class MemStorage implements IStorage {
   async getUsersPendingTermsAcceptance(): Promise<any[]> {
     const activeTerms = await this.getCurrentActiveTerms();
     if (!activeTerms) return [];
-    
+
     const acceptedUserIds = new Set(
       this.userTermsAcceptance
         .filter(a => a.termsVersion === activeTerms.version)
         .map(a => a.userId)
     );
-    
+
     return this.users
       .filter(user => !acceptedUserIds.has(user.id))
       .map(user => ({
@@ -5275,7 +5289,7 @@ class MemStorage implements IStorage {
   }
 
   async getAllPrivacyPolicyVersions(): Promise<any[]> {
-    return this.privacyPolicies.sort((a, b) => 
+    return this.privacyPolicies.sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -5291,7 +5305,7 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     this.privacyPolicies.push(newPolicy);
     return newPolicy;
   }
@@ -5299,46 +5313,46 @@ class MemStorage implements IStorage {
   async updatePrivacyPolicy(id: string, updates: any): Promise<any> {
     const index = this.privacyPolicies.findIndex(p => p.id === id);
     if (index === -1) return null;
-    
+
     this.privacyPolicies[index] = {
       ...this.privacyPolicies[index],
       ...updates,
       updatedAt: new Date().toISOString()
     };
-    
+
     return this.privacyPolicies[index];
   }
 
   async activatePrivacyPolicy(id: string): Promise<any> {
     // Deactivate all existing versions
     this.privacyPolicies.forEach(p => p.isActive = false);
-    
+
     // Activate the specified version
     const index = this.privacyPolicies.findIndex(p => p.id === id);
     if (index === -1) return null;
-    
+
     this.privacyPolicies[index].isActive = true;
     this.privacyPolicies[index].updatedAt = new Date().toISOString();
-    
+
     return this.privacyPolicies[index];
   }
 
   async deletePrivacyPolicy(id: string): Promise<boolean> {
     const index = this.privacyPolicies.findIndex(p => p.id === id);
     if (index === -1) return false;
-    
+
     // Don't allow deletion of active version
     if (this.privacyPolicies[index].isActive) {
       throw new Error('لا يمكن حذف الإصدار النشط من سياسة الخصوصية');
     }
-    
+
     this.privacyPolicies.splice(index, 1);
     return true;
   }
 
   // Smart Notifications operations
   async getAllSmartCampaigns(): Promise<SmartCampaign[]> {
-    return this.smartCampaigns.sort((a, b) => 
+    return this.smartCampaigns.sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -5360,7 +5374,7 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     this.smartCampaigns.push(newCampaign);
     return newCampaign;
   }
@@ -5368,26 +5382,26 @@ class MemStorage implements IStorage {
   async updateSmartCampaign(id: string, updates: Partial<InsertSmartCampaign>): Promise<SmartCampaign> {
     const index = this.smartCampaigns.findIndex(c => c.id === id);
     if (index === -1) throw new Error('Smart campaign not found');
-    
+
     this.smartCampaigns[index] = {
       ...this.smartCampaigns[index],
       ...updates,
       updatedAt: new Date().toISOString()
     };
-    
+
     return this.smartCampaigns[index];
   }
 
   async deleteSmartCampaign(id: string): Promise<boolean> {
     const index = this.smartCampaigns.findIndex(c => c.id === id);
     if (index === -1) return false;
-    
+
     this.smartCampaigns.splice(index, 1);
-    
+
     // Also delete related targeting rules and sent messages
     this.targetingRules = this.targetingRules.filter(r => r.campaignId !== id);
     this.sentMessages = this.sentMessages.filter(m => m.campaignId !== id);
-    
+
     return true;
   }
 
@@ -5401,7 +5415,7 @@ class MemStorage implements IStorage {
 
   // Message Templates operations
   async getAllMessageTemplates(): Promise<MessageTemplate[]> {
-    return this.messageTemplates.sort((a, b) => 
+    return this.messageTemplates.sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -5420,7 +5434,7 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     this.messageTemplates.push(newTemplate);
     return newTemplate;
   }
@@ -5428,25 +5442,25 @@ class MemStorage implements IStorage {
   async updateMessageTemplate(id: string, updates: Partial<InsertMessageTemplate>): Promise<MessageTemplate> {
     const index = this.messageTemplates.findIndex(t => t.id === id);
     if (index === -1) throw new Error('Message template not found');
-    
+
     this.messageTemplates[index] = {
       ...this.messageTemplates[index],
       ...updates,
       updatedAt: new Date().toISOString()
     };
-    
+
     return this.messageTemplates[index];
   }
 
   async deleteMessageTemplate(id: string): Promise<boolean> {
     const index = this.messageTemplates.findIndex(t => t.id === id);
     if (index === -1) return false;
-    
+
     // Don't allow deletion of system templates
     if (this.messageTemplates[index].isSystem) {
       throw new Error('لا يمكن حذف القوالب النظامية');
     }
-    
+
     this.messageTemplates.splice(index, 1);
     return true;
   }
@@ -5464,7 +5478,7 @@ class MemStorage implements IStorage {
       ...rule,
       createdAt: new Date().toISOString()
     };
-    
+
     this.targetingRules.push(newRule);
     return newRule;
   }
@@ -5472,19 +5486,19 @@ class MemStorage implements IStorage {
   async updateTargetingRule(id: string, updates: Partial<InsertTargetingRule>): Promise<TargetingRule> {
     const index = this.targetingRules.findIndex(r => r.id === id);
     if (index === -1) throw new Error('Targeting rule not found');
-    
+
     this.targetingRules[index] = {
       ...this.targetingRules[index],
       ...updates
     };
-    
+
     return this.targetingRules[index];
   }
 
   async deleteTargetingRule(id: string): Promise<boolean> {
     const index = this.targetingRules.findIndex(r => r.id === id);
     if (index === -1) return false;
-    
+
     this.targetingRules.splice(index, 1);
     return true;
   }
@@ -5500,14 +5514,14 @@ class MemStorage implements IStorage {
       ...behavior,
       updatedAt: new Date().toISOString()
     };
-    
+
     this.userBehaviors.push(newBehavior);
     return newBehavior;
   }
 
   async updateUserBehavior(userId: string, updates: Partial<InsertUserBehavior>): Promise<UserBehavior> {
     let behavior = await this.getUserBehavior(userId);
-    
+
     if (!behavior) {
       behavior = {
         id: `behavior_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -5529,26 +5543,26 @@ class MemStorage implements IStorage {
       };
       this.userBehaviors.push(behavior);
     }
-    
+
     const index = this.userBehaviors.findIndex(b => b.userId === userId);
     this.userBehaviors[index] = {
       ...this.userBehaviors[index],
       ...updates,
       updatedAt: new Date().toISOString()
     };
-    
+
     return this.userBehaviors[index];
   }
 
   // Sent Messages operations
   async getSentMessages(campaignId?: string): Promise<SentMessage[]> {
     let messages = this.sentMessages;
-    
+
     if (campaignId) {
       messages = messages.filter(m => m.campaignId === campaignId);
     }
-    
-    return messages.sort((a, b) => 
+
+    return messages.sort((a, b) =>
       new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()
     );
   }
@@ -5563,7 +5577,7 @@ class MemStorage implements IStorage {
       isClicked: false,
       sentAt: new Date().toISOString()
     };
-    
+
     this.sentMessages.push(newMessage);
     return newMessage;
   }
@@ -5571,18 +5585,18 @@ class MemStorage implements IStorage {
   async updateSentMessage(id: string, updates: Partial<InsertSentMessage>): Promise<SentMessage> {
     const index = this.sentMessages.findIndex(m => m.id === id);
     if (index === -1) throw new Error('Sent message not found');
-    
+
     this.sentMessages[index] = {
       ...this.sentMessages[index],
       ...updates
     };
-    
+
     return this.sentMessages[index];
   }
 
 
   // ===== Cart Order Operations =====
-  
+
   async createCartOrder(orderData: InsertCartOrder): Promise<CartOrder> {
     const order: CartOrder = {
       id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -5595,7 +5609,7 @@ class MemStorage implements IStorage {
   }
 
   async getAllCartOrders(): Promise<CartOrder[]> {
-    return [...this.cartOrders].sort((a, b) => 
+    return [...this.cartOrders].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -5609,13 +5623,13 @@ class MemStorage implements IStorage {
     if (index === -1) {
       throw new Error('Cart order not found');
     }
-    
+
     this.cartOrders[index] = {
       ...this.cartOrders[index],
       ...updates,
       updatedAt: new Date()
     };
-    
+
     return this.cartOrders[index];
   }
 
@@ -5651,13 +5665,13 @@ class MemStorage implements IStorage {
       // Create default preferences if none exist
       return await this.createUserPreferences({ userId, ...updates } as InsertUserPreferences);
     }
-    
+
     this.userPreferencesData[index] = {
       ...this.userPreferencesData[index],
       ...updates,
       updatedAt: new Date()
     };
-    
+
     return this.userPreferencesData[index];
   }
 
@@ -5682,7 +5696,7 @@ class MemStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
+
     // If this is set as default, unset other defaults for this user
     if (newAddress.isDefault) {
       this.userAddressesData.forEach(addr => {
@@ -5691,7 +5705,7 @@ class MemStorage implements IStorage {
         }
       });
     }
-    
+
     this.userAddressesData.push(newAddress);
     return newAddress;
   }
@@ -5699,9 +5713,9 @@ class MemStorage implements IStorage {
   async updateUserAddress(addressId: string, updates: Partial<InsertUserAddress>): Promise<UserAddress> {
     const index = this.userAddressesData.findIndex(addr => addr.id === addressId);
     if (index === -1) throw new Error('Address not found');
-    
+
     const address = this.userAddressesData[index];
-    
+
     // If setting as default, unset other defaults for this user
     if (updates.isDefault) {
       this.userAddressesData.forEach(addr => {
@@ -5710,20 +5724,20 @@ class MemStorage implements IStorage {
         }
       });
     }
-    
+
     this.userAddressesData[index] = {
       ...address,
       ...updates,
       updatedAt: new Date()
     };
-    
+
     return this.userAddressesData[index];
   }
 
   async deleteUserAddress(addressId: string): Promise<boolean> {
     const index = this.userAddressesData.findIndex(addr => addr.id === addressId);
     if (index === -1) return false;
-    
+
     this.userAddressesData.splice(index, 1);
     return true;
   }
@@ -5735,14 +5749,14 @@ class MemStorage implements IStorage {
         addr.isDefault = false;
       }
     });
-    
+
     // Set the specified address as default
     const index = this.userAddressesData.findIndex(addr => addr.id === addressId && addr.userId === userId);
     if (index === -1) throw new Error('Address not found');
-    
+
     this.userAddressesData[index].isDefault = true;
     this.userAddressesData[index].updatedAt = new Date();
-    
+
     return this.userAddressesData[index];
   }
 
@@ -5766,7 +5780,7 @@ class MemStorage implements IStorage {
       readAt: null,
       createdAt: new Date()
     };
-    
+
     this.userNotificationsData.push(newNotification);
     return newNotification;
   }
@@ -5774,10 +5788,10 @@ class MemStorage implements IStorage {
   async markNotificationAsRead(notificationId: string): Promise<UserNotification> {
     const index = this.userNotificationsData.findIndex(notif => notif.id === notificationId);
     if (index === -1) throw new Error('Notification not found');
-    
+
     this.userNotificationsData[index].read = true;
     this.userNotificationsData[index].readAt = new Date();
-    
+
     return this.userNotificationsData[index];
   }
 
@@ -5796,7 +5810,7 @@ class MemStorage implements IStorage {
   async deleteUserNotification(notificationId: string): Promise<boolean> {
     const index = this.userNotificationsData.findIndex(notif => notif.id === notificationId);
     if (index === -1) return false;
-    
+
     this.userNotificationsData.splice(index, 1);
     return true;
   }
@@ -5822,9 +5836,9 @@ class MemStorage implements IStorage {
       ...achievement,
       earnedAt: new Date()
     };
-    
+
     this.userAchievementsData.push(newAchievement);
-    
+
     // Also create activity log
     await this.createUserActivity({
       userId: achievement.userId,
@@ -5832,20 +5846,20 @@ class MemStorage implements IStorage {
       description: `حصل على إنجاز: ${achievement.title}`,
       metadata: { achievementId: newAchievement.id, achievementCode: achievement.achievementCode }
     });
-    
+
     return newAchievement;
   }
 
   async deleteUserAchievement(achievementId: string): Promise<boolean> {
     const index = this.userAchievementsData.findIndex(ach => ach.id === achievementId);
     if (index === -1) return false;
-    
+
     this.userAchievementsData.splice(index, 1);
     return true;
   }
 
   async hasUserAchievement(userId: string, achievementCode: string): Promise<boolean> {
-    return this.userAchievementsData.some(ach => 
+    return this.userAchievementsData.some(ach =>
       ach.userId === userId && ach.achievementCode === achievementCode
     );
   }
@@ -5864,7 +5878,7 @@ class MemStorage implements IStorage {
       ...activity,
       createdAt: new Date()
     };
-    
+
     this.userActivityData.push(newActivity);
     return newActivity;
   }
@@ -5872,7 +5886,7 @@ class MemStorage implements IStorage {
   async deleteUserActivity(activityId: string): Promise<boolean> {
     const index = this.userActivityData.findIndex(act => act.id === activityId);
     if (index === -1) return false;
-    
+
     this.userActivityData.splice(index, 1);
     return true;
   }
@@ -5880,7 +5894,7 @@ class MemStorage implements IStorage {
   async clearUserActivity(userId: string, olderThanDays?: number): Promise<number> {
     let count = 0;
     const cutoffDate = olderThanDays ? new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000) : null;
-    
+
     for (let i = this.userActivityData.length - 1; i >= 0; i--) {
       const activity = this.userActivityData[i];
       if (activity.userId === userId) {
@@ -5890,7 +5904,7 @@ class MemStorage implements IStorage {
         }
       }
     }
-    
+
     return count;
   }
 
@@ -5912,17 +5926,17 @@ class MemStorage implements IStorage {
       ...transaction,
       createdAt: new Date()
     };
-    
+
     this.rewardTransactionsData.push(newTransaction);
-    
+
     // Update user points
     const user = await this.getUser(transaction.userId);
     if (user) {
-      await this.updateUser(transaction.userId, { 
-        bountyPoints: transaction.balanceAfter 
+      await this.updateUser(transaction.userId, {
+        bountyPoints: transaction.balanceAfter
       });
     }
-    
+
     // Create activity log
     await this.createUserActivity({
       userId: transaction.userId,
@@ -5930,7 +5944,7 @@ class MemStorage implements IStorage {
       description: transaction.description,
       metadata: { transactionId: newTransaction.id, amount: transaction.amount, reason: transaction.reason }
     });
-    
+
     return newTransaction;
   }
 
@@ -5942,8 +5956,8 @@ class MemStorage implements IStorage {
   async getUserPointsHistory(userId: string, days = 30): Promise<RewardTransaction[]> {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     return this.rewardTransactionsData
-      .filter(trans => 
-        trans.userId === userId && 
+      .filter(trans =>
+        trans.userId === userId &&
         new Date(trans.createdAt) >= cutoffDate
       )
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -5970,7 +5984,7 @@ class MemStorage implements IStorage {
     const totalPrintedPages = this.users.reduce((sum, user) => sum + (user.totalPrints || 0), 0);
     const totalReferrals = this.users.reduce((sum, user) => sum + (user.totalReferrals || 0), 0);
     const totalEarnedPages = this.users.reduce((sum, user) => sum + (user.bountyPoints || 0), 0);
-    
+
     // حساب أنواع المكافآت من المعاملات
     const rewardTypeStats = {
       print_milestone: 0,
@@ -5978,7 +5992,7 @@ class MemStorage implements IStorage {
       first_login: 0,
       admin_bonus: 0
     };
-    
+
     for (const transaction of this.rewardTransactionsData) {
       if (transaction.type === 'earned') {
         if (transaction.reason?.includes('print') || transaction.reason?.includes('طباعة')) {
@@ -5992,11 +6006,11 @@ class MemStorage implements IStorage {
         }
       }
     }
-    
+
     const averagePagesPerUser = totalUsers > 0 ? Math.round(totalPrintedPages / totalUsers) : 0;
     const averageEarnedPerUser = totalUsers > 0 ? Math.round(totalEarnedPages / totalUsers) : 0;
     const totalFreePages = totalEarnedPages; // النقاط = الأوراق المجانية
-    
+
     return {
       totalUsers,
       totalFreePages,
@@ -6022,7 +6036,7 @@ class MemStorage implements IStorage {
   }> {
     const user = await this.getUser(userId);
     if (!user) throw new Error('User not found');
-    
+
     const preferences = await this.getUserPreferences(userId);
     const totalAddresses = this.userAddressesData.filter(addr => addr.userId === userId).length;
     const unreadNotifications = await this.getUserUnreadNotificationsCount(userId);
@@ -6030,11 +6044,11 @@ class MemStorage implements IStorage {
     const recentActivity = await this.getUserActivity(userId, 10, 0);
     const currentPoints = user.bountyPoints || 0;
     const level = user.level || 1;
-    
+
     // Calculate level progress (assuming 1000 points per level)
     const pointsInCurrentLevel = currentPoints % 1000;
     const levelProgress = (pointsInCurrentLevel / 1000) * 100;
-    
+
     return {
       user,
       preferences,

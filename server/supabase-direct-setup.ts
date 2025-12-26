@@ -6,11 +6,11 @@ export class SupabaseDirectSetup {
   private serviceKey: string;
 
   constructor() {
-    this.supabaseUrl = process.env.SUPABASE_URL!;
-    this.serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    
+    this.supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    this.serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+
     if (!this.supabaseUrl || !this.serviceKey) {
-      throw new Error('Missing Supabase configuration');
+      console.warn('⚠️ Supabase configuration missing in supabase-direct-setup - features disabled');
     }
   }
 
@@ -77,30 +77,30 @@ export class SupabaseDirectSetup {
   private async executeSQLViaClient(sql: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
       const supabase = createClient(this.supabaseUrl, this.serviceKey);
-      
+
       // Break down SQL into individual statements
       const statements = sql.split(';').filter(stmt => stmt.trim());
       const results = [];
-      
+
       for (const statement of statements) {
         const trimmed = statement.trim();
         if (!trimmed) continue;
-        
+
         try {
           // For CREATE TABLE statements, we'll use a workaround
           if (trimmed.toLowerCase().startsWith('create table')) {
             console.log(`Attempting to create table via client: ${trimmed.substring(0, 50)}...`);
-            
+
             // Extract table name
             const tableMatch = trimmed.match(/create table\s+(?:if not exists\s+)?(\w+)/i);
             const tableName = tableMatch ? tableMatch[1] : 'unknown';
-            
+
             // Try to execute via raw SQL (this might not work but worth trying)
             const { data, error } = await supabase
               .from(tableName)
               .select('*')
               .limit(0);
-            
+
             if (error && error.code === 'PGRST116') {
               // Table doesn't exist, which is expected before creation
               results.push({ statement: tableName, status: 'table_creation_attempted' });
@@ -115,7 +115,7 @@ export class SupabaseDirectSetup {
           results.push({ statement: trimmed.substring(0, 50), status: 'error', error: err.message });
         }
       }
-      
+
       return {
         success: true,
         data: {
@@ -205,9 +205,9 @@ export class SupabaseDirectSetup {
     `;
 
     console.log('🔧 Attempting to create tables using direct SQL execution...');
-    
+
     const result = await this.executeSQL(sql);
-    
+
     if (result.success) {
       return {
         success: true,
@@ -229,7 +229,7 @@ export class SupabaseDirectSetup {
   async getDetailedInfo(): Promise<any> {
     try {
       const supabase = createClient(this.supabaseUrl, this.serviceKey);
-      
+
       // Test connection with a simple query
       const { data, error } = await supabase
         .from('information_schema.tables')

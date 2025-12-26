@@ -1,3 +1,6 @@
+// Load environment variables FIRST before anything else
+import 'dotenv/config';
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -58,7 +61,7 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  if (process.env.NODE_ENV !== 'production') {
     await setupVite(app, server);
   } else {
     serveStatic(app);
@@ -69,13 +72,9 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, () => {
     log(`serving on port ${port}`);
-    
+
     // AUTO-CLEANUP DISABLED - Manual control only
     console.log('🎮 Manual control mode: All cleanup requires manual API calls');
 
@@ -84,10 +83,10 @@ app.use((req, res, next) => {
       try {
         console.log('📊 Storage monitoring only (manual control mode)...');
         const storageInfo = await googleDriveService.getStorageInfo();
-        
+
         if (storageInfo.success && !storageInfo.unlimited) {
           const usagePercentage = storageInfo.usagePercentage!;
-          
+
           // Only alerts - no automatic action
           if (usagePercentage >= 90) {
             console.log('🚨 CRITICAL: Storage at ' + usagePercentage.toFixed(1) + '% - manual cleanup recommended');
@@ -107,7 +106,7 @@ app.use((req, res, next) => {
       try {
         console.log('📊 Initial storage check...');
         const storageInfo = await googleDriveService.getStorageInfo();
-        
+
         if (storageInfo.success) {
           if (storageInfo.unlimited) {
             console.log('✅ Storage: Unlimited quota detected');

@@ -34,6 +34,12 @@ export class GoogleDriveService {
       const redirectUri = config?.redirectUri || process.env.GOOGLE_REDIRECT_URI || 'https://developers.google.com/oauthplayground';
       const refreshToken = config?.refreshToken || process.env.GOOGLE_REFRESH_TOKEN;
 
+      // 🔍 DEBUG: Log what we found
+      console.log('🔍 Google Drive Credentials Check:');
+      console.log(`   Client ID: ${clientId ? '✅ Found (' + clientId.substring(0, 20) + '...)' : '❌ Missing'}`);
+      console.log(`   Client Secret: ${clientSecret ? '✅ Found (' + clientSecret.substring(0, 15) + '...)' : '❌ Missing'}`);
+      console.log(`   Refresh Token: ${refreshToken ? '✅ Found (' + refreshToken.substring(0, 15) + '...)' : '❌ Missing'}`);
+
       if (!clientId || !clientSecret || !refreshToken) {
         console.warn('⚠️ Google Drive credentials not configured. Google Drive backup will be disabled.');
         this.isConfigured = false;
@@ -78,8 +84,8 @@ export class GoogleDriveService {
    * Upload file to Google Drive
    */
   async uploadFile(
-    filePath: string, 
-    fileName?: string, 
+    filePath: string,
+    fileName?: string,
     folderId?: string,
     mimeType?: string
   ): Promise<UploadResult> {
@@ -207,6 +213,42 @@ export class GoogleDriveService {
 
     } catch (error: any) {
       console.error('❌ Google Drive buffer upload failed:', error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Download file from Google Drive by file ID
+   */
+  async downloadFile(fileId: string): Promise<{ success: boolean; buffer?: Buffer; error?: string }> {
+    if (!this.isConfigured) {
+      return {
+        success: false,
+        error: 'Google Drive not configured'
+      };
+    }
+
+    try {
+      console.log(`📥 Downloading file from Google Drive: ${fileId}`);
+
+      const response = await this.drive.files.get(
+        { fileId: fileId, alt: 'media' },
+        { responseType: 'arraybuffer' }
+      );
+
+      const buffer = Buffer.from(response.data);
+      console.log(`✅ File downloaded successfully: ${(buffer.length / 1024).toFixed(1)}KB`);
+
+      return {
+        success: true,
+        buffer: buffer
+      };
+
+    } catch (error: any) {
+      console.error('❌ Google Drive download failed:', error.message);
       return {
         success: false,
         error: error.message
@@ -389,7 +431,7 @@ export class GoogleDriveService {
 
       // Clean up temp folder after successful move
       await this.deleteFolder(tempFolderId);
-      
+
       console.log(`✅ Successfully moved ${files.length} files to permanent location`);
       console.log(`   Permanent folder: ${this.getOrderFolderHierarchy(customerName, date, orderResult.orderNumber)}`);
 
@@ -438,6 +480,71 @@ export class GoogleDriveService {
   }
 
   /**
+   * Rename a file on Google Drive
+   */
+  async renameFile(fileId: string, newName: string): Promise<boolean> {
+    if (!this.isConfigured) {
+      return false;
+    }
+
+    try {
+      await this.drive.files.update({
+        fileId: fileId,
+        resource: {
+          name: newName
+        },
+        fields: 'id, name'
+      });
+
+      console.log(`✅ File renamed to: ${newName}`);
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Failed to rename file ${fileId}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Move and rename file in one operation
+   */
+  async moveAndRenameFile(
+    fileId: string,
+    newParentFolderId: string,
+    newName: string
+  ): Promise<boolean> {
+    if (!this.isConfigured) {
+      return false;
+    }
+
+    try {
+      // Get current parents
+      const file = await this.drive.files.get({
+        fileId: fileId,
+        fields: 'parents'
+      });
+
+      const previousParents = file.data.parents?.join(',') || '';
+
+      // Move and rename in one operation
+      await this.drive.files.update({
+        fileId: fileId,
+        addParents: newParentFolderId,
+        removeParents: previousParents,
+        resource: {
+          name: newName
+        },
+        fields: 'id, name, parents'
+      });
+
+      console.log(`✅ File moved and renamed to: ${newName}`);
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Failed to move and rename file ${fileId}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
    * Delete a folder and all its contents
    */
   async deleteFolder(folderId: string): Promise<boolean> {
@@ -449,6 +556,37 @@ export class GoogleDriveService {
       return true;
     } catch (error: any) {
       console.error(`❌ Failed to delete folder ${folderId}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Share folder with specific email address
+   */
+  async shareFolderWithEmail(
+    folderId: string,
+    email: string,
+    role: 'reader' | 'writer' = 'writer'
+  ): Promise<boolean> {
+    if (!this.isConfigured) {
+      return false;
+    }
+
+    try {
+      await this.drive.permissions.create({
+        fileId: folderId,
+        requestBody: {
+          type: 'user',
+          role: role,
+          emailAddress: email
+        },
+        fields: 'id'
+      });
+
+      console.log(`✅ Folder ${folderId} shared with ${email} (${role})`);
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Failed to share folder with ${email}:`, error.message);
       return false;
     }
   }
@@ -516,6 +654,28 @@ export class GoogleDriveService {
   }
 
   /**
+   * List all files in a specific folder
+   */
+  async listFilesInFolder(folderId: string): Promise<Array<{ id: string; name: string; mimeType: string }>> {
+    if (!this.isConfigured) {
+      return [];
+    }
+
+    try {
+      const response = await this.drive.files.list({
+        q: `'${folderId}' in parents and trashed=false`,
+        fields: 'files(id, name, mimeType)',
+        pageSize: 100
+      });
+
+      return response.data.files || [];
+    } catch (error: any) {
+      console.error(`❌ Failed to list files in folder ${folderId}:`, error.message);
+      return [];
+    }
+  }
+
+  /**
    * Find folder by name (helper function)
    */
   async findFolderByName(folderName: string, parentId?: string): Promise<string | null> {
@@ -542,7 +702,7 @@ export class GoogleDriveService {
    * Create new nested folder structure: اطبعلي/[date]/[customerName]/طلب_[orderNumber]
    */
   async createOrderFolderStructure(
-    customerName: string, 
+    customerName: string,
     date: string = new Date().toISOString().split('T')[0]
   ): Promise<{ folderId: string | null; orderNumber: number }> {
     if (!this.isConfigured) {
@@ -599,14 +759,14 @@ export class GoogleDriveService {
     try {
       // Search for existing order folders in customer folder
       const query = `'${customerFolderId}' in parents and name contains 'طلب_' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
-      
+
       const response = await this.drive.files.list({
         q: query,
         fields: 'files(id, name)'
       });
 
       const orderFolders = response.data.files || [];
-      
+
       // Extract order numbers and find the highest
       let maxOrderNumber = 0;
       orderFolders.forEach((folder: any) => {
@@ -621,7 +781,7 @@ export class GoogleDriveService {
 
       const nextOrderNumber = maxOrderNumber + 1;
       console.log(`📊 Customer ${customerName} - Found ${orderFolders.length} existing orders, next order: ${nextOrderNumber}`);
-      
+
       return nextOrderNumber;
 
     } catch (error: any) {
@@ -631,10 +791,64 @@ export class GoogleDriveService {
   }
 
   /**
+   * Create customer-based folder structure: [AccountUsername]_[AccountPhone]/[CheckoutName]_[CheckoutPhone]_[Date]_[Time]_[Price]جنيه
+   */
+  async createCustomerOrderFolder(
+    accountUsername: string,
+    accountPhone: string,
+    checkoutName: string,
+    checkoutPhone: string,
+    date: string,
+    totalPrice: number
+  ): Promise<{ folderId: string | null; shared: boolean }> {
+    if (!this.isConfigured) {
+      return { folderId: null, shared: false };
+    }
+
+    try {
+      console.log(`📁 Creating nested folder structure: ${accountUsername}_${accountPhone} > ${checkoutName}_${checkoutPhone}`);
+
+      // Step 1: Create or get account folder (top level) - Username_Phone
+      const accountFolderName = `${accountUsername}_${accountPhone}`;
+      const accountFolderId = await this.createFolder(accountFolderName);
+      if (!accountFolderId) {
+        throw new Error(`Failed to create account folder: ${accountFolderName}`);
+      }
+
+      // Step 2: Create checkout folder inside account folder - CheckoutName_CheckoutPhone_Date_Time_Price
+      const now = new Date();
+      const time = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const checkoutFolderName = `${checkoutName}_${checkoutPhone}_${date}_${time.replace(':', '.')}_${totalPrice}جنيه`;
+      const checkoutFolderId = await this.createFolder(checkoutFolderName, accountFolderId);
+      if (!checkoutFolderId) {
+        throw new Error(`Failed to create checkout folder: ${checkoutFolderName}`);
+      }
+
+      console.log(`✅ Customer folder structure created: ${accountFolderName}/${checkoutFolderName}/`);
+
+      // Step 3: Share account folder (top level) with printformead1@gmail.com
+      const shared = await this.shareFolderWithEmail(
+        accountFolderId,
+        'printformead1@gmail.com',
+        'writer'
+      );
+
+      return {
+        folderId: checkoutFolderId,
+        shared: shared
+      };
+
+    } catch (error: any) {
+      console.error('❌ Failed to create customer folder structure:', error.message);
+      return { folderId: null, shared: false };
+    }
+  }
+
+  /**
    * Create nested folder structure: اطبعلي/العميل [customerName]/[date] (OLD VERSION)
    */
   async createNestedFolderStructure(
-    customerName: string, 
+    customerName: string,
     date: string = new Date().toISOString().split('T')[0]
   ): Promise<string | null> {
     if (!this.isConfigured) {
@@ -782,7 +996,7 @@ export class GoogleDriveService {
       });
 
       const quota = response.data.storageQuota;
-      
+
       if (!quota) {
         return { success: false, error: 'Storage quota information not available' };
       }
@@ -791,7 +1005,7 @@ export class GoogleDriveService {
       const totalUsed = parseInt(quota.usage || '0');
       const usageInDrive = parseInt(quota.usageInDrive || '0');
       const usageInTrash = parseInt(quota.usageInDriveTrash || '0');
-      
+
       const available = totalLimit ? totalLimit - totalUsed : undefined;
       const usagePercentage = totalLimit ? (totalUsed / totalLimit) * 100 : 0;
       const unlimited = !totalLimit;
@@ -832,14 +1046,14 @@ export class GoogleDriveService {
     formattedRemaining?: string;
   }> {
     const storageInfo = await this.getStorageInfo();
-    
+
     if (!storageInfo.success) {
       return { hasSpace: false, message: `خطأ في فحص المساحة: ${storageInfo.error}` };
     }
 
     if (storageInfo.unlimited) {
-      return { 
-        hasSpace: true, 
+      return {
+        hasSpace: true,
         message: 'مساحة غير محدودة متاحة',
         remainingSpace: Infinity,
         formattedRemaining: 'غير محدود'
@@ -847,18 +1061,18 @@ export class GoogleDriveService {
     }
 
     const available = storageInfo.available!;
-    
+
     if (available >= requiredBytes) {
-      return { 
-        hasSpace: true, 
+      return {
+        hasSpace: true,
         message: `مساحة كافية متاحة: ${this.formatBytes(available)}`,
         remainingSpace: available,
         formattedRemaining: this.formatBytes(available)
       };
     }
 
-    return { 
-      hasSpace: false, 
+    return {
+      hasSpace: false,
       message: `مساحة غير كافية. مطلوب: ${this.formatBytes(requiredBytes)}, متاح: ${this.formatBytes(available)}`,
       remainingSpace: available,
       formattedRemaining: this.formatBytes(available)
@@ -877,18 +1091,18 @@ export class GoogleDriveService {
     error?: string;
   }> {
     const actionsPerformed: string[] = [];
-    
+
     try {
       // Get initial storage info
       const initialInfo = await this.getStorageInfo();
       if (!initialInfo.success) {
-        return { 
-          success: false, 
-          spaceFeed: 0, 
-          beforeUsage: 0, 
-          afterUsage: 0, 
+        return {
+          success: false,
+          spaceFeed: 0,
+          beforeUsage: 0,
+          afterUsage: 0,
           actionsPerformed,
-          error: initialInfo.error 
+          error: initialInfo.error
         };
       }
 
@@ -929,7 +1143,7 @@ export class GoogleDriveService {
       const spaceFeed = beforeUsage - afterUsage;
 
       console.log(`✅ Cleanup completed! Freed: ${this.formatBytes(spaceFeed)}`);
-      
+
       return {
         success: true,
         spaceFeed,
@@ -940,13 +1154,13 @@ export class GoogleDriveService {
 
     } catch (error: any) {
       console.error('❌ Cleanup failed:', error.message);
-      return { 
-        success: false, 
-        spaceFeed: 0, 
-        beforeUsage: 0, 
-        afterUsage: 0, 
+      return {
+        success: false,
+        spaceFeed: 0,
+        beforeUsage: 0,
+        afterUsage: 0,
         actionsPerformed,
-        error: error.message 
+        error: error.message
       };
     }
   }
@@ -970,7 +1184,7 @@ export class GoogleDriveService {
 
       // Get ALL folders and files in main folder
       const query = `'${mainFolderId}' in parents and trashed=false`;
-      
+
       try {
         const response = await this.drive.files.list({
           q: query,
@@ -1053,7 +1267,7 @@ export class GoogleDriveService {
       for (const folder of dateFormatResponse.data.files || []) {
         // Skip if already processed (old format)
         if (folder.name?.includes('العميل')) continue;
-        
+
         // Check if it's a date format (YYYY-MM-DD or DD/MM/YYYY or similar)
         if (this.isDateFolder(folder.name!)) {
           console.log(`🗑️ Deleting date folder: ${folder.name}`);
@@ -1073,7 +1287,7 @@ export class GoogleDriveService {
       for (const folder of anyOldResponse.data.files || []) {
         // Skip system folders
         if (folder.name === 'مؤقت' || folder.name === 'temp') continue;
-        
+
         console.log(`🗑️ Final cleanup: ${folder.name}`);
         const deleted = await this.deleteFolder(folder.id!);
         if (deleted) cleaned++; else errors++;
@@ -1100,7 +1314,7 @@ export class GoogleDriveService {
       /^\d{1,2}\/\d{1,2}$/, // 7/9 or 07/09
       /^\d{1,2}-\d{1,2}$/, // 7-9 or 07-09
     ];
-    
+
     return datePatterns.some(pattern => pattern.test(name));
   }
 
@@ -1109,7 +1323,7 @@ export class GoogleDriveService {
    */
   private formatBytes(bytes: number): string {
     if (!bytes || bytes === 0) return '0 بايت';
-    
+
     const sizes = ['بايت', 'كيلوبايت', 'ميجابايت', 'جيجابايت', 'تيرابايت'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];

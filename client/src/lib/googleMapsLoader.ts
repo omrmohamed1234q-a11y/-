@@ -37,10 +37,10 @@ class GoogleMapsLoader {
   private constructor() {
     // Get API key from environment variable (secure approach)
     this.apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    
+
     if (!this.apiKey) {
-      console.error('❌ VITE_GOOGLE_MAPS_API_KEY not configured');
-      throw new Error('Google Maps API key not configured');
+      console.warn('⚠️ VITE_GOOGLE_MAPS_API_KEY not configured - Google Maps features will be disabled');
+      // Don't throw - allow app to work without Google Maps
     }
   }
 
@@ -82,12 +82,12 @@ class GoogleMapsLoader {
 
         // Create callback function name
         const callbackName = `googleMapsCallback_${Date.now()}`;
-        
+
         // Setup callback function
         (window as any)[callbackName] = () => {
           try {
             console.log('✅ Google Maps API loaded successfully');
-            
+
             // Validate API availability
             if (!window.google || !window.google.maps) {
               throw new Error('Google Maps API not properly initialized');
@@ -95,10 +95,10 @@ class GoogleMapsLoader {
 
             this.isLoaded = true;
             this.isLoading = false;
-            
+
             // Cleanup callback
             delete (window as any)[callbackName];
-            
+
             resolve({
               success: true,
               api: window.google.maps
@@ -106,10 +106,10 @@ class GoogleMapsLoader {
           } catch (error) {
             console.error('❌ Google Maps callback error:', error);
             this.isLoading = false;
-            
+
             // Cleanup callback
             delete (window as any)[callbackName];
-            
+
             resolve({
               success: false,
               error: error instanceof Error ? error.message : 'Unknown callback error'
@@ -139,10 +139,10 @@ class GoogleMapsLoader {
         script.onerror = () => {
           console.error('❌ Failed to load Google Maps script');
           this.isLoading = false;
-          
+
           // Cleanup callback
           delete (window as any)[callbackName];
-          
+
           resolve({
             success: false,
             error: 'Failed to load Google Maps script'
@@ -153,10 +153,10 @@ class GoogleMapsLoader {
         const timeoutId = setTimeout(() => {
           console.warn('⚠️ Google Maps loading timeout (20s)');
           this.isLoading = false;
-          
+
           // Cleanup callback
           delete (window as any)[callbackName];
-          
+
           resolve({
             success: false,
             error: 'Google Maps loading timeout'
@@ -175,7 +175,7 @@ class GoogleMapsLoader {
       } catch (error) {
         console.error('❌ Google Maps loader error:', error);
         this.isLoading = false;
-        
+
         resolve({
           success: false,
           error: error instanceof Error ? error.message : 'Unknown loader error'
@@ -224,7 +224,7 @@ export function useGoogleMaps(options?: GoogleMapsLoaderOptions) {
 
     try {
       const result = await googleMapsLoader.loadGoogleMaps(options);
-      
+
       if (result.success) {
         setIsLoaded(true);
         setApi(result.api || null);

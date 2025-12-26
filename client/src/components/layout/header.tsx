@@ -20,7 +20,21 @@ export default function Header() {
     enabled: !!user
   });
 
+  // Fetch active orders to show tracking badge
+  const { data: ordersData } = useQuery({
+    queryKey: ['/api/orders'],
+    retry: false,
+    enabled: !!user,
+    refetchInterval: 30000 // Refresh every 30 seconds
+  });
+
   const cartItemsCount = (cartData as any)?.totalQuantity || 0;
+
+  // Check if there's an active order (not delivered/cancelled)
+  const activeOrders = (ordersData as any[])?.filter((order: any) =>
+    !['delivered', 'cancelled', 'completed'].includes(order.status)
+  ) || [];
+  const hasActiveOrder = activeOrders.length > 0;
 
   return (
     <>
@@ -37,30 +51,47 @@ export default function Header() {
                 </div>
               </div>
             </Link>
-            
+
             {/* Navigation Icons */}
             <div className="flex items-center space-x-3 space-x-reverse">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="relative p-1.5"
                 onClick={() => setIsCartOpen(true)}
                 data-testid="button-open-cart"
               >
                 <ShoppingCart className="w-5 h-5" />
                 {cartItemsCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-1 -left-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center p-0 arabic-nums"
                   >
                     {cartItemsCount}
                   </Badge>
                 )}
               </Button>
-              
+
+              {/* Active Order Tracking Badge */}
+              {hasActiveOrder && (
+                <Link href="/orders">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="relative px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-medium rounded-full transition-all"
+                    data-testid="button-track-order"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      تتبع طلبك
+                    </span>
+                  </Button>
+                </Link>
+              )}
+
               {/* Replace old notification system with new NotificationCenter */}
               <NotificationCenter />
-            
+
               <Link href="/profile">
                 <Button variant="ghost" size="sm" className="p-2">
                   {user ? (
@@ -82,9 +113,9 @@ export default function Header() {
       </header>
 
       {/* Cart Drawer - unified single cart system */}
-      <CartDrawer 
-        isOpen={isCartOpen} 
-        onClose={() => setIsCartOpen(false)} 
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
       />
 
       {/* Notification Center - Now implemented with full smart targeting */}

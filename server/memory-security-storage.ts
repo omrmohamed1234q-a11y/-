@@ -6,9 +6,9 @@ import path from 'path';
 import crypto from 'crypto';
 
 // Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
 
 interface SecurityUser {
   id: string;
@@ -75,12 +75,14 @@ export class MemorySecurityStorage {
     const algorithm = 'aes-256-gcm';
     const key = crypto.scryptSync(this.getEncryptionKey(), 'salt', 32);
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(algorithm, key);
-    
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
+
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
-    return iv.toString('hex') + ':' + encrypted;
+
+    const authTag = cipher.getAuthTag();
+
+    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
   }
 
   private decrypt(encryptedText: string): string {
@@ -88,17 +90,25 @@ export class MemorySecurityStorage {
       const algorithm = 'aes-256-gcm';
       const key = crypto.scryptSync(this.getEncryptionKey(), 'salt', 32);
       const textParts = encryptedText.split(':');
-      const iv = Buffer.from(textParts.shift()!, 'hex');
-      const encrypted = textParts.join(':');
-      const decipher = crypto.createDecipher(algorithm, key);
-      
+
+      if (textParts.length !== 3) {
+        return encryptedText;
+      }
+
+      const iv = Buffer.from(textParts[0], 'hex');
+      const authTag = Buffer.from(textParts[1], 'hex');
+      const encrypted = textParts[2];
+
+      const decipher = crypto.createDecipheriv(algorithm, key, iv);
+      decipher.setAuthTag(authTag);
+
       let decrypted = decipher.update(encrypted, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
-      
+
       return decrypted;
     } catch (error) {
       console.error('❌ Decryption error:', error);
-      return encryptedText; // Return original if decryption fails
+      return encryptedText;
     }
   }
 
@@ -127,11 +137,11 @@ export class MemorySecurityStorage {
         twoFactorAuth: this.twoFactorAuth,
         lastSaved: new Date().toISOString()
       };
-      
+
       // Encrypt sensitive data before saving
       const jsonData = JSON.stringify(data, null, 2);
       const encryptedData = this.encrypt(jsonData);
-      
+
       fs.writeFileSync(this.dataFilePath, encryptedData);
       console.log(`💾 Security data encrypted and saved locally (${this.users.length} users, ${this.logs.length} logs)`);
     } catch (error) {
@@ -146,7 +156,7 @@ export class MemorySecurityStorage {
       const { data: users, error: usersError } = await supabase
         .from('secure_admins')
         .select('*');
-      
+
       if (usersError) {
         console.log('⚠️ Could not load users from Supabase (this is normal on first run)');
         return;
@@ -156,7 +166,7 @@ export class MemorySecurityStorage {
       const { data: drivers, error: driversError } = await supabase
         .from('secure_drivers')
         .select('*');
-      
+
       if (driversError) {
         console.log('⚠️ Could not load drivers from Supabase (this is normal on first run)');
         return;
@@ -164,24 +174,24 @@ export class MemorySecurityStorage {
 
       // Merge data from Supabase into memory, avoiding duplicates
       const supabaseUsers = [...(users || []), ...(drivers || [])];
-      
+
       // Create a map to track unique usernames and keep only the latest version
       const uniqueUsers = new Map<string, any>();
-      
+
       for (const dbUser of supabaseUsers) {
         // Skip test accounts
         if (dbUser.username === 'testadmin' || dbUser.username === 'testdriver') {
           console.log(`🗑️ Skipping test account: ${dbUser.username}`);
           continue;
         }
-        
+
         // Keep only the latest version of each user (by created_at)
         const existing = uniqueUsers.get(dbUser.username);
         if (!existing || new Date(dbUser.created_at) > new Date(existing.created_at)) {
           uniqueUsers.set(dbUser.username, dbUser);
         }
       }
-      
+
       // Add unique users to memory
       for (const dbUser of uniqueUsers.values()) {
         const memoryUser: SecurityUser = {
@@ -211,7 +221,7 @@ export class MemorySecurityStorage {
   private async syncUserToSupabase(user: SecurityUser) {
     try {
       const tableName = user.role === 'admin' ? 'secure_admins' : 'secure_drivers';
-      
+
       const { error } = await supabase
         .from(tableName)
         .upsert({
@@ -267,7 +277,7 @@ export class MemorySecurityStorage {
   async createSecurityUser(userData: any): Promise<SecurityUser> {
     try {
       const passwordHash = await bcrypt.hash(userData.password, 10);
-      
+
       const newUser: SecurityUser = {
         id: userData.id || uuidv4(),
         username: userData.username,
@@ -286,13 +296,13 @@ export class MemorySecurityStorage {
       };
 
       this.users.push(newUser);
-      
+
       // Save to local file immediately
       this.saveDataToLocalFile();
-      
+
       // Sync to Supabase (best effort)
       await this.syncUserToSupabase(newUser);
-      
+
       // Log the creation
       await this.createSecurityLog({
         user_id: newUser.id,
@@ -333,13 +343,13 @@ export class MemorySecurityStorage {
   }
 
   async getSecurityUserByCredentials(username: string, email: string): Promise<SecurityUser | undefined> {
-    return this.users.find(user => 
+    return this.users.find(user =>
       user.username === username && user.email === email
     );
   }
 
   async getUserByUsernameOrEmail(username: string, email: string): Promise<SecurityUser | undefined> {
-    return this.users.find(user => 
+    return this.users.find(user =>
       user.username === username || user.email === email
     );
   }
@@ -378,7 +388,7 @@ export class MemorySecurityStorage {
   async validateUserCredentials(username: string, email: string, password: string, driverCode?: string): Promise<SecurityUser | null> {
     try {
       let user = this.users.find(u => u.username === username && u.email === email);
-      
+
       // For drivers, also check driver code if provided
       if (driverCode && user?.role === 'driver') {
         if (user.driver_code !== driverCode) {
@@ -413,7 +423,7 @@ export class MemorySecurityStorage {
 
       // Update last login
       user.last_login = new Date().toISOString();
-      
+
       // Save to local file
       this.saveDataToLocalFile();
 
@@ -438,19 +448,19 @@ export class MemorySecurityStorage {
     try {
       const userIndex = this.users.findIndex(u => u.username === username);
       if (userIndex === -1) return false;
-      
+
       const passwordHash = await bcrypt.hash(newPassword, 10);
       this.users[userIndex].password_hash = passwordHash;
       this.users[userIndex].updated_at = new Date().toISOString();
-      
+
       // Save to local file
       this.saveDataToLocalFile();
-      
+
       // Sync to Supabase (best effort)
       await this.syncUserToSupabase(this.users[userIndex]);
-      
+
       console.log(`🔑 Password reset for ${username}: ${newPassword}`);
-      
+
       return true;
     } catch (error) {
       console.error('Error resetting password:', error);
@@ -462,13 +472,13 @@ export class MemorySecurityStorage {
     try {
       const userIndex = this.users.findIndex(u => u.id === userId);
       if (userIndex === -1) return false;
-      
+
       this.users[userIndex].is_active = isActive;
       this.users[userIndex].updated_at = new Date().toISOString();
-      
+
       // Sync to Supabase
       await this.syncUserToSupabase(this.users[userIndex]);
-      
+
       return true;
     } catch (error) {
       console.error('Error updating user status:', error);
@@ -490,10 +500,10 @@ export class MemorySecurityStorage {
     };
 
     this.logs.push(log);
-    
+
     // Save to local file immediately
     this.saveDataToLocalFile();
-    
+
     // Sync to Supabase (best effort)
     await this.syncLogToSupabase(log);
 
@@ -522,10 +532,10 @@ export class MemorySecurityStorage {
     const activeUsers = this.users.filter(u => u.is_active).length;
     const adminCount = this.users.filter(u => u.role === 'admin').length;
     const driverCount = this.users.filter(u => u.role === 'driver').length;
-    
+
     const today = new Date().toISOString().split('T')[0];
     const todayLogs = this.logs.filter(log => log.timestamp.startsWith(today));
-    
+
     return {
       totalUsers,
       activeUsers,
@@ -568,10 +578,10 @@ export class MemorySecurityStorage {
 
       // Update user data
       this.users[userIndex] = { ...this.users[userIndex], ...updateData };
-      
+
       // Save to local file
       this.saveDataToLocalFile();
-      
+
       // Sync to Supabase
       await this.syncUserToSupabase(this.users[userIndex]);
 
@@ -591,13 +601,13 @@ export class MemorySecurityStorage {
       }
 
       const user = this.users[userIndex];
-      
+
       // Remove from memory
       this.users.splice(userIndex, 1);
-      
+
       // Save to local file
       this.saveDataToLocalFile();
-      
+
       // Remove from Supabase
       await this.deleteUserFromSupabase(user);
 
@@ -612,7 +622,7 @@ export class MemorySecurityStorage {
   private async deleteUserFromSupabase(user: SecurityUser) {
     try {
       const tableName = user.role === 'admin' ? 'secure_admins' : 'secure_drivers';
-      
+
       const { error } = await supabase
         .from(tableName)
         .delete()
@@ -653,7 +663,7 @@ export class MemorySecurityStorage {
 
     // Add super admin to memory
     this.users.push(adminAccount);
-    
+
     // Create a log for super admin creation
     await this.createSecurityLog({
       user_id: adminAccount.id,
@@ -684,7 +694,7 @@ export class MemorySecurityStorage {
     };
 
     this.users.push(testDriver);
-    
+
     // Create a log for test driver creation
     await this.createSecurityLog({
       user_id: testDriver.id,
@@ -711,7 +721,7 @@ export class MemorySecurityStorage {
     this.twoFactorAuth = this.twoFactorAuth.filter(
       record => !(record.userId === twoFAData.userId && record.userType === twoFAData.userType)
     );
-    
+
     this.twoFactorAuth.push(twoFAData);
     this.saveDataToLocalFile();
     return twoFAData;
@@ -774,19 +784,19 @@ export class MemorySecurityStorage {
   }
 
   // ==================== TOKEN VERIFICATION METHODS ====================
-  
+
   // Verify admin token - Missing method that's causing 401 errors
   async verifyAdminToken(token: string): Promise<SecurityUser | null> {
     try {
       console.log(`🔍 Verifying admin token: ${token.substring(0, 8)}...`);
-      
+
       // Find user with matching token
-      const user = this.users.find(u => 
-        u.role === 'admin' && 
-        u.is_active === true && 
+      const user = this.users.find(u =>
+        u.role === 'admin' &&
+        u.is_active === true &&
         u.currentToken === token
       );
-      
+
       if (user) {
         console.log(`✅ Valid admin token for: ${user.username}`);
         return user;
@@ -799,13 +809,13 @@ export class MemorySecurityStorage {
       return null;
     }
   }
-  
+
   // Get admin by email (for Supabase JWT verification)
   async getAdminByEmail(email: string): Promise<SecurityUser | null> {
     try {
-      const user = this.users.find(u => 
-        u.role === 'admin' && 
-        u.is_active === true && 
+      const user = this.users.find(u =>
+        u.role === 'admin' &&
+        u.is_active === true &&
         u.email === email
       );
       return user || null;
@@ -814,13 +824,13 @@ export class MemorySecurityStorage {
       return null;
     }
   }
-  
+
   // Get secure admin by credentials (for login)
   async getSecureAdminByCredentials(username: string, email: string): Promise<SecurityUser | null> {
     try {
-      const user = this.users.find(u => 
-        u.role === 'admin' && 
-        u.is_active === true && 
+      const user = this.users.find(u =>
+        u.role === 'admin' &&
+        u.is_active === true &&
         (u.username === username || u.email === email)
       );
       return user || null;
@@ -829,13 +839,13 @@ export class MemorySecurityStorage {
       return null;
     }
   }
-  
+
   // Get secure captain by credentials (for driver login)
   async getSecureCaptainByCredentials(username: string, email: string): Promise<SecurityUser | null> {
     try {
-      const user = this.users.find(u => 
-        u.role === 'driver' && 
-        u.is_active === true && 
+      const user = this.users.find(u =>
+        u.role === 'driver' &&
+        u.is_active === true &&
         (u.username === username || u.email === email)
       );
       return user || null;
@@ -844,11 +854,11 @@ export class MemorySecurityStorage {
       return null;
     }
   }
-  
+
   // Get user by username or email (for conflict checking)
   async getUserByUsernameOrEmail(username: string, email: string): Promise<SecurityUser | null> {
     try {
-      const user = this.users.find(u => 
+      const user = this.users.find(u =>
         u.username === username || u.email === email
       );
       return user || null;

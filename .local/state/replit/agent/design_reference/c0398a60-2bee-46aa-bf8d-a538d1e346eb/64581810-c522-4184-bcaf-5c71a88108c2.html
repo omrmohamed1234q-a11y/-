@@ -1,0 +1,909 @@
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اطبعلي - منصة الطباعة والتسوق الذكية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    primary: '#000000',
+                    accent: '#EF2D50',
+                    background: '#FAFAFA',
+                    secondary: '#F5F5F5',
+                    success: '#10B981',
+                    warning: '#F59E0B',
+                    error: '#EF4444'
+                },
+                fontFamily: {
+                    'arabic': ['IBM Plex Sans Arabic', 'sans-serif'],
+                    'latin': ['Inter', 'sans-serif']
+                },
+                boxShadow: {
+                    'paper': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                    'card': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                }
+            }
+        }
+    };
+    </script>
+    
+    <style>
+        /* Custom paper texture and Arabic optimizations */
+        .paper-texture {
+            background-image: 
+                radial-gradient(circle at 1px 1px, rgba(0,0,0,.15) 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+        
+        .paper-edge {
+            border-image: url("data:image/svg+xml,%3csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='m0,0 l100,0 l0,100 l-100,0 z' fill='none' stroke='%23e5e7eb' stroke-width='1' stroke-dasharray='2,2'/%3e%3c/svg%3e") 1;
+        }
+        
+        /* RTL optimizations */
+        .rtl-flip {
+            transform: scaleX(-1);
+        }
+        
+        /* Arabic number styling */
+        .arabic-nums {
+            font-variant-numeric: tabular-nums;
+            direction: ltr;
+            unicode-bidi: bidi-override;
+        }
+        
+        /* Hover animations */
+        .hover-lift {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+
+<body class="bg-background font-arabic text-primary min-h-screen">
+    <!-- @COMPONENT: AppHeader [navigation, user menu, cart] -->
+    <header class="bg-white shadow-paper sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo and App Name -->
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <div class="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
+                        <i class="fas fa-print text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-primary">اطبعلي</h1>
+                        <p class="text-xs text-gray-500">منصة الطباعة الذكية</p>
+                    </div>
+                </div>
+                
+                <!-- Navigation Icons -->
+                <div class="flex items-center space-x-4 space-x-reverse">
+                    <button class="relative p-2 hover:bg-gray-100 rounded-lg">
+                        <i class="fas fa-shopping-cart text-lg"></i>
+                        <!-- @STATE: cartItemCount:number = 3 -->
+                        <span class="absolute -top-1 -left-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center arabic-nums">3</span>
+                    </button>
+                    
+                    <button class="relative p-2 hover:bg-gray-100 rounded-lg">
+                        <i class="fas fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -left-1 bg-warning text-white text-xs rounded-full w-5 h-5 flex items-center justify-center arabic-nums">2</span>
+                    </button>
+                    
+                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-sm"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: AppHeader -->
+
+    <!-- @COMPONENT: QuickActions [fast print, scan, rewards display] -->
+    <section class="max-w-6xl mx-auto px-4 py-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Quick Print -->
+            <button class="bg-white p-6 rounded-xl shadow-paper hover-lift text-center" data-event="click:openQuickPrint">
+                <div class="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-print text-accent text-xl"></i>
+                </div>
+                <h3 class="font-semibold text-sm mb-1">طباعة سريعة</h3>
+                <p class="text-xs text-gray-500">اطبع الآن</p>
+            </button>
+            
+            <!-- Smart Scan -->
+            <button class="bg-white p-6 rounded-xl shadow-paper hover-lift text-center" data-event="click:openScanner">
+                <div class="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-camera text-success text-xl"></i>
+                </div>
+                <h3 class="font-semibold text-sm mb-1">مسح ذكي</h3>
+                <p class="text-xs text-gray-500">OCR + تحرير</p>
+            </button>
+            
+            <!-- Bounty Points -->
+            <div class="bg-gradient-to-br from-warning/10 to-accent/10 p-6 rounded-xl shadow-paper text-center">
+                <div class="w-12 h-12 bg-warning/20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-coins text-warning text-xl"></i>
+                </div>
+                <h3 class="font-semibold text-sm mb-1">نقاط المكافآت</h3>
+                <!-- @STATE: userPoints:number = 1250 -->
+                <p class="text-lg font-bold text-warning arabic-nums" data-bind="user.bountyPoints">1,250</p>
+            </div>
+            
+            <!-- PDF Tools -->
+            <button class="bg-white p-6 rounded-xl shadow-paper hover-lift text-center" data-event="click:openPdfTools">
+                <div class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-file-pdf text-blue-500 text-xl"></i>
+                </div>
+                <h3 class="font-semibold text-sm mb-1">أدوات PDF</h3>
+                <p class="text-xs text-gray-500">دمج • تقسيم • ضغط</p>
+            </button>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: QuickActions -->
+
+    <!-- @COMPONENT: PrintQueue [active jobs, status] -->
+    <section class="max-w-6xl mx-auto px-4 py-4">
+        <div class="bg-white rounded-xl shadow-paper p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold flex items-center">
+                    <i class="fas fa-clock-rotate-left text-accent ml-2"></i>
+                    طابور الطباعة
+                </h2>
+                <span class="text-sm text-gray-500">مهام نشطة: <span class="arabic-nums font-semibold">2</span></span>
+            </div>
+            
+            <!-- @MAP: printJobs.map(job => ( -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-r-4 border-warning">
+                    <div class="flex items-center space-x-3 space-x-reverse">
+                        <div class="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-file text-warning"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-sm" data-bind="job.filename">تقرير_الفيزياء.pdf</h4>
+                            <p class="text-xs text-gray-500">صفحات: <span class="arabic-nums" data-bind="job.pages">12</span> • ملون</p>
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <span class="inline-block bg-warning text-white text-xs px-2 py-1 rounded-full">جاري الطباعة</span>
+                        <p class="text-xs text-gray-500 mt-1 arabic-nums">٧٥٪ مكتمل</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-r-4 border-gray-300">
+                    <div class="flex items-center space-x-3 space-x-reverse">
+                        <div class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-file text-gray-500"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-sm">ملخص_الرياضيات.docx</h4>
+                            <p class="text-xs text-gray-500">صفحات: <span class="arabic-nums">8</span> • أبيض وأسود</p>
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <span class="inline-block bg-gray-300 text-gray-700 text-xs px-2 py-1 rounded-full">في الانتظار</span>
+                        <p class="text-xs text-gray-500 mt-1">الموضع: <span class="arabic-nums">2</span></p>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_MAP )) -->
+        </div>
+    </section>
+    <!-- @END_COMPONENT: PrintQueue -->
+
+    <!-- @COMPONENT: MarketplaceSection [featured products, categories] -->
+    <section class="max-w-6xl mx-auto px-4 py-6">
+        <div class="bg-white rounded-xl shadow-paper p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold flex items-center">
+                    <i class="fas fa-store text-accent ml-2"></i>
+                    متجر اطبعلي
+                </h2>
+                <button class="text-accent text-sm font-medium hover:underline" data-event="click:viewAllProducts">
+                    عرض الكل
+                    <i class="fas fa-chevron-left mr-1"></i>
+                </button>
+            </div>
+            
+            <!-- Categories -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+                <button class="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg text-center hover-lift" data-category="teachers">
+                    <i class="fas fa-chalkboard-teacher text-blue-600 text-2xl mb-2"></i>
+                    <p class="text-sm font-medium">كتب المعلمين</p>
+                </button>
+                
+                <button class="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg text-center hover-lift" data-category="students">
+                    <i class="fas fa-graduation-cap text-green-600 text-2xl mb-2"></i>
+                    <p class="text-sm font-medium">كتب الطلاب</p>
+                </button>
+                
+                <button class="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg text-center hover-lift" data-category="supplies">
+                    <i class="fas fa-print text-purple-600 text-2xl mb-2"></i>
+                    <p class="text-sm font-medium">مستلزمات الطباعة</p>
+                </button>
+                
+                <button class="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg text-center hover-lift" data-category="digital">
+                    <i class="fas fa-download text-orange-600 text-2xl mb-2"></i>
+                    <p class="text-sm font-medium">تحميلات رقمية</p>
+                </button>
+                
+                <button class="p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg text-center hover-lift" data-category="tools">
+                    <i class="fas fa-pencil-ruler text-red-600 text-2xl mb-2"></i>
+                    <p class="text-sm font-medium">أدوات مدرسية</p>
+                </button>
+            </div>
+            
+            <!-- Featured Products -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- @MAP: featuredProducts.map(product => ( -->
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden hover-lift" data-mock="true">
+                    <!-- High-quality Arabic textbook cover showing mathematics equations and geometric shapes -->
+                    <img src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250" alt="Arabic mathematics textbook" class="w-full h-40 object-cover"/>
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="bg-success/10 text-success text-xs px-2 py-1 rounded-full">جديد</span>
+                            <div class="flex text-yellow-400">
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="far fa-star text-xs"></i>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-sm mb-1" data-bind="product.name">كتاب الرياضيات - الصف الثالث الثانوي</h3>
+                        <p class="text-xs text-gray-600 mb-3" data-bind="product.description">منهج محدث وفقاً لوزارة التربية والتعليم</p>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2 space-x-reverse">
+                                <span class="text-lg font-bold text-accent arabic-nums" data-bind="product.price">١٢٠ جنيه</span>
+                                <span class="text-sm text-gray-500 line-through arabic-nums" data-bind="product.originalPrice">١٥٠ جنيه</span>
+                            </div>
+                            <button class="bg-accent text-white px-3 py-1 rounded-lg text-xs hover:bg-accent/90" data-event="click:addToCart">
+                                <i class="fas fa-cart-plus ml-1"></i>
+                                أضف للسلة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden hover-lift" data-mock="true">
+                    <!-- Professional printer paper and office supplies arranged neatly -->
+                    <img src="https://images.unsplash.com/photo-1586281380349-632531db7ed4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250" alt="Premium printer paper" class="w-full h-40 object-cover"/>
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="bg-accent/10 text-accent text-xs px-2 py-1 rounded-full">الأكثر مبيعاً</span>
+                            <div class="flex text-yellow-400">
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="fas fa-star text-xs"></i>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-sm mb-1">ورق طباعة فاخر A4</h3>
+                        <p class="text-xs text-gray-600 mb-3">٥٠٠ ورقة • جودة عالية • مقاوم للحبر</p>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2 space-x-reverse">
+                                <span class="text-lg font-bold text-accent arabic-nums">٨٥ جنيه</span>
+                            </div>
+                            <button class="bg-accent text-white px-3 py-1 rounded-lg text-xs hover:bg-accent/90">
+                                <i class="fas fa-cart-plus ml-1"></i>
+                                أضف للسلة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden hover-lift" data-mock="true">
+                    <!-- Digital learning content displayed on tablet screen -->
+                    <img src="https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250" alt="Digital education content" class="w-full h-40 object-cover"/>
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full">رقمي</span>
+                            <div class="flex text-yellow-400">
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="fas fa-star text-xs"></i>
+                                <i class="far fa-star text-xs"></i>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-sm mb-1">مجموعة قوالب الطلاب</h3>
+                        <p class="text-xs text-gray-600 mb-3">جداول دراسية • منظمات • أوراق ملاحظات</p>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2 space-x-reverse">
+                                <span class="text-lg font-bold text-accent arabic-nums">٤٥ جنيه</span>
+                                <span class="text-sm text-gray-500 line-through arabic-nums">٦٠ جنيه</span>
+                            </div>
+                            <button class="bg-accent text-white px-3 py-1 rounded-lg text-xs hover:bg-accent/90">
+                                <i class="fas fa-download ml-1"></i>
+                                تحميل فوري
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: MarketplaceSection -->
+
+    <!-- @COMPONENT: TeacherCorner [curated content, subscription] -->
+    <section class="max-w-6xl mx-auto px-4 py-6">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-100 rounded-xl shadow-paper p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center ml-3">
+                        <i class="fas fa-chalkboard-teacher text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-blue-900">ركن المعلمين</h2>
+                        <p class="text-sm text-blue-700">محتوى تعليمي متخصص ومواد منهجية</p>
+                    </div>
+                </div>
+                <button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700" data-event="click:openTeacherPortal">
+                    انضم الآن
+                    <i class="fas fa-arrow-left mr-2"></i>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Teacher Subscription Plan -->
+                <div class="bg-white rounded-xl p-6 text-center border-2 border-blue-200">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-crown text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">اشتراك المعلم المميز</h3>
+                    <p class="text-sm text-gray-600 mb-4">وصول حصري لجميع المواد التعليمية</p>
+                    <div class="text-center mb-4">
+                        <span class="text-3xl font-bold text-blue-600 arabic-nums">٩٩</span>
+                        <span class="text-sm text-gray-500">جنيه/شهرياً</span>
+                    </div>
+                    <ul class="text-sm text-gray-600 space-y-2 mb-6 text-right">
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-success ml-2"></i>
+                            طباعة مجانية شهرية (١٠٠ صفحة)
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-success ml-2"></i>
+                            مكتبة تفاعلية للمناهج
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-success ml-2"></i>
+                            أوراق عمل قابلة للتخصيص
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-success ml-2"></i>
+                            دعم فني أولوية
+                        </li>
+                    </ul>
+                    <button class="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700">
+                        ابدأ التجربة المجانية
+                    </button>
+                </div>
+                
+                <!-- Quick Access Materials -->
+                <div class="space-y-4">
+                    <h3 class="font-bold text-blue-900 mb-4">مواد سريعة الوصول</h3>
+                    
+                    <div class="bg-white rounded-lg p-4 hover-lift cursor-pointer" data-event="click:openWorksheet">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center ml-3">
+                                <i class="fas fa-file-alt text-green-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-sm">أوراق عمل الرياضيات</h4>
+                                <p class="text-xs text-gray-500">الصف الأول الثانوي • جديد</p>
+                            </div>
+                            <span class="bg-success text-white text-xs px-2 py-1 rounded-full">مجاني</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg p-4 hover-lift cursor-pointer">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center ml-3">
+                                <i class="fas fa-question-circle text-purple-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-sm">بنك أسئلة العلوم</h4>
+                                <p class="text-xs text-gray-500">١٠٠٠+ سؤال مع الإجابات</p>
+                            </div>
+                            <span class="bg-accent text-white text-xs px-2 py-1 rounded-full">مميز</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg p-4 hover-lift cursor-pointer">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center ml-3">
+                                <i class="fas fa-calendar-alt text-orange-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-sm">خطط دروس أسبوعية</h4>
+                                <p class="text-xs text-gray-500">جاهزة للطباعة والتخصيص</p>
+                            </div>
+                            <span class="bg-warning text-white text-xs px-2 py-1 rounded-full">جديد</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Curriculum Filters -->
+                <div>
+                    <h3 class="font-bold text-blue-900 mb-4">تصفية حسب المنهج</h3>
+                    <div class="space-y-3">
+                        <button class="w-full bg-white p-3 rounded-lg text-right hover-lift border-2 border-blue-200" data-curriculum="egyptian">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium">المنهج المصري</span>
+                                <i class="fas fa-chevron-left text-blue-600"></i>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">وزارة التربية والتعليم</p>
+                        </button>
+                        
+                        <button class="w-full bg-white p-3 rounded-lg text-right hover-lift" data-curriculum="cambridge">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium">منهج كامبريدج</span>
+                                <i class="fas fa-chevron-left text-gray-400"></i>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Cambridge International</p>
+                        </button>
+                        
+                        <button class="w-full bg-white p-3 rounded-lg text-right hover-lift" data-curriculum="american">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium">المنهج الأمريكي</span>
+                                <i class="fas fa-chevron-left text-gray-400"></i>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Common Core Standards</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: TeacherCorner -->
+
+    <!-- @COMPONENT: RewardsGamification [points, levels, challenges] -->
+    <section class="max-w-6xl mx-auto px-4 py-6">
+        <div class="bg-gradient-to-r from-yellow-50 to-orange-100 rounded-xl shadow-paper p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center ml-3">
+                        <i class="fas fa-trophy text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-orange-900">نظام المكافآت</h2>
+                        <p class="text-sm text-orange-700">اربح نقاط واستبدلها بمكافآت مذهلة</p>
+                    </div>
+                </div>
+                <div class="text-left">
+                    <p class="text-sm text-orange-700">رصيدك الحالي</p>
+                    <p class="text-2xl font-bold text-orange-900 arabic-nums" data-bind="user.totalPoints">1,250</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- User Level & Progress -->
+                <div class="bg-white rounded-xl p-6">
+                    <div class="text-center mb-4">
+                        <div class="w-20 h-20 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-medal text-white text-2xl"></i>
+                        </div>
+                        <h3 class="font-bold text-lg">طابع ماهر</h3>
+                        <p class="text-sm text-gray-600">المستوى <span class="arabic-nums font-bold">7</span></p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="flex justify-between text-sm mb-2">
+                            <span>التقدم للمستوى التالي</span>
+                            <span class="arabic-nums">٧٥٪</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-yellow-400 to-orange-500 h-2 rounded-full" style="width: 75%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">يتبقى <span class="arabic-nums font-medium">٣٢٥</span> نقطة للمستوى التالي</p>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-sm">
+                            <span>إجمالي الطباعات</span>
+                            <span class="arabic-nums font-bold">١,٤٢٧</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span>المشتريات المكتملة</span>
+                            <span class="arabic-nums font-bold">٨٩</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span>الإحالات الناجحة</span>
+                            <span class="arabic-nums font-bold">١٢</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Daily Challenges -->
+                <div class="bg-white rounded-xl p-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-tasks text-blue-600 ml-2"></i>
+                        تحديات اليوم
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="p-4 bg-green-50 rounded-lg border-r-4 border-success">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-medium text-sm">اطبع ٥ صفحات</h4>
+                                <span class="bg-success text-white text-xs px-2 py-1 rounded-full">مكتمل</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="w-full bg-green-200 rounded-full h-2 ml-3">
+                                    <div class="bg-success h-2 rounded-full w-full"></div>
+                                </div>
+                                <span class="text-sm font-bold text-success">+٥٠ نقطة</span>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-blue-50 rounded-lg border-r-4 border-blue-500">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-medium text-sm">امسح وثيقة ضوئياً</h4>
+                                <span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">جاري التنفيذ</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="w-full bg-blue-200 rounded-full h-2 ml-3">
+                                    <div class="bg-blue-500 h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                                <span class="text-sm font-bold text-blue-500">+٣٠ نقطة</span>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-gray-50 rounded-lg border-r-4 border-gray-300">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-medium text-sm">ادع صديقاً للانضمام</h4>
+                                <span class="bg-gray-300 text-gray-600 text-xs px-2 py-1 rounded-full">لم يبدأ</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="w-full bg-gray-200 rounded-full h-2 ml-3">
+                                    <div class="bg-gray-300 h-2 rounded-full w-0"></div>
+                                </div>
+                                <span class="text-sm font-bold text-gray-500">+١٠٠ نقطة</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Rewards Catalog -->
+                <div class="bg-white rounded-xl p-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-gift text-purple-600 ml-2"></i>
+                        كتالوج المكافآت
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="p-4 border border-green-200 rounded-lg hover-lift cursor-pointer" data-event="click:redeemReward">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-medium text-sm">طباعة مجانية (١٠ صفحات)</h4>
+                                <i class="fas fa-print text-green-600"></i>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-success font-bold arabic-nums">٢٠٠ نقطة</span>
+                                <button class="bg-success text-white text-xs px-3 py-1 rounded-full">استبدل</button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 border border-blue-200 rounded-lg hover-lift cursor-pointer">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-medium text-sm">كوبون خصم ٢٠٪</h4>
+                                <i class="fas fa-percentage text-blue-600"></i>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-blue-600 font-bold arabic-nums">٥٠٠ نقطة</span>
+                                <button class="bg-blue-600 text-white text-xs px-3 py-1 rounded-full">استبدل</button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 border border-purple-200 rounded-lg opacity-50">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-medium text-sm">كتاب رقمي مجاني</h4>
+                                <i class="fas fa-book text-purple-600"></i>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-purple-600 font-bold arabic-nums">١,٠٠٠ نقطة</span>
+                                <button class="bg-gray-300 text-gray-500 text-xs px-3 py-1 rounded-full" disabled>غير متاح</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: RewardsGamification -->
+
+    <!-- @COMPONENT: AIStudio [templates, chat interface] -->
+    <section class="max-w-6xl mx-auto px-4 py-6">
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-100 rounded-xl shadow-paper p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center ml-3">
+                        <i class="fas fa-brain text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-indigo-900">استوديو الذكاء الاصطناعي</h2>
+                        <p class="text-sm text-indigo-700">إنشاء وتخصيص القوالب بتقنية الذكاء الاصطناعي</p>
+                    </div>
+                </div>
+                <span class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-medium">جديد</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- AI Template Generator -->
+                <div class="bg-white rounded-xl p-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-magic text-indigo-600 ml-2"></i>
+                        مولد القوالب الذكي
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">نوع القالب</label>
+                            <select class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" data-bind="templateType">
+                                <option>جدول دراسي</option>
+                                <option>منظم مهام</option>
+                                <option>كروت الفلاش</option>
+                                <option>قائمة مراجعة</option>
+                                <option>خطة أسبوعية</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">وصف التخصيص</label>
+                            <textarea 
+                                class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 h-24 resize-none" 
+                                placeholder="مثال: أريد جدول دراسي لطالب ثانوي يدرس 6 مواد، مع مساحة للملاحظات..."
+                                data-bind="customizationRequest"></textarea>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">اللغة</label>
+                                <select class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option>العربية</option>
+                                    <option>الإنجليزية</option>
+                                    <option>الاثنان معاً</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">حجم الورق</label>
+                                <select class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option>A4</option>
+                                    <option>A5</option>
+                                    <option>Letter</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <button class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:opacity-90" data-event="click:generateTemplate">
+                            <i class="fas fa-sparkles ml-2"></i>
+                            إنشاء القالب بالذكاء الاصطناعي
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Smart Chat Assistant -->
+                <div class="bg-white rounded-xl p-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-comments text-purple-600 ml-2"></i>
+                        مساعد الطباعة الذكي
+                    </h3>
+                    
+                    <!-- @COMPONENT: ChatInterface [messages, input] -->
+                    <div class="border border-gray-200 rounded-lg p-4 h-64 overflow-y-auto mb-4" id="chatContainer">
+                        <div class="space-y-3" data-mock="true">
+                            <!-- Bot Message -->
+                            <div class="flex items-start space-x-3 space-x-reverse">
+                                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-robot text-purple-600 text-sm"></i>
+                                </div>
+                                <div class="bg-gray-100 p-3 rounded-lg rounded-tr-none max-w-xs">
+                                    <p class="text-sm">مرحباً! كيف يمكنني مساعدتك في الطباعة اليوم؟</p>
+                                </div>
+                            </div>
+                            
+                            <!-- User Message -->
+                            <div class="flex items-start space-x-3 space-x-reverse justify-end">
+                                <div class="bg-indigo-600 text-white p-3 rounded-lg rounded-tl-none max-w-xs">
+                                    <p class="text-sm">أريد طباعة ملاحظاتي في الأحياء A5 وجهين</p>
+                                </div>
+                                <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-user text-indigo-600 text-sm"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Bot Response -->
+                            <div class="flex items-start space-x-3 space-x-reverse">
+                                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-robot text-purple-600 text-sm"></i>
+                                </div>
+                                <div class="bg-gray-100 p-3 rounded-lg rounded-tr-none max-w-xs">
+                                    <p class="text-sm">ممتاز! سأساعدك في إعداد طباعة A5 على وجهين. هل تريد:</p>
+                                    <div class="mt-2 space-y-1">
+                                        <button class="block w-full text-right text-xs bg-white p-2 rounded border hover:bg-gray-50" data-event="click:selectPrintOption">• طباعة فورية</button>
+                                        <button class="block w-full text-right text-xs bg-white p-2 rounded border hover:bg-gray-50" data-event="click:selectPrintOption">• جدولة الطباعة</button>
+                                        <button class="block w-full text-right text-xs bg-white p-2 rounded border hover:bg-gray-50" data-event="click:selectPrintOption">• معاينة أولاً</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: ChatInterface -->
+                    
+                    <!-- Chat Input -->
+                    <div class="flex space-x-2 space-x-reverse">
+                        <input 
+                            type="text" 
+                            placeholder="اكتب رسالتك هنا..." 
+                            class="flex-1 p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            data-bind="chatInput"
+                        />
+                        <button class="bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700" data-event="click:sendChatMessage">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <button class="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs hover:bg-purple-100" data-preset="quickPrint">طباعة سريعة</button>
+                        <button class="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs hover:bg-purple-100" data-preset="scan">مسح ضوئي</button>
+                        <button class="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs hover:bg-purple-100" data-preset="pdfTools">أدوات PDF</button>
+                        <button class="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs hover:bg-purple-100" data-preset="templates">القوالب</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: AIStudio -->
+
+    <!-- @COMPONENT: BottomNavigation [main app tabs] -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2">
+        <div class="flex items-center justify-around max-w-md mx-auto">
+            <button class="flex flex-col items-center py-2 px-4 text-accent" data-tab="home">
+                <i class="fas fa-home text-xl mb-1"></i>
+                <span class="text-xs font-medium">الرئيسية</span>
+            </button>
+            
+            <button class="flex flex-col items-center py-2 px-4 text-gray-500 hover:text-accent" data-tab="print">
+                <i class="fas fa-print text-xl mb-1"></i>
+                <span class="text-xs">طباعة</span>
+            </button>
+            
+            <button class="flex flex-col items-center py-2 px-4 text-gray-500 hover:text-accent" data-tab="store">
+                <i class="fas fa-store text-xl mb-1"></i>
+                <span class="text-xs">المتجر</span>
+            </button>
+            
+            <button class="flex flex-col items-center py-2 px-4 text-gray-500 hover:text-accent" data-tab="rewards">
+                <i class="fas fa-trophy text-xl mb-1"></i>
+                <span class="text-xs">المكافآت</span>
+            </button>
+            
+            <button class="flex flex-col items-center py-2 px-4 text-gray-500 hover:text-accent" data-tab="profile">
+                <i class="fas fa-user text-xl mb-1"></i>
+                <span class="text-xs">الملف الشخصي</span>
+            </button>
+        </div>
+    </nav>
+    <!-- @END_COMPONENT: BottomNavigation -->
+
+    <!-- Add bottom padding to account for fixed navigation -->
+    <div class="h-20"></div>
+
+    <script>
+        // TODO: Implement Supabase integration
+        // const supabaseUrl = 'https://fvahcgubddynggktqklz.supabase.co'
+        // const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ2YWhjZ3ViZGR5bmdna3Rxa2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NzI0MDcsImV4cCI6MjA3MDM0ODQwN30.M08VvM756YpAAUfpX0WLUK3FyQFLD5wgutkHQyWWbpY'
+        
+        (function() {
+            // UI State Management
+            let activeTab = 'home';
+            let cartItems = [];
+            let userPoints = 1250;
+            
+            // Navigation handling
+            function handleTabNavigation(tabName) {
+                // TODO: Implement tab switching logic with Supabase data fetching
+                activeTab = tabName;
+                updateActiveTab();
+            }
+            
+            function updateActiveTab() {
+                document.querySelectorAll('[data-tab]').forEach(tab => {
+                    const tabName = tab.getAttribute('data-tab');
+                    if (tabName === activeTab) {
+                        tab.classList.add('text-accent');
+                        tab.classList.remove('text-gray-500');
+                    } else {
+                        tab.classList.remove('text-accent');
+                        tab.classList.add('text-gray-500');
+                    }
+                });
+            }
+            
+            // Mock functionality for demonstrations
+            function handleQuickPrint() {
+                // TODO: Implement print queue management with Supabase
+                console.log('Quick print initiated');
+            }
+            
+            function handleAddToCart(productId) {
+                // TODO: Implement cart management with Supabase real-time updates
+                cartItems.push(productId);
+                updateCartDisplay();
+            }
+            
+            function updateCartDisplay() {
+                const cartBadge = document.querySelector('.fa-shopping-cart + span');
+                if (cartBadge) {
+                    cartBadge.textContent = cartItems.length;
+                }
+            }
+            
+            function handleRewardRedemption(pointsCost) {
+                // TODO: Implement rewards system with Supabase
+                if (userPoints >= pointsCost) {
+                    userPoints -= pointsCost;
+                    updatePointsDisplay();
+                }
+            }
+            
+            function updatePointsDisplay() {
+                document.querySelectorAll('[data-bind="user.bountyPoints"], [data-bind="user.totalPoints"]').forEach(el => {
+                    el.textContent = userPoints.toLocaleString('ar-EG');
+                });
+            }
+            
+            // Event listeners
+            document.addEventListener('click', function(e) {
+                const target = e.target.closest('[data-event], [data-tab]');
+                if (!target) return;
+                
+                const action = target.getAttribute('data-event') || target.getAttribute('data-tab');
+                
+                switch(action) {
+                    case 'home':
+                    case 'print':
+                    case 'store':
+                    case 'rewards':
+                    case 'profile':
+                        handleTabNavigation(action);
+                        break;
+                    case 'click:openQuickPrint':
+                        handleQuickPrint();
+                        break;
+                    case 'click:addToCart':
+                        handleAddToCart(Math.random().toString(36).substr(2, 9));
+                        break;
+                    case 'click:redeemReward':
+                        handleRewardRedemption(200);
+                        break;
+                    default:
+                        console.log('Action not implemented:', action);
+                }
+            });
+            
+            // Initialize app
+            updateActiveTab();
+            updatePointsDisplay();
+            
+            // TODO: Initialize Supabase client and real-time subscriptions
+            // TODO: Implement authentication flow
+            // TODO: Set up offline data caching
+            // TODO: Implement print queue management
+            // TODO: Set up push notifications for print status
+        })();
+    </script>
+</body>
+</html>

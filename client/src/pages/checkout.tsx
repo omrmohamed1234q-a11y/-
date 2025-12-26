@@ -76,10 +76,10 @@ export default function CheckoutPage() {
     if (appliedCoupon && cart?.subtotal !== undefined) {
       // If cart subtotal has changed since coupon was applied, revalidate
       const currentSubtotal = cart.subtotal || 0;
-      
+
       if (appliedCoupon.originalSubtotal && appliedCoupon.originalSubtotal !== currentSubtotal) {
         console.log('🔄 Cart changed, revalidating coupon...');
-        
+
         // Automatically revalidate the coupon with new cart total
         const revalidateCoupon = async () => {
           try {
@@ -145,7 +145,7 @@ export default function CheckoutPage() {
   const handleLocationSelect = (location: LocationData, validation: DeliveryValidation) => {
     setSelectedLocation(location);
     setLocationValidation(validation);
-    
+
     // Auto-fill delivery address if available
     if (location.address && validation.isValid) {
       handleInputChange('deliveryAddress', location.address);
@@ -229,7 +229,7 @@ export default function CheckoutPage() {
     setIsPhoneVerified(true);
     setVerifiedPhoneNumber(phoneNumber);
     setShowPhoneVerification(false);
-    
+
     toast({
       title: "تم التحقق من الهاتف",
       description: "تم التحقق من رقم هاتفك بنجاح",
@@ -246,7 +246,7 @@ export default function CheckoutPage() {
   // Proceed with actual checkout
   const proceedWithCheckout = () => {
     // Format address
-    const fullAddress = formData.deliveryMethod === 'delivery' 
+    const fullAddress = formData.deliveryMethod === 'delivery'
       ? `${formData.deliveryAddress}${formData.buildingNumber ? `, مبنى رقم ${formData.buildingNumber}` : ''}${formData.floor ? `, الطابق ${formData.floor}` : ''}${formData.apartment ? `, شقة ${formData.apartment}` : ''}${formData.landmarks ? `. علامات مميزة: ${formData.landmarks}` : ''}`
       : 'استلام من الفرع';
 
@@ -279,13 +279,13 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Show order summary with fees first
     if (!showOrderSummary) {
       setShowOrderSummary(true);
       return;
     }
-    
+
     // Validation
     if (!formData.customerName.trim()) {
       toast({
@@ -375,34 +375,47 @@ export default function CheckoutPage() {
   }
 
   const subtotal = cart.subtotal || 0;
-  
+
   // New payment system calculations
   const baseFare = 5; // Fixed fee
   const minimumOrderAmount = 45; // Minimum order amount for delivery
-  
+
   // Service Fee: (Order Value × 5%) + Fixed Fee
   const serviceFee = (subtotal * 0.05) + baseFare;
-  
+
   // Dynamic Delivery Fee based on actual location
-  const deliveryFee = formData.deliveryMethod === 'delivery' 
-    ? (locationValidation && locationValidation.isValid 
-        ? locationValidation.deliveryFee 
-        : baseFare + (5 * 1.5)) // Default fallback: 5km × 1.5 + 5 base
+  const deliveryFee = formData.deliveryMethod === 'delivery'
+    ? (locationValidation && locationValidation.isValid
+      ? locationValidation.deliveryFee
+      : baseFare + (5 * 1.5)) // Default fallback: 5km × 1.5 + 5 base
     : 0;
-  
+
   const pointsDiscount = formData.usePoints ? Math.min(50, Math.floor(subtotal * 0.05)) : 0;
-  
+
   // New Total: Order Value + Delivery Fee + Service Fee - Discounts
   const total = subtotal + deliveryFee + serviceFee - pointsDiscount - couponDiscount;
-  
+
   // Check minimum order amount and location validity for delivery
-  const canDeliver = formData.deliveryMethod !== 'delivery' || 
+  const canDeliver = formData.deliveryMethod !== 'delivery' ||
     (subtotal >= minimumOrderAmount && (!selectedLocation || (locationValidation && locationValidation.isValid)));
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
         <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.history.back()}
+              className="flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+              رجوع
+            </Button>
+          </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="checkout-title">
             إتمام الطلب
           </h1>
@@ -624,12 +637,12 @@ export default function CheckoutPage() {
                 {/* Cart Items with Enhanced Preview */}
                 <div className="space-y-3 max-h-80 overflow-y-auto">
                   {cart.items.map((item) => {
-                    const isPrintJob = (item.variant as any)?.isPrintJob || 
-                                      (item as any).productSource === 'print_service' || 
-                                      (item as any).printJobData;
+                    const isPrintJob = (item.variant as any)?.isPrintJob ||
+                      (item as any).productSource === 'print_service' ||
+                      (item as any).printJobData;
                     const previewUrl = (item as any).previewUrl;
                     const printJobData = (item as any).printJobData || (item.variant as any)?.printJob || {};
-                    
+
                     return (
                       <div key={item.id} className="p-3 border rounded-lg bg-white hover:shadow-sm transition-shadow" data-testid={`checkout-item-${item.id}`}>
                         <div className="flex gap-3">
@@ -663,12 +676,12 @@ export default function CheckoutPage() {
                               <Package className="h-8 w-8 text-gray-400" />
                             )}
                           </div>
-                          
+
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <p className="text-sm font-medium line-clamp-2 mb-1">{item.productName}</p>
-                                
+
                                 {/* Print Job Details */}
                                 {isPrintJob && (
                                   <div className="text-xs text-gray-600 space-y-1 mb-2">
@@ -678,7 +691,7 @@ export default function CheckoutPage() {
                                         <span className="font-medium text-gray-700">📁 {printJobData.filename}</span>
                                       </div>
                                     )}
-                                    
+
                                     <div className="grid grid-cols-1 gap-1 mt-1">
                                       {/* Pages and Copies */}
                                       {printJobData.pages && (
@@ -687,14 +700,14 @@ export default function CheckoutPage() {
                                           {printJobData.copies > 1 && <span>× {printJobData.copies} نسخة</span>}
                                         </div>
                                       )}
-                                      
+
                                       {/* Paper Size */}
                                       {printJobData.paperSize && (
                                         <div className="flex items-center gap-1">
                                           <span>📏 ورق {printJobData.paperSize}</span>
                                         </div>
                                       )}
-                                      
+
                                       {/* Color Mode */}
                                       {printJobData.colorMode && (
                                         <div className="flex items-center gap-1">
@@ -703,11 +716,11 @@ export default function CheckoutPage() {
                                           </span>
                                         </div>
                                       )}
-                                      
+
                                       {/* Single/Double Sided */}
                                       <div className="flex items-center gap-1">
                                         <span>
-                                          {printJobData.doubleSided || printJobData.double_sided ? 
+                                          {printJobData.doubleSided || printJobData.double_sided ?
                                             '🔄 وش وضهر' : '📄 وش فقط'
                                           }
                                         </span>
@@ -715,7 +728,7 @@ export default function CheckoutPage() {
                                     </div>
                                   </div>
                                 )}
-                                
+
                                 <div className="flex items-center justify-between">
                                   <Badge variant="secondary" className="text-xs">{item.quantity}×</Badge>
                                   <span className="text-sm font-bold text-green-600">
@@ -739,7 +752,7 @@ export default function CheckoutPage() {
                     <Tag className="h-4 w-4 text-orange-600" />
                     <span className="font-medium text-orange-800">كوبون الخصم</span>
                   </div>
-                  
+
                   {!appliedCoupon ? (
                     <div className="flex gap-2">
                       <input
@@ -751,8 +764,8 @@ export default function CheckoutPage() {
                         data-testid="coupon-input"
                         onKeyPress={(e) => e.key === 'Enter' && applyCoupon()}
                       />
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={applyCoupon}
                         disabled={isApplyingCoupon || !couponCode.trim()}
@@ -781,7 +794,7 @@ export default function CheckoutPage() {
                       </Button>
                     </div>
                   )}
-                  
+
                   <div className="text-xs text-orange-600 mt-2">
                     💡 احصل على خصم إضافي باستخدام كود الخصم
                   </div>
@@ -827,7 +840,7 @@ export default function CheckoutPage() {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
                           <div className="flex items-center gap-2 text-blue-700">
                             <div className="bg-blue-100 p-1 rounded">
@@ -877,7 +890,7 @@ export default function CheckoutPage() {
                               </div>
                             </div>
                           )}
-                          
+
                           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                             <div className="flex justify-between items-center">
                               <div className="flex items-center gap-2">
@@ -905,7 +918,7 @@ export default function CheckoutPage() {
                               </div>
                               <span className="text-green-800 font-semibold">الخصومات المطبقة</span>
                             </div>
-                            
+
                             <div className="space-y-2">
                               {pointsDiscount > 0 && (
                                 <div className="flex justify-between items-center p-2 bg-green-100 rounded">
@@ -916,7 +929,7 @@ export default function CheckoutPage() {
                                   <span className="font-semibold text-green-800">-{pointsDiscount} جنيه</span>
                                 </div>
                               )}
-                              
+
                               {couponDiscount > 0 && (
                                 <div className="flex justify-between items-center p-2 bg-orange-100 rounded">
                                   <div className="flex items-center gap-2">
@@ -955,7 +968,7 @@ export default function CheckoutPage() {
                         </div>
                       </>
                     )}
-                    
+
                     {/* Palestine Support Section */}
                     <div className="bg-gradient-to-r from-green-50 via-white to-red-50 p-4 rounded-lg border-2 border-green-200">
                       <div className="flex items-center gap-3 mb-2">
@@ -1023,7 +1036,7 @@ export default function CheckoutPage() {
                     </p>
                   </div>
                 )}
-                
+
                 {formData.deliveryMethod === 'delivery' && (!locationValidation || !locationValidation.isValid) && (
                   <div className="text-center p-2 bg-orange-50 rounded-lg">
                     <p className="text-sm text-orange-600">

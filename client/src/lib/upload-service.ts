@@ -8,7 +8,7 @@ export interface UploadResult {
   url?: string;
   downloadUrl?: string;
   previewUrl?: string;
-  provider?: 'cloudinary' | 'firebase' | 'google_drive';
+  provider?: 'cloudinary' | 'google_drive';
   error?: string;
   fileId?: string;
   folderLink?: string;
@@ -45,7 +45,7 @@ export interface ChunkInfo {
 // Upload file using Cloudinary with account integration
 export async function uploadFile(file: File): Promise<UploadResult> {
   console.log(`📤 Uploading to Cloudinary: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-  
+
   try {
     // Test Cloudinary connection first
     const cloudinaryTest = await testCloudinaryConnection();
@@ -55,7 +55,7 @@ export async function uploadFile(file: File): Promise<UploadResult> {
 
     console.log('☁️ Uploading to Cloudinary...');
     const result = await uploadToCloudinary(file);
-    
+
     if (result.success) {
       console.log('✅ Cloudinary upload successful!');
       const uploadResult = {
@@ -66,7 +66,7 @@ export async function uploadFile(file: File): Promise<UploadResult> {
         provider: 'cloudinary' as const,
         fileId: result.publicId
       };
-      
+
       // Notify server about successful upload
       await notifyServerUpload(file, uploadResult);
       return uploadResult;
@@ -75,7 +75,7 @@ export async function uploadFile(file: File): Promise<UploadResult> {
     }
   } catch (error) {
     console.error('❌ Cloudinary upload failed:', error);
-    
+
     let errorMessage = 'Cloudinary upload failed';
     if (error instanceof Error) {
       if (error.message.includes('timeout') || error.message.includes('TimeoutError')) {
@@ -84,7 +84,7 @@ export async function uploadFile(file: File): Promise<UploadResult> {
         errorMessage = error.message;
       }
     }
-    
+
     return {
       success: false,
       error: errorMessage,
@@ -96,49 +96,49 @@ export async function uploadFile(file: File): Promise<UploadResult> {
 // 🔧 FIXED: Convert to base64 for JSON upload (temporary fix)
 export async function uploadFileToGoogleDrive(file: File, printSettings?: any): Promise<UploadResult> {
   console.log(`🚀 Cloud Priority Upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-  
+
   try {
     console.log('📁 Uploading to Cloud Storage (Primary)...');
-    
+
     // 🚀 MEMORY OPTIMIZATION: Safe file processing with timeout and size limits
     const MAX_SAFE_SIZE = 8 * 1024 * 1024; // 8MB safe limit
-    
+
     if (file.size > MAX_SAFE_SIZE) {
       throw new Error(`الملف كبير جداً (${(file.size / 1024 / 1024).toFixed(1)}MB). الحد الأقصى: ${MAX_SAFE_SIZE / 1024 / 1024}MB`);
     }
-    
+
     const fileBuffer = await new Promise<string>((resolve, reject) => {
       // Add timeout to prevent hanging
       const timeout = setTimeout(() => {
         reject(new Error('انتهت مهلة معالجة الملف (10 ثوان)'));
       }, 10000);
-      
+
       const reader = new FileReader();
-      
+
       reader.onload = () => {
         clearTimeout(timeout);
         try {
           const result = reader.result as string;
           const base64 = result.split(',')[1];
-          
+
           // Memory check before proceeding
           if (base64.length > MAX_SAFE_SIZE * 1.5) { // base64 is ~33% larger
             reject(new Error('الملف كبير جداً للذاكرة المتاحة'));
             return;
           }
-          
+
           console.log(`✅ File processed safely: ${file.name} (${(base64.length / 1024).toFixed(1)}KB base64)`);
           resolve(base64);
         } catch (error) {
           reject(new Error('فشل في تحويل الملف'));
         }
       };
-      
+
       reader.onerror = () => {
         clearTimeout(timeout);
         reject(new Error('فشل في قراءة الملف'));
       };
-      
+
       // Start reading
       console.log(`🔄 Processing file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
       reader.readAsDataURL(file);
@@ -177,10 +177,10 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
     });
 
     const result = await response.json();
-    
+
     if (result.success) {
       console.log('✅ Cloud upload successful! Cost savings activated 💰');
-      
+
       const uploadResult: UploadResult = {
         success: true,
         url: result.folderLink || result.url, // Use folder link for admin, file link for direct access
@@ -190,7 +190,7 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
         fileId: result.fileId,
         folderLink: result.folderLink
       };
-      
+
       // Notify server about successful upload
       await notifyServerUpload(file, uploadResult);
       return uploadResult;
@@ -199,7 +199,7 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
     }
   } catch (error) {
     console.error('❌ Cloud upload failed:', error);
-    
+
     let errorMessage = 'Cloud upload failed';
     if (error instanceof Error) {
       if (error.message.includes('timeout') || error.message.includes('TimeoutError')) {
@@ -210,7 +210,7 @@ export async function uploadFileToGoogleDrive(file: File, printSettings?: any): 
         errorMessage = error.message;
       }
     }
-    
+
     return {
       success: false,
       error: errorMessage,
@@ -228,12 +228,12 @@ const CHUNK_TIMEOUT = 30000; // 30 seconds per chunk
 function createChunks(file: File): ChunkInfo[] {
   const chunks: ChunkInfo[] = [];
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-  
+
   for (let i = 0; i < totalChunks; i++) {
     const start = i * CHUNK_SIZE;
     const end = Math.min(start + CHUNK_SIZE, file.size);
     const chunkData = file.slice(start, end);
-    
+
     chunks.push({
       index: i,
       size: end - start,
@@ -242,22 +242,22 @@ function createChunks(file: File): ChunkInfo[] {
       data: chunkData
     });
   }
-  
+
   console.log(`📊 Created ${totalChunks} chunks for ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
   return chunks;
 }
 
 // 🚀 CHUNKED UPLOAD: Upload single chunk with retry logic (for standard use)
 async function uploadChunk(
-  chunk: ChunkInfo, 
-  sessionId: string, 
+  chunk: ChunkInfo,
+  sessionId: string,
   fileName: string,
   totalChunks: number,
   onProgress?: (progress: ChunkUploadProgress) => void
 ): Promise<boolean> {
   const maxRetries = 3;
   let attempt = 0;
-  
+
   while (attempt < maxRetries) {
     try {
       const formData = new FormData();
@@ -266,7 +266,7 @@ async function uploadChunk(
       formData.append('totalChunks', totalChunks.toString());
       formData.append('sessionId', sessionId);
       formData.append('fileName', fileName);
-      
+
       const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/upload/chunk', {
         method: 'POST',
@@ -277,7 +277,7 @@ async function uploadChunk(
         body: formData,
         signal: AbortSignal.timeout(CHUNK_TIMEOUT)
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
@@ -286,37 +286,37 @@ async function uploadChunk(
             chunkIndex: chunk.index,
             totalChunks,
             uploadedBytes: chunk.size,
-            totalBytes: chunk.size * totalChunks, 
+            totalBytes: chunk.size * totalChunks,
             percentage: ((chunk.index + 1) / totalChunks) * 100
           });
-          
+
           console.log(`✅ Chunk ${chunk.index + 1}/${totalChunks} uploaded successfully`);
           return true;
         }
       }
-      
+
       throw new Error(`Chunk ${chunk.index} upload failed: ${response.status}`);
-      
+
     } catch (error) {
       attempt++;
       console.warn(`⚠️ Chunk ${chunk.index} attempt ${attempt} failed:`, error);
-      
+
       if (attempt >= maxRetries) {
         throw new Error(`Chunk ${chunk.index} failed after ${maxRetries} attempts`);
       }
-      
+
       // Exponential backoff
       await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
     }
   }
-  
+
   return false;
 }
 
 // 🔧 FIX: Simplified chunk upload without internal retries (for recovery system)
 async function uploadChunkSimple(
-  chunk: ChunkInfo, 
-  sessionId: string, 
+  chunk: ChunkInfo,
+  sessionId: string,
   fileName: string,
   totalChunks: number
 ): Promise<boolean> {
@@ -327,7 +327,7 @@ async function uploadChunkSimple(
     formData.append('totalChunks', totalChunks.toString());
     formData.append('sessionId', sessionId);
     formData.append('fileName', fileName);
-    
+
     const authHeaders = await getAuthHeaders();
     const response = await fetch('/api/upload/chunk', {
       method: 'POST',
@@ -338,7 +338,7 @@ async function uploadChunkSimple(
       body: formData,
       signal: AbortSignal.timeout(CHUNK_TIMEOUT)
     });
-    
+
     if (response.ok) {
       const result = await response.json();
       if (result.success) {
@@ -346,9 +346,9 @@ async function uploadChunkSimple(
         return true;
       }
     }
-    
+
     throw new Error(`Chunk ${chunk.index} upload failed: ${response.status}`);
-    
+
   } catch (error) {
     console.warn(`⚠️ Chunk ${chunk.index} failed (simple):`, error);
     return false;
@@ -357,63 +357,63 @@ async function uploadChunkSimple(
 
 // 🔄 RECOVERY: Enhanced chunked upload with automatic retry and recovery
 export async function uploadFileWithChunks(
-  file: File, 
+  file: File,
   printSettings?: any,
   onProgress?: (progress: ChunkUploadProgress) => void
 ): Promise<ChunkedUploadResult> {
   const startTime = Date.now();
   console.log(`🚀 Starting chunked upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-  
+
   // 🔧 FIX: Move sessionId and failedChunks outside try block for cleanup access
   let sessionId: string | null = null;
   const failedChunks = new Set<number>(); // 🔧 FIX: Move to function scope for error access
   let retryAttempts = 0; // 🔧 FIX: Move to function scope for error return
-  
+
   try {
     // Validate file size for chunking (only chunk files > 10MB)
     if (file.size <= 10 * 1024 * 1024) {
       console.log('📁 File under 10MB, using standard upload');
       return await uploadFileToGoogleDrive(file, printSettings);
     }
-    
+
     // Create session ID for this upload
     sessionId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const chunks = createChunks(file);
-    
+
     // 🔄 RECOVERY: Recovery logic constants
     const maxRetryAttempts = 3;
     const baseRetryDelay = 1000; // 1 second
     let recoveredChunks = 0;
-    
+
     // 🔧 FIX: Track actual uploaded bytes for accurate progress
     let uploadedBytes = 0;
     const chunkSizes = new Map<number, number>(); // Track individual chunk sizes
     chunks.forEach(chunk => chunkSizes.set(chunk.index, chunk.size));
-    
+
     // Upload with recovery mechanism
     for (let attempt = 1; attempt <= maxRetryAttempts; attempt++) {
       console.log(`🔄 Upload attempt ${attempt}/${maxRetryAttempts}`);
-      
+
       // Determine which chunks to upload this attempt
-      const chunksToUpload = attempt === 1 
-        ? chunks 
+      const chunksToUpload = attempt === 1
+        ? chunks
         : chunks.filter(chunk => failedChunks.has(chunk.index));
-      
+
       if (chunksToUpload.length === 0) {
         console.log('✅ All chunks uploaded successfully!');
         break;
       }
-      
+
       console.log(`📦 Uploading ${chunksToUpload.length} chunks (attempt ${attempt})`);
       retryAttempts = attempt - 1;
-      
+
       // Track chunks that fail in this specific attempt
       const currentAttemptFailed = new Set<number>();
-      
+
       // Upload chunks in parallel batches
       for (let i = 0; i < chunksToUpload.length; i += MAX_PARALLEL_CHUNKS) {
         const batch = chunksToUpload.slice(i, i + MAX_PARALLEL_CHUNKS);
-        
+
         const batchPromises = batch.map(async (chunk) => {
           try {
             // 🔧 FIX: Use simplified upload without internal retries to avoid double retry
@@ -422,7 +422,7 @@ export async function uploadFileWithChunks(
               // Remove from failed list if it was there
               const wasFailedBefore = failedChunks.has(chunk.index);
               failedChunks.delete(chunk.index);
-              
+
               // 🔧 FIX: Only increment uploaded bytes if this chunk wasn't uploaded before
               if (wasFailedBefore) {
                 recoveredChunks++;
@@ -433,7 +433,7 @@ export async function uploadFileWithChunks(
                 // First time uploading this chunk
                 uploadedBytes += chunkSizes.get(chunk.index) || 0;
               }
-              
+
               // 🔧 FIX: Accurate progress calculation using actual uploaded bytes
               const percentage = (uploadedBytes / file.size) * 100;
               onProgress?.({
@@ -445,7 +445,7 @@ export async function uploadFileWithChunks(
                 retryAttempt: attempt > 1 ? attempt : undefined,
                 failedChunks: Array.from(failedChunks)
               });
-              
+
               return true;
             }
             throw new Error('Upload returned false');
@@ -455,25 +455,25 @@ export async function uploadFileWithChunks(
             return false;
           }
         });
-        
+
         // Wait for this batch to complete
         await Promise.allSettled(batchPromises);
       }
-      
+
       // Update the overall failed chunks list
       currentAttemptFailed.forEach(index => failedChunks.add(index));
-      
+
       // If no chunks failed in this attempt, we're done
       if (currentAttemptFailed.size === 0) {
         console.log(`✅ All chunks uploaded successfully on attempt ${attempt}`);
         break;
       }
-      
+
       // If this was the last attempt and chunks still failed
       if (attempt === maxRetryAttempts && failedChunks.size > 0) {
         throw new Error(`🔄 Recovery failed: ${failedChunks.size} chunks still failed after ${maxRetryAttempts} attempts`);
       }
-      
+
       // Wait before retry with exponential backoff
       if (attempt < maxRetryAttempts) {
         const delay = Math.min(baseRetryDelay * Math.pow(2, attempt - 1), 10000); // Max 10 seconds
@@ -481,7 +481,7 @@ export async function uploadFileWithChunks(
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    
+
     // 🔧 FIX: Final progress update with actual uploaded bytes
     onProgress?.({
       chunkIndex: chunks.length - 1,
@@ -491,7 +491,7 @@ export async function uploadFileWithChunks(
       percentage: 100,
       failedChunks: []
     });
-    
+
     // Merge chunks on server
     console.log('🔗 Merging chunks on server...');
     const authHeaders = await getAuthHeaders();
@@ -510,21 +510,21 @@ export async function uploadFileWithChunks(
         printSettings
       })
     });
-    
+
     const mergeResult = await mergeResponse.json();
-    
+
     if (!mergeResult.success) {
       throw new Error(mergeResult.error || 'Failed to merge chunks');
     }
-    
+
     const uploadTime = (Date.now() - startTime) / 1000;
     const averageSpeed = ((file.size / 1024 / 1024) / uploadTime).toFixed(2);
-    
+
     console.log(`🎉 Chunked upload completed in ${uploadTime.toFixed(2)}s (${averageSpeed}MB/s)`);
     if (recoveredChunks > 0) {
       console.log(`🔄 Recovery stats: ${recoveredChunks} chunks recovered, ${retryAttempts} retry attempts`);
     }
-    
+
     const result: ChunkedUploadResult = {
       success: true,
       url: mergeResult.url,
@@ -539,14 +539,14 @@ export async function uploadFileWithChunks(
       retryAttempts,
       recoveredChunks
     };
-    
+
     // Notify server about successful upload
     await notifyServerUpload(file, result);
     return result;
-    
+
   } catch (error) {
     console.error('❌ Chunked upload failed:', error);
-    
+
     // 🔧 FIX: Safe cleanup with proper sessionId handling
     if (sessionId) {
       try {
@@ -564,7 +564,7 @@ export async function uploadFileWithChunks(
         console.warn('⚠️ Failed to cleanup chunks:', cleanupError);
       }
     }
-    
+
     // 🔧 FIX: Return actual failed chunks and retry attempts for debugging
     return {
       success: false,
@@ -580,7 +580,7 @@ export async function uploadFileWithChunks(
 async function notifyServerUpload(file: File, result: UploadResult): Promise<void> {
   try {
     console.log('🔔 Notifying server about upload...');
-    
+
     const uploadData = {
       fileName: file.name,
       fileType: file.type,
@@ -591,7 +591,7 @@ async function notifyServerUpload(file: File, result: UploadResult): Promise<voi
 
     const response = await apiRequest('POST', '/api/upload-file', uploadData);
     const serverResult = await response.json();
-    
+
     if (serverResult.success) {
       console.log('✅ Server notified about upload:', serverResult);
     } else {
@@ -615,9 +615,9 @@ export async function checkUploadServiceStatus(): Promise<{
   try {
     cloudinaryStatus = await testCloudinaryConnection();
   } catch (error) {
-    cloudinaryStatus = { 
-      success: false, 
-      message: error instanceof Error ? error.message : 'Connection failed' 
+    cloudinaryStatus = {
+      success: false,
+      message: error instanceof Error ? error.message : 'Connection failed'
     };
   }
 
@@ -667,17 +667,17 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
 // Debug tools for browser console
 if (typeof window !== 'undefined') {
   (window as any).checkUploadServiceStatus = checkUploadServiceStatus;
-  (window as any).testUploadService = async function() {
+  (window as any).testUploadService = async function () {
     console.log('🔧 Testing Upload Service...');
-    
+
     const status = await checkUploadServiceStatus();
     console.log('Upload Service Status:', status);
-    
+
     // Test file validation
     const testFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
     const validation = validateFile(testFile);
     console.log('File validation test:', validation);
-    
+
     return {
       status,
       validation,

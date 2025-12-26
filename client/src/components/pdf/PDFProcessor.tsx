@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,10 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  RotateCw, 
-  Scissors, 
-  FilePlus2, 
+import {
+  RotateCw,
+  Scissors,
+  FilePlus2,
   Archive,
   Download,
   Loader2,
@@ -23,19 +23,21 @@ import {
 } from 'lucide-react';
 // Using PDF-lib for real PDF processing
 import { PDFDocument, rgb } from 'pdf-lib';
-import AdvancedPDFCompressor from '@/lib/advanced-pdf-compression';
 
 interface PDFProcessorProps {
-  files: File[];
+  files?: File[]; // Optional File objects (from old upload flow)
+  fileUrls?: Array<{ url: string; name: string; type?: string }>; // Optional URLs (from pending uploads)
   onProcessComplete: (processedFiles: File[]) => void;
 }
 
-export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
+export function PDFProcessor({ files = [], fileUrls = [], onProcessComplete }: PDFProcessorProps) {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processedFiles, setProcessedFiles] = useState<File[]>([]);
   const [selectedTool, setSelectedTool] = useState<string>('');
+  const [loadedFiles, setLoadedFiles] = useState<File[]>([]); // Files loaded from URLs
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [mergeSettings, setMergeSettings] = useState({
     outputName: 'merged-document.pdf'
   });
@@ -51,6 +53,82 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
     angle: 90,
     pages: 'all'
   });
+
+  // Load files from URLs when fileUrls changes
+  useEffect(() => {
+    const loadFilesFromUrls = async () => {
+      if (fileUrls.length === 0) {
+        setLoadedFiles([]);
+        return;
+      }
+
+      setIsLoadingFiles(true);
+      console.log('📥 Loading files from URLs:', fileUrls);
+
+      try {
+        const loaded: File[] = [];
+
+        for (const fileUrl of fileUrls) {
+          try {
+            // Use server proxy to bypass CORS
+            const proxyUrl = `/api/proxy/google-drive?url=${encodeURIComponent(fileUrl.url)}`;
+            console.log(`📥 Loading ${fileUrl.name} via proxy...`);
+
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error(`Failed to fetch ${fileUrl.name}`);
+
+            const blob = await response.blob();
+
+            // Validate that it's actually a PDF
+            const arrayBuffer = await blob.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            const header = String.fromCharCode(...bytes.slice(0, 5));
+
+            if (header !== '%PDF-') {
+              console.error(`❌ ${fileUrl.name} is not a valid PDF (header: ${header})`);
+              toast({
+                title: 'ملف غير صالح',
+                description: `${fileUrl.name} ليس ملف PDF صحيح. تأكد من أن الملف مشارك بشكل عام على Google Drive.`,
+                variant: 'destructive'
+              });
+              continue; // Skip this file
+            }
+
+            const file = new File([blob], fileUrl.name, {
+              type: fileUrl.type || 'application/pdf'
+            });
+
+            loaded.push(file);
+            console.log(`✅ Loaded ${fileUrl.name} (${(file.size / 1024).toFixed(1)}KB)`);
+          } catch (error) {
+            console.error(`❌ Failed to load ${fileUrl.name}:`, error);
+            toast({
+              title: 'فشل في تحميل الملف',
+              description: `تعذر تحميل ${fileUrl.name}. تأكد من أن الملف مشارك بشكل عام.`,
+              variant: 'destructive'
+            });
+          }
+        }
+
+        setLoadedFiles(loaded);
+        console.log(`📦 Loaded ${loaded.length}/${fileUrls.length} files from URLs`);
+      } catch (error) {
+        console.error('Error loading files from URLs:', error);
+        toast({
+          title: 'خطأ في تحميل الملفات',
+          description: 'فشل في تحميل بعض الملفات من الروابط',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoadingFiles(false);
+      }
+    };
+
+    loadFilesFromUrls();
+  }, [fileUrls, toast]);
+
+  // Combine files from both sources (direct files + loaded from URLs)
+  const allFiles = [...files, ...loadedFiles];
 
   const tools = [
     {
@@ -102,10 +180,10 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
   const mergePDFs = async (files: File[]): Promise<File> => {
     try {
       setProgress(10);
-      
+
       // Create a new PDF document for merging
       const mergedPdf = await PDFDocument.create();
-      
+
       setProgress(20);
 
       // Process each file
@@ -113,24 +191,24 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
         const file = files[i];
         const arrayBuffer = await file.arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuffer);
-        
+
         // Copy all pages from this PDF
         const pageCount = pdfDoc.getPageCount();
         const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
         const copiedPages = await mergedPdf.copyPages(pdfDoc, pageIndices);
-        
+
         copiedPages.forEach((page) => mergedPdf.addPage(page));
-        
+
         setProgress(20 + (i / files.length) * 60);
       }
-      
+
       setProgress(85);
 
       // Save the merged PDF
       const mergedBytes = await mergedPdf.save();
-      
+
       const mergedFile = new File(
-        [mergedBytes], 
+        [mergedBytes],
         mergeSettings.outputName,
         { type: 'application/pdf' }
       );
@@ -150,13 +228,13 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
   const splitPDF = async (file: File): Promise<File[]> => {
     try {
       setProgress(10);
-      
+
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
       const totalPages = pdfDoc.getPageCount();
-      
+
       setProgress(20);
-      
+
       const pages = splitSettings.pages.trim();
       let pageNumbers: number[] = [];
 
@@ -184,23 +262,23 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
 
       // Create individual PDF files for each page
       const splitFiles: File[] = [];
-      
+
       for (let i = 0; i < pageNumbers.length; i++) {
         const pageNum = pageNumbers[i];
-        
+
         // Create a new PDF with just this page
         const newPdf = await PDFDocument.create();
         const [copiedPage] = await newPdf.copyPages(pdfDoc, [pageNum - 1]); // 0-indexed
         newPdf.addPage(copiedPage);
-        
+
         const pageBytes = await newPdf.save();
-        
+
         const pageFile = new File(
           [pageBytes],
           `${splitSettings.outputPrefix}-${pageNum}.pdf`,
           { type: 'application/pdf' }
         );
-        
+
         splitFiles.push(pageFile);
         setProgress(40 + (i / pageNumbers.length) * 50);
       }
@@ -218,156 +296,57 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
   const compressPDF = async (file: File): Promise<File> => {
     try {
       setProgress(10);
-      
-      console.log(`🗜️ Starting ULTRA compression for ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
-      console.log(`📊 Quality: ${compressSettings.quality} (${compressSettings.quality <= 0.3 ? 'Maximum' : compressSettings.quality <= 0.6 ? 'High' : 'Standard'} compression)`);
-      
-      setProgress(20);
-      
-      // Use the new advanced compressor with aggressive settings
-      const compressionOptions = AdvancedPDFCompressor.getCompressionOptions(compressSettings.quality);
-      
+
+      console.log(`🗜️ Compressing ${file.name} (${(file.size / 1024).toFixed(1)}KB)...`);
+
       setProgress(30);
-      
-      console.log('🔥 Applying ULTRA compression with aggressive settings...');
-      console.log('🗑️ Removing:', {
-        metadata: compressionOptions.removeMetadata,
-        annotations: compressionOptions.removeAnnotations,
-        bookmarks: compressionOptions.removeBookmarks,
-        javascript: compressionOptions.removeJavaScript,
-        embeddedFiles: compressionOptions.removeEmbeddedFiles
+
+      // Simple approach: Load and re-save the PDF with optimization
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+
+      setProgress(60);
+
+      // Save with optimization settings
+      const compressedBytes = await pdfDoc.save({
+        useObjectStreams: true,
+        addDefaultPage: false,
+        objectsPerTick: 50,
+        updateFieldAppearances: false
       });
-      
-      const compressedFile = await AdvancedPDFCompressor.compressPDF(file, compressionOptions);
-      
+
       setProgress(90);
-      
-      // If still not compressed enough, apply extreme measures
-      if (compressedFile.size >= file.size * 0.8 && compressSettings.quality < 0.5) {
-        console.log('🚀 Applying EXTREME compression techniques...');
-        
-        // Load the compressed PDF and apply even more aggressive techniques
-        const arrayBuffer = await compressedFile.arrayBuffer();
-        const pdfDoc = await PDFDocument.load(arrayBuffer);
-        
-        // Create a completely new PDF with minimal data
-        const ultraCompressedPdf = await PDFDocument.create();
-        const pages = pdfDoc.getPages();
-        
-        // Copy only essential content with maximum compression
-        for (let i = 0; i < pages.length; i++) {
-          const [copiedPage] = await ultraCompressedPdf.copyPages(pdfDoc, [i]);
-          
-          // Strip page of all non-essential elements
-          const pageNode = copiedPage.node;
-          
-          // Remove optional elements for extreme compression
-          pageNode.delete(PDFDocument.of('UserUnit'));
-          pageNode.delete(PDFDocument.of('VP'));
-          pageNode.delete(PDFDocument.of('BoxColorInfo'));
-          pageNode.delete(PDFDocument.of('Metadata'));
-          
-          ultraCompressedPdf.addPage(copiedPage);
-        }
-        
-        // Save with extreme compression settings
-        const ultraBytes = await ultraCompressedPdf.save({
-          useObjectStreams: true,
-          addDefaultPage: false,
-          objectsPerTick: 1000,
-          updateFieldAppearances: false
-        });
-        
-        // Create artificial size reduction for demonstration
-        const targetReduction = compressSettings.quality <= 0.3 ? 0.5 : 0.3; // 50% or 30% reduction
-        const targetSize = Math.floor(file.size * (1 - targetReduction));
-        
-        let finalBytes: Uint8Array;
-        if (ultraBytes.length > targetSize) {
-          // Simulate aggressive compression by carefully truncating while preserving PDF structure
-          const pdfHeader = ultraBytes.slice(0, 200); // Keep PDF header
-          const reducedBody = ultraBytes.slice(200, targetSize - 200);
-          const pdfTrailer = new TextEncoder().encode('\n%%EOF'); // Simple EOF marker
-          
-          finalBytes = new Uint8Array(pdfHeader.length + reducedBody.length + pdfTrailer.length);
-          finalBytes.set(pdfHeader, 0);
-          finalBytes.set(reducedBody, pdfHeader.length);
-          finalBytes.set(pdfTrailer, pdfHeader.length + reducedBody.length);
-        } else {
-          finalBytes = ultraBytes;
-        }
-        
-        const ultraCompressedFile = new File(
-          [finalBytes],
-          file.name.replace('.pdf', '-ultra-compressed.pdf'),
-          { type: 'application/pdf' }
-        );
-        
-        const compressionRatio = ((file.size - ultraCompressedFile.size) / file.size * 100);
-        console.log(`🎯 ULTRA compression complete: ${(ultraCompressedFile.size / 1024).toFixed(1)}KB (${compressionRatio.toFixed(1)}% reduction)`);
-        
-        setProgress(100);
-        return ultraCompressedFile;
-      }
-      
+
+      const compressedFile = new File(
+        [compressedBytes],
+        file.name.replace('.pdf', '-compressed.pdf'),
+        { type: 'application/pdf' }
+      );
+
       const compressionRatio = ((file.size - compressedFile.size) / file.size * 100);
-      console.log(`✅ Advanced compression complete: ${(compressedFile.size / 1024).toFixed(1)}KB (${compressionRatio.toFixed(1)}% reduction)`);
-      
+      console.log(`✅ Compression complete: ${(compressedFile.size / 1024).toFixed(1)}KB (${compressionRatio.toFixed(1)}% reduction)`);
+
       setProgress(100);
       return compressedFile;
-      
+
     } catch (error) {
       console.error('❌ PDF compression failed:', error);
-      
-      // Emergency fallback - create a minimal PDF with text content
-      try {
-        console.log('🆘 Using emergency compression fallback...');
-        
-        const emergencyPdf = await PDFDocument.create();
-        const page = emergencyPdf.addPage([595, 842]); // A4 size
-        page.drawText(`محتوى الملف الأصلي: ${file.name}`, {
-          x: 50,
-          y: 800,
-          size: 14,
-          color: rgb(0, 0, 0)
-        });
-        page.drawText('تم ضغط الملف باستخدام الضغط الطارئ', {
-          x: 50,
-          y: 770,
-          size: 12,
-          color: rgb(0.5, 0.5, 0.5)
-        });
-        
-        const emergencyBytes = await emergencyPdf.save();
-        const emergencyFile = new File(
-          [emergencyBytes],
-          file.name.replace('.pdf', '-emergency-compressed.pdf'),
-          { type: 'application/pdf' }
-        );
-        
-        console.log(`🆘 Emergency compression: ${(emergencyFile.size / 1024).toFixed(1)}KB`);
-        setProgress(100);
-        return emergencyFile;
-        
-      } catch (emergencyError) {
-        console.error('Emergency compression also failed:', emergencyError);
-        throw new Error('فشل في ضغط ملف PDF - يرجى المحاولة مع ملف آخر');
-      }
+      throw new Error('فشل في ضغط ملف PDF - يرجى المحاولة مع ملف آخر');
     }
   };
 
   const rotatePDF = async (file: File): Promise<File> => {
     try {
       setProgress(10);
-      
+
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
-      
+
       setProgress(30);
-      
+
       const pages = pdfDoc.getPages();
       const rotationAngle = rotateSettings.angle;
-      
+
       // Apply rotation to all pages or specific pages
       if (rotateSettings.pages === 'all' || rotateSettings.pages === '') {
         pages.forEach((page, index) => {
@@ -384,11 +363,11 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
           setProgress(30 + (index / pageNumbers.length) * 50);
         });
       }
-      
+
       setProgress(85);
-      
+
       const rotatedBytes = await pdfDoc.save();
-      
+
       const rotatedFile = new File(
         [rotatedBytes],
         file.name.replace('.pdf', `-rotated-${rotateSettings.angle}.pdf`),
@@ -415,7 +394,7 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
       return;
     }
 
-    if (files.length === 0) {
+    if (allFiles.length === 0) {
       toast({
         title: 'خطأ',
         description: 'لا توجد ملفات للمعالجة',
@@ -432,35 +411,35 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
 
       switch (selectedTool) {
         case 'merge':
-          if (files.length < 2) {
+          if (allFiles.length < 2) {
             throw new Error('يجب اختيار ملفين على الأقل للدمج');
           }
-          const mergedFile = await mergePDFs(files);
+          const mergedFile = await mergePDFs(allFiles);
           result = [mergedFile];
           break;
 
         case 'split':
-          if (files.length !== 1) {
+          if (allFiles.length !== 1) {
             throw new Error('يجب اختيار ملف واحد فقط للتقسيم');
           }
-          result = await splitPDF(files[0]);
+          result = await splitPDF(allFiles[0]);
           break;
 
         case 'compress':
           result = [];
-          for (let i = 0; i < files.length; i++) {
-            const compressedFile = await compressPDF(files[i]);
+          for (let i = 0; i < allFiles.length; i++) {
+            const compressedFile = await compressPDF(allFiles[i]);
             result.push(compressedFile);
-            setProgress((i + 1) / files.length * 100);
+            setProgress((i + 1) / allFiles.length * 100);
           }
           break;
 
         case 'rotate':
           result = [];
-          for (let i = 0; i < files.length; i++) {
-            const rotatedFile = await rotatePDF(files[i]);
+          for (let i = 0; i < allFiles.length; i++) {
+            const rotatedFile = await rotatePDF(allFiles[i]);
             result.push(rotatedFile);
-            setProgress((i + 1) / files.length * 100);
+            setProgress((i + 1) / allFiles.length * 100);
           }
           break;
 
@@ -470,7 +449,7 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
 
       setProcessedFiles(result);
       onProcessComplete(result);
-      
+
       toast({
         title: 'تمت المعالجة بنجاح',
         description: `تم إنشاء ${result.length} ملف جديد`,
@@ -500,7 +479,18 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
     URL.revokeObjectURL(url);
   };
 
-  if (files.length === 0) {
+  if (isLoadingFiles) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <Loader2 className="h-12 w-12 text-primary mx-auto mb-4 animate-spin" />
+          <p className="text-muted-foreground">جاري تحميل الملفات...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (allFiles.length === 0) {
     return (
       <Card>
         <CardContent className="text-center py-8">
@@ -528,11 +518,10 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
               return (
                 <div
                   key={tool.id}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    selectedTool === tool.id
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50'
-                  }`}
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedTool === tool.id
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50'
+                    }`}
                   onClick={() => setSelectedTool(tool.id)}
                   data-testid={`tool-${tool.id}`}
                 >
@@ -605,9 +594,9 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
                   <Label>مستوى الضغط</Label>
                   <Select
                     value={compressSettings.quality.toString()}
-                    onValueChange={(value) => setCompressSettings(prev => ({ 
-                      ...prev, 
-                      quality: parseFloat(value) 
+                    onValueChange={(value) => setCompressSettings(prev => ({
+                      ...prev,
+                      quality: parseFloat(value)
                     }))}
                   >
                     <SelectTrigger data-testid="select-compress-level">
@@ -629,9 +618,9 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
                     max="1"
                     step="0.1"
                     value={compressSettings.imageQuality}
-                    onChange={(e) => setCompressSettings(prev => ({ 
-                      ...prev, 
-                      imageQuality: parseFloat(e.target.value) 
+                    onChange={(e) => setCompressSettings(prev => ({
+                      ...prev,
+                      imageQuality: parseFloat(e.target.value)
                     }))}
                     className="w-full mt-2"
                     data-testid="slider-image-quality"
@@ -649,9 +638,9 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
                   <Label htmlFor="angle">زاوية التدوير</Label>
                   <Select
                     value={rotateSettings.angle.toString()}
-                    onValueChange={(value) => setRotateSettings(prev => ({ 
-                      ...prev, 
-                      angle: parseInt(value) 
+                    onValueChange={(value) => setRotateSettings(prev => ({
+                      ...prev,
+                      angle: parseInt(value)
                     }))}
                   >
                     <SelectTrigger data-testid="select-rotate-angle">
@@ -673,11 +662,11 @@ export function PDFProcessor({ files, onProcessComplete }: PDFProcessorProps) {
       {/* File List */}
       <Card>
         <CardHeader>
-          <CardTitle>الملفات المحددة ({files.length})</CardTitle>
+          <CardTitle>الملفات المحددة ({allFiles.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {files.map((file, index) => (
+            {allFiles.map((file, index) => (
               <div key={index} className="flex items-center gap-3 p-3 border rounded-lg">
                 <FileText className="h-5 w-5 text-primary" />
                 <div className="flex-1">

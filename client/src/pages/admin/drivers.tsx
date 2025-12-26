@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import { apiRequest } from '@/lib/queryClient';
@@ -67,6 +68,8 @@ export default function DriversManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [newDriver, setNewDriver] = useState<NewDriverForm>({
     name: '',
     username: '',
@@ -76,6 +79,13 @@ export default function DriversManagement() {
     vehiclePlate: '',
     workingArea: 'القاهرة الكبرى',
     password: ''
+  });
+  const [editForm, setEditForm] = useState<Partial<NewDriverForm>>({
+    name: '',
+    phone: '',
+    vehicleType: 'motorcycle',
+    vehiclePlate: '',
+    workingArea: ''
   });
 
   const { toast } = useToast();
@@ -140,15 +150,38 @@ export default function DriversManagement() {
     }
   });
 
+  // Update captain mutation
+  const updateDriverMutation = useMutation({
+    mutationFn: async ({ driverId, data }: { driverId: string; data: Partial<NewDriverForm> }) => {
+      return apiRequest('PUT', `/api/admin/captains/${driverId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/captains'] });
+      setShowEditDialog(false);
+      setEditingDriver(null);
+      toast({
+        title: "تم تحديث البيانات",
+        description: "تم تحديث بيانات الكبتن بنجاح",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ في التحديث",
+        description: error.message || "فشل في تحديث بيانات الكبتن",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Filter drivers
   const filteredDrivers = drivers.filter(driver => {
     const matchesSearch = driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         driver.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (driver.email && driver.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         driver.driverCode.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      driver.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (driver.email && driver.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      driver.driverCode.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === 'all' || driver.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -163,6 +196,26 @@ export default function DriversManagement() {
     }
 
     createDriverMutation.mutate(newDriver);
+  };
+
+  const handleEditDriver = (driver: Driver) => {
+    setEditingDriver(driver);
+    setEditForm({
+      name: driver.name,
+      phone: driver.phone,
+      vehicleType: driver.vehicleType,
+      vehiclePlate: driver.vehiclePlate,
+      workingArea: driver.workingArea
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateDriver = () => {
+    if (!editingDriver) return;
+    updateDriverMutation.mutate({
+      driverId: editingDriver.id,
+      data: editForm
+    });
   };
 
   const getStatusBadge = (status: string, isAvailable: boolean) => {
@@ -294,7 +347,7 @@ export default function DriversManagement() {
                 className="pl-10"
               />
             </div>
-            
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
                 <Filter className="w-4 h-4 ml-2" />
@@ -320,7 +373,7 @@ export default function DriversManagement() {
               <DialogHeader>
                 <DialogTitle>إضافة سائق جديد</DialogTitle>
               </DialogHeader>
-              
+
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name">الاسم الكامل</Label>
@@ -366,9 +419,9 @@ export default function DriversManagement() {
 
                 <div>
                   <Label htmlFor="vehicleType">نوع المركبة</Label>
-                  <Select 
-                    value={newDriver.vehicleType} 
-                    onValueChange={(value: 'motorcycle' | 'car' | 'truck') => 
+                  <Select
+                    value={newDriver.vehicleType}
+                    onValueChange={(value: 'motorcycle' | 'car' | 'truck') =>
                       setNewDriver(prev => ({ ...prev, vehicleType: value }))
                     }
                   >
@@ -415,15 +468,15 @@ export default function DriversManagement() {
                 </div>
 
                 <div className="flex gap-2 pt-4">
-                  <Button 
+                  <Button
                     onClick={handleCreateDriver}
                     disabled={createDriverMutation.isPending}
                     className="flex-1"
                   >
                     {createDriverMutation.isPending ? "جاري الإنشاء..." : "إنشاء الحساب"}
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setShowAddDialog(false)}
                     className="flex-1"
                   >
@@ -460,26 +513,26 @@ export default function DriversManagement() {
                   {getStatusBadge(driver.status, driver.isAvailable)}
                 </div>
               </CardHeader>
-              
+
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="w-4 h-4 text-gray-400 text-center">@</span>
                     <span className="text-gray-600">{driver.username}</span>
                   </div>
-                  
+
                   {driver.email && (
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="w-4 h-4 text-gray-400" />
                       <span className="text-gray-600">{driver.email}</span>
                     </div>
                   )}
-                  
+
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="w-4 h-4 text-gray-400" />
                     <span className="text-gray-600">{driver.phone}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 text-sm">
                     <MapPin className="w-4 h-4 text-gray-400" />
                     <span className="text-gray-600">{driver.workingArea}</span>
@@ -516,20 +569,45 @@ export default function DriversManagement() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-2"
+                    onClick={() => handleEditDriver(driver)}
+                  >
                     <Edit2 className="w-4 h-4" />
                     تعديل
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2 text-red-600 hover:text-red-700"
-                    onClick={() => deleteDriverMutation.mutate(driver.id)}
-                    disabled={deleteDriverMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    حذف
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        disabled={deleteDriverMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        حذف
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>هل أنت متأكد من حذف هذا الكبتن؟</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          سيتم حذف الكبتن "{driver.name}" نهائياً. هذا الإجراء لا يمكن التراجع عنه.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteDriverMutation.mutate(driver.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          نعم، احذف
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>
@@ -542,8 +620,8 @@ export default function DriversManagement() {
           <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">لا توجد سائقين</h3>
           <p className="text-gray-500 mb-4">
-            {searchTerm || statusFilter !== 'all' 
-              ? 'لا توجد نتائج تطابق البحث' 
+            {searchTerm || statusFilter !== 'all'
+              ? 'لا توجد نتائج تطابق البحث'
               : 'ابدأ بإضافة سائقين جدد لفريق التوصيل'}
           </p>
           {(!searchTerm && statusFilter === 'all') && (
@@ -554,6 +632,93 @@ export default function DriversManagement() {
           )}
         </div>
       )}
+
+      {/* Edit Driver Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>تعديل بيانات الكبتن</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">الاسم الكامل</Label>
+              <Input
+                id="edit-name"
+                value={editForm.name || ''}
+                onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="اسم الكبتن"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-phone">رقم الهاتف</Label>
+              <Input
+                id="edit-phone"
+                value={editForm.phone || ''}
+                onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="01xxxxxxxxx"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-vehicleType">نوع المركبة</Label>
+              <Select
+                value={editForm.vehicleType}
+                onValueChange={(value: 'motorcycle' | 'car' | 'truck') =>
+                  setEditForm(prev => ({ ...prev, vehicleType: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="motorcycle">دراجة نارية</SelectItem>
+                  <SelectItem value="car">سيارة</SelectItem>
+                  <SelectItem value="truck">شاحنة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-vehiclePlate">رقم اللوحة</Label>
+              <Input
+                id="edit-vehiclePlate"
+                value={editForm.vehiclePlate || ''}
+                onChange={(e) => setEditForm(prev => ({ ...prev, vehiclePlate: e.target.value }))}
+                placeholder="أ ب ج 123"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-workingArea">منطقة العمل</Label>
+              <Input
+                id="edit-workingArea"
+                value={editForm.workingArea || ''}
+                onChange={(e) => setEditForm(prev => ({ ...prev, workingArea: e.target.value }))}
+                placeholder="القاهرة الكبرى"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={handleUpdateDriver}
+                disabled={updateDriverMutation.isPending}
+                className="flex-1"
+              >
+                {updateDriverMutation.isPending ? "جاري الحفظ..." : "حفظ التغييرات"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowEditDialog(false)}
+                className="flex-1"
+              >
+                إلغاء
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

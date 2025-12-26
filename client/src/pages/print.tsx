@@ -15,17 +15,17 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion, AnimatePresence } from "framer-motion"
-import { 
-  Printer, 
-  FileText, 
-  Clock, 
-  DollarSign, 
+import {
+  Printer,
+  FileText,
+  Clock,
+  DollarSign,
   Download,
   Upload,
   Scan,
   ShoppingCart,
-  CameraIcon, 
-  FileImageIcon, 
+  CameraIcon,
+  FileImageIcon,
   CheckIcon,
   XIcon,
   RotateCcwIcon,
@@ -34,19 +34,23 @@ import {
   Palette,
   File as FileIcon,
   Image as ImageIcon,
-  FileType as FileTypeIcon
+  FileType as FileTypeIcon,
+  BookOpen
 } from 'lucide-react';
 import { DragDropUpload } from '@/components/upload/DragDropUpload';
 import { uploadFile, uploadFileToGoogleDrive, validateFile, checkUploadServiceStatus } from '@/lib/upload-service';
-import { PDFProcessor } from '@/components/pdf/PDFProcessor';
 import { UploadStatus } from '@/components/upload/UploadStatus';
 import { PriceGuide } from '@/components/print/PriceGuide';
 import { calculateSharedPrice, convertLegacySettings } from '@shared/pricing';
 import { getPDFInfo } from '@/lib/pdf-tools';
+import AdvancedSmartScanner from '@/components/scanner/AdvancedSmartScanner';
+import { CartConflictModal } from '@/components/CartConflictModal';
 // Unified cart system
 
 type ScanMode = 'color' | 'grayscale' | 'blackwhite'
 type ScanStep = 'capture' | 'preview' | 'processing' | 'complete'
+type PagesPerSheet = 1 | 2 | 4 | 6 | 9
+
 
 interface ScannedDocument {
   id: string
@@ -57,29 +61,29 @@ interface ScannedDocument {
   timestamp: Date
 }
 
-const ScanModeSelector = ({ 
-  selectedMode, 
-  onModeChange, 
-  disabled 
-}: { 
+const ScanModeSelector = ({
+  selectedMode,
+  onModeChange,
+  disabled
+}: {
   selectedMode: ScanMode
   onModeChange: (mode: ScanMode) => void
   disabled: boolean
 }) => {
   const modes = [
-    { 
-      value: 'color' as ScanMode, 
-      label: 'ملون', 
+    {
+      value: 'color' as ScanMode,
+      label: 'ملون',
       description: 'احتفظ بالألوان الأصلية'
     },
-    { 
-      value: 'grayscale' as ScanMode, 
-      label: 'رمادي', 
+    {
+      value: 'grayscale' as ScanMode,
+      label: 'رمادي',
       description: 'تحويل إلى رمادي للوضوح'
     },
-    { 
-      value: 'blackwhite' as ScanMode, 
-      label: 'أبيض وأسود', 
+    {
+      value: 'blackwhite' as ScanMode,
+      label: 'أبيض وأسود',
       description: 'نص واضح وحاد'
     }
   ]
@@ -95,8 +99,8 @@ const ScanModeSelector = ({
           disabled={disabled}
           className={`
             p-4 rounded-xl border-2 transition-all duration-200
-            ${selectedMode === mode.value 
-              ? 'border-red-500 bg-red-50 text-red-700' 
+            ${selectedMode === mode.value
+              ? 'border-red-500 bg-red-50 text-red-700'
               : 'border-gray-200 bg-white hover:border-gray-300'
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -110,15 +114,134 @@ const ScanModeSelector = ({
   )
 }
 
+// Pages Per Sheet Selector Component
+const PagesPerSheetSelector = ({
+  selectedPagesPerSheet,
+  onPagesPerSheetChange,
+  disabled,
+  totalPages = 1
+}: {
+  selectedPagesPerSheet: PagesPerSheet
+  onPagesPerSheetChange: (pagesPerSheet: PagesPerSheet) => void
+  disabled: boolean
+  totalPages?: number
+}) => {
+  const pricePerSheet = 0.30 // EGP per sheet
+
+  const options = [
+    {
+      value: 1 as PagesPerSheet,
+      label: '1 صفحة',
+      description: 'حجم عادي'
+    },
+    {
+      value: 2 as PagesPerSheet,
+      label: '2 صفحة',
+      description: 'توفير 50%'
+    },
+    {
+      value: 4 as PagesPerSheet,
+      label: '4 صفحات',
+      description: 'توفير 75%'
+    },
+    {
+      value: 6 as PagesPerSheet,
+      label: '6 صفحات',
+      description: 'توفير 83%'
+    },
+    {
+      value: 9 as PagesPerSheet,
+      label: '9 صفحات',
+      description: 'توفير 89%'
+    }
+  ]
+
+  const calculatePrice = (pagesPerSheet: PagesPerSheet) => {
+    const sheetsNeeded = Math.ceil(totalPages / pagesPerSheet)
+    return (sheetsNeeded * pricePerSheet).toFixed(2)
+  }
+
+  const calculateSavings = (pagesPerSheet: PagesPerSheet) => {
+    if (pagesPerSheet === 1) return null
+    const normalPrice = totalPages * pricePerSheet
+    const discountedPrice = Math.ceil(totalPages / pagesPerSheet) * pricePerSheet
+    const savings = normalPrice - discountedPrice
+    return savings.toFixed(2)
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 mb-3">
+        <FileText className="h-5 w-5 text-gray-600" />
+        <h3 className="font-semibold text-gray-900">صفحات في الورقة الواحدة</h3>
+      </div>
+
+      <div className="grid grid-cols-5 gap-2">
+        {options.map((option) => {
+          const price = calculatePrice(option.value)
+          const savings = calculateSavings(option.value)
+
+          return (
+            <motion.button
+              key={option.value}
+              whileHover={{ scale: disabled ? 1 : 1.05 }}
+              whileTap={{ scale: disabled ? 1 : 0.95 }}
+              onClick={() => !disabled && onPagesPerSheetChange(option.value)}
+              disabled={disabled}
+              className={`
+                p-3 rounded-xl border-2 transition-all duration-200 relative
+                ${selectedPagesPerSheet === option.value
+                  ? 'border-red-500 bg-red-50 text-red-700'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+                }
+                ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+              `}
+            >
+              <div className="font-bold text-lg mb-1">{option.value}</div>
+              <div className="text-xs text-gray-500 mb-1">{option.description}</div>
+              {totalPages > 1 && (
+                <>
+                  <div className="text-xs font-semibold text-green-600">
+                    {price} ج
+                  </div>
+                  {savings && (
+                    <div className="text-[10px] text-green-500">
+                      ⬇️ {savings} ج
+                    </div>
+                  )}
+                </>
+              )}
+            </motion.button>
+          )
+        })}
+      </div>
+
+      {totalPages > 1 && selectedPagesPerSheet > 1 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+          <div className="flex items-center gap-2 text-green-700">
+            <CheckIcon className="h-4 w-4" />
+            <span className="font-medium">
+              وفرت {calculateSavings(selectedPagesPerSheet)} جنيه!
+              ({Math.ceil(totalPages / selectedPagesPerSheet)} ورقة بدلاً من {totalPages})
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
 const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]) => void }) => {
   const [currentStep, setCurrentStep] = useState<ScanStep>('capture')
   const [selectedMode, setSelectedMode] = useState<ScanMode>('color')
+  const [pagesPerSheet, setPagesPerSheet] = useState<PagesPerSheet>(1)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [scannedDocuments, setScannedDocuments] = useState<ScannedDocument[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -142,7 +265,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
   const startCamera = useCallback(async () => {
     try {
       console.log('🎥 Starting camera...')
-      
+
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error('CAMERA_NOT_SUPPORTED')
       }
@@ -153,8 +276,8 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
 
       let mediaStream: MediaStream
       try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
             facingMode: 'environment',
             width: { ideal: 1280 },
             height: { ideal: 720 }
@@ -166,10 +289,10 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
 
       setStream(mediaStream)
       setIsUsingCamera(true)
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
-        
+
         videoRef.current.onloadedmetadata = () => {
           toast({
             title: "تم تفعيل الكاميرا",
@@ -180,9 +303,9 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
 
     } catch (error: any) {
       console.error('❌ Camera error:', error)
-      
+
       let errorMessage = "لا يمكن الوصول إلى الكاميرا"
-      
+
       if (error?.name === 'NotAllowedError') {
         errorMessage = "يرجى السماح بالوصول إلى الكاميرا من إعدادات المتصفح"
       } else if (error?.name === 'NotFoundError') {
@@ -190,7 +313,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
       } else if (error?.name === 'NotSupportedError' || error?.message === 'CAMERA_NOT_SUPPORTED') {
         errorMessage = "المتصفح لا يدعم استخدام الكاميرا"
       }
-      
+
       toast({
         title: "خطأ في الكاميرا",
         description: errorMessage,
@@ -216,7 +339,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
     const video = videoRef.current
     const canvas = canvasRef.current
     const context = canvas.getContext('2d')
-    
+
     if (!context || !video.videoWidth || !video.videoHeight) {
       toast({
         title: "خطأ",
@@ -230,7 +353,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
       // تعيين حجم محسن للكانفاس
       const maxWidth = 1200
       const ratio = video.videoWidth / video.videoHeight
-      
+
       if (video.videoWidth > maxWidth) {
         canvas.width = maxWidth
         canvas.height = maxWidth / ratio
@@ -238,15 +361,15 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
         canvas.width = video.videoWidth
         canvas.height = video.videoHeight
       }
-      
+
       context.drawImage(video, 0, 0, canvas.width, canvas.height)
-      
+
       // حفظ الصورة كـ data URL للمعاينة فقط
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8)
       setCapturedImage(imageDataUrl)
       setCurrentStep('preview')
       stopCamera()
-      
+
       toast({
         title: "تم التقاط الصورة",
         description: "يمكنك الآن إضافتها للطباعة",
@@ -281,7 +404,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
       const result = e.target?.result as string
       setCapturedImage(result)
       setCurrentStep('preview')
-      
+
       toast({
         title: "تم تحديد الصورة",
         description: "يمكنك الآن معاينتها ومعالجتها",
@@ -308,7 +431,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
       // إنشاء كانفاس لتطبيق المرشحات
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
-      
+
       if (!ctx) {
         throw new Error('فشل في إنشاء Canvas للمعالجة')
       }
@@ -320,29 +443,29 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
           // تعيين حجم الكانفاس
           canvas.width = img.width
           canvas.height = img.height
-          
+
           // رسم الصورة
           ctx.drawImage(img, 0, 0)
-          
+
           // تطبيق المرشح حسب النوع المحدد
           if (selectedMode === 'grayscale') {
             console.log('🎨 Applying grayscale filter...')
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
             const data = imageData.data
-            
+
             for (let i = 0; i < data.length; i += 4) {
               const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
               data[i] = gray     // red
               data[i + 1] = gray // green  
               data[i + 2] = gray // blue
             }
-            
+
             ctx.putImageData(imageData, 0, 0)
           } else if (selectedMode === 'blackwhite') {
             console.log('🎨 Applying black & white filter...')
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
             const data = imageData.data
-            
+
             for (let i = 0; i < data.length; i += 4) {
               const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
               const threshold = gray > 128 ? 255 : 0
@@ -350,7 +473,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
               data[i + 1] = threshold // green  
               data[i + 2] = threshold // blue
             }
-            
+
             ctx.putImageData(imageData, 0, 0)
           }
 
@@ -361,7 +484,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
             }
 
             const file = new File([blob], `scan_${selectedMode}_${Date.now()}.jpg`, { type: 'image/jpeg' })
-            
+
             // إرسال الملف للمكون الأب
             onScanComplete([file])
 
@@ -429,7 +552,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
     setCurrentStep('capture')
     setIsProcessing(false)
     stopCamera()
-    
+
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -459,69 +582,69 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
         {/* تبسيط المكون للتشخيص - بدون framer-motion مؤقتاً */}
         {currentStep === 'capture' && (
           <div className="space-y-4">
-              {isUsingCamera && (
-                <div className="space-y-4">
-                  <div className="relative bg-black rounded-xl overflow-hidden">
-                    <video 
-                      ref={videoRef}
-                      autoPlay 
-                      playsInline 
-                      muted
-                      className="w-full h-64 object-cover"
-                    />
-                    
-                    <div className="absolute inset-4 border-2 border-white/50 border-dashed rounded-lg flex items-center justify-center pointer-events-none">
-                      <div className="text-white/70 text-center text-sm">
-                        <p>ضع المستند داخل الإطار</p>
-                      </div>
-                    </div>
-                    
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-                      <Button
-                        onClick={capturePhoto}
-                        className="w-16 h-16 rounded-full bg-white hover:bg-gray-100 text-black shadow-xl border-4 border-white/20"
-                      >
-                        <CameraIcon className="w-6 h-6" />
-                      </Button>
-                    </div>
-                    
-                    <Button
-                      onClick={stopCamera}
-                      variant="outline"
-                      size="sm"
-                      className="absolute top-4 right-4 bg-white/90 hover:bg-white text-black border-0"
-                    >
-                      <XIcon className="w-4 h-4" />
-                    </Button>
-                    
-                    <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                      Live
+            {isUsingCamera && (
+              <div className="space-y-4">
+                <div className="relative bg-black rounded-xl overflow-hidden">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-64 object-cover"
+                  />
+
+                  <div className="absolute inset-4 border-2 border-white/50 border-dashed rounded-lg flex items-center justify-center pointer-events-none">
+                    <div className="text-white/70 text-center text-sm">
+                      <p>ضع المستند داخل الإطار</p>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {!isUsingCamera && (
-                <div className="grid grid-cols-2 gap-4">
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                    <Button
+                      onClick={capturePhoto}
+                      className="w-16 h-16 rounded-full bg-white hover:bg-gray-100 text-black shadow-xl border-4 border-white/20"
+                    >
+                      <CameraIcon className="w-6 h-6" />
+                    </Button>
+                  </div>
+
                   <Button
-                    onClick={startCamera}
-                    className="h-24 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl flex-col transition-all duration-200"
-                  >
-                    <CameraIcon className="w-8 h-8 mb-2" />
-                    <span>استخدام الكاميرا</span>
-                  </Button>
-                  
-                  <Button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={stopCamera}
                     variant="outline"
-                    className="h-24 border-2 border-gray-200 hover:border-gray-300 rounded-xl flex-col transition-all duration-200"
+                    size="sm"
+                    className="absolute top-4 right-4 bg-white/90 hover:bg-white text-black border-0"
                   >
-                    <FileImageIcon className="w-8 h-8 mb-2 text-gray-600" />
-                    <span>اختيار من الجهاز</span>
+                    <XIcon className="w-4 h-4" />
                   </Button>
+
+                  <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    Live
+                  </div>
                 </div>
-              )}
+              </div>
+            )}
+
+            {!isUsingCamera && (
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  onClick={startCamera}
+                  className="h-24 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl flex-col transition-all duration-200"
+                >
+                  <CameraIcon className="w-8 h-8 mb-2" />
+                  <span>استخدام الكاميرا</span>
+                </Button>
+
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  className="h-24 border-2 border-gray-200 hover:border-gray-300 rounded-xl flex-col transition-all duration-200"
+                >
+                  <FileImageIcon className="w-8 h-8 mb-2 text-gray-600" />
+                  <span>اختيار من الجهاز</span>
+                </Button>
+              </div>
+            )}
 
             <input
               ref={fileInputRef}
@@ -540,10 +663,10 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
               <h3 className="text-lg font-semibold text-green-600 mb-2">✅ تم تحميل الصورة بنجاح!</h3>
               <p className="text-gray-600">اختر المرشح المطلوب ثم اضغط "إضافة للمسح"</p>
             </div>
-            
+
             <div className="relative bg-gray-100 rounded-xl overflow-hidden border-2 border-green-200">
-              <img 
-                src={capturedImage} 
+              <img
+                src={capturedImage}
                 alt="معاينة الصورة"
                 className="w-full h-64 object-contain"
               />
@@ -551,16 +674,16 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
                 معاينة
               </div>
             </div>
-            
+
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <h4 className="font-semibold text-blue-800 mb-2">🎨 المرشح المحدد:</h4>
               <p className="text-blue-700">
-                {selectedMode === 'color' ? '🌈 ملون - ستبقى الألوان كما هي' : 
-                 selectedMode === 'grayscale' ? '⚫ رمادي - ستتحول للرمادي' : 
-                 '⚪ أبيض وأسود - ستتحول لأبيض وأسود حاد'}
+                {selectedMode === 'color' ? '🌈 ملون - ستبقى الألوان كما هي' :
+                  selectedMode === 'grayscale' ? '⚫ رمادي - ستتحول للرمادي' :
+                    '⚪ أبيض وأسود - ستتحول لأبيض وأسود حاد'}
               </p>
             </div>
-            
+
             <div className="flex gap-3">
               <Button
                 variant="outline"
@@ -607,7 +730,7 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
             </div>
             <h3 className="text-lg font-semibold mb-2">تم بنجاح!</h3>
             <p className="text-gray-600 mb-4">تم إضافة الملف للمسح</p>
-            
+
             <Button
               onClick={resetScan}
               className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6"
@@ -624,8 +747,8 @@ const SmartScanComponent = ({ onScanComplete }: { onScanComplete: (files: File[]
               {scannedDocuments.map((doc) => (
                 <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <img 
-                      src={doc.processedImage} 
+                    <img
+                      src={doc.processedImage}
                       alt="مصغرة المستند"
                       className="w-12 h-12 object-cover rounded"
                     />
@@ -697,7 +820,16 @@ export default function Print() {
   const queryClient = useQueryClient();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
-  
+
+  // Cart validation state
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+
+  // Get current cart to check for conflicts
+  const { data: cartData } = useQuery({
+    queryKey: ['/api/cart'],
+  });
+
   // Default print settings (fallback values)
   const defaultPrintSettings = {
     copies: 1,
@@ -717,7 +849,7 @@ export default function Print() {
         // Validate that all required keys exist in saved settings
         const requiredKeys = Object.keys(defaultPrintSettings);
         const hasAllKeys = requiredKeys.every(key => key in parsed);
-        
+
         if (hasAllKeys) {
           console.log('✅ Loaded saved print settings:', parsed);
           return parsed;
@@ -753,40 +885,42 @@ export default function Print() {
   const getFileIcon = (fileName: string, fileType?: string) => {
     const extension = fileName.toLowerCase().split('.').pop();
     const mimeType = fileType?.toLowerCase();
-    
+
     // PDF files
     if (extension === 'pdf' || mimeType === 'application/pdf') {
       return FileText;
     }
-    
+
     // Image files
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension || '') ||
-        mimeType?.startsWith('image/')) {
+      mimeType?.startsWith('image/')) {
       return ImageIcon;
     }
-    
+
     // Document files
     if (['doc', 'docx', 'txt', 'rtf'].includes(extension || '') ||
-        mimeType?.includes('document') || mimeType?.includes('text')) {
+      mimeType?.includes('document') || mimeType?.includes('text')) {
       return FileTypeIcon;
     }
-    
+
     // Default file icon
     return FileIcon;
   };
 
   // Individual file settings - each file gets its own print settings
-  const [fileSettings, setFileSettings] = useState<{[fileName: string]: {
-    copies: number;
-    colorMode: 'grayscale' | 'color';
-    paperSize: 'A4' | 'A3' | 'A0' | 'A1' | 'A2';
-    paperType: 'plain' | 'coated' | 'glossy' | 'sticker';
-    doubleSided: boolean;
-  }}>({});
-  
+  const [fileSettings, setFileSettings] = useState<{
+    [fileName: string]: {
+      copies: number;
+      colorMode: 'grayscale' | 'color';
+      paperSize: 'A4' | 'A3' | 'A0' | 'A1' | 'A2';
+      paperType: 'plain' | 'coated' | 'glossy' | 'sticker';
+      doubleSided: boolean;
+    }
+  }>({});
+
   // File collapse state - tracks which files are expanded/collapsed
-  const [fileExpandedState, setFileExpandedState] = useState<{[fileName: string]: boolean}>({});
-  
+  const [fileExpandedState, setFileExpandedState] = useState<{ [fileName: string]: boolean }>({});
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Array<{
     fileName: string;
@@ -803,7 +937,7 @@ export default function Print() {
     previewUrl?: string;
     fileSize?: number;
   }>>([]);
-  
+
   // Unified cart system - using working legacy cart only
   const [uploadErrors, setUploadErrors] = useState<Array<{
     name: string;
@@ -824,6 +958,19 @@ export default function Print() {
     onError: (error: any, variables: any) => {
       console.error('❌ Failed to add print job:', variables.filename, error);
       throw error; // Re-throw للسماح للـ parent handler بمعالجة الخطأ
+    },
+  });
+
+  // Clear cart mutation for conflict resolution
+  const clearCartMutation = useMutation({
+    mutationFn: () => apiRequest('DELETE', '/api/cart/clear', undefined),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart/count'] });
+      toast({
+        title: "تم تفريغ السلة",
+        description: "يمكنك الآن رفع الملفات للطباعة"
+      });
     },
   });
 
@@ -851,7 +998,7 @@ export default function Print() {
 
   // Prevent duplicate execution with ref flag
   const isPersistingRef = useRef(false);
-  
+
   // Helper function to persist uploaded files as pending uploads  
   const persistPendingUploads = async (uploadedFiles: any[]) => {
     if (!uploadedFiles || uploadedFiles.length === 0) {
@@ -864,56 +1011,56 @@ export default function Print() {
       console.log('🔄 persistPendingUploads already in progress, skipping duplicate call');
       return;
     }
-    
+
     isPersistingRef.current = true;
     console.log(`💾 Saving ${uploadedFiles.length} uploaded files to pending uploads cart...`);
     try {
       const uploadSession = `upload_${Date.now()}`;
-      
+
       // Use Promise.all to save all files to pending uploads with PDF analysis
       await Promise.all(uploadedFiles.map(async (file) => {
         console.log(`📁 Saving ${file.name} to pending uploads...`);
-        
+
         // Enhanced PDF analysis using server-side endpoint for Google Drive compatibility
         let actualPages = 1; // Default fallback
         let actualFileType = file.fileType || 'application/pdf';
         let analysisMessage = '';
         let usedFallback = false;
-        
+
         if (file.url && file.name.toLowerCase().endsWith('.pdf')) {
           try {
             console.log(`📄 Enhanced PDF analysis starting: ${file.name}`);
             console.log(`🔗 URL: ${file.url}`);
             console.log(`🆔 File ID: ${file.fileId || 'auto-detect'}`);
-            
+
             // Use enhanced PDF analysis that handles Google Drive CORS issues
             const { smartPDFAnalysis } = await import('@/lib/pdf-tools');
-            
+
             const analysisResult = await smartPDFAnalysis({
               url: file.url,
               name: file.name,
               fileId: file.fileId // Pass the Google Drive file ID if available
             });
-            
+
             actualPages = analysisResult.pages;
             actualFileType = 'application/pdf';
             usedFallback = analysisResult.fallback;
             analysisMessage = analysisResult.message || '';
-            
+
             if (analysisResult.fallback && analysisResult.error) {
               console.warn(`⚠️ PDF analysis used fallback for ${file.name}:`, analysisResult.error);
             } else {
               console.log(`✅ Enhanced PDF analysis successful: ${file.name} has ${actualPages} pages`);
             }
-            
+
             if (analysisResult.message) {
               console.log(`📋 Analysis message: ${analysisResult.message}`);
             }
-            
+
           } catch (error) {
             console.error(`❌ Enhanced PDF analysis failed for ${file.name}:`, error);
             console.log(`🔧 Attempting basic fallback for: ${file.name}`);
-            
+
             // Ultimate fallback - try to extract from filename or use 1
             const filenamePageMatch = file.name.match(/(\d+)\s*(page|صفحة|pages)/i);
             if (filenamePageMatch) {
@@ -929,11 +1076,12 @@ export default function Print() {
             }
           }
         }
-        
-        return await createPendingUploadMutation.mutateAsync({
+
+        const uploadData = {
           filename: file.name,
           originalName: file.name,
           fileUrl: file.url,
+          googleDriveFileId: file.fileId, // 🎯 ADDED: Store Google Drive file ID for renaming
           fileSize: file.fileSize || 0,
           fileType: actualFileType,
           provider: file.provider || 'google_drive',
@@ -945,20 +1093,154 @@ export default function Print() {
           paperSize: 'A4',
           paperType: 'plain',
           doubleSided: false,
+          pagesPerSheet: 1, // Pages per sheet feature
           isExpanded: false,
           // Book printing defaults
           bookPrinting: false,
           bindingType: 'spiral',
           bindingPrice: 20
+        };
+
+        console.log(`📊 Creating pending upload for ${file.name}:`, {
+          fileSize: file.fileSize,
+          uploadDataFileSize: uploadData.fileSize
         });
+
+        return await createPendingUploadMutation.mutateAsync(uploadData);
       }));
-      
+
       console.log(`✅ All ${uploadedFiles.length} files saved to pending uploads cart successfully!`);
     } catch (error) {
       console.error('❌ Failed to save files to pending uploads cart:', error);
     } finally {
       // Reset flag to allow future executions
       isPersistingRef.current = false;
+    }
+  };
+
+  // Handle scanned PDF from AdvancedSmartScanner
+  const handleSmartScan = useCallback(async (files: File[]) => {
+    if (!files || files.length === 0) {
+      console.log('⚠️ No files received from scanner');
+      return;
+    }
+
+    console.log(`📸 Received ${files.length} file(s) from scanner`);
+
+    // Check if cart has items from other sources
+    if (cartData?.items?.length > 0) {
+      const firstItem = cartData.items[0];
+      const itemSource = firstItem.productSource || 'atbaali';
+
+      // If cart has items from partners or store, show conflict modal
+      if (itemSource !== 'print_service') {
+        console.log('⚠️ Cart has items from other source:', itemSource);
+        setPendingFiles(files);
+        setShowConflictModal(true);
+        return;
+      }
+    }
+
+    // Cart is empty or has print jobs, proceed with upload
+    try {
+      setIsUploading(true);
+
+      // Upload files to Google Drive
+      const uploadedFiles = [];
+      for (const file of files) {
+        console.log(`📤 Uploading scanned PDF: ${file.name}`);
+
+        const result = await uploadFileToGoogleDrive(file, (progress) => {
+          console.log(`Upload progress: ${progress}%`);
+        });
+
+        if (result.success && result.url) {
+          uploadedFiles.push({
+            name: file.name,
+            url: result.url,
+            fileId: result.fileId,
+            provider: 'google_drive',
+            fileSize: file.size,
+          });
+          console.log(`✅ Uploaded: ${file.name}`);
+        } else {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+      }
+
+      // Save to pending uploads
+      await persistPendingUploads(uploadedFiles);
+
+      toast({
+        title: 'تم الإضافة للطباعة',
+        description: `تم إضافة ${files.length} ملف - يمكنك الآن تعديل الإعدادات`,
+      });
+
+    } catch (error) {
+      console.error('❌ Error handling scanned files:', error);
+      toast({
+        title: 'خطأ',
+        description: 'فشل في إضافة الملفات للطباعة',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  }, [toast, persistPendingUploads, cartData]);
+
+  // Handle clear cart and proceed with upload
+  const handleClearAndUpload = async () => {
+    try {
+      await clearCartMutation.mutateAsync();
+      setShowConflictModal(false);
+      // Proceed with upload by calling handleSmartScan with pending files
+      if (pendingFiles.length > 0) {
+        // Temporarily clear cartData check by directly uploading
+        const files = pendingFiles;
+        setPendingFiles([]);
+
+        // Re-trigger upload without cart check
+        setTimeout(async () => {
+          try {
+            setIsUploading(true);
+            const uploadedFiles = [];
+            for (const file of files) {
+              const result = await uploadFileToGoogleDrive(file, (progress) => {
+                console.log(`Upload progress: ${progress}%`);
+              });
+              if (result.success && result.url) {
+                uploadedFiles.push({
+                  name: file.name,
+                  url: result.url,
+                  fileId: result.fileId,
+                  provider: 'google_drive',
+                  fileSize: file.size,
+                });
+              }
+            }
+            await persistPendingUploads(uploadedFiles);
+            toast({
+              title: 'تم الإضافة للطباعة',
+              description: `تم إضافة ${files.length} ملف`,
+            });
+          } catch (error) {
+            toast({
+              title: 'خطأ',
+              description: 'فشل في رفع الملفات',
+              variant: 'destructive',
+            });
+          } finally {
+            setIsUploading(false);
+          }
+        }, 500); // Wait for cart to clear
+      }
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل تفريغ السلة",
+        variant: "destructive"
+      });
     }
   };
 
@@ -969,20 +1251,20 @@ export default function Print() {
     onMutate: async ({ id, updates }) => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ['/api/pending-uploads'] });
-      
+
       // Snapshot the previous value
       const previousUploads = queryClient.getQueryData(['/api/pending-uploads']);
-      
+
       // Optimistically update to the new value
       queryClient.setQueryData(['/api/pending-uploads'], (old: any) => {
         if (!old) return old;
-        return old.map((upload: any) => 
+        return old.map((upload: any) =>
           upload.id === id ? { ...upload, ...updates } : upload
         );
       });
-      
+
       console.log('⚡ Optimistic update applied for', id);
-      
+
       // Return a context object with the snapshotted value
       return { previousUploads };
     },
@@ -1058,9 +1340,9 @@ export default function Print() {
     setUploadResults([]);
     setUploadErrors([]);
     setUploadProgress([]);
-    
+
     console.log('📤 Starting upload of', files.length, 'files...');
-    
+
     // Initialize progress tracking for all files
     const initialProgress = files.map(file => ({
       fileName: file.name,
@@ -1071,22 +1353,22 @@ export default function Print() {
       timeRemaining: 0
     }));
     setUploadProgress(initialProgress);
-    
+
     try {
       console.log('🔍 Checking Cloudinary status...');
       const status = await checkUploadServiceStatus();
       console.log('Upload service status:', status);
-      
+
       const results: Array<{ name: string; url: string; provider?: 'cloudinary' | 'firebase' | 'google_drive'; fileSize?: number }> = [];
       const errors: Array<{ name: string; error: string; fileSize?: number }> = [];
-      
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const startTime = Date.now();
-        
+
         try {
           console.log(`🚀 Uploading to Google Drive (Primary): ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-          
+
           // Simulate detailed progress tracking
           const progressInterval = setInterval(() => {
             const elapsed = Date.now() - startTime;
@@ -1095,8 +1377,8 @@ export default function Print() {
             const speed = uploadedBytes / (elapsed / 1000); // bytes per second
             const remainingBytes = file.size - uploadedBytes;
             const timeRemaining = speed > 0 ? remainingBytes / speed : 0;
-            
-            setUploadProgress(prev => prev.map((p, index) => 
+
+            setUploadProgress(prev => prev.map((p, index) =>
               index === i ? {
                 ...p,
                 progress: simulatedProgress,
@@ -1106,17 +1388,17 @@ export default function Print() {
               } : p
             ));
           }, 200);
-          
+
           // Use Google Drive as primary upload method for cost optimization
           const result = await uploadFileToGoogleDrive(file, printSettings);
-          
+
           clearInterval(progressInterval);
-          
+
           if (result.success && result.url) {
             console.log('✅ Google Drive upload successful! Cost savings activated 💰');
-            
+
             // Complete progress
-            setUploadProgress(prev => prev.map((p, index) => 
+            setUploadProgress(prev => prev.map((p, index) =>
               index === i ? {
                 ...p,
                 progress: 100,
@@ -1125,7 +1407,7 @@ export default function Print() {
                 timeRemaining: 0
               } : p
             ));
-            
+
             results.push({
               name: file.name,
               url: result.url,
@@ -1136,12 +1418,12 @@ export default function Print() {
             // Fallback to Cloudinary if Google Drive fails
             console.warn('⚠️ Google Drive failed, trying Cloudinary fallback...');
             const fallbackResult = await uploadFile(file);
-            
+
             if (fallbackResult.success && fallbackResult.url) {
               console.log('✅ Cloudinary fallback successful!');
-              
+
               // Complete progress
-              setUploadProgress(prev => prev.map((p, index) => 
+              setUploadProgress(prev => prev.map((p, index) =>
                 index === i ? {
                   ...p,
                   progress: 100,
@@ -1150,7 +1432,7 @@ export default function Print() {
                   timeRemaining: 0
                 } : p
               ));
-              
+
               results.push({
                 name: file.name,
                 url: fallbackResult.url,
@@ -1170,16 +1452,16 @@ export default function Print() {
           });
         }
       }
-      
+
       console.log('✅ Successfully uploaded', results.length, 'files');
       console.log('Upload results:', results);
-      
+
       // إضافة النتائج للنتائج الموجودة بدلاً من استبدالها
       setUploadResults(prev => [...prev, ...results]);
       setUploadErrors(prev => [...prev, ...errors]);
       // لا نعيد تعيين selectedFiles هنا لأنها تم تعيينها بالفعل
       setUploadedUrls(prev => [...prev, ...results.map(r => r.url)]);
-      
+
       // Success message
       if (results.length > 0) {
         toast({
@@ -1187,7 +1469,7 @@ export default function Print() {
           description: `تم حفظ ${results.length} ملف - ستبقى متاحة حتى لو غادرت الصفحة`,
         });
       }
-      
+
       if (errors.length > 0) {
         toast({
           title: 'بعض الملفات فشلت في الرفع',
@@ -1195,7 +1477,7 @@ export default function Print() {
           variant: 'destructive'
         });
       }
-      
+
     } catch (error) {
       console.error('Upload process failed:', error);
       toast({
@@ -1208,38 +1490,53 @@ export default function Print() {
     }
   };
 
-  // Calculate current cart size from uploaded files
+  // Calculate current cart size from pending uploads (actual uploaded files)
   const calculateCurrentCartSize = () => {
-    return uploadResults.reduce((total, result) => total + (result.fileSize || 0), 0);
+    return pendingUploads.reduce((total: number, upload: any) => total + (upload.fileSize || 0), 0);
   };
 
-  const handleDragDropUpload = async (files: File[], urls: string[]) => {
+  const handleDragDropUpload = async (
+    files: File[],
+    urls: string[],
+    uploads?: Array<{ file: File; url: string; provider?: string; fileSize?: number }>
+  ) => {
     console.log('Files selected via drag & drop:', files.map(f => f.name));
     console.log('URLs received:', urls);
-    
-    // Create upload results for the UI
-    const uploadResults = files.map((file, index) => ({
-      name: file.name,
-      url: urls[index],
-      fileSize: file.size,
-      provider: 'google_drive',
-      status: 'success'
-    }));
-    
+    console.log('Upload results with fileSize:', uploads);
+
+    // Use uploads array if available (has fileSize), otherwise fallback to files
+    const uploadResults = uploads
+      ? uploads.map((upload, index) => {
+        const finalFileSize = upload.fileSize || upload.file.size || 0;
+        console.log(`📊 File ${upload.file.name}: fileSize=${upload.fileSize}, file.size=${upload.file.size}, final=${finalFileSize}`);
+        return {
+          name: upload.file.name,
+          url: upload.url,
+          fileSize: finalFileSize,
+          provider: upload.provider || 'google_drive',
+          status: 'success'
+        };
+      })
+      : files.map((file, index) => {
+        console.log(`📊 Fallback for ${file.name}: size=${file.size}`);
+        return {
+          name: file.name,
+          url: urls[index],
+          fileSize: file.size,
+          provider: 'google_drive',
+          status: 'success'
+        };
+      });
+
+    console.log('📦 Final uploadResults:', uploadResults.map(r => ({ name: r.name, fileSize: r.fileSize })));
+
     // **FIXED: Only save to pending uploads (remove selectedFiles duplication)**
     await persistPendingUploads(uploadResults);
     setUploadedUrls(prev => [...prev, ...urls]);
-    
+
     // إضافة نتائج الرفع
-    const newResults = files.map((file, index) => ({
-      name: file.name,
-      url: urls[index],
-      provider: 'google_drive' as 'google_drive',
-      fileSize: file.size
-    }));
-    
-    setUploadResults(prev => [...prev, ...newResults]);
-    
+    setUploadResults(prev => [...prev, ...uploadResults]);
+
     // رسالة النجاح محذوفة - الزر الجماعي سيظهر بدلاً منها
   };
 
@@ -1247,14 +1544,6 @@ export default function Print() {
     setSelectedFiles(prev => [...prev, file]);
     setUploadedUrls(prev => [...prev, downloadUrl]);
     console.log('File captured:', file.name, 'URL:', downloadUrl);
-  };
-
-  // دالة للمسح الذكي
-  const handleSmartScan = (files: File[]) => {
-    if (files && files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...files]);
-      console.log('Smart scan completed:', files.map(f => f.name));
-    }
   };
 
   // دالة لتوليد اسم واضح للملف حسب إعدادات الطباعة
@@ -1266,7 +1555,7 @@ export default function Print() {
       const fileIndex = selectedFiles.findIndex(f => f.name === fileName);
       return prev.filter((_, index) => index !== fileIndex);
     });
-    
+
     toast({
       title: 'تم حذف الملف',
       description: `تم حذف ${fileName}`,
@@ -1283,7 +1572,7 @@ export default function Print() {
     setUploadErrors([]);
     setFileSettings({});
     setFileExpandedState({});
-    
+
     // Clear new system (pending uploads)
     clearPendingUploadsMutation.mutate(undefined, {
       onSuccess: () => {
@@ -1291,7 +1580,7 @@ export default function Print() {
         queryClient.invalidateQueries({ queryKey: ['/api/pending-uploads'] });
       }
     });
-    
+
     toast({
       title: 'تم مسح جميع الملفات',
       description: 'تم مسح جميع الملفات من القائمة وسلة الملفات',
@@ -1323,7 +1612,7 @@ export default function Print() {
     // إنشاء print jobs لكل ملف مع إعداداته من pending uploads
     for (const upload of pendingUploads) {
       const fileName = upload.originalName || upload.filename;
-      
+
       // Use settings directly from pending upload (includes user's actual selections)
       const settings = {
         copies: upload.copies || 1,
@@ -1361,8 +1650,30 @@ export default function Print() {
         await addToCartMutation.mutateAsync(printJobData);
         console.log(`✅ Successfully added ${fileName} with ${settings.copies} copies to cart`);
         successCount++;
-      } catch (error) {
+      } catch (error: any) {
         console.error(`❌ Failed to add ${fileName} to cart:`, error);
+
+        // Check if this is a 409 conflict error
+        if (error?.message?.includes('409:')) {
+          try {
+            // Parse the conflict data from error message
+            const conflictMatch = error.message.match(/409: ({.*})/);
+            if (conflictMatch) {
+              const conflictData = JSON.parse(conflictMatch[1]);
+              if (conflictData.conflict && conflictData.requiresClearCart) {
+                console.log('⚠️ Cart conflict detected, showing modal...');
+                // Store the pending files for later
+                setPendingFiles(pendingUploads.map((u: any) => new File([], u.filename)));
+                setShowConflictModal(true);
+                // Stop processing more files
+                return;
+              }
+            }
+          } catch (parseError) {
+            console.error('Failed to parse conflict data:', parseError);
+          }
+        }
+
         failureCount++;
       }
     }
@@ -1390,7 +1701,7 @@ export default function Print() {
       'glossy': 'ورق جلوسي',
       'sticker': 'ورق لاصق'
     };
-    
+
     const colorModeLabels = {
       'grayscale': 'أبيض وأسود',
       'color': 'ملون'
@@ -1399,11 +1710,11 @@ export default function Print() {
     // الحصول على اسم الملف بدون امتداد
     const fileNameWithoutExt = originalName.replace(/\.[^/.]+$/, "");
     const fileExtension = originalName.split('.').pop() || '';
-    
+
     // تكوين اسم الملف: الاسم الأصلي + عدد النسخ + نوع الورق
     const printSettings = `عدد ${settings.copies} - ${settings.paperSize} ${paperTypeLabels[settings.paperType as keyof typeof paperTypeLabels]} ${colorModeLabels[settings.colorMode as keyof typeof colorModeLabels]}`;
     const displayName = `${fileNameWithoutExt} - ${printSettings}`;
-    
+
     return settings.doubleSided ? `${displayName} (وجهين).${fileExtension}` : `${displayName}.${fileExtension}`;
   };
 
@@ -1427,15 +1738,15 @@ export default function Print() {
     }
 
     setIsUploading(true);
-    
+
     try {
       console.log('Adding print jobs to cart:', selectedFiles.map(f => f.name), 'with settings:', printSettings);
       console.log('File URLs:', uploadedUrls);
-      
+
       const printJobs = selectedFiles.map((file, index) => {
         // إيجاد بيانات الرفع الكاملة للملف
         const uploadResult = uploadResults.find(result => result.name === file.name);
-        
+
         // Transform data to match discriminated union format
         return {
           type: 'print_job' as const,
@@ -1500,7 +1811,7 @@ export default function Print() {
           variant: 'destructive'
         });
       }
-      
+
     } catch (error) {
       console.error('Failed to add print jobs to cart:', error);
       toast({
@@ -1515,13 +1826,13 @@ export default function Print() {
 
   const calculateCost = () => {
     if (selectedFiles.length === 0) return 0;
-    
+
     // Convert current settings to new pricing format
     const pricingSettings = convertLegacySettings(printSettings);
-    
+
     // Calculate estimated pages (1 page per file for now, can be improved with PDF page detection)
     const estimatedPages = selectedFiles.length;
-    
+
     // Calculate price using professional pricing function
     const pricingResult = calculateSharedPrice({
       paper_size: pricingSettings.paper_size,
@@ -1530,17 +1841,17 @@ export default function Print() {
       pages: estimatedPages,
       is_black_white: pricingSettings.is_black_white
     });
-    
+
     // Multiply by copies
     const totalCost = pricingResult.finalPrice * printSettings.copies;
-    
+
     return totalCost;
   };
 
   return (
     <div className="min-h-screen bg-background pb-20">
       <Header />
-      
+
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-2">خدمات الطباعة</h1>
@@ -1548,14 +1859,10 @@ export default function Print() {
         </div>
 
         <Tabs defaultValue="upload" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
               رفع الملفات
-            </TabsTrigger>
-            <TabsTrigger value="pdf-tools" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              أدوات PDF
             </TabsTrigger>
             <TabsTrigger value="smart-scan" className="flex items-center gap-2">
               <Scan className="h-4 w-4" />
@@ -1574,7 +1881,7 @@ export default function Print() {
                       <Upload className="h-5 w-5 text-accent ml-2" />
                       رفع الملف
                     </h2>
-                    
+
                     <DragDropUpload
                       onUpload={handleDragDropUpload}
                       maxFiles={5}
@@ -1583,8 +1890,8 @@ export default function Print() {
                       currentCartSize={calculateCurrentCartSize()}
                       maxCartSize={50 * 1024 * 1024}
                     />
-                    
-                    <UploadStatus 
+
+                    <UploadStatus
                       isUploading={isUploading}
                       uploadProgress={uploadProgress}
                       uploadResults={uploadResults}
@@ -1600,7 +1907,7 @@ export default function Print() {
                       <Info className="h-5 w-5 text-accent ml-2" />
                       دليل الطباعة الشامل
                     </h2>
-                    
+
                     <div className="text-center">
                       <PriceGuide compact />
                     </div>
@@ -1631,9 +1938,9 @@ export default function Print() {
                           </Button>
                         )}
                       </div>
-                      
+
                       {/* زر إضافة للسلة الموحد */}
-                      {uploadResults.length > 0 && (
+                      {pendingUploads.length > 0 && (
                         <Button
                           onClick={addAllFilesToCart}
                           disabled={addToCartMutation.isPending}
@@ -1642,13 +1949,13 @@ export default function Print() {
                         >
                           {addToCartMutation.isPending ? (
                             <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2"></div>
+                              <Clock className="h-5 w-5 ml-2 animate-spin" />
                               جاري الإضافة...
                             </>
                           ) : (
                             <>
-                              <ShoppingCart className="h-4 w-4 ml-2" />
-                              إضافة للسلة ({uploadResults.length})
+                              <ShoppingCart className="h-5 w-5 ml-2" />
+                              إضافة الكل للسلة ({pendingUploads.length})
                             </>
                           )}
                         </Button>
@@ -1673,6 +1980,7 @@ export default function Print() {
                             paperSize: upload.paperSize || 'A4',
                             paperType: upload.paperType || 'plain',
                             doubleSided: upload.doubleSided || false,
+                            pagesPerSheet: upload.pagesPerSheet || 1,
                           };
 
                           // Use expanded state from pending upload (persistent across page reloads)
@@ -1691,15 +1999,15 @@ export default function Print() {
                                     <div className="min-w-0 flex-1">
                                       <p className="font-medium text-sm text-gray-800 truncate">{fileName}</p>
                                       <p className="text-xs text-gray-500">
-                                        {(upload.fileSize && upload.fileSize > 0) ? 
-                                          `${(upload.fileSize / 1024 / 1024).toFixed(1)} MB` : 
+                                        {(upload.fileSize && upload.fileSize > 0) ?
+                                          `${(upload.fileSize / 1024 / 1024).toFixed(1)} MB` :
                                           'حجم غير محدد'
                                         }
                                         <span className="ml-2 text-green-600">• محفوظ</span>
                                       </p>
                                     </div>
                                   </div>
-                                  
+
                                   <div className="flex items-center space-x-1 space-x-reverse">
                                     {/* زر الطي/الفتح */}
                                     <Button
@@ -1722,7 +2030,7 @@ export default function Print() {
                                         </svg>
                                       )}
                                     </Button>
-                                    
+
                                     {/* زر الحذف */}
                                     <Button
                                       variant="ghost"
@@ -1740,63 +2048,35 @@ export default function Print() {
 
                                 {/* إعدادات الطباعة - تظهر فقط عند التوسع */}
                                 {isExpanded && (
-                                <div className="p-4">
-                                  {/* الصف الأول: النسخ وحجم الورق */}
-                                  <div className="grid grid-cols-2 gap-3 mb-4">
-                                    <div>
-                                      <Label className="text-xs font-medium text-gray-700 mb-1 block">عدد النسخ</Label>
-                                      <Input
-                                        type="number"
-                                        min="1"
-                                        max="100"
-                                        value={currentSettings.copies}
-                                        onChange={(e) => {
-                                          const copies = parseInt(e.target.value) || 1;
-                                          updatePendingUploadMutation.mutate({
-                                            id: upload.id,
-                                            updates: { copies }
-                                          });
-                                        }}
-                                        className="h-9 text-center"
-                                      />
-                                    </div>
-
-                                    <div>
-                                      <Label className="text-xs font-medium text-gray-700 mb-1 block">حجم الورق</Label>
-                                      <Select
-                                        value={currentSettings.paperSize}
-                                        onValueChange={(value: 'A4' | 'A3' | 'A0' | 'A1' | 'A2') => {
-                                          updatePendingUploadMutation.mutate({
-                                            id: upload.id,
-                                            updates: { paperSize: value }
-                                          });
-                                        }}
-                                      >
-                                        <SelectTrigger className="h-9">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="A4">A4</SelectItem>
-                                          <SelectItem value="A3">A3</SelectItem>
-                                          <SelectItem value="A0">A0</SelectItem>
-                                          <SelectItem value="A1">A1</SelectItem>
-                                          <SelectItem value="A2">A2</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </div>
-
-                                  {/* الصف الثاني: نوع الورق ووضع الألوان */}
-                                  <div className="grid grid-cols-2 gap-3 mb-4">
-                                    {!['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
+                                  <div className="p-4">
+                                    {/* الصف الأول: النسخ وحجم الورق */}
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
                                       <div>
-                                        <Label className="text-xs font-medium text-gray-700 mb-1 block">نوع الورق</Label>
-                                        <Select
-                                          value={currentSettings.paperType}
-                                          onValueChange={(value: 'plain' | 'coated' | 'glossy' | 'sticker') => {
+                                        <Label className="text-xs font-medium text-gray-700 mb-1 block">عدد النسخ</Label>
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          max="100"
+                                          value={currentSettings.copies}
+                                          onChange={(e) => {
+                                            const copies = parseInt(e.target.value) || 1;
                                             updatePendingUploadMutation.mutate({
                                               id: upload.id,
-                                              updates: { paperType: value }
+                                              updates: { copies }
+                                            });
+                                          }}
+                                          className="h-9 text-center"
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <Label className="text-xs font-medium text-gray-700 mb-1 block">حجم الورق</Label>
+                                        <Select
+                                          value={currentSettings.paperSize}
+                                          onValueChange={(value: 'A4' | 'A3' | 'A0' | 'A1' | 'A2') => {
+                                            updatePendingUploadMutation.mutate({
+                                              id: upload.id,
+                                              updates: { paperSize: value }
                                             });
                                           }}
                                         >
@@ -1804,29 +2084,91 @@ export default function Print() {
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="plain">عادي</SelectItem>
-                                            <SelectItem value="coated">كوشيه</SelectItem>
-                                            <SelectItem value="glossy">جلوسي</SelectItem>
-                                            <SelectItem value="sticker">لاصق</SelectItem>
+                                            <SelectItem value="A4">A4</SelectItem>
+                                            <SelectItem value="A3">A3</SelectItem>
+                                            <SelectItem value="A0">A0</SelectItem>
+                                            <SelectItem value="A1">A1</SelectItem>
+                                            <SelectItem value="A2">A2</SelectItem>
                                           </SelectContent>
                                         </Select>
                                       </div>
-                                    )}
-                                    
-                                    {['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
-                                      <div className="col-span-2">
-                                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
-                                          <p className="text-sm text-amber-700 font-medium">
-                                            📄 ورق عادي فقط متاح للحجم {currentSettings.paperSize}
-                                          </p>
-                                          <p className="text-xs text-amber-600 mt-1">
-                                            ⏳ باقي أنواع الأوراق متوفرة قريباً
-                                          </p>
-                                        </div>
-                                      </div>
-                                    )}
+                                    </div>
 
-                                    <div className={['A0', 'A1', 'A2'].includes(currentSettings.paperSize) ? 'col-span-2' : ''}>
+                                    {/* الصف الثاني: نوع الورق ووضع الألوان */}
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                      {!['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
+                                        <div>
+                                          <Label className="text-xs font-medium text-gray-700 mb-1 block">نوع الورق</Label>
+                                          <Select
+                                            value={currentSettings.paperType}
+                                            onValueChange={(value: 'plain' | 'coated' | 'glossy' | 'sticker') => {
+                                              updatePendingUploadMutation.mutate({
+                                                id: upload.id,
+                                                updates: { paperType: value }
+                                              });
+                                            }}
+                                          >
+                                            <SelectTrigger className="h-9">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="plain">عادي</SelectItem>
+                                              <SelectItem value="coated">كوشيه</SelectItem>
+                                              <SelectItem value="glossy">جلوسي</SelectItem>
+                                              <SelectItem value="sticker">لاصق</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      )}
+
+                                      {['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
+                                        <div className="col-span-2">
+                                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                                            <p className="text-sm text-amber-700 font-medium">
+                                              📄 ورق عادي فقط متاح للحجم {currentSettings.paperSize}
+                                            </p>
+                                            <p className="text-xs text-amber-600 mt-1">
+                                              ⏳ باقي أنواع الأوراق متوفرة قريباً
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* الصف الثالث: صفحات في الورقة */}
+                                    <div className="mb-4">
+                                      <Label className="text-xs font-medium text-gray-700 mb-1 block">صفحات في الورقة الواحدة</Label>
+                                      <Select
+                                        value={String(upload.pagesPerSheet || 1)}
+                                        onValueChange={(value) => {
+                                          const pagesPerSheet = parseInt(value);
+                                          updatePendingUploadMutation.mutate({
+                                            id: upload.id,
+                                            updates: { pagesPerSheet }
+                                          });
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-9">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="1">1 صفحة (عادي)</SelectItem>
+                                          <SelectItem value="2">2 صفحة (توفير 50%)</SelectItem>
+                                          <SelectItem value="4">4 صفحات (توفير 75%)</SelectItem>
+                                          <SelectItem value="6">6 صفحات (توفير 83%)</SelectItem>
+                                          <SelectItem value="9">9 صفحات (توفير 89%)</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      {upload.pagesPerSheet && upload.pagesPerSheet > 1 && (
+                                        <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                          <CheckIcon className="h-3 w-3" />
+                                          وفر {((1 - 1 / upload.pagesPerSheet) * 100).toFixed(0)}% من تكلفة الطباعة
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    {/* الصف الرابع: وضع الألوان */}
+                                    <div className="mb-4">
                                       <Label className="text-xs font-medium text-gray-700 mb-1 block">وضع الألوان</Label>
                                       <Select
                                         value={currentSettings.colorMode}
@@ -1852,141 +2194,183 @@ export default function Print() {
                                         </p>
                                       )}
                                     </div>
-                                  </div>
 
-                                  {/* طباعة على الوجهين */}
-                                  {!['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
-                                    <div className="flex items-center justify-between py-3 border-t border-gray-100">
-                                      <Label className="text-sm font-medium text-gray-700">طباعة على الوجهين</Label>
-                                      <Switch
-                                        checked={currentSettings.doubleSided}
-                                        onCheckedChange={(checked) => {
-                                          updatePendingUploadMutation.mutate({
-                                            id: upload.id,
-                                            updates: { doubleSided: checked }
-                                          });
-                                        }}
-                                      />
-                                    </div>
-                                  )}
+                                    {/* طباعة على الوجهين */}
+                                    {!['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
+                                      <div className="flex items-center justify-between py-3 border-t border-gray-100">
+                                        <Label className="text-sm font-medium text-gray-700">طباعة على الوجهين</Label>
+                                        <Switch
+                                          checked={currentSettings.doubleSided}
+                                          onCheckedChange={(checked) => {
+                                            updatePendingUploadMutation.mutate({
+                                              id: upload.id,
+                                              updates: { doubleSided: checked }
+                                            });
+                                          }}
+                                        />
+                                      </div>
+                                    )}
 
-                                  {/* عرض السعر */}
-                                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm font-medium text-blue-800">تكلفة هذا الملف:</span>
-                                      <span className="text-xl font-bold text-blue-600">
+
+                                    {/* عرض السعر - تصميم احترافي */}
+                                    <div className="mt-4 border-t border-gray-200 pt-3">
+                                      <div className="space-y-2">
                                         {(() => {
                                           // Get actual page count (default to 1 for single-page uploads)
-                                          // TODO: Enhance with proper PDF page detection
                                           const pageCount = upload.pageCount || upload.pages || 1;
-                                          
-                                          // Calculate price for all pages
+
+                                          // Get pages per sheet setting (default to 1)
+                                          const pagesPerSheet = upload.pagesPerSheet || 1;
+
+                                          // Calculate actual sheets needed based on pages per sheet
+                                          const sheetsNeeded = Math.ceil(pageCount / pagesPerSheet);
+
+                                          // Calculate price for actual sheets needed
                                           const pricingForAllPages = calculateSharedPrice({
                                             paper_size: currentSettings.paperSize,
                                             paper_type: currentSettings.paperType,
                                             print_type: currentSettings.doubleSided ? 'face_back' : 'face',
-                                            pages: pageCount,
+                                            pages: sheetsNeeded,
                                             is_black_white: currentSettings.colorMode === 'grayscale'
                                           });
-                                          
+
                                           // Multiply by number of copies
                                           const copiesCost = pricingForAllPages.finalPrice * currentSettings.copies;
-                                          
-                                          // Apply binding cost per copy (each copy = separate book)
-                                          const bindingCost = upload.bookPrinting ? 
-                                            (upload.bindingType === 'book' ? 25 : 20) : 0;
-                                          
-                                          const totalPrice = copiesCost + (bindingCost * currentSettings.copies);
-                                          return totalPrice.toFixed(2);
-                                        })()} جنيه
-                                      </span>
-                                    </div>
-                                    {currentSettings.colorMode === 'grayscale' && (
-                                      <p className="text-xs text-green-700 mt-2 flex items-center">
-                                        ✓ خصم 10% للطباعة بالأبيض والأسود
-                                      </p>
-                                    )}
-                                  </div>
 
-                                  {/* خيارات طباعة الكتاب */}
-                                  {!['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
-                                    <div className="border-t border-gray-200 pt-4 mt-4">
-                                      <div className="flex items-center space-x-2 space-x-reverse mb-3">
-                                        <input
-                                          id={`book-printing-${upload.id}`}
-                                          type="checkbox"
-                                          checked={upload.bookPrinting || false}
-                                          onChange={(e) => {
-                                            const bookPrinting = e.target.checked;
-                                            const bindingPrice = bookPrinting ? 
-                                              (upload.bindingType === 'book' ? 25 : 20) : 0;
-                                            updatePendingUploadMutation.mutate({
-                                              id: upload.id,
-                                              updates: { 
-                                                bookPrinting,
-                                                bindingPrice
-                                              }
-                                            });
-                                          }}
-                                          className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                                          data-testid={`checkbox-book-printing-${upload.id}`}
-                                        />
-                                        <Label htmlFor={`book-printing-${upload.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">
-                                          📖 طباعة كتاب
-                                        </Label>
+                                          // Apply binding cost per copy (each copy = separate book)
+                                          const bindingCost = upload.bookPrinting ?
+                                            (upload.bindingType === 'book' ? 25 : 20) : 0;
+
+                                          const totalPrice = copiesCost + (bindingCost * currentSettings.copies);
+
+                                          return (
+                                            <>
+                                              {/* Price breakdown */}
+                                              <div className="flex justify-between items-center text-xs text-gray-600">
+                                                <span>{pageCount} صفحة × {currentSettings.copies} نسخة</span>
+                                                <span>{pricingForAllPages.finalPrice.toFixed(2)} ج</span>
+                                              </div>
+
+                                              {pagesPerSheet > 1 && (
+                                                <div className="flex justify-between items-center text-xs text-green-600">
+                                                  <span>توفير ({pagesPerSheet} صفحات/ورقة)</span>
+                                                  <span>-{((pageCount - sheetsNeeded) * 0.30 * currentSettings.copies).toFixed(2)} ج</span>
+                                                </div>
+                                              )}
+
+                                              {currentSettings.colorMode === 'grayscale' && (
+                                                <div className="flex justify-between items-center text-xs text-green-600">
+                                                  <span>خصم أبيض وأسود (10%)</span>
+                                                  <span>مطبق</span>
+                                                </div>
+                                              )}
+
+                                              {bindingCost > 0 && (
+                                                <div className="flex justify-between items-center text-xs text-gray-600">
+                                                  <span>تغليف ({upload.bindingType === 'book' ? 'كتاب' : 'لولبي'})</span>
+                                                  <span>+{(bindingCost * currentSettings.copies).toFixed(2)} ج</span>
+                                                </div>
+                                              )}
+                                            </>
+                                          );
+                                        })()}
                                       </div>
-                                    
-                                    {upload.bookPrinting && (
-                                      <div className="grid grid-cols-2 gap-3 pr-6 bg-blue-50 p-3 rounded-md">
-                                        <div>
-                                          <Label className="text-xs font-medium text-gray-700 mb-1 block">نوع التغليف</Label>
-                                          <Select
-                                            value={upload.bindingType || 'spiral'}
-                                            onValueChange={(value: 'spiral' | 'book') => {
-                                              const bindingPrice = value === 'book' ? 25 : 20;
+                                    </div>
+
+                                    {/* خيارات طباعة الكتاب */}
+                                    {!['A0', 'A1', 'A2'].includes(currentSettings.paperSize) && (
+                                      <div className="border-t border-gray-200 pt-4 mt-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <Label htmlFor={`book-printing-${upload.id}`} className="text-sm font-medium text-gray-900 cursor-pointer flex items-center gap-2">
+                                            <BookOpen className="h-4 w-4" />
+                                            طباعة كتاب
+                                          </Label>
+                                          <Switch
+                                            id={`book-printing-${upload.id}`}
+                                            checked={upload.bookPrinting || false}
+                                            onCheckedChange={(checked) => {
+                                              const bindingPrice = checked ?
+                                                (upload.bindingType === 'book' ? 25 : 20) : 0;
                                               updatePendingUploadMutation.mutate({
                                                 id: upload.id,
-                                                updates: { 
-                                                  bindingType: value,
+                                                updates: {
+                                                  bookPrinting: checked,
                                                   bindingPrice
                                                 }
                                               });
                                             }}
-                                          >
-                                            <SelectTrigger className="h-9" data-testid={`select-binding-type-${upload.id}`}>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="spiral">
-                                                <div className="flex items-center space-x-2 space-x-reverse">
-                                                  <span>🌀</span>
-                                                  <span>تغليف لولبي</span>
-                                                  <span className="text-green-600 font-medium">(20 جنيه)</span>
-                                                </div>
-                                              </SelectItem>
-                                              <SelectItem value="book">
-                                                <div className="flex items-center space-x-2 space-x-reverse">
-                                                  <span>📘</span>
-                                                  <span>تغليف كتاب</span>
-                                                  <span className="text-green-600 font-medium">(25 جنيه)</span>
-                                                </div>
-                                              </SelectItem>
-                                            </SelectContent>
-                                          </Select>
+                                            data-testid={`switch-book-printing-${upload.id}`}
+                                          />
                                         </div>
-                                        
-                                        <div className="flex items-end">
-                                          <div className="bg-green-100 border border-green-300 rounded-md px-3 py-2 text-xs w-full text-center">
-                                            <span className="text-green-800 font-bold">
-                                              التكلفة الإضافية: {upload.bindingPrice || 20} جنيه
-                                            </span>
+
+                                        {upload.bookPrinting && (
+                                          <div className="space-y-3 pl-6">
+                                            <div>
+                                              <Label className="text-xs font-medium text-gray-700 mb-1 block">نوع التغليف</Label>
+                                              <Select
+                                                value={upload.bindingType || 'spiral'}
+                                                onValueChange={(value: 'spiral' | 'book') => {
+                                                  const bindingPrice = value === 'book' ? 25 : 20;
+                                                  updatePendingUploadMutation.mutate({
+                                                    id: upload.id,
+                                                    updates: {
+                                                      bindingType: value,
+                                                      bindingPrice
+                                                    }
+                                                  });
+                                                }}
+                                              >
+                                                <SelectTrigger className="h-9" data-testid={`select-binding-type-${upload.id}`}>
+                                                  <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="spiral">تغليف لولبي - 20 جنيه</SelectItem>
+                                                  <SelectItem value="book">تغليف كتاب - 25 جنيه</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                            </div>
+
+                                            <div className="flex justify-between items-center text-xs bg-gray-50 px-3 py-2 rounded-md">
+                                              <span className="text-gray-600">تكلفة التغليف:</span>
+                                              <span className="font-semibold text-gray-900">
+                                                +{upload.bindingPrice || 20} جنيه
+                                              </span>
+                                            </div>
                                           </div>
-                                        </div>
+                                        )}
                                       </div>
                                     )}
+
+                                    {/* الإجمالي - Total Price */}
+                                    <div className="mt-4 pt-3 border-t border-gray-200">
+                                      {(() => {
+                                        const pageCount = upload.pageCount || upload.pages || 1;
+                                        const pagesPerSheet = upload.pagesPerSheet || 1;
+                                        const sheetsNeeded = Math.ceil(pageCount / pagesPerSheet);
+
+                                        const pricingForAllPages = calculateSharedPrice({
+                                          paper_size: currentSettings.paperSize,
+                                          paper_type: currentSettings.paperType,
+                                          print_type: currentSettings.doubleSided ? 'face_back' : 'face',
+                                          pages: sheetsNeeded,
+                                          is_black_white: currentSettings.colorMode === 'grayscale'
+                                        });
+
+                                        const copiesCost = pricingForAllPages.finalPrice * currentSettings.copies;
+                                        const bindingCost = upload.bookPrinting ?
+                                          (upload.bindingType === 'book' ? 25 : 20) : 0;
+                                        const totalPrice = copiesCost + (bindingCost * currentSettings.copies);
+
+                                        return (
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-sm font-semibold text-gray-900">الإجمالي:</span>
+                                            <span className="text-lg font-bold text-blue-600">{totalPrice.toFixed(2)} جنيه</span>
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
-                                  )}
-                                </div>
+                                  </div>
+
                                 )}
                               </CardContent>
                             </Card>
@@ -2000,25 +2384,37 @@ export default function Print() {
             </div>
           </TabsContent>
 
-          <TabsContent value="pdf-tools">
-            <PDFProcessor 
-              files={selectedFiles.filter(f => f.type === 'application/pdf')}
-              onProcessComplete={(files) => {
-                setSelectedFiles(files);
-                console.log('PDF tools processing complete:', files.map(f => f.name));
-              }}
-            />
-          </TabsContent>
+
 
           <TabsContent value="smart-scan">
-            <SmartScanComponent onScanComplete={handleSmartScan} />
+            <AdvancedSmartScanner onScanComplete={handleSmartScan} />
           </TabsContent>
         </Tabs>
       </main>
-      
+
       <BottomNav />
-      
+
       {/* Cart system - using simple working legacy cart */}
-    </div>
+
+      {/* Cart Conflict Modal */}
+      <CartConflictModal
+        isOpen={showConflictModal}
+        onClose={() => {
+          setShowConflictModal(false);
+          setPendingFiles([]);
+        }}
+        conflictType="different_source"
+        currentSource={cartData?.items?.[0]?.productSource || 'atbaali'}
+        currentPartner={cartData?.items?.[0]?.partnerName ? {
+          id: cartData.items[0].partnerId || '',
+          name: cartData.items[0].partnerName
+        } : undefined}
+        newItem={{
+          source: 'print_service',
+          productName: 'ملفات الطباعة'
+        }}
+        onClearAndAdd={handleClearAndUpload}
+      />
+    </div >
   );
 }

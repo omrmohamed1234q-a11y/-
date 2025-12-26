@@ -108,7 +108,7 @@ export function useWebSocket(): WebSocketHook {
         console.warn('⚠️ Invalid captain session data:', error);
       }
     }
-    
+
     // Check localStorage for admin token
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
@@ -119,7 +119,7 @@ export function useWebSocket(): WebSocketHook {
         userData: user
       };
     }
-    
+
     // Fall back to Supabase session for regular users
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -135,15 +135,15 @@ export function useWebSocket(): WebSocketHook {
     } catch (error) {
       console.warn('⚠️ Failed to get Supabase session:', error);
     }
-    
+
     return null;
   }, [user]);
 
   // إنشاء اتصال WebSocket - RE-ENABLED after fixing auth issues
   const connect = useCallback(() => {
 
-    if (wsRef.current?.readyState === WebSocket.CONNECTING || 
-        wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.CONNECTING ||
+      wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
 
@@ -152,8 +152,11 @@ export function useWebSocket(): WebSocketHook {
 
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
+      // Use explicit port for development (5000) or window.location.port for production
+      const port = window.location.port || '5000';
+      const wsUrl = `${protocol}//${window.location.hostname}:${port}/ws`;
+
+      console.log('🔗 WebSocket URL:', wsUrl);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -171,7 +174,7 @@ export function useWebSocket(): WebSocketHook {
 
         // مصادقة المستخدم مع دعم Captain و Supabase authentication
         const authDetails = await getAuthDetails();
-        
+
         if (authDetails && authDetails.token !== 'temp-token') {
           const authMessage: WebSocketMessage = {
             type: 'authenticate',
@@ -206,7 +209,7 @@ export function useWebSocket(): WebSocketHook {
             case 'notification':
               handleNotificationMessage(message.data);
               break;
-              
+
             case 'welcome':
               setState(prev => ({
                 ...prev,
@@ -262,7 +265,7 @@ export function useWebSocket(): WebSocketHook {
         const isNormalClosure = event.code === 1000;
         const isAuthFailure = event.code === 4001 || event.code === 4000;
         const isInvalidToken = event.reason === 'Authentication required';
-        
+
         // Only reconnect if it's not a normal closure and not an auth failure
         if (!isNormalClosure && !isAuthFailure && !isInvalidToken) {
           console.log('🔄 Network error detected - scheduling reconnect');
@@ -270,13 +273,13 @@ export function useWebSocket(): WebSocketHook {
         } else if (isAuthFailure || isInvalidToken) {
           console.warn('🚫 AUTHENTICATION FAILED - Connection stopped permanently');
           console.warn('🚫 Please login again to restore WebSocket connection');
-          
+
           // Clear any pending reconnection attempts
           if (reconnectTimerRef.current) {
             clearTimeout(reconnectTimerRef.current);
             reconnectTimerRef.current = null;
           }
-          
+
           setState(prev => ({
             ...prev,
             error: 'Authentication required - please login again'
@@ -318,7 +321,7 @@ export function useWebSocket(): WebSocketHook {
   // بدء ping للحفاظ على الاتصال
   const startPing = useCallback(() => {
     stopPing();
-    
+
     pingIntervalRef.current = setInterval(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: 'ping' }));
@@ -330,7 +333,7 @@ export function useWebSocket(): WebSocketHook {
   const scheduleReconnect = useCallback(() => {
     // DEBUG: Log call stack to find who's calling this
     console.error('🔍 scheduleReconnect() called from:', new Error().stack);
-    
+
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
     }
@@ -419,7 +422,7 @@ export function useWebSocket(): WebSocketHook {
   // تأثيرات الاتصال والتنظيف - RE-ENABLED after fixing auth issues
   useEffect(() => {
     console.log('🔗 useWebSocket connection re-enabled - Authentication issues resolved');
-    
+
     // Auto-connect when component mounts and user is authenticated
     if (user) {
       connect();

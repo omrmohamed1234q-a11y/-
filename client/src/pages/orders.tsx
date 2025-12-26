@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import GoogleMap from "@/components/GoogleMap";
-import { 
-  X, 
-  MessageCircle, 
+import {
+  X,
+  MessageCircle,
   Phone,
   Home,
   Calendar,
@@ -51,13 +51,13 @@ interface OrderItem {
 // Calculate ETA in minutes from estimatedDelivery
 function calculateETA(estimatedDelivery?: string): string {
   if (!estimatedDelivery) return "within 15 minutes";
-  
+
   try {
     const deliveryTime = new Date(estimatedDelivery);
     const now = new Date();
     const diffMs = deliveryTime.getTime() - now.getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
-    
+
     if (diffMins <= 0) return "arriving now";
     if (diffMins <= 5) return "within 5 minutes";
     if (diffMins <= 15) return "within 15 minutes";
@@ -85,22 +85,22 @@ export default function Orders() {
 
   // Real order data from API
   const [selectedOrderData, setSelectedOrderData] = useState<any>(null);
-  
+
   // WebSocket for real-time updates
   const { state: wsState, subscribeToOrderUpdates } = useWebSocket();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Fetch order data from API
   const { data: orderData, isLoading: orderLoading } = useQuery<any>({
     queryKey: ['/api/orders', selectedOrderId],
     enabled: !!selectedOrderId,
     refetchInterval: 5000 // تحديث كل 5 ثوان للحصول على التحديثات الفورية
   });
-  
+
   // Helper function to get status text
   const getStatusText = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'reviewing':
       case 'pending':
         return 'جاري مراجعة الطلب';
@@ -121,31 +121,31 @@ export default function Orders() {
         return 'جاري مراجعة الطلب';
     }
   };
-  
+
   // Fetch all orders for the user
   const { data: ordersArray = [], isLoading, refetch } = useQuery<Order[]>({
     queryKey: ['/api/orders'],
     refetchInterval: 10000 // تحديث كل 10 ثوان للحصول على طلبات جديدة
   });
-  
+
   // Filter out cancelled orders - only show active orders
-  const visibleOrders = useMemo(() => 
-    ordersArray.filter(order => order.status !== 'cancelled'), 
+  const visibleOrders = useMemo(() =>
+    ordersArray.filter(order => order.status !== 'cancelled'),
     [ordersArray]
   );
-  
+
   // Get the active order from visible orders only
-  const activeOrder = visibleOrders.find((order: Order) => 
+  const activeOrder = visibleOrders.find((order: Order) =>
     ['out_for_delivery', 'ready', 'processing', 'confirmed', 'pending', 'preparing', 'printing', 'reviewing'].includes(order.status)
   ) || visibleOrders[0];
 
   // Get the selected order with real-time status updates (from visible orders only)
   const selectedOrder = useMemo(() => {
     if (!selectedOrderId) return activeOrder;
-    
+
     // First try to get from visible orders list (excludes cancelled)
     const orderFromList = visibleOrders.find((o: Order) => o.id === selectedOrderId);
-    
+
     // If we have real-time data and it's not cancelled, merge it
     if (orderData?.order && orderFromList && orderData.order.status !== 'cancelled') {
       return {
@@ -153,7 +153,7 @@ export default function Orders() {
         ...orderData.order
       };
     }
-    
+
     // If order became cancelled or not found, return activeOrder or null
     return orderFromList || activeOrder;
   }, [selectedOrderId, visibleOrders, orderData?.order, activeOrder]);
@@ -161,11 +161,11 @@ export default function Orders() {
   // Determine order stage from selected order status (real-time)
   const orderStage = useMemo(() => {
     if (!selectedOrder) return 'reviewing';
-    
+
     const status = selectedOrder.status;
-    
+
     // Map backend status to frontend stages
-    switch(status) {
+    switch (status) {
       case 'reviewing':
       case 'pending':
         return 'reviewing';
@@ -185,7 +185,7 @@ export default function Orders() {
         return 'reviewing';
     }
   }, [selectedOrder?.status]);
-  
+
   // Get order info from real data
   const getOrderInfo = () => {
     if (!orderData?.order) {
@@ -195,7 +195,7 @@ export default function Orders() {
         stage: 'reviewing' as const
       };
     }
-    
+
     const order = orderData.order;
     return {
       status: order.status,
@@ -219,23 +219,23 @@ export default function Orders() {
       subscribeToOrderUpdates(selectedOrderId);
     }
   }, [selectedOrderId, wsState.isConnected, subscribeToOrderUpdates]);
-  
+
   // Listen for order status updates
   useWebSocketEvent('order_status_update', (data: any) => {
     console.log('📱 Real-time order status update received:', data);
-    
+
     if (data.orderId === selectedOrderId || ordersArray.some(o => o.id === data.orderId)) {
       // If order became cancelled and it's currently selected, clear selection
       if (data.newStatus === 'cancelled' && data.orderId === selectedOrderId) {
         setSelectedOrderId(null);
       }
-      
+
       // Invalidate and refetch order data
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       if (selectedOrderId) {
         queryClient.invalidateQueries({ queryKey: ['/api/orders', selectedOrderId] });
       }
-      
+
       // Show toast notification
       toast({
         title: '📱 تحديث حالة الطلب',
@@ -244,17 +244,17 @@ export default function Orders() {
       });
     }
   });
-  
+
   // Listen for delivery location updates
   useWebSocketEvent('driver_location_update', (data: any) => {
     console.log('🚚 Driver location update received:', data);
-    
+
     if (data.orderId === selectedOrderId) {
       // This could trigger map updates in the future
       console.log('📍 Driver location for current order updated');
     }
   });
-  
+
 
   if (isLoading) {
     return (
@@ -275,7 +275,7 @@ export default function Orders() {
             <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-gray-900 mb-2">لا توجد طلبات</h2>
             <p className="text-gray-600 mb-6">ابدأ التسوق الآن لترى طلباتك هنا</p>
-            <Button 
+            <Button
               className="bg-[--brand-500] hover:bg-[--brand-600]"
               onClick={() => window.location.href = '/'}
             >
@@ -309,10 +309,10 @@ export default function Orders() {
               {orderStage === 'delivering' ? calculateETA(selectedOrder.estimatedDelivery) : 'قريباً'}
             </Badge>
           </div>
-          
+
         </div>
       )}
-      
+
       {/* Top Section: Animation or Map */}
       {selectedOrder && (
         <div className="relative h-[52vh] w-full bg-gradient-to-br from-gray-50 to-gray-100">
@@ -321,20 +321,20 @@ export default function Orders() {
             <div className="flex items-center justify-center h-full">
               {/* Beautiful reviewing animation filling the whole space */}
               <div className="w-full h-full relative bg-gradient-to-br from-indigo-50 via-white to-purple-50 overflow-hidden">
-                
+
                 {/* Floating background particles */}
                 <div className="absolute top-16 left-8 w-4 h-4 bg-blue-300/40 rounded-full animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }}></div>
                 <div className="absolute top-20 right-12 w-3 h-3 bg-purple-300/40 rounded-full animate-bounce" style={{ animationDelay: '1s', animationDuration: '4s' }}></div>
                 <div className="absolute bottom-32 left-10 w-3 h-3 bg-pink-300/40 rounded-full animate-bounce" style={{ animationDelay: '2s', animationDuration: '3.5s' }}></div>
                 <div className="absolute top-28 left-1/4 w-2 h-2 bg-yellow-300/40 rounded-full animate-bounce" style={{ animationDelay: '1.5s', animationDuration: '3.8s' }}></div>
                 <div className="absolute bottom-20 right-16 w-3 h-3 bg-green-300/40 rounded-full animate-bounce" style={{ animationDelay: '2.2s', animationDuration: '3.2s' }}></div>
-                
+
                 {/* Central documents stack */}
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                   <div className="relative">
                     {/* Bottom document */}
                     <div className="w-24 h-20 bg-white rounded-lg shadow-xl border border-gray-100"></div>
-                    
+
                     {/* Middle document */}
                     <div className="absolute -top-3 left-3 w-24 h-20 bg-white rounded-lg shadow-xl border border-gray-100">
                       <div className="h-4 bg-gradient-to-r from-[--brand-400] to-[--brand-600] rounded-t-lg mx-1 mt-1"></div>
@@ -342,7 +342,7 @@ export default function Orders() {
                       <div className="h-1 bg-gray-200 rounded mx-2 mt-1"></div>
                       <div className="h-1 bg-gray-300 rounded mx-2 mt-1"></div>
                     </div>
-                    
+
                     {/* Top document with animation */}
                     <div className="absolute -top-6 left-6 w-24 h-20 bg-white rounded-lg shadow-2xl border-2 border-[--brand-300] animate-pulse">
                       <div className="h-4 bg-gradient-to-r from-[--brand-500] to-[--brand-700] rounded-t-lg mx-1 mt-1"></div>
@@ -352,7 +352,7 @@ export default function Orders() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Magnifying glass animation */}
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 translate-x-12 translate-y-12">
                   <div className="relative animate-bounce" style={{ animationDuration: '2s' }}>
@@ -364,7 +364,7 @@ export default function Orders() {
                     <div className="absolute -bottom-4 -right-4 w-10 h-3 bg-blue-600 rounded-full rotate-45 shadow-lg"></div>
                   </div>
                 </div>
-                
+
                 {/* Check marks appearing */}
                 <div className="absolute top-24 left-16">
                   <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center animate-ping" style={{ animationDelay: '1s' }}>
@@ -373,7 +373,7 @@ export default function Orders() {
                     </svg>
                   </div>
                 </div>
-                
+
                 <div className="absolute top-32 right-20">
                   <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center animate-ping" style={{ animationDelay: '2s' }}>
                     <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -381,7 +381,7 @@ export default function Orders() {
                     </svg>
                   </div>
                 </div>
-                
+
                 <div className="absolute bottom-16 left-20">
                   <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center animate-ping" style={{ animationDelay: '3s' }}>
                     <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -389,7 +389,7 @@ export default function Orders() {
                     </svg>
                   </div>
                 </div>
-                
+
                 {/* Floating documents around */}
                 <div className="absolute top-16 right-12">
                   <div className="w-16 h-10 bg-white rounded shadow-lg rotate-12 animate-bounce border-l-4 border-[--brand-400]" style={{ animationDelay: '0.5s', animationDuration: '3s' }}>
@@ -398,7 +398,7 @@ export default function Orders() {
                     <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
                   </div>
                 </div>
-                
+
                 <div className="absolute bottom-20 right-8">
                   <div className="w-14 h-16 bg-white rounded shadow-lg -rotate-6 animate-bounce border-l-4 border-purple-400" style={{ animationDelay: '1.5s', animationDuration: '2.5s' }}>
                     <div className="h-1.5 bg-gray-200 rounded mx-1 mt-1"></div>
@@ -407,14 +407,14 @@ export default function Orders() {
                     <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
                   </div>
                 </div>
-                
+
                 <div className="absolute bottom-8 left-12">
                   <div className="w-18 h-8 bg-white rounded shadow-lg rotate-6 animate-bounce border-l-4 border-blue-400" style={{ animationDelay: '2.5s', animationDuration: '2.8s' }}>
                     <div className="h-1.5 bg-gray-200 rounded mx-1 mt-1"></div>
                     <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
                   </div>
                 </div>
-                
+
                 <div className="absolute top-40 left-8">
                   <div className="w-12 h-14 bg-white rounded shadow-lg -rotate-12 animate-bounce border-l-4 border-pink-400" style={{ animationDelay: '3.5s', animationDuration: '3.2s' }}>
                     <div className="h-1.5 bg-gray-200 rounded mx-1 mt-1"></div>
@@ -422,31 +422,31 @@ export default function Orders() {
                     <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
                   </div>
                 </div>
-                
+
                 {/* Sparkle effects */}
                 <div className="absolute top-20 left-24 w-2 h-2 bg-yellow-400 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
                 <div className="absolute top-36 right-16 w-2 h-2 bg-pink-400 rounded-full animate-ping" style={{ animationDelay: '2s' }}></div>
                 <div className="absolute bottom-24 left-16 w-2 h-2 bg-blue-400 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
                 <div className="absolute top-28 left-32 w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{ animationDelay: '2.8s' }}></div>
                 <div className="absolute bottom-32 right-24 w-1 h-1 bg-green-400 rounded-full animate-ping" style={{ animationDelay: '1.8s' }}></div>
-                
+
               </div>
             </div>
           )}
-          
+
           {/* Animation for Preparing Stage */}
           {orderStage === 'preparing' && (
             <div className="flex items-center justify-center h-full">
               {/* Beautiful preparing animation with animated background */}
               <div className="w-full h-full relative bg-gradient-to-br from-indigo-50 via-white to-purple-50 overflow-hidden">
-                
+
                 {/* Floating background particles */}
                 <div className="absolute top-16 left-8 w-4 h-4 bg-blue-300/40 rounded-full animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }}></div>
                 <div className="absolute top-20 right-12 w-3 h-3 bg-purple-300/40 rounded-full animate-bounce" style={{ animationDelay: '1s', animationDuration: '4s' }}></div>
                 <div className="absolute bottom-32 left-10 w-3 h-3 bg-pink-300/40 rounded-full animate-bounce" style={{ animationDelay: '2s', animationDuration: '3.5s' }}></div>
                 <div className="absolute top-28 left-1/4 w-2 h-2 bg-yellow-300/40 rounded-full animate-bounce" style={{ animationDelay: '1.5s', animationDuration: '3.8s' }}></div>
                 <div className="absolute bottom-20 right-16 w-3 h-3 bg-green-300/40 rounded-full animate-bounce" style={{ animationDelay: '2.2s', animationDuration: '3.2s' }}></div>
-                
+
                 {/* Central Printer Animation */}
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                   <div className="relative">
@@ -456,12 +456,12 @@ export default function Orders() {
                       <div className="flex items-center justify-center h-full">
                         <div className="w-8 h-8 bg-gray-600 rounded-full animate-spin"></div>
                       </div>
-                      
+
                       {/* Printer details */}
                       <div className="absolute top-2 right-2 w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
                       <div className="absolute top-2 left-2 w-10 h-1.5 bg-gray-600 rounded"></div>
                     </div>
-                    
+
                     {/* Paper coming out - bigger */}
                     <div className="absolute -bottom-6 left-6 right-6">
                       <div className="w-36 h-16 bg-white border-2 border-gray-300 rounded-b-lg animate-pulse shadow-xl">
@@ -473,14 +473,14 @@ export default function Orders() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Animated red dots showing printing progress */}
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 translate-y-20 flex space-x-3">
                   <div className="w-4 h-4 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
                   <div className="w-4 h-4 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   <div className="w-4 h-4 bg-[--brand-500] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                 </div>
-                
+
                 {/* Floating printed pages around */}
                 <div className="absolute top-16 right-12">
                   <div className="w-16 h-12 bg-white rounded shadow-lg rotate-12 animate-bounce border-l-4 border-[--brand-400]" style={{ animationDelay: '0.5s', animationDuration: '3s' }}>
@@ -489,7 +489,7 @@ export default function Orders() {
                     <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
                   </div>
                 </div>
-                
+
                 <div className="absolute bottom-20 right-8">
                   <div className="w-14 h-18 bg-white rounded shadow-lg -rotate-6 animate-bounce border-l-4 border-purple-400" style={{ animationDelay: '1.5s', animationDuration: '2.5s' }}>
                     <div className="h-2 bg-purple-500 rounded-t mx-1 mt-1"></div>
@@ -498,14 +498,14 @@ export default function Orders() {
                     <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
                   </div>
                 </div>
-                
+
                 <div className="absolute bottom-8 left-12">
                   <div className="w-18 h-10 bg-white rounded shadow-lg rotate-6 animate-bounce border-l-4 border-blue-400" style={{ animationDelay: '2.5s', animationDuration: '2.8s' }}>
                     <div className="h-2 bg-blue-500 rounded-t mx-1 mt-1"></div>
                     <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
                   </div>
                 </div>
-                
+
                 <div className="absolute top-40 left-8">
                   <div className="w-12 h-16 bg-white rounded shadow-lg -rotate-12 animate-bounce border-l-4 border-pink-400" style={{ animationDelay: '3.5s', animationDuration: '3.2s' }}>
                     <div className="h-2 bg-pink-500 rounded-t mx-1 mt-1"></div>
@@ -513,33 +513,33 @@ export default function Orders() {
                     <div className="h-0.5 bg-gray-300 rounded mx-1 mt-0.5"></div>
                   </div>
                 </div>
-                
+
                 {/* Progress indicators - gear icons */}
                 <div className="absolute top-20 left-20">
                   <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center animate-spin" style={{ animationDelay: '1s' }}>
                     <div className="w-4 h-4 border-2 border-white rounded-full"></div>
                   </div>
                 </div>
-                
+
                 <div className="absolute top-28 right-20">
                   <div className="w-6 h-6 bg-teal-500 rounded-full flex items-center justify-center animate-spin" style={{ animationDelay: '2s', animationDuration: '3s' }}>
                     <div className="w-3 h-3 border-2 border-white rounded-full"></div>
                   </div>
                 </div>
-                
+
                 <div className="absolute bottom-16 left-16">
                   <div className="w-7 h-7 bg-indigo-500 rounded-full flex items-center justify-center animate-spin" style={{ animationDelay: '1.5s', animationDuration: '2.5s' }}>
                     <div className="w-3 h-3 border-2 border-white rounded-full"></div>
                   </div>
                 </div>
-                
+
                 {/* Sparkle effects */}
                 <div className="absolute top-20 left-24 w-2 h-2 bg-yellow-400 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
                 <div className="absolute top-36 right-16 w-2 h-2 bg-pink-400 rounded-full animate-ping" style={{ animationDelay: '2s' }}></div>
                 <div className="absolute bottom-24 left-16 w-2 h-2 bg-blue-400 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
                 <div className="absolute top-28 left-32 w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{ animationDelay: '2.8s' }}></div>
                 <div className="absolute bottom-32 right-24 w-1 h-1 bg-green-400 rounded-full animate-ping" style={{ animationDelay: '1.8s' }}></div>
-                
+
               </div>
             </div>
           )}
@@ -560,7 +560,7 @@ export default function Orders() {
 
               {/* Map Overlays */}
               {/* Close Button */}
-              <button 
+              <button
                 className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg z-20"
                 onClick={() => window.history.back()}
                 data-testid="button-close-tracking"
@@ -569,7 +569,7 @@ export default function Orders() {
               </button>
 
               {/* Location Badge */}
-              <div 
+              <div
                 className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-full shadow-lg z-20 flex items-center gap-2"
                 data-testid="pill-location"
               >
@@ -591,8 +591,8 @@ export default function Orders() {
               <div className="flex items-center gap-3 flex-1">
                 <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
                   {selectedOrder.restaurantLogo ? (
-                    <img 
-                      src={selectedOrder.restaurantLogo} 
+                    <img
+                      src={selectedOrder.restaurantLogo}
                       alt="Restaurant"
                       className="w-full h-full object-cover rounded-xl"
                     />
@@ -656,7 +656,7 @@ export default function Orders() {
                 </p>
               </div>
               <div className="flex gap-3 flex-shrink-0">
-                <button 
+                <button
                   className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
                   onClick={() => window.location.href = `/chat?order=${selectedOrder.id}`}
                   data-testid="button-chat"
@@ -665,7 +665,7 @@ export default function Orders() {
                   <MessageCircle className="h-6 w-6 text-gray-700" />
                 </button>
                 {selectedOrder.driverPhone && (
-                  <button 
+                  <button
                     className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors"
                     onClick={() => window.open(`tel:${selectedOrder.driverPhone}`)}
                     data-testid="button-call"
@@ -714,8 +714,8 @@ export default function Orders() {
                 </div>
                 <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
                   {selectedOrder.restaurantLogo ? (
-                    <img 
-                      src={selectedOrder.restaurantLogo} 
+                    <img
+                      src={selectedOrder.restaurantLogo}
                       alt="Restaurant"
                       className="w-full h-full object-cover rounded-xl"
                     />
@@ -768,9 +768,9 @@ export default function Orders() {
               <p className="text-sm text-gray-600">
                 طلب #{selectedOrder.orderNumber}
               </p>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="w-full mt-4 border-2 h-12"
                 onClick={() => window.location.href = `/support?order=${selectedOrder.orderNumber}`}
               >
@@ -779,14 +779,14 @@ export default function Orders() {
               </Button>
             </div>
 
-            {/* Back to Orders Button */}
-            <Button 
-              variant="outline" 
+            {/* Back to Shopping Button */}
+            <Button
+              variant="outline"
               className="w-full border-2 h-12 mt-6"
-              onClick={() => window.location.href = '/orders-list'}
+              onClick={() => window.location.href = '/print'}
             >
               <ArrowLeft className="h-5 w-5 ml-2" />
-              العودة لقائمة الطلبات
+              العودة للتسوق
             </Button>
           </div>
         )}

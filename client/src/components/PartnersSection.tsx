@@ -4,9 +4,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { 
-  MapPin, Phone, Clock, Star, Shield, 
-  Truck, CreditCard, ChevronRight, Building2
+import {
+  MapPin, Phone, Clock, Star, Shield,
+  Truck, CreditCard, ChevronRight, Building2, Search
 } from 'lucide-react';
 import type { Partner } from '@shared/schema';
 import { PartnerDetailsView } from './admin/PartnerDetailsView';
@@ -15,6 +15,7 @@ export function PartnersSection() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const { data: partners, isLoading } = useQuery({
     queryKey: ['/api/partners/featured'],
@@ -29,9 +30,13 @@ export function PartnersSection() {
     { id: 'stationery', name: 'أدوات مكتبية', icon: Building2 },
   ];
 
-  const filteredPartners = (partners as Partner[] || []).filter((partner: Partner) => 
-    selectedCategory === 'all' || partner.businessType === selectedCategory
-  );
+  const filteredPartners = (partners as Partner[] || []).filter((partner: Partner) => {
+    const matchesCategory = selectedCategory === 'all' || partner.businessType === selectedCategory;
+    const matchesSearch = searchQuery === '' ||
+      partner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      partner.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const handleViewPartner = (partner: Partner) => {
     setSelectedPartner(partner);
@@ -62,7 +67,7 @@ export function PartnersSection() {
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <motion.h2 
+          <motion.h2
             className="text-4xl md:text-5xl font-bold text-gray-900 mb-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -70,7 +75,7 @@ export function PartnersSection() {
           >
             شركاؤنا المعتمدون
           </motion.h2>
-          <motion.p 
+          <motion.p
             className="text-xl text-gray-600 max-w-3xl mx-auto"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -78,6 +83,20 @@ export function PartnersSection() {
           >
             اكتشف شبكتنا من المطابع والمكتبات المعتمدة في جميع أنحاء مصر
           </motion.p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="max-w-2xl mx-auto mb-8">
+          <div className="relative">
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="ابحث عن مطبعة أو مكتبة..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pr-12 pl-4 py-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors text-right"
+            />
+          </div>
         </div>
 
         {/* Category Filter */}
@@ -88,11 +107,10 @@ export function PartnersSection() {
               <motion.button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium transition-all ${
-                  selectedCategory === category.id
-                    ? 'bg-blue-600 text-white shadow-lg scale-105'
-                    : 'bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-600 shadow-sm hover:shadow-md'
-                }`}
+                className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium transition-all ${selectedCategory === category.id
+                  ? 'bg-blue-600 text-white shadow-lg scale-105'
+                  : 'bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-600 shadow-sm hover:shadow-md'
+                  }`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -105,177 +123,176 @@ export function PartnersSection() {
         </div>
 
         {/* Partners Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredPartners.map((partner: Partner, index: number) => (
-            <motion.div
-              key={partner.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-            >
-              <Card className="group h-full bg-white border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden hover:-translate-y-2">
-                {/* Cover Image */}
-                <div className="relative h-48 overflow-hidden">
-                  {partner.coverImageUrl ? (
-                    <img 
-                      src={partner.coverImageUrl} 
-                      alt={partner.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center">
-                      <Building2 className="w-16 h-16 text-white/70" />
-                    </div>
-                  )}
-                  
-                  {/* Business Type Badge */}
-                  <div className="absolute top-4 right-4">
-                    <Badge variant="secondary" className="bg-white/90 text-blue-700 backdrop-blur-sm">
-                      {partner.businessType === 'print_shop' && 'مطبعة'}
-                      {partner.businessType === 'bookstore' && 'مكتبة'}
-                      {partner.businessType === 'library' && 'مكتبة عامة'}
-                      {partner.businessType === 'stationery' && 'أدوات مكتبية'}
-                    </Badge>
-                  </div>
+        {!isViewOpen && (
+          <>
+            {filteredPartners.length === 0 ? (
+              <div className="text-center py-16">
+                <Building2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  لا توجد نتائج
+                </h3>
+                <p className="text-gray-500">
+                  جرب تغيير البحث أو الفلتر
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredPartners.map((partner: Partner, index: number) => (
+                  <motion.div
+                    key={partner.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                  >
+                    <Card className="group h-full bg-white border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden hover:-translate-y-2 rounded-xl">
+                      {/* Cover Image - Larger */}
+                      <div className="relative h-48 overflow-hidden">
+                        {partner.coverImageUrl ? (
+                          <img
+                            src={partner.coverImageUrl}
+                            alt={partner.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600" />
+                        )}
 
-                  {/* Verified Badge */}
-                  {partner.isVerified && (
-                    <div className="absolute top-4 left-4">
-                      <Badge className="bg-green-500 text-white">
-                        <Shield className="w-3 h-3 mr-1" />
-                        معتمد
-                      </Badge>
-                    </div>
-                  )}
-
-                  {/* Logo Overlay */}
-                  {partner.logoUrl && (
-                    <div className="absolute bottom-4 right-4 w-16 h-16 bg-white rounded-full shadow-lg p-2">
-                      <img 
-                        src={partner.logoUrl} 
-                        alt={`${partner.name} Logo`}
-                        className="w-full h-full object-contain rounded-full"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <CardContent className="p-6">
-                  {/* Header */}
-                  <div className="mb-4">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                      {partner.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm line-clamp-2">
-                      {partner.shortDescription || partner.description}
-                    </p>
-                  </div>
-
-                  {/* Rating & Reviews */}
-                  {partner.rating && Number(partner.rating) > 0 && (
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="font-semibold text-gray-900">
-                          {Number(partner.rating).toFixed(1)}
-                        </span>
-                      </div>
-                      <span className="text-gray-500 text-sm">
-                        ({partner.reviewCount} تقييم)
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Location */}
-                  <div className="flex items-center gap-2 mb-3 text-gray-600">
-                    <MapPin className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm">
-                      {partner.city}, {partner.governorate}
-                    </span>
-                  </div>
-
-                  {/* Phone */}
-                  {partner.phone && (
-                    <div className="flex items-center gap-2 mb-4 text-gray-600">
-                      <Phone className="w-4 h-4 text-green-500" />
-                      <span className="text-sm" dir="ltr">{partner.phone}</span>
-                    </div>
-                  )}
-
-                  {/* Services */}
-                  {partner.services && partner.services.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex flex-wrap gap-1">
-                        {partner.services.slice(0, 3).map((service, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {service === 'printing' && 'طباعة'}
-                            {service === 'binding' && 'تجليد'}
-                            {service === 'scanning' && 'مسح ضوئي'}
-                            {service === 'design' && 'تصميم'}
-                            {service === 'books' && 'كتب'}
-                            {service === 'stationery' && 'أدوات مكتبية'}
+                        {/* Business Type Badge */}
+                        <div className="absolute top-2 right-2">
+                          <Badge variant="secondary" className="bg-white/95 text-blue-700 backdrop-blur-sm text-[10px] px-2 py-0.5 h-5">
+                            {partner.businessType === 'print_shop' && 'مطبعة'}
+                            {partner.businessType === 'bookstore' && 'مكتبة'}
+                            {partner.businessType === 'library' && 'مكتبة عامة'}
+                            {partner.businessType === 'stationery' && 'أدوات مكتبية'}
                           </Badge>
-                        ))}
-                        {partner.services.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{partner.services.length - 3}
-                          </Badge>
+                        </div>
+
+                        {/* Verified Badge */}
+                        {partner.isVerified && (
+                          <div className="absolute top-2 left-2">
+                            <Badge className="bg-green-500 text-white text-[10px] px-2 py-0.5 h-5">
+                              <Shield className="w-2.5 h-2.5 mr-0.5" />
+                              معتمد
+                            </Badge>
+                          </div>
+                        )}
+
+                        {/* Logo Overlay - Larger */}
+                        {partner.logoUrl && (
+                          <div className="absolute bottom-3 right-3 w-16 h-16 bg-white rounded-full shadow-lg p-2">
+                            <img
+                              src={partner.logoUrl}
+                              alt={`${partner.name} Logo`}
+                              className="w-full h-full object-contain rounded-full"
+                            />
+                          </div>
                         )}
                       </div>
-                    </div>
-                  )}
 
-                  {/* Features */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      {partner.hasDelivery && (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <Truck className="w-4 h-4" />
-                          <span className="text-xs">توصيل</span>
+                      <CardContent className="p-4">
+                        {/* Header */}
+                        <div className="mb-3">
+                          <h3 className="text-base font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                            {partner.name}
+                          </h3>
+                          <p className="text-gray-600 text-sm line-clamp-1">
+                            {partner.shortDescription || partner.description}
+                          </p>
                         </div>
-                      )}
-                      {partner.acceptsOnlinePayment && (
-                        <div className="flex items-center gap-1 text-blue-600">
-                          <CreditCard className="w-4 h-4" />
-                          <span className="text-xs">دفع إلكتروني</span>
+
+                        {/* Rating & Reviews - Prominent */}
+                        {partner.rating && Number(partner.rating) > 0 && (
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center gap-1">
+                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                              <span className="font-bold text-sm text-gray-900">
+                                {Number(partner.rating).toFixed(1)}
+                              </span>
+                            </div>
+                            <span className="text-sm text-gray-500">
+                              ({partner.reviewCount || 0}+)
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Delivery Time */}
+                        <div className="flex items-center gap-2 mb-3 text-gray-600">
+                          <Clock className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm">15-30 دقيقة</span>
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Action Button */}
-                  <Button 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white group"
-                    data-testid={`button-view-partner-${partner.id}`}
-                    onClick={() => handleViewPartner(partner)}
-                  >
-                    <span>عرض التفاصيل</span>
-                    <ChevronRight className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+                        {/* Location */}
+                        <div className="flex items-center gap-2 mb-3 text-gray-600">
+                          <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                          <span className="text-sm line-clamp-1">
+                            {partner.city}, {partner.governorate}
+                          </span>
+                        </div>
 
-        {/* Empty State */}
-        {filteredPartners.length === 0 && !isLoading && (
-          <div className="text-center py-16">
-            <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              لا يوجد شركاء في هذه الفئة
-            </h3>
-            <p className="text-gray-500">
-              جاري العمل على إضافة المزيد من الشركاء قريباً
-            </p>
-          </div>
+
+
+                        {/* Services */}
+                        {partner.services && partner.services.length > 0 && (
+                          <div className="mb-3">
+                            <div className="flex flex-wrap gap-1.5">
+                              {partner.services.slice(0, 3).map((service, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs px-2 py-0.5">
+                                  {service === 'printing' && 'طباعة'}
+                                  {service === 'binding' && 'تجليد'}
+                                  {service === 'scanning' && 'مسح'}
+                                  {service === 'design' && 'تصميم'}
+                                  {service === 'books' && 'كتب'}
+                                  {service === 'stationery' && 'أدوات'}
+                                </Badge>
+                              ))}
+                              {partner.services.length > 3 && (
+                                <Badge variant="outline" className="text-xs px-2 py-0.5">
+                                  +{partner.services.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Features */}
+                        <div className="flex items-center gap-3 mb-4">
+                          {partner.hasDelivery && (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <Truck className="w-4 h-4" />
+                              <span className="text-xs">توصيل</span>
+                            </div>
+                          )}
+                          {partner.acceptsOnlinePayment && (
+                            <div className="flex items-center gap-1 text-blue-600">
+                              <CreditCard className="w-4 h-4" />
+                              <span className="text-xs">دفع إلكتروني</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Button */}
+                        <Button
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white h-10 text-sm font-medium group/btn"
+                          data-testid={`button-view-partner-${partner.id}`}
+                          onClick={() => handleViewPartner(partner)}
+                        >
+                          <span>عرض التفاصيل</span>
+                          <ChevronRight className="w-4 h-4 mr-1.5 group-hover/btn:translate-x-1 transition-transform" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* View All Button */}
-        {filteredPartners.length > 0 && (
+        {!isViewOpen && filteredPartners.length > 0 && (
           <div className="text-center mt-12">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
               className="bg-white border-blue-200 text-blue-600 hover:bg-blue-50"
               data-testid="button-view-all-partners"
@@ -286,11 +303,11 @@ export function PartnersSection() {
           </div>
         )}
 
-        {/* Partner Details View - Talabat Style */}
+        {/* Partner Details View - Inline */}
         {isViewOpen && selectedPartner && (
-          <div className="fixed inset-0 bg-white z-[9999] overflow-y-auto">
-            <PartnerDetailsView 
-              partner={selectedPartner} 
+          <div className="mt-8">
+            <PartnerDetailsView
+              partner={selectedPartner}
               onClose={handleCloseView}
             />
           </div>
