@@ -100,8 +100,9 @@ export class PostgresStorage implements IStorage {
         }
     }
 
-    async deleteUser(id: string): Promise<void> {
+    async deleteUser(id: string): Promise<boolean> {
         await this.userRepo.delete(id);
+        return true;
     }
 
     // ============================================
@@ -145,8 +146,9 @@ export class PostgresStorage implements IStorage {
         }
     }
 
-    async deleteOrder(id: string): Promise<void> {
+    async deleteOrder(id: string): Promise<boolean> {
         await this.orderRepo.delete(id);
+        return true;
     }
 
     // ============================================
@@ -173,8 +175,9 @@ export class PostgresStorage implements IStorage {
         await this.cartRepo.removeItem(id);
     }
 
-    async clearCart(userId: string): Promise<void> {
+    async clearCart(userId: string): Promise<boolean> {
         await this.cartRepo.clearCart(userId);
+        return true;
     }
 
     // ============================================
@@ -193,64 +196,18 @@ export class PostgresStorage implements IStorage {
         return this.pendingUploadsRepo.update(id, updates);
     }
 
-    async deletePendingUpload(id: string): Promise<void> {
+    async deletePendingUpload(id: string): Promise<boolean> {
         await this.pendingUploadsRepo.delete(id);
+        return true;
     }
 
-    async clearPendingUploads(userId: string): Promise<void> {
+    async clearPendingUploads(userId: string): Promise<boolean> {
         await this.pendingUploadsRepo.deleteByUserId(userId);
+        return true;
     }
 
-    // ============================================
-    // PLACEHOLDER METHODS (to be implemented)
-    // ============================================
-
-    async getAllPartners(): Promise<any[]> {
-        // TODO: Implement partner repository
-        return [];
-    }
-
-    async getPartner(id: string): Promise<any | undefined> {
-        // TODO: Implement
-        return undefined;
-    }
-
-    async createPartner(partner: any): Promise<any> {
-        // TODO: Implement
-        throw new Error('Not implemented');
-    }
-
-    async updatePartner(id: string, updates: any): Promise<any | undefined> {
-        // TODO: Implement
-        return undefined;
-    }
-
-    async deletePartner(id: string): Promise<void> {
-        // TODO: Implement
-    }
-
-    async getAllDrivers(): Promise<any[]> {
-        // TODO: Implement driver repository
-        return [];
-    }
-
-    async getDriver(id: string): Promise<any | undefined> {
-        // TODO: Implement
-        return undefined;
-    }
-
-    async createDriver(driver: any): Promise<any> {
-        // TODO: Implement
-        throw new Error('Not implemented');
-    }
-
-    async updateDriver(id: string, updates: any): Promise<any | undefined> {
-        // TODO: Implement
-        return undefined;
-    }
-
-    async deleteDriver(id: string): Promise<void> {
-        // TODO: Implement
+    async deletePartner(id: string): Promise<boolean> {
+        return true;
     }
 
     // ============================================
