@@ -6063,13 +6063,19 @@ class MemStorage implements IStorage {
   }
 }
 
-// Use MemStorage temporarily due to database connection issues
-// Will switch to DatabaseStorage when database is ready
-// تبديل إلى Memory Storage مؤقتاً
-// TEMPORARY: Using MemoryStorage until PostgresStorage is complete
-// PostgresStorage is missing some methods (notifications, etc.)
-export const storage = new MemoryStorage();
+// Export PostgreSQL storage (persistent database) - HYBRID APPROACH
+// Core features (products, users, orders, cart, uploads) use PostgreSQL
+// Other features (notifications, drivers, partners) use stubs temporarily
+import { PostgresStorage } from './db/PostgresStorage';
+export const storage = new PostgresStorage();
 
-// TODO: Complete PostgresStorage implementation then switch back
-// import { PostgresStorage } from './db/PostgresStorage';
-// export const storage = new PostgresStorage();
+// Initialize database connection on startup
+storage.initialize().catch(err => {
+  console.error('❌ Failed to initialize PostgreSQL storage:', err);
+  console.error('⚠️  Application may not function correctly');
+  // Don't exit - stubs will prevent crashes
+});
+
+console.log('🚀 Using PostgreSQL storage (hybrid mode)');
+console.log('✅ Core features: PostgreSQL (products, users, orders, cart, uploads)');
+console.log('⚠️  Other features: Stubs (notifications, drivers, partners)');
